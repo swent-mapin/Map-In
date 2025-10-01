@@ -1,4 +1,4 @@
-package com.android.sample
+package com.swent.mapin
 
 import kotlin.math.sqrt
 
