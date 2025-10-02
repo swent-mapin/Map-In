@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">MapIn</string>
-    <string name="title_activity_main">MainActivity</string>
-    <string name="title_activity_second">SecondActivity</string>
 </resources>
