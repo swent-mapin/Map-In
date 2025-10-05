@@ -10,10 +10,9 @@ import androidx.compose.ui.platform.testTag
 import com.swent.mapin.testing.UiTestTags
 
 @Composable
-fun MapScreen(
-    ) {
-    // Placeholder map
-    Box(Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN), contentAlignment = Alignment.Center) {
-        Text("Map placeholder")
-    }
+fun MapScreen() {
+  // Placeholder map
+  Box(Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN), contentAlignment = Alignment.Center) {
+    Text("Map placeholder")
+  }
 }

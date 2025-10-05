@@ -12,54 +12,40 @@ import org.junit.Test
 
 class AppNavHostTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    @Test
-    fun startsOnAuth_whenNotLoggedIn() {
-        composeTestRule.setContent {
-            AppNavHost(
-                navController = rememberNavController(),
-                isLoggedIn = false
-            )
-        }
-
-        composeTestRule
-            .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-            .assertIsDisplayed()
+  @Test
+  fun startsOnAuth_whenNotLoggedIn() {
+    composeTestRule.setContent {
+      AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
-    @Test
-    fun authContinueNavigatesToMap() {
-        composeTestRule.setContent {
-            AppNavHost(
-                navController = rememberNavController(),
-                isLoggedIn = false
-            )
-        }
+    composeTestRule
+        .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
+  }
 
-        // Click on continue
-        composeTestRule
-            .onNodeWithTag(UiTestTags.AUTH_CONTINUE_BUTTON, useUnmergedTree = true)
-            .performClick()
-
-        // Map should be visible
-        composeTestRule
-            .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-            .assertIsDisplayed()
+  @Test
+  fun authContinueNavigatesToMap() {
+    composeTestRule.setContent {
+      AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
-    @Test
-    fun startsOnMap_whenLoggedIn() {
-        composeTestRule.setContent {
-            AppNavHost(
-                navController = rememberNavController(),
-                isLoggedIn = true
-            )
-        }
+    // Click on continue
+    composeTestRule
+        .onNodeWithTag(UiTestTags.AUTH_CONTINUE_BUTTON, useUnmergedTree = true)
+        .performClick()
 
-        composeTestRule
-            .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-            .assertIsDisplayed()
+    // Map should be visible
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun startsOnMap_whenLoggedIn() {
+    composeTestRule.setContent {
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
     }
+
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+  }
 }
