@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(platform(libs.compose.bom))
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20250517")
     globalTestImplementation(libs.androidx.junit)
     globalTestImplementation(libs.androidx.espresso.core)
 
@@ -145,6 +146,10 @@ dependencies {
     // UI Tests
     globalTestImplementation(libs.compose.test.junit)
     debugImplementation(libs.compose.test.manifest)
+    testImplementation(libs.mockk)
+
+    // ----------- Networking (OkHttp) -------------
+    implementation(libs.okhttp)
 
     // --------- Kaspresso test framework ----------
     globalTestImplementation(libs.kaspresso)
