@@ -19,7 +19,8 @@ fun AppNavHost(
       AuthScreen(
           onAuthSuccess = {
             navController.navigate(Route.Map.route) {
-              popUpTo(0) // clear back stack
+                popUpTo(Route.Auth.route) { inclusive = true }
+                launchSingleTop = true // not necessary here, but good practice
             }
           })
     }
