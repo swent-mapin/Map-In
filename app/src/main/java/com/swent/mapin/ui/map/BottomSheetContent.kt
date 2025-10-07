@@ -128,7 +128,7 @@ fun BottomSheetContent(state: BottomSheetState, fullEntryKey: Int, searchBarStat
   }
 }
 
-/** Search bar that triggers full mode when tapped.*/
+/** Search bar that triggers full mode when tapped. */
 @Composable
 private fun SearchBar(
     value: String,
@@ -180,7 +180,7 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
   }
 }
 
-/**  button for quick actions  */
+/** button for quick actions */
 @Composable
 private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
   Button(

@@ -52,10 +52,11 @@ fun MapInTheme(
   if (!view.isInEditMode) {
     SideEffect {
       val window = (view.context as Activity).window
-      WindowCompat.setDecorFitsSystemWindows(window, false)
+      // Transparent system bars for immersive map experience
       window.statusBarColor = android.graphics.Color.TRANSPARENT
       window.navigationBarColor = android.graphics.Color.TRANSPARENT
-      WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+      // Light icons work better on map backgrounds with the gradient overlay
+      WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
       WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
     }
   }

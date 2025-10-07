@@ -13,8 +13,7 @@ object MapConstants {
   /** Height of the bottom sheet at medium state (showing menu and buttons) */
   val MEDIUM_HEIGHT = 400.dp
 
-  /**
-   * Percentage of screen height for full state */
+  /** Percentage of screen height for full state */
   const val FULL_HEIGHT_PERCENTAGE = 0.98f
 
   /** Maximum opacity of the scrim overlay when sheet is at full height */
