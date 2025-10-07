@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
@@ -131,7 +130,7 @@ private fun MapInteractionBlocker() {
               while (true) {
                 val event = awaitPointerEvent()
                 event.changes.forEach { pointerInputChange ->
-                  pointerInputChange.consumeAllChanges()
+                    pointerInputChange.consume()
                 }
               }
             }
