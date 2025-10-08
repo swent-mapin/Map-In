@@ -48,7 +48,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.2"
+        kotlinCompilerExtensionVersion = "1.5.1"
     }
 
     compileOptions {
@@ -124,7 +124,18 @@ dependencies {
     globalTestImplementation(libs.androidx.espresso.core)
 
     // Firebase BOM
-    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
+    // Firebase Authentication - no version needed when using BOM
+    implementation("com.google.firebase:firebase-auth")
+
+    // AndroidX Browser for Custom Tabs (required for Firebase Auth redirects)
+    implementation("androidx.browser:browser:1.7.0")
+
+    // Google Identity Services and Credentials Manager
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
 
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
