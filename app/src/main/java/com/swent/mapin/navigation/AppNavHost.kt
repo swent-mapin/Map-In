@@ -4,12 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.authentication.AuthScreen
 import com.swent.mapin.map.MapScreen
 
 @Composable
 fun AppNavHost(
-    navController: NavHostController,
+    navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
