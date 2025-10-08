@@ -85,12 +85,14 @@ class MapScreenTest {
 
     rule.waitUntil(timeoutMillis = 5000) {
       try {
-        rule.onNodeWithText("Activity 1").assertExists()
+        rule.onNodeWithText("Activity 1").assertIsDisplayed()
+        rule.onNodeWithText("Sports").assertIsDisplayed()
         true
       } catch (e: AssertionError) {
         false
       }
     }
+    rule.waitForIdle()
 
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
