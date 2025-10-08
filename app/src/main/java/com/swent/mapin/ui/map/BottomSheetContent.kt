@@ -81,7 +81,7 @@ fun BottomSheetContent(state: BottomSheetState, fullEntryKey: Int, searchBarStat
         focusRequester = focusRequester,
         onSearchAction = { focusManager.clearFocus() })
 
-    Spacer(modifier = Modifier.height(48.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
     val contentModifier =
         if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
