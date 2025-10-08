@@ -20,7 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-class DraggableBottomSheetTest {
+class BottomSheetTest {
 
   @get:Rule val rule = createComposeRule()
 
@@ -47,7 +47,7 @@ class DraggableBottomSheetTest {
     rule.setContent {
       MaterialTheme {
         var current by remember { mutableStateOf(TestState.COLLAPSED) }
-        DraggableBottomSheet(
+        BottomSheet(
             modifier = Modifier.testTag("sheet"),
             config = config,
             currentState = current,
@@ -69,7 +69,7 @@ class DraggableBottomSheetTest {
 
     rule.setContent {
       MaterialTheme {
-        DraggableBottomSheet(
+        BottomSheet(
             modifier = Modifier.testTag("sheet"),
             config = config,
             currentState = current,
@@ -99,7 +99,7 @@ class DraggableBottomSheetTest {
 
     rule.setContent {
       MaterialTheme {
-        DraggableBottomSheet(
+        BottomSheet(
             modifier = Modifier.testTag("sheet"),
             config = config,
             currentState = current,
@@ -126,7 +126,7 @@ class DraggableBottomSheetTest {
 
     rule.setContent {
       MaterialTheme {
-        DraggableBottomSheet(
+        BottomSheet(
             modifier = Modifier.testTag("sheet"),
             config = config,
             currentState = current,
@@ -150,7 +150,7 @@ class DraggableBottomSheetTest {
     rule.setContent {
       MaterialTheme {
         var current by remember { mutableStateOf(TestState.COLLAPSED) }
-        DraggableBottomSheet(
+        BottomSheet(
             modifier = Modifier.testTag("sheet"),
             config = config,
             currentState = current,

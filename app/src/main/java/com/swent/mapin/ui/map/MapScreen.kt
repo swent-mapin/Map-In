@@ -15,18 +15,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
-import com.swent.mapin.ui.components.DraggableBottomSheet
 
 /**
- * Main map screen with draggable bottom sheet overlay.
+ * Main map screen with bottom sheet overlay.
  *
  * Architecture:
  * - Google Maps as background layer TODO
  * - Top gradient for status bar visibility
  * - Progressive scrim overlay (darkens as sheet expands)
  * - Map interaction blocker (active only in full mode)
- * - Draggable bottom sheet with content
+ * - Bottom sheet with content
  *
  * State is managed by MapScreenViewModel.
  */
@@ -61,7 +61,7 @@ fun MapScreen() {
       MapInteractionBlocker()
     }
 
-    DraggableBottomSheet(
+    BottomSheet(
         config = sheetConfig,
         currentState = viewModel.bottomSheetState,
         onStateChange = { newState -> viewModel.setBottomSheetState(newState) },
@@ -129,9 +129,7 @@ private fun MapInteractionBlocker() {
             awaitPointerEventScope {
               while (true) {
                 val event = awaitPointerEvent()
-                event.changes.forEach { pointerInputChange ->
-                    pointerInputChange.consume()
-                }
+                event.changes.forEach { pointerInputChange -> pointerInputChange.consume() }
               }
             }
           })

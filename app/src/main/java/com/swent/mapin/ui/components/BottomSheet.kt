@@ -29,8 +29,8 @@ import com.swent.mapin.ui.map.MapConstants
 import kotlinx.coroutines.launch
 
 /**
- * Configuration for DraggableBottomSheet behavior. Defines the three anchor heights that the sheet
- * can snap to.
+ * Configuration for the bottom sheet behavior. Defines the three anchor heights that the sheet can
+ * snap to.
  *
  * @property collapsedHeight Height when sheet is collapsed
  * @property mediumHeight Height when sheet is at medium state
@@ -39,8 +39,9 @@ import kotlinx.coroutines.launch
 data class BottomSheetConfig(val collapsedHeight: Dp, val mediumHeight: Dp, val fullHeight: Dp)
 
 /**
- * Reusable draggable bottom sheet with continuous content reveal, no content switching. Dragging
- * follows finger movement, then snaps to nearest state/height on release.
+ * Reusable bottom sheet with continuous content reveal, no content switching. Dragging follows
+ * finger movement, then snaps to nearest state/height on release. Doesn't block map interaction
+ * unless fully expanded.
  *
  * @param modifier Optional modifier for the root composable
  * @param config Configuration for sheet heights
@@ -52,7 +53,7 @@ data class BottomSheetConfig(val collapsedHeight: Dp, val mediumHeight: Dp, val 
  * @param content Composable content (rendered once at full size, clipped by sheet height)
  */
 @Composable
-fun <T> DraggableBottomSheet(
+fun <T> BottomSheet(
     modifier: Modifier = Modifier,
     config: BottomSheetConfig,
     currentState: T,
