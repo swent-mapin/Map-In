@@ -82,18 +82,7 @@ class MapScreenTest {
   fun mapScreen_fullState_showsAllContentSections() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").performClick()
-
-    rule.waitUntil(timeoutMillis = 5000) {
-      try {
-        rule.onNodeWithText("Activity 1").assertIsDisplayed()
-        rule.onNodeWithText("Sports").assertIsDisplayed()
-        true
-      } catch (e: AssertionError) {
-        false
-      }
-    }
     rule.waitForIdle()
-
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
     rule.onNodeWithText("Discover").assertIsDisplayed()

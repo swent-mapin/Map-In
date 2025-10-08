@@ -73,15 +73,6 @@ class BottomSheetContentTest {
   @Test
   fun fullState_showsAllContent() {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
-
-    rule.waitUntil(timeoutMillis = 5000) {
-      try {
-        rule.onNodeWithText("Activity 1").assertIsDisplayed()
-        true
-      } catch (e: AssertionError) {
-        false
-      }
-    }
     rule.waitForIdle()
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
