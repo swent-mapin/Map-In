@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+// Assisted by AI
 class BottomSheetContentTest {
 
   @get:Rule val rule = createComposeRule()

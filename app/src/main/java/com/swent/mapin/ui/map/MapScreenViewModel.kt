@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlin.math.abs
 
+// Assisted by AI
 /**
  * ViewModel for MapScreen that encapsulates all state management and business logic.
  * - Manages bottom sheet state transitions

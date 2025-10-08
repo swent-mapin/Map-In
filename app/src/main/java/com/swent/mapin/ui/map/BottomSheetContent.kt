@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+// Assisted by AI
 /** States for search bar interactions. */
 @Stable
 data class SearchBarState(

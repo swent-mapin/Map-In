@@ -17,6 +17,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.CameraPosition
@@ -26,6 +27,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 
+// Assisted by AI
 /**
  * Main map screen with bottom sheet overlay.
  *
@@ -50,9 +52,10 @@ fun MapScreen() {
   val viewModel = rememberMapScreenViewModel(sheetConfig)
 
   val cameraPositionState = rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(
-        LatLng(MapConstants.DEFAULT_LATITUDE, MapConstants.DEFAULT_LONGITUDE),
-        MapConstants.DEFAULT_ZOOM)
+    position =
+        CameraPosition.fromLatLngZoom(
+            LatLng(MapConstants.DEFAULT_LATITUDE, MapConstants.DEFAULT_LONGITUDE),
+            MapConstants.DEFAULT_ZOOM)
   }
 
   LaunchedEffect(viewModel.bottomSheetState) {
@@ -69,23 +72,22 @@ fun MapScreen() {
 
   val density = LocalDensity.current
   val densityDpi = remember(density) { density.density.toInt() * 160 }
-  val screenHeightPx = remember(screenHeightDp, density) {
-    with(density) { screenHeightDp.toPx() }
-  }
+  val screenHeightPx = remember(screenHeightDp, density) { with(density) { screenHeightDp.toPx() } }
   val sheetTopPx = screenHeightPx - with(density) { viewModel.currentSheetHeight.toPx() }
 
   Box(modifier = Modifier.fillMaxSize()) {
-
     GoogleMap(
-        modifier = Modifier.fillMaxSize().then(
-            Modifier.mapPointerInput(
-                bottomSheetState = viewModel.bottomSheetState,
-                sheetTopPx = sheetTopPx,
-                densityDpi = densityDpi,
-                onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
-                checkTouchProximity = viewModel::checkTouchProximityToSheet
-            )
-        ),
+        modifier =
+            Modifier.fillMaxSize()
+                .then(
+                    Modifier.mapPointerInput(
+                        bottomSheetState = viewModel.bottomSheetState,
+                        sheetTopPx = sheetTopPx,
+                        densityDpi = densityDpi,
+                        onCollapseSheet = {
+                          viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                        },
+                        checkTouchProximity = viewModel::checkTouchProximityToSheet)),
         cameraPositionState = cameraPositionState)
 
     TopGradient()
@@ -106,7 +108,7 @@ fun MapScreen() {
         calculateTargetState = viewModel::calculateTargetState,
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
-        modifier = Modifier.align(Alignment.BottomCenter)) {
+        modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
           BottomSheetContent(
               state = viewModel.bottomSheetState,
               fullEntryKey = viewModel.fullEntryKey,
@@ -154,7 +156,11 @@ private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: 
         0f
       }
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = opacity)))
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .testTag("scrimOverlay")
+              .background(Color.Black.copy(alpha = opacity)))
 }
 
 /** Transparent overlay that consumes all map gestures while the sheet is fully expanded. */
@@ -163,7 +169,7 @@ private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: 
 private fun MapInteractionBlocker() {
   Box(
       modifier =
-          Modifier.fillMaxSize().pointerInput(Unit) {
+          Modifier.fillMaxSize().testTag("mapInteractionBlocker").pointerInput(Unit) {
             awaitPointerEventScope {
               while (true) {
                 val event = awaitPointerEvent()
@@ -183,18 +189,19 @@ private fun Modifier.mapPointerInput(
     densityDpi: Int,
     onCollapseSheet: () -> Unit,
     checkTouchProximity: (Float, Float, Int) -> Boolean
-) = this.pointerInput(bottomSheetState, sheetTopPx) {
-    awaitPointerEventScope {
-      while (true) {
-        val event = awaitPointerEvent()
-        if (event.type == PointerEventType.Move) {
-          event.changes.firstOrNull()?.let { change ->
-            val touchY = change.position.y
-            if (checkTouchProximity(touchY, sheetTopPx, densityDpi)) {
-              onCollapseSheet()
+) =
+    this.pointerInput(bottomSheetState, sheetTopPx) {
+      awaitPointerEventScope {
+        while (true) {
+          val event = awaitPointerEvent()
+          if (event.type == PointerEventType.Move) {
+            event.changes.firstOrNull()?.let { change ->
+              val touchY = change.position.y
+              if (checkTouchProximity(touchY, sheetTopPx, densityDpi)) {
+                onCollapseSheet()
+              }
             }
           }
         }
       }
     }
-}

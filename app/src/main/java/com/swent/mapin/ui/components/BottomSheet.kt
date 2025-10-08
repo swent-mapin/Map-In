@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.ui.map.MapConstants
 import kotlinx.coroutines.launch
 
+// Assisted by AI
 /**
  * Configuration for the bottom sheet behavior. Defines the three anchor heights that the sheet can
  * snap to.

@@ -7,10 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.theme.MapInTheme
 
-/**
- * Main activity of the app.
- *
- */
+/** Main activity of the app. */
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
