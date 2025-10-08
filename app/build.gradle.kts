@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -11,6 +14,11 @@ android {
     namespace = "com.swent.mapin"
     compileSdk = 34
 
+    val localProps = Properties()
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) localProps.load(FileInputStream(localPropsFile))
+    val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY") ?: ""
+
     defaultConfig {
         applicationId = "com.swent.mapin"
         minSdk = 28
@@ -19,9 +27,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        vectorDrawables { useSupportLibrary = true }
+
+        // Injection de la clé Maps dans le manifeste
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -32,7 +41,6 @@ android {
                 "proguard-rules.pro"
             )
         }
-
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
@@ -47,8 +55,9 @@ android {
         compose = true
     }
 
+    // Aligne le Compose Compiler avec Kotlin 1.8.10
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.2"
+        kotlinCompilerExtensionVersion = "1.5.1"
     }
 
     compileOptions {
@@ -73,13 +82,9 @@ android {
         }
     }
 
-    // Robolectric needs to be run only in debug. But its tests are placed in the shared source set (test)
-    // The next lines transfers the src/test/* from shared to the testDebug one
-    //
-    // This prevent errors from occurring during unit tests
+    // Robolectric: déplace src/test vers testDebug
     sourceSets.getByName("testDebug") {
         val test = sourceSets.getByName("test")
-
         java.setSrcDirs(test.java.srcDirs)
         res.setSrcDirs(test.res.srcDirs)
         resources.setSrcDirs(test.resources.srcDirs)
@@ -98,28 +103,40 @@ sonar {
         property("sonar.projectName", "Map-In")
         property("sonar.organization", "swent-mapin")
         property("sonar.host.url", "https://sonarcloud.io")
-        // Comma-separated paths to the various directories containing the *.xml JUnit report files. Each path may be absolute or relative to the project base directory.
         property("sonar.junit.reportPaths", "${project.layout.buildDirectory.get()}/test-results/testDebugunitTest/")
-        // Paths to xml files with Android Lint issues. If the main flavor is changed, this file will have to be changed too.
         property("sonar.androidLint.reportPaths", "${project.layout.buildDirectory.get()}/reports/lint-results-debug.xml")
-        // Paths to JaCoCo XML coverage report files.
         property("sonar.coverage.jacoco.xmlReportPaths", "${project.layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
     }
 }
 
-// When a library is used both by robolectric and connected tests, use this function
 fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
     androidTestImplementation(dep)
     testImplementation(dep)
 }
 
 dependencies {
+
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.01.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation(platform("androidx.compose:compose-bom:2025.01.00"))
+    implementation("androidx.compose.material3:material3")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+
+
+
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(platform(libs.compose.bom))
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20250517")
     globalTestImplementation(libs.androidx.junit)
     globalTestImplementation(libs.androidx.espresso.core)
 
@@ -133,18 +150,17 @@ dependencies {
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
-    // Material Design 3
     implementation(libs.compose.material3)
-    // Integration with activities
     implementation(libs.compose.activity)
-    // Integration with ViewModels
     implementation(libs.compose.viewmodel)
-    // Android Studio Preview support
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
-    // UI Tests
     globalTestImplementation(libs.compose.test.junit)
     debugImplementation(libs.compose.test.manifest)
+    testImplementation(libs.mockk)
+
+    // ----------- Networking (OkHttp) -------------
+    implementation(libs.okhttp)
 
     // --------- Kaspresso test framework ----------
     globalTestImplementation(libs.kaspresso)
@@ -152,10 +168,23 @@ dependencies {
 
     // ----------       Robolectric     ------------
     testImplementation(libs.robolectric)
+
+// --- Unit tests (JVM) ---
+    testImplementation("junit:junit:4.13.2")
+
+// --- Instrumented tests (androidTest) ---
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+
+// Compose UI testing
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // ---------- Google Maps ----------
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 }
 
 tasks.withType<Test> {
-    // Configure Jacoco for each tests
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")
