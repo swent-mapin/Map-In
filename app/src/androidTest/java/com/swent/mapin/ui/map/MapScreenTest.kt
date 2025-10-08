@@ -83,6 +83,18 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
+
+    // Wait for scrollable content to appear (slower on CI)
+    rule.waitUntil(timeoutMillis = 5000) {
+      try {
+        rule.onNodeWithText("Activity 1").assertExists()
+        rule.onNodeWithText("Sports").assertExists()
+        true
+      } catch (e: AssertionError) {
+        false
+      }
+    }
+
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
     rule.onNodeWithText("Discover").assertIsDisplayed()

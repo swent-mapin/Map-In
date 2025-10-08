@@ -75,6 +75,16 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
 
+    // Wait for scrollable content to appear (slower on CI)
+    rule.waitUntil(timeoutMillis = 5000) {
+      try {
+        rule.onNodeWithText("Activity 1").assertExists()
+        true
+      } catch (e: AssertionError) {
+        false
+      }
+    }
+
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
     rule.onNodeWithText("Discover").assertIsDisplayed()
