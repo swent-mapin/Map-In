@@ -7,17 +7,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 
+// Assisted by AI
 /**
  * Main map screen with bottom sheet overlay.
  *
@@ -41,14 +51,44 @@ fun MapScreen() {
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
 
-  // TODO Ziyad: After map integration, add LaunchedEffects here to wire zoom interaction logic
-  // LaunchedEffect(viewModel.bottomSheetState) { ... updateMediumReferenceZoom ... }
-  // LaunchedEffect(cameraPositionState.position.zoom) { ... checkZoomInteraction ... }
+  val cameraPositionState = rememberCameraPositionState {
+    position =
+        CameraPosition.fromLatLngZoom(
+            LatLng(MapConstants.DEFAULT_LATITUDE, MapConstants.DEFAULT_LONGITUDE),
+            MapConstants.DEFAULT_ZOOM)
+  }
+
+  LaunchedEffect(viewModel.bottomSheetState) {
+    if (viewModel.bottomSheetState == BottomSheetState.MEDIUM) {
+      viewModel.updateMediumReferenceZoom(cameraPositionState.position.zoom)
+    }
+  }
+
+  LaunchedEffect(cameraPositionState.position.zoom) {
+    if (viewModel.checkZoomInteraction(cameraPositionState.position.zoom)) {
+      viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+    }
+  }
+
+  val density = LocalDensity.current
+  val densityDpi = remember(density) { density.density.toInt() * 160 }
+  val screenHeightPx = remember(screenHeightDp, density) { with(density) { screenHeightDp.toPx() } }
+  val sheetTopPx = screenHeightPx - with(density) { viewModel.currentSheetHeight.toPx() }
 
   Box(modifier = Modifier.fillMaxSize()) {
-    // TODO Nader: google map
-    // For now, Map placeholder
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE0E0E0)))
+    GoogleMap(
+        modifier =
+            Modifier.fillMaxSize()
+                .then(
+                    Modifier.mapPointerInput(
+                        bottomSheetState = viewModel.bottomSheetState,
+                        sheetTopPx = sheetTopPx,
+                        densityDpi = densityDpi,
+                        onCollapseSheet = {
+                          viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                        },
+                        checkTouchProximity = viewModel::checkTouchProximityToSheet)),
+        cameraPositionState = cameraPositionState)
 
     TopGradient()
 
@@ -68,7 +108,7 @@ fun MapScreen() {
         calculateTargetState = viewModel::calculateTargetState,
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
-        modifier = Modifier.align(Alignment.BottomCenter)) {
+        modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
           BottomSheetContent(
               state = viewModel.bottomSheetState,
               fullEntryKey = viewModel.fullEntryKey,
@@ -116,7 +156,11 @@ private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: 
         0f
       }
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = opacity)))
+  Box(
+      modifier =
+          Modifier.fillMaxSize()
+              .testTag("scrimOverlay")
+              .background(Color.Black.copy(alpha = opacity)))
 }
 
 /** Transparent overlay that consumes all map gestures while the sheet is fully expanded. */
@@ -125,7 +169,7 @@ private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: 
 private fun MapInteractionBlocker() {
   Box(
       modifier =
-          Modifier.fillMaxSize().pointerInput(Unit) {
+          Modifier.fillMaxSize().testTag("mapInteractionBlocker").pointerInput(Unit) {
             awaitPointerEventScope {
               while (true) {
                 val event = awaitPointerEvent()
@@ -134,3 +178,30 @@ private fun MapInteractionBlocker() {
             }
           })
 }
+
+/**
+ * Creates a pointer input modifier for the map, handling touch events to collapse the bottom sheet
+ * when dragging down near the sheet's top edge.
+ */
+private fun Modifier.mapPointerInput(
+    bottomSheetState: BottomSheetState,
+    sheetTopPx: Float,
+    densityDpi: Int,
+    onCollapseSheet: () -> Unit,
+    checkTouchProximity: (Float, Float, Int) -> Boolean
+) =
+    this.pointerInput(bottomSheetState, sheetTopPx) {
+      awaitPointerEventScope {
+        while (true) {
+          val event = awaitPointerEvent()
+          if (event.type == PointerEventType.Move) {
+            event.changes.firstOrNull()?.let { change ->
+              val touchY = change.position.y
+              if (checkTouchProximity(touchY, sheetTopPx, densityDpi)) {
+                onCollapseSheet()
+              }
+            }
+          }
+        }
+      }
+    }

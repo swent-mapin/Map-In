@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+// Assisted by AI
 class BottomSheetContentTest {
 
   @get:Rule val rule = createComposeRule()
@@ -72,6 +73,17 @@ class BottomSheetContentTest {
   @Test
   fun fullState_showsAllContent() {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
+    rule.waitForIdle()
+
+    // Wait for scrollable content to be fully displayed (slower on CI)
+    rule.waitUntil(timeoutMillis = 10000) {
+      try {
+        rule.onNodeWithText("Activity 1").assertIsDisplayed()
+        true
+      } catch (e: AssertionError) {
+        false
+      }
+    }
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()

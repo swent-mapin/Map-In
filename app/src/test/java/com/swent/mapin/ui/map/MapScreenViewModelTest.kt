@@ -8,6 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+// Assisted by AI
 class MapScreenViewModelTest {
 
   private lateinit var viewModel: MapScreenViewModel
@@ -140,6 +141,42 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.checkZoomInteraction(10.4f))
     assertTrue(viewModel.checkZoomInteraction(10.5f))
     assertTrue(viewModel.checkZoomInteraction(9.4f))
+  }
+
+  @Test
+  fun checkTouchProximityToSheet_notInMediumMode_returnsFalse() {
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+    assertFalse(viewModel.checkTouchProximityToSheet(500f, 1000f, 160))
+  }
+
+  @Test
+  fun checkTouchProximityToSheet_inMediumMode_detectsProximity() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    val densityDpi = 160
+    val sheetTopY = 1000f
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY, sheetTopY, densityDpi))
+    assertTrue(
+        viewModel.checkTouchProximityToSheet(sheetTopY - thresholdPx + 1f, sheetTopY, densityDpi))
+    assertFalse(
+        viewModel.checkTouchProximityToSheet(sheetTopY - thresholdPx - 1f, sheetTopY, densityDpi))
+  }
+
+  @Test
+  fun checkTouchProximityToSheet_respectsThreshold() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    val sheetTopY = 1000f
+    val densityDpi = 160
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY, sheetTopY, densityDpi))
+    assertTrue(
+        viewModel.checkTouchProximityToSheet(sheetTopY - (thresholdPx - 1f), sheetTopY, densityDpi))
+    assertTrue(
+        viewModel.checkTouchProximityToSheet(sheetTopY + (thresholdPx - 1f), sheetTopY, densityDpi))
+    assertFalse(
+        viewModel.checkTouchProximityToSheet(sheetTopY - (thresholdPx + 5f), sheetTopY, densityDpi))
   }
 
   @Test
