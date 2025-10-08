@@ -143,6 +143,43 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun checkTouchProximityToSheet_notInMediumMode_returnsFalse() {
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+    assertFalse(viewModel.checkTouchProximityToSheet(500f, 1000f, 160))
+  }
+
+  @Test
+  fun checkTouchProximityToSheet_inMediumMode_detectsProximity() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    val densityDpi = 160
+    val sheetTopY = 1000f
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+
+    // Touch at sheet top edge
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY, sheetTopY, densityDpi))
+
+    // Touch within threshold
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY - thresholdPx + 1f, sheetTopY, densityDpi))
+
+    // Touch outside threshold
+    assertFalse(viewModel.checkTouchProximityToSheet(sheetTopY - thresholdPx - 1f, sheetTopY, densityDpi))
+  }
+
+  @Test
+  fun checkTouchProximityToSheet_respectsThreshold() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    val sheetTopY = 1000f
+    val densityDpi = 160
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+
+    // At threshold boundary
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY, sheetTopY, densityDpi))
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY - (thresholdPx - 1f), sheetTopY, densityDpi))
+    assertTrue(viewModel.checkTouchProximityToSheet(sheetTopY + (thresholdPx - 1f), sheetTopY, densityDpi))
+    assertFalse(viewModel.checkTouchProximityToSheet(sheetTopY - (thresholdPx + 5f), sheetTopY, densityDpi))
+  }
+
+  @Test
   fun calculateTargetState_snapsToNearestState() {
     assertEquals(BottomSheetState.COLLAPSED, viewModel.calculateTargetState(150f, 120f, 400f, 800f))
     assertEquals(BottomSheetState.MEDIUM, viewModel.calculateTargetState(300f, 120f, 400f, 800f))

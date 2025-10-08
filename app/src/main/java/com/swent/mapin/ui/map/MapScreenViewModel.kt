@@ -109,6 +109,23 @@ class MapScreenViewModel(
     return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
   }
 
+  /**
+   * Check if touch position is within proximity of sheet top edge. Returns true if the touch is
+   * close enough to trigger collapse.
+   *
+   * @param touchY Y coordinate of touch position in pixels
+   * @param sheetTopY Y coordinate of sheet top edge in pixels
+   * @param densityDpi Screen density in DPI for dp-to-px conversion
+   */
+  fun checkTouchProximityToSheet(touchY: Float, sheetTopY: Float, densityDpi: Int): Boolean {
+    if (!isInMediumMode) return false
+
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+    val distance = abs(touchY - sheetTopY)
+
+    return distance <= thresholdPx
+  }
+
   /** Calculate target state after drag based on current height */
   fun calculateTargetState(
       currentHeightPx: Float,

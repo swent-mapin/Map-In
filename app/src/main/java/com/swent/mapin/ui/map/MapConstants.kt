@@ -22,6 +22,22 @@ object MapConstants {
   /** Minimum zoom change threshold to trigger bottom sheet collapse */
   const val ZOOM_CHANGE_THRESHOLD = 0.5f
 
+  /**
+   * Maximum distance (in dp) from touch position to sheet top edge to trigger collapse. When user
+   * pans the map within this distance from the sheet, it collapses.
+   */
+  const val SHEET_PROXIMITY_THRESHOLD_DP = 5f
+
   /** Overscroll allowance in dp - allows slight dragging beyond bounds for natural feel */
   const val OVERSCROLL_ALLOWANCE_DP = 60f
+
+  // Default camera position (EPFL)
+  /** Default map latitude */
+  const val DEFAULT_LATITUDE = 46.5197
+
+  /** Default map longitude */
+  const val DEFAULT_LONGITUDE = 6.5668
+
+  /** Default map zoom level */
+  const val DEFAULT_ZOOM = 15f
 }
