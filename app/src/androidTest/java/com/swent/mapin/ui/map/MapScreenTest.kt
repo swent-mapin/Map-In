@@ -84,11 +84,12 @@ class MapScreenTest {
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
 
-    // Wait for scrollable content to appear (slower on CI)
-    rule.waitUntil(timeoutMillis = 5000) {
+    // Wait for scrollable content to be fully displayed (slower on CI)
+    rule.waitUntil(timeoutMillis = 10000) {
       try {
-        rule.onNodeWithText("Activity 1").assertExists()
-        rule.onNodeWithText("Sports").assertExists()
+        rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+        rule.onNodeWithText("Activity 1").assertIsDisplayed()
+        rule.onNodeWithText("Sports").assertIsDisplayed()
         true
       } catch (e: AssertionError) {
         false
