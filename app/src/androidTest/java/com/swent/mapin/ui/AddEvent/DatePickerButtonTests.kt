@@ -12,26 +12,25 @@ import org.junit.Rule
 import org.junit.Test
 
 class DatePickerButtonTests {
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    @Before
-    fun setup() {
-        val date = mutableStateOf("")
-        composeTestRule.setContent {
-            FutureDatePickerButton(
-                selectedDate = date, onDateClick = { date.value = "10/10/2025" } // simulate selection
-            )
-        }
+  @Before
+  fun setup() {
+    val date = mutableStateOf("")
+    composeTestRule.setContent {
+      FutureDatePickerButton(
+          selectedDate = date, onDateClick = { date.value = "10/10/2025" } // simulate selection
+          )
     }
+  }
 
-    @Test
-    fun datePickerUpdatesDisplayedDate() {
+  @Test
+  fun datePickerUpdatesDisplayedDate() {
 
-        composeTestRule.onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE).performClick()
+    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE).performClick()
 
-        composeTestRule
-            .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
-            .assertTextContains("10/10/2025", substring = true, ignoreCase = true)
-    }
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
+        .assertTextContains("10/10/2025", substring = true, ignoreCase = true)
+  }
 }

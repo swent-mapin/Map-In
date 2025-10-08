@@ -1,6 +1,5 @@
 package com.swent.mapin.ui.AddEvent
 
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -13,8 +12,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.ui.AddEventPopUp
 import com.swent.mapin.ui.AddEventPopUpTestTags
-import com.swent.mapin.ui.FutureDatePickerButton
-import com.swent.mapin.ui.TimePickerButton
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -25,17 +22,16 @@ class AddEventPopUpTests {
   private var backClicked = false
   private var dismissCalled = false
 
-  @get:Rule
-  val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
   @Before
   fun setUp() {
     composeTestRule.setContent {
-        AddEventPopUp(
-            onBack = { backClicked = true },
-            onDismiss = { dismissCalled = true },
-            onSave = { saveClicked = true },
-            onCancel = { cancelClicked = true })
+      AddEventPopUp(
+          onBack = { backClicked = true },
+          onDismiss = { dismissCalled = true },
+          onSave = { saveClicked = true },
+          onCancel = { cancelClicked = true })
     }
   }
 
@@ -67,16 +63,24 @@ class AddEventPopUpTests {
 
   @Test
   fun nonEmptyTitleRemovesTitleError() {
-      composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
-      composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).performTextInput("This is a valid title")
-      composeTestRule.onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE).assert(!hasText("Title", substring = true, ignoreCase = true))
+    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("This is a valid title")
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .assert(!hasText("Title", substring = true, ignoreCase = true))
   }
 
   @Test
   fun nonEmptyDescriptionRemovesDescriptionError() {
     composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("This is a valid Description")
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).assert(!hasText("Description", substring = true, ignoreCase = true))
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("This is a valid Description")
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .assert(!hasText("Description", substring = true, ignoreCase = true))
   }
 
   @Test
@@ -90,18 +94,19 @@ class AddEventPopUpTests {
     composeTestRule.onNodeWithContentDescription("Close").performClick()
     assert(backClicked)
   }
+
   @Test
   fun datePickerButtonDisplaysDefaultText() {
-      composeTestRule
+    composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
   }
 
   @Test
   fun timePickerButtonDisplaysDefaultText() {
-      composeTestRule
-         .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_TIME)
-         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_TIME)
+        .assertTextContains("Select Time:", substring = true, ignoreCase = true)
   }
 
   @Test
@@ -137,7 +142,9 @@ class AddEventPopUpTests {
   @Test
   fun invalidInputsKeepSaveButtonDisabled() {
     composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).performTextInput("")
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("This is a valid description")
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("This is a valid description")
     composeTestRule.onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE).assertIsNotEnabled()
   }
 }
