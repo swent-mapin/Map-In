@@ -44,6 +44,9 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
 
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
