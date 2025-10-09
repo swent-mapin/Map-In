@@ -36,6 +36,9 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+
 
 // Assisted by AI
 /**
@@ -75,10 +78,14 @@ fun MapScreen() {
         }
     }
 
-    LaunchedEffect(cameraPositionState.position.zoom) {
-        if (viewModel.checkZoomInteraction(cameraPositionState.position.zoom)) {
-            viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { cameraPositionState.position.zoom }
+            .distinctUntilChanged()
+            .collect { z ->
+                if (viewModel.checkZoomInteraction(z)) {
+                    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                }
+            }
     }
 
     val density = LocalDensity.current
@@ -113,17 +120,13 @@ fun MapScreen() {
             // Display weighted heatmap based on attendees
             if (viewModel.showHeatmap && viewModel.locations.isNotEmpty()) {
                 val weightedData = remember(viewModel.locations) {
-                    // Find max attendees for normalization
-                    val maxAttendees = viewModel.locations.maxOfOrNull { it.attendees }?.toDouble() ?: 1.0
+
+                    val max = viewModel.locations.maxOfOrNull { it.attendees } ?: 0
                     // Create weighted points: more attendees = higher weight = more red
                     viewModel.locations.map { location ->
-                        val weight = if (maxAttendees > 0) {
-                            location.attendees.toDouble() / maxAttendees
-                        } else {
-                            1.0
-                        }
+                        val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
                         WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
-                    }
+                        }
                 }
 
                 val heatmapProvider = remember(weightedData) {
