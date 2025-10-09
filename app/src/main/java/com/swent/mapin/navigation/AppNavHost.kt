@@ -6,7 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.authentication.AuthScreen
-import com.swent.mapin.map.MapScreen
+import com.swent.mapin.ui.map.MapScreen
 
 @Composable
 fun AppNavHost(
