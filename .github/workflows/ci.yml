@@ -82,13 +82,13 @@ jobs:
       - name: Assemble
         run: |
           # To run the CI with debug information, add --info
-          ./gradlew assemble lint --parallel --build-cache --stacktrace --info
+          ./gradlew assemble lint --parallel --build-cache --stacktrace --info --debug
 
       # Run Unit tests
       - name: Run tests
         run: |
           # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache --stacktrace --info
+          ./gradlew check --parallel --build-cache --stacktrace --info --debug
 
       # Run connected tests on the emulator
       - name: run tests
