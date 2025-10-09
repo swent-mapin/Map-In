@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.SampleLocationRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlin.math.abs
 
@@ -161,19 +162,14 @@ class MapScreenViewModel(
 
   // ---------------- Locations & Heatmap ----------------
 
-  /** Sample location data with attendees for realistic heatmap */
-  private var _locations by mutableStateOf(
-    listOf(
-      Location("Music Festival", 46.5197, 6.5668, attendees = 200),
-      Location("Basketball Game", 46.5217, 6.5688, attendees = 50),
-      Location("Art Exhibition", 46.5177, 6.5653, attendees = 120),
-      Location("Food Market", 46.5212, 6.5658, attendees = 80),
-      Location("Yoga Class", 46.5182, 6.5683, attendees = 30)
-    )
-  )
+  /** Location data for display on the map */
+  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
   val locations: List<Location>
     get() = _locations
 
+  fun setLocations(newLocations: List<Location>) {
+    _locations = newLocations
+  }
 
   // Heatmap visibility toggle
   private var _showHeatmap by mutableStateOf(false)
