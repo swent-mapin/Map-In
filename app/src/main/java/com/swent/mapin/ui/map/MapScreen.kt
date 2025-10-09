@@ -151,11 +151,11 @@ fun MapScreen() {
             MapInteractionBlocker()
         }
 
-        // Floating action button positioned above the bottom sheet
+        // Floating action button positioned at a fixed location (above collapsed sheet)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = viewModel.currentSheetHeight + 16.dp, end = 16.dp)
+                .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp, end = 16.dp)
         ) {
             FloatingActionButton(
                 onClick = { viewModel.toggleHeatmap() },
