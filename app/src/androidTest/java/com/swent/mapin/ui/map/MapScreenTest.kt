@@ -184,4 +184,53 @@ class MapScreenTest {
     rule.waitForIdle()
     rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
   }
+
+  // new tests
+  @Test
+  fun heatmapToggle_isVisible_andToggles() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithText("Heatmap OFF").assertIsDisplayed()
+    rule.onNodeWithTag("heatmapToggle").performClick()
+    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.onNodeWithTag("heatmapToggle").performClick()
+    rule.onNodeWithText("Heatmap OFF").assertIsDisplayed()
+  }
+
+  @Test
+  fun heatmapToggle_persists_afterBottomSheetTransitions() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.onNodeWithTag("heatmapToggle").performClick()
+    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.onNodeWithText("Search activities").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
+    rule.waitForIdle()
+    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchQuery_clears_whenLeavingFullState() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.onNodeWithText("Search activities").performTextInput("basketball")
+    rule.waitForIdle()
+    rule.onNodeWithText("basketball").assertIsDisplayed()
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
+    rule.waitForIdle()
+    rule.onNodeWithText("basketball").assertDoesNotExist()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun heatmapToggle_visible_inAllSheetStates() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithText("Search activities").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
+    rule.waitForIdle()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+  }
 }
