@@ -114,7 +114,11 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 
 dependencies {
 
-    implementation(platform(libs.compose.bom))
+    // ------------- Jetpack Compose ------------------
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+    globalTestImplementation(composeBom)
+
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.material3)
@@ -134,44 +138,28 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // Firebase BOM
-    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
-
-    // Firebase Authentication - no version needed when using BOM
-    implementation("com.google.firebase:firebase-auth")
-
-    // OkHttp for HTTP requests
-    implementation(libs.okhttp)
-
-    // AndroidX Browser for Custom Tabs (required for Firebase Auth redirects)
-    implementation("androidx.browser:browser:1.7.0")
-
-    // Google Identity Services and Credentials Manager
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
-    implementation("androidx.credentials:credentials:1.2.2")
-    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
-
-    // ------------- Jetpack Compose ------------------
-    val composeBom = platform(libs.compose.bom)
-    implementation(composeBom)
-    globalTestImplementation(composeBom)
-    // --- Maps (single set) ---
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-
     // --- Firebase (BoM first, then artifacts without versions) ---
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
+
+    // --- Maps ---
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:android-maps-utils:3.8.2")
 
     // --- Networking ---
     implementation(libs.okhttp)
 
-    // --- ADDED: coroutines Task.await() support ---
+    // --- Coroutines Task.await() support ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
-    // ----------       MockK     ------------
-    testImplementation(libs.mockk)
-    androidTestImplementation(libs.mockk.android)
+    // --- Google Identity Services (for Firebase Auth) ---
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("androidx.browser:browser:1.7.0")
+
     // --- Local unit tests (JVM) ---
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.12.0")
@@ -180,20 +168,14 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("org.json:json:20250517")
-
-    // --- MockK for both JVM and instrumentation tests ---
     testImplementation(libs.mockk)
 
     // --- Instrumented tests (androidTest) ---
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-
-    // Kaspresso (instrumented only — avoid global to keep JVM classpath lean)
     androidTestImplementation(libs.kaspresso)
     androidTestImplementation(libs.kaspresso.compose)
-
-    // Google Maps Utils
-    implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    androidTestImplementation(libs.mockk.android)
 }
 
 
