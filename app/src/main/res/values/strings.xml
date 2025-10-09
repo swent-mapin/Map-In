@@ -1,3 +1,20 @@
 <resources>
     <string name="app_name">MapIn</string>
+    <string name="event_creation_title">New Event Manager</string>>
+    <string name="title_field">Title</string>>
+    <string name="date_field">Date</string>>
+    <string name="time_field">Pick a time</string>
+    <string name="location_field">Location</string>>
+    <string name="description_field">Description</string>>
+    <string name="tag_field">Tags</string>>
+    <string name="title_place_holder">Enter the name of your event:</string>>
+    <string name="day_place_holder">DD</string>>
+    <string name="month_place_holder">MM</string>>
+    <string name="year_place_holder">YY</string>>
+    <string name="location_place_holder">Where is it happening?</string>>
+    <string name="description_place_holder">Describe your cool event:</string>>
+    <string name="add_tag_place_holder">Add tags: #party #epfl #sport …</string>>
+    <string name="save_button">Save</string>>
+    <string name="cancel_button">Cancel</string>>
+    <string name="time">Time</string>
 </resources>
