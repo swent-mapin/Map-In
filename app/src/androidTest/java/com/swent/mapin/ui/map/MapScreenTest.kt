@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
@@ -87,22 +88,22 @@ class MapScreenTest {
     // Wait for scrollable content to be fully displayed (slower on CI)
     rule.waitUntil(timeoutMillis = 10000) {
       try {
-        rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-        rule.onNodeWithText("Activity 1").assertIsDisplayed()
-        rule.onNodeWithText("Sports").assertIsDisplayed()
+        rule.onNodeWithText("Quick Actions").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Activity 1").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
         true
       } catch (e: AssertionError) {
         false
       }
     }
 
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Discover").assertIsDisplayed()
-    rule.onNodeWithText("Activity 1").assertIsDisplayed()
-    rule.onNodeWithText("Activity 2").assertIsDisplayed()
-    rule.onNodeWithText("Sports").assertIsDisplayed()
-    rule.onNodeWithText("Music").assertIsDisplayed()
+    rule.onNodeWithText("Quick Actions").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Recent Activities").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Activity 1").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Activity 2").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
   }
 
   @Test
