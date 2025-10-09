@@ -10,6 +10,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.swent.mapin.model.Location
+import com.swent.mapin.model.SampleLocationRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlin.math.abs
 
@@ -20,12 +22,15 @@ import kotlin.math.abs
  * - Handles search interactions
  * - Detects zoom-based map interactions
  * - Coordinates scroll resets and focus management
+ * - Exposes optional pins and heatmap state for the map layer
  */
 class MapScreenViewModel(
-    initialSheetState: BottomSheetState,
-    private val sheetConfig: BottomSheetConfig,
-    private val onClearFocus: () -> Unit
+  initialSheetState: BottomSheetState,
+  private val sheetConfig: BottomSheetConfig,
+  private val onClearFocus: () -> Unit
 ) : ViewModel() {
+
+  // ---------------- Existing state (unchanged) ----------------
 
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
@@ -129,10 +134,10 @@ class MapScreenViewModel(
 
   /** Calculate target state after drag based on current height */
   fun calculateTargetState(
-      currentHeightPx: Float,
-      collapsedPx: Float,
-      mediumPx: Float,
-      fullPx: Float
+    currentHeightPx: Float,
+    collapsedPx: Float,
+    mediumPx: Float,
+    fullPx: Float
   ): BottomSheetState {
     return when {
       currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
@@ -154,6 +159,26 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
   }
+
+  // ---------------- Locations & Heatmap ----------------
+
+  /** Location data for display on the map */
+  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
+  val locations: List<Location>
+    get() = _locations
+
+  fun setLocations(newLocations: List<Location>) {
+    _locations = newLocations
+  }
+
+  // Heatmap visibility toggle
+  private var _showHeatmap by mutableStateOf(false)
+  val showHeatmap: Boolean
+    get() = _showHeatmap
+
+  fun toggleHeatmap() {
+    _showHeatmap = !_showHeatmap
+  }
 }
 
 /**
@@ -164,15 +189,15 @@ class MapScreenViewModel(
  */
 @Composable
 fun rememberMapScreenViewModel(
-    sheetConfig: BottomSheetConfig,
-    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
+  sheetConfig: BottomSheetConfig,
+  initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
 
   return viewModel {
     MapScreenViewModel(
-        initialSheetState = initialSheetState,
-        sheetConfig = sheetConfig,
-        onClearFocus = { focusManager.clearFocus(force = true) })
+      initialSheetState = initialSheetState,
+      sheetConfig = sheetConfig,
+      onClearFocus = { focusManager.clearFocus(force = true) })
   }
 }
