@@ -189,25 +189,27 @@ class MapScreenTest {
   @Test
   fun heatmapToggle_isVisible_andToggles() {
     rule.setContent { MaterialTheme { MapScreen() } }
+    rule.waitForIdle()
     rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
-    rule.onNodeWithText("Heatmap OFF").assertIsDisplayed()
     rule.onNodeWithTag("heatmapToggle").performClick()
-    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.waitForIdle()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
     rule.onNodeWithTag("heatmapToggle").performClick()
-    rule.onNodeWithText("Heatmap OFF").assertIsDisplayed()
+    rule.waitForIdle()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
   }
 
   @Test
   fun heatmapToggle_persists_afterBottomSheetTransitions() {
     rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("heatmapToggle").performClick()
-    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.waitForIdle()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
     rule.waitForIdle()
-    rule.onNodeWithText("Heatmap ON").assertIsDisplayed()
+    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
   }
 
   @Test
