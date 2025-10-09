@@ -82,13 +82,13 @@ jobs:
       - name: Assemble
         run: |
           # To run the CI with debug information, add --info
-          ./gradlew assemble lint --parallel --build-cache --stacktrace --info --debug
+          ./gradlew assemble lint --parallel --build-cache 
 
       # Run Unit tests
       - name: Run tests
         run: |
           # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache --stacktrace --info --debug
+          ./gradlew check --parallel --build-cache
 
       # Run connected tests on the emulator
       - name: run tests
@@ -106,7 +106,7 @@ jobs:
       # This step generates the coverage report which will be uploaded to sonar
       - name: Generate Coverage Report
         run: |
-          ./gradlew jacocoTestReport --stacktrace --info --debug
+          ./gradlew jacocoTestReport
 
       # Upload the various reports to sonar
       - name: Upload report to SonarCloud
