@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ktfmt)
     alias(libs.plugins.sonar)
     id("jacoco")
@@ -55,11 +56,6 @@ android {
         compose = true
     }
 
-    // Aligne le Compose Compiler avec Kotlin 1.8.10
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -72,6 +68,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
         }
     }
 
@@ -136,6 +134,27 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    // Firebase BOM
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
+    // Firebase Authentication - no version needed when using BOM
+    implementation("com.google.firebase:firebase-auth")
+
+    // OkHttp for HTTP requests
+    implementation(libs.okhttp)
+
+    // AndroidX Browser for Custom Tabs (required for Firebase Auth redirects)
+    implementation("androidx.browser:browser:1.7.0")
+
+    // Google Identity Services and Credentials Manager
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+
+    // ------------- Jetpack Compose ------------------
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+    globalTestImplementation(composeBom)
     // --- Maps (single set) ---
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
@@ -150,6 +169,9 @@ dependencies {
     // --- ADDED: coroutines Task.await() support ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
+    // ----------       MockK     ------------
+    testImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
     // --- Local unit tests (JVM) ---
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.12.0")
