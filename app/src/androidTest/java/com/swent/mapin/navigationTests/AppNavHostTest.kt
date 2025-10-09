@@ -12,7 +12,8 @@ import org.junit.Test
 
 class AppNavHostTest {
 
-    @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
     @Test
     fun startsOnAuth_whenNotLoggedIn() {
@@ -37,7 +38,8 @@ class AppNavHostTest {
             .performClick()
 
         // Map should be visible
-        composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+            .assertIsDisplayed()
     }
 
     @Test
@@ -46,6 +48,7 @@ class AppNavHostTest {
             AppNavHost(navController = rememberNavController(), isLoggedIn = true)
         }
 
-        composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+            .assertIsDisplayed()
     }
 }
