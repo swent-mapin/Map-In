@@ -79,7 +79,7 @@ class AddEventPopUpTests {
         .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid Description")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
         .assert(!hasText("Description", substring = true, ignoreCase = true))
   }
 

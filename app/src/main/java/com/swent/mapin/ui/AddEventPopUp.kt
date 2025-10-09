@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -262,7 +263,8 @@ fun AddEventPopUp(
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
         Card(
             modifier =
-                Modifier.width(400.dp)
+                Modifier.fillMaxWidth()
+                    .widthIn(max = 400.dp)
                     .heightIn(min = 400.dp)
                     .background(Color.Transparent)
                     .padding(16.dp),
@@ -273,7 +275,7 @@ fun AddEventPopUp(
                   horizontalAlignment = Alignment.CenterHorizontally,
                   modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                      IconButton(onClick = onBack, modifier.padding(start = 10.dp).size(25.dp)) {
+                      IconButton(onClick = onBack, Modifier.padding(start = 10.dp).size(25.dp)) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
                       }
                       Spacer(modifier = Modifier.padding(10.dp))
