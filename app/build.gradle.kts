@@ -144,6 +144,9 @@ dependencies {
     // Firebase Authentication - no version needed when using BOM
     implementation("com.google.firebase:firebase-auth")
 
+    // OkHttp for HTTP requests
+    implementation(libs.okhttp)
+
     // AndroidX Browser for Custom Tabs (required for Firebase Auth redirects)
     implementation("androidx.browser:browser:1.7.0")
 
