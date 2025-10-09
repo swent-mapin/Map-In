@@ -1,6 +1,7 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
 
 /**
  * @property uid event id
@@ -21,17 +22,11 @@ data class Event(
     val url: String = "",
     val description: String = "",
     val date: Timestamp? = null,
-    val location: Location = Location(),
+    val location: Location = Location("", 0.0, 0.0),
     val tags: List<String> = emptyList(),
     val public: Boolean = true,
     val ownerId: String = "",
     val imageUrl: String? = null,
     val capacity: Int? = 0,
     val attendeeCount: Int? = 0,
-)
-/**Only for testing purpose**/
-data class Location(
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0,
-    val address: String = ""
 )
