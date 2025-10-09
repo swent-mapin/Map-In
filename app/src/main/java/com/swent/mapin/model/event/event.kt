@@ -19,7 +19,7 @@ import com.swent.mapin.model.Location
 data class Event(
     val uid: String = "",
     val title: String = "",
-    val url: String = "",
+    val url: String? = null,
     val description: String = "",
     val date: Timestamp? = null,
     val location: Location = Location("", 0.0, 0.0),
@@ -27,6 +27,6 @@ data class Event(
     val public: Boolean = true,
     val ownerId: String = "",
     val imageUrl: String? = null,
-    val capacity: Int? = 0,
+    val capacity: Int? = null,
     val attendeeCount: Int? = 0,
 )
