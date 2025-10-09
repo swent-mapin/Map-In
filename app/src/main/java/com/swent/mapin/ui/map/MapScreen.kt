@@ -166,8 +166,7 @@ fun MapScreen() {
                   }) {
                 Icon(
                     painter = painterResource(id = android.R.drawable.ic_dialog_map),
-                    contentDescription =
-                        if (viewModel.showHeatmap) "Heatmap ON" else "Heatmap OFF",
+                    contentDescription = if (viewModel.showHeatmap) "Heatmap ON" else "Heatmap OFF",
                     tint =
                         if (viewModel.showHeatmap) {
                           MaterialTheme.colorScheme.onPrimary
