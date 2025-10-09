@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ktfmt)
     alias(libs.plugins.sonar)
     id("jacoco")
@@ -53,11 +54,6 @@ android {
 
     buildFeatures {
         compose = true
-    }
-
-    // Aligne le Compose Compiler avec Kotlin 1.8.10
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
 
     compileOptions {
