@@ -28,283 +28,234 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28])
 class SignInScreenTests {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    private lateinit var context: Context
-    private lateinit var mockViewModel: SignInViewModel
-    private lateinit var uiStateFlow: MutableStateFlow<SignInUiState>
+  private lateinit var context: Context
+  private lateinit var mockViewModel: SignInViewModel
+  private lateinit var uiStateFlow: MutableStateFlow<SignInUiState>
 
-    @Before
-    fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+  @Before
+  fun setup() {
+    context = ApplicationProvider.getApplicationContext()
 
-        // Initialize Firebase if not already initialized
-        if (FirebaseApp.getApps(context).isEmpty()) {
-            FirebaseApp.initializeApp(context)
-        }
-
-        // Mock ViewModel
-        mockViewModel = mockk(relaxed = true)
-        uiStateFlow = MutableStateFlow(SignInUiState())
-        every { mockViewModel.uiState } returns uiStateFlow
+    // Initialize Firebase if not already initialized
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
     }
 
-    @Test
-    fun `SignInScreen should display app logo`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Mock ViewModel
+    mockViewModel = mockk(relaxed = true)
+    uiStateFlow = MutableStateFlow(SignInUiState())
+    every { mockViewModel.uiState } returns uiStateFlow
+  }
 
-        composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
+  @Test
+  fun `SignInScreen should display app logo`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
+  }
+
+  @Test
+  fun `SignInScreen should display slogan text`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
+  }
+
+  @Test
+  fun `SignInScreen should display Google sign-in button`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+  }
+
+  @Test
+  fun `SignInScreen should display Microsoft sign-in button`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+  }
+
+  @Test
+  fun `buttons should be clickable when not loading`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+  }
+
+  @Test
+  fun `buttons should be disabled when loading`() {
+    uiStateFlow.value = SignInUiState(isLoading = true)
+
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.waitForIdle()
+
+    // During loading, buttons are disabled but text is replaced by progress indicator
+    // We verify the state is loading and screen renders without crash
+    val state = uiStateFlow.value
+    assertTrue(state.isLoading)
+  }
+
+  @Test
+  fun `Google sign-in button should call viewModel on click`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithText("Sign in with Google").performClick()
+
+    verify { mockViewModel.signInWithGoogle(any(), any()) }
+  }
+
+  @Test
+  fun `should display Google logo in button`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithContentDescription("Google logo").assertExists()
+  }
+
+  @Test
+  fun `onSignInSuccess callback should be invoked when sign-in is successful`() {
+    var callbackInvoked = false
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.email } returns "test@example.com"
+
+    composeTestRule.setContent {
+      SignInScreen(viewModel = mockViewModel, onSignInSuccess = { callbackInvoked = true })
     }
 
-    @Test
-    fun `SignInScreen should display slogan text`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Simulate successful sign-in
+    uiStateFlow.value = SignInUiState(isSignInSuccessful = true, currentUser = mockUser)
 
-        composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
-    }
+    composeTestRule.waitForIdle()
 
-    @Test
-    fun `SignInScreen should display Google sign-in button`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Callback should be invoked
+    assert(callbackInvoked)
+  }
 
-        composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    }
+  @Test
+  fun `should handle error state and call clearError`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `SignInScreen should display Microsoft sign-in button`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Simulate error
+    uiStateFlow.value = SignInUiState(errorMessage = "Test error")
 
-        composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
-    }
+    composeTestRule.waitForIdle()
 
-    @Test
-    fun `buttons should be clickable when not loading`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    verify { mockViewModel.clearError() }
+  }
 
-        composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-        composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
-    }
+  @Test
+  fun `SignInScreen should render without crashes`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `buttons should be disabled when loading`() {
-        uiStateFlow.value = SignInUiState(isLoading = true)
+    composeTestRule.waitForIdle()
+    // If we reach here, rendering was successful
+  }
 
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+  @Test
+  fun `SignInScreen should use provided viewModel`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-        composeTestRule.waitForIdle()
+    // Verify the UI state is collected from the provided viewModel
+    verify { mockViewModel.uiState }
+  }
 
-        // During loading, buttons are disabled but text is replaced by progress indicator
-        // We verify the state is loading and screen renders without crash
-        val state = uiStateFlow.value
-        assertTrue(state.isLoading)
-    }
+  @Test
+  fun `buttons should have correct height`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `Google sign-in button should call viewModel on click`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Both buttons should exist with proper dimensions
+    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+  }
 
-        composeTestRule.onNodeWithText("Sign in with Google").performClick()
+  @Test
+  fun `should handle null currentUser email in success message`() {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.email } returns null
 
-        verify { mockViewModel.signInWithGoogle(any(), any()) }
-    }
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `should display Google logo in button`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Simulate successful sign-in with null email
+    uiStateFlow.value = SignInUiState(isSignInSuccessful = true, currentUser = mockUser)
 
-        composeTestRule.onNodeWithContentDescription("Google logo").assertExists()
-    }
+    composeTestRule.waitForIdle()
+    // Should not crash even with null email
+  }
 
-    @Test
-    fun `onSignInSuccess callback should be invoked when sign-in is successful`() {
-        var callbackInvoked = false
-        val mockUser = mockk<FirebaseUser>()
-        every { mockUser.email } returns "test@example.com"
+  @Test
+  fun `buttons should transition from enabled to disabled when loading starts`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-        composeTestRule.setContent {
-            SignInScreen(
-                viewModel = mockViewModel,
-                onSignInSuccess = { callbackInvoked = true }
-            )
-        }
+    // Initially enabled - verify button exists and is enabled
+    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
 
-        // Simulate successful sign-in
-        uiStateFlow.value = SignInUiState(
-            isSignInSuccessful = true,
-            currentUser = mockUser
-        )
+    // Start loading - this will replace button content with progress indicator
+    uiStateFlow.value = SignInUiState(isLoading = true)
+    composeTestRule.waitForIdle()
 
-        composeTestRule.waitForIdle()
+    // Verify loading state is active (button content changes, so we check state)
+    assertTrue(uiStateFlow.value.isLoading)
+  }
 
-        // Callback should be invoked
-        assert(callbackInvoked)
-    }
+  @Test
+  fun `buttons should transition from disabled to enabled when loading ends`() {
+    uiStateFlow.value = SignInUiState(isLoading = true)
 
-    @Test
-    fun `should handle error state and call clearError`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-        // Simulate error
-        uiStateFlow.value = SignInUiState(errorMessage = "Test error")
+    composeTestRule.waitForIdle()
 
-        composeTestRule.waitForIdle()
+    // Initially loading
+    assertTrue(uiStateFlow.value.isLoading)
 
-        verify { mockViewModel.clearError() }
-    }
+    // End loading
+    uiStateFlow.value = SignInUiState(isLoading = false)
+    composeTestRule.waitForIdle()
 
-    @Test
-    fun `SignInScreen should render without crashes`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Should now be enabled and text visible again
+    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+  }
 
-        composeTestRule.waitForIdle()
-        // If we reach here, rendering was successful
-    }
+  @Test
+  fun `should handle rapid state changes`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `SignInScreen should use provided viewModel`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Rapid state changes
+    uiStateFlow.value = SignInUiState(isLoading = true)
+    composeTestRule.waitForIdle()
 
-        // Verify the UI state is collected from the provided viewModel
-        verify { mockViewModel.uiState }
-    }
+    uiStateFlow.value = SignInUiState(isLoading = false)
+    composeTestRule.waitForIdle()
 
-    @Test
-    fun `buttons should have correct height`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    uiStateFlow.value = SignInUiState(errorMessage = "Error")
+    composeTestRule.waitForIdle()
 
-        // Both buttons should exist with proper dimensions
-        composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-        composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
-    }
+    verify { mockViewModel.clearError() }
+  }
 
-    @Test
-    fun `should handle null currentUser email in success message`() {
-        val mockUser = mockk<FirebaseUser>()
-        every { mockUser.email } returns null
+  @Test
+  fun `should maintain proper button order`() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    // Both buttons should exist
+    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+  }
 
-        // Simulate successful sign-in with null email
-        uiStateFlow.value = SignInUiState(
-            isSignInSuccessful = true,
-            currentUser = mockUser
-        )
+  @Test
+  fun `should handle successful sign-in with valid user email`() {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.email } returns "test@gmail.com"
 
-        composeTestRule.waitForIdle()
-        // Should not crash even with null email
-    }
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    @Test
-    fun `buttons should transition from enabled to disabled when loading starts`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
+    uiStateFlow.value = SignInUiState(isSignInSuccessful = true, currentUser = mockUser)
 
-        // Initially enabled - verify button exists and is enabled
-        composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-
-        // Start loading - this will replace button content with progress indicator
-        uiStateFlow.value = SignInUiState(isLoading = true)
-        composeTestRule.waitForIdle()
-
-        // Verify loading state is active (button content changes, so we check state)
-        assertTrue(uiStateFlow.value.isLoading)
-    }
-
-    @Test
-    fun `buttons should transition from disabled to enabled when loading ends`() {
-        uiStateFlow.value = SignInUiState(isLoading = true)
-
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
-
-        composeTestRule.waitForIdle()
-
-        // Initially loading
-        assertTrue(uiStateFlow.value.isLoading)
-
-        // End loading
-        uiStateFlow.value = SignInUiState(isLoading = false)
-        composeTestRule.waitForIdle()
-
-        // Should now be enabled and text visible again
-        composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-        composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
-    }
-
-    @Test
-    fun `should handle rapid state changes`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
-
-        // Rapid state changes
-        uiStateFlow.value = SignInUiState(isLoading = true)
-        composeTestRule.waitForIdle()
-
-        uiStateFlow.value = SignInUiState(isLoading = false)
-        composeTestRule.waitForIdle()
-
-        uiStateFlow.value = SignInUiState(errorMessage = "Error")
-        composeTestRule.waitForIdle()
-
-        verify { mockViewModel.clearError() }
-    }
-
-    @Test
-    fun `should maintain proper button order`() {
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
-
-        // Both buttons should exist
-        composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-        composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
-    }
-
-    @Test
-    fun `should handle successful sign-in with valid user email`() {
-        val mockUser = mockk<FirebaseUser>()
-        every { mockUser.email } returns "test@gmail.com"
-
-        composeTestRule.setContent {
-            SignInScreen(viewModel = mockViewModel)
-        }
-
-        uiStateFlow.value = SignInUiState(
-            isSignInSuccessful = true,
-            currentUser = mockUser
-        )
-
-        composeTestRule.waitForIdle()
-        // Should not crash with valid email
-    }
+    composeTestRule.waitForIdle()
+    // Should not crash with valid email
+  }
 }

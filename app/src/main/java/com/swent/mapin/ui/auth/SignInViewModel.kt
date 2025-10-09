@@ -45,152 +45,150 @@ data class SignInUiState(
  * @property context Application context used for credential manager operations.
  */
 class SignInViewModel(context: Context) : ViewModel() {
-    private val applicationContext = context.applicationContext
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+  private val applicationContext = context.applicationContext
+  private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    private val _uiState = MutableStateFlow(SignInUiState(currentUser = auth.currentUser))
-    val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(SignInUiState(currentUser = auth.currentUser))
+  val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
-    /**
-     * Initiates Google sign-in flow using Credential Manager API.
-     *
-     * This method uses the modern Credential Manager API to handle Google authentication.
-     * It prevents multiple simultaneous sign-in attempts and updates the UI state accordingly.
-     *
-     * @param credentialManager The [CredentialManager] instance for handling credentials.
-     * @param onSuccess Callback invoked when sign-in is successful.
-     */
-    fun signInWithGoogle(credentialManager: CredentialManager, onSuccess: () -> Unit = {}) {
-        if (_uiState.value.isLoading) {
-            return
+  /**
+   * Initiates Google sign-in flow using Credential Manager API.
+   *
+   * This method uses the modern Credential Manager API to handle Google authentication. It prevents
+   * multiple simultaneous sign-in attempts and updates the UI state accordingly.
+   *
+   * @param credentialManager The [CredentialManager] instance for handling credentials.
+   * @param onSuccess Callback invoked when sign-in is successful.
+   */
+  fun signInWithGoogle(credentialManager: CredentialManager, onSuccess: () -> Unit = {}) {
+    if (_uiState.value.isLoading) {
+      return
+    }
+
+    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+    viewModelScope.launch {
+      try {
+        Log.d(TAG, "Starting Google Sign-In process with GetSignInWithGoogleOption...")
+
+        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build()
+
+        val request =
+            GetCredentialRequest.Builder().addCredentialOption(signInWithGoogleOption).build()
+
+        val credentialResult = credentialManager.getCredential(applicationContext, request)
+        val credential = credentialResult.credential
+
+        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+        Log.d(TAG, "Google ID Token created successfully")
+
+        val googleCredential =
+            GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+        val authResult = auth.signInWithCredential(googleCredential).await()
+
+        authResult.user?.let { user ->
+          Log.d(TAG, "Sign-in successful for user: ${user.email}")
+          _uiState.value =
+              _uiState.value.copy(
+                  isLoading = false,
+                  isSignInSuccessful = true,
+                  currentUser = user,
+                  errorMessage = null)
+          onSuccess()
         }
+            ?: run {
+              Log.e(TAG, "No user returned from Firebase")
+              _uiState.value =
+                  _uiState.value.copy(
+                      isLoading = false, errorMessage = "Sign-in failed: No user returned")
+            }
+      } catch (e: Exception) {
+        Log.e(TAG, "Sign-in failed", e)
+        _uiState.value =
+            _uiState.value.copy(isLoading = false, errorMessage = e.message ?: "Sign-in failed")
+      }
+    }
+  }
 
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+  /**
+   * Initiates Microsoft sign-in flow using Firebase OAuth provider.
+   *
+   * This method starts an activity-based OAuth flow for Microsoft authentication. It requires an
+   * Activity context to launch the authentication UI.
+   *
+   * @param activity The [Activity] context required for launching the OAuth flow.
+   */
+  fun signInWithMicrosoft(activity: Activity) {
+    if (_uiState.value.isLoading) {
+      return
+    }
 
-        viewModelScope.launch {
-            try {
-                Log.d(TAG, "Starting Google Sign-In process with GetSignInWithGoogleOption...")
+    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-                val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build()
+    viewModelScope.launch {
+      try {
+        val provider =
+            OAuthProvider.newBuilder(MICROSOFT_PROVIDER_ID)
+                .setScopes(listOf("openid", "email", "profile", "User.Read"))
+                .build()
 
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(signInWithGoogleOption)
-                    .build()
-
-                val credentialResult = credentialManager.getCredential(applicationContext, request)
-                val credential = credentialResult.credential
-
-                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                Log.d(TAG, "Google ID Token created successfully")
-
-                val googleCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                val authResult = auth.signInWithCredential(googleCredential).await()
-
-                authResult.user?.let { user ->
-                    Log.d(TAG, "Sign-in successful for user: ${user.email}")
-                    _uiState.value = _uiState.value.copy(
+        auth
+            .startActivityForSignInWithProvider(activity, provider)
+            .addOnSuccessListener { authResult ->
+              authResult.user?.let { user ->
+                Log.d(TAG, "Microsoft sign-in successful for: ${user.displayName}")
+                _uiState.value =
+                    _uiState.value.copy(
                         isLoading = false,
                         isSignInSuccessful = true,
                         currentUser = user,
-                        errorMessage = null
-                    )
-                    onSuccess()
-                } ?: run {
-                    Log.e(TAG, "No user returned from Firebase")
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = "Sign-in failed: No user returned"
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Sign-in failed", e)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message ?: "Sign-in failed"
-                )
-            }
-        }
-    }
-
-    /**
-     * Initiates Microsoft sign-in flow using Firebase OAuth provider.
-     *
-     * This method starts an activity-based OAuth flow for Microsoft authentication.
-     * It requires an Activity context to launch the authentication UI.
-     *
-     * @param activity The [Activity] context required for launching the OAuth flow.
-     */
-    fun signInWithMicrosoft(activity: Activity) {
-        if (_uiState.value.isLoading) {
-            return
-        }
-
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-        viewModelScope.launch {
-            try {
-                val provider = OAuthProvider.newBuilder(MICROSOFT_PROVIDER_ID)
-                    .setScopes(listOf("openid", "email", "profile", "User.Read"))
-                    .build()
-
-                auth.startActivityForSignInWithProvider(activity, provider)
-                    .addOnSuccessListener { authResult ->
-                        authResult.user?.let { user ->
-                            Log.d(TAG, "Microsoft sign-in successful for: ${user.displayName}")
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                isSignInSuccessful = true,
-                                currentUser = user,
-                                errorMessage = null
-                            )
-                        } ?: run {
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                errorMessage = "Microsoft sign-in failed: No user returned"
-                            )
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Microsoft sign-in failed", e)
-                        _uiState.value = _uiState.value.copy(
+                        errorMessage = null)
+              }
+                  ?: run {
+                    _uiState.value =
+                        _uiState.value.copy(
                             isLoading = false,
-                            errorMessage = "Microsoft sign-in failed: ${e.message}"
-                        )
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "Microsoft sign-in exception", e)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Microsoft sign-in failed: ${e.message}"
-                )
+                            errorMessage = "Microsoft sign-in failed: No user returned")
+                  }
             }
-        }
+            .addOnFailureListener { e ->
+              Log.e(TAG, "Microsoft sign-in failed", e)
+              _uiState.value =
+                  _uiState.value.copy(
+                      isLoading = false, errorMessage = "Microsoft sign-in failed: ${e.message}")
+            }
+      } catch (e: Exception) {
+        Log.e(TAG, "Microsoft sign-in exception", e)
+        _uiState.value =
+            _uiState.value.copy(
+                isLoading = false, errorMessage = "Microsoft sign-in failed: ${e.message}")
+      }
     }
+  }
+
+  /** Clears the current error message from the UI state. */
+  fun clearError() {
+    _uiState.value = _uiState.value.copy(errorMessage = null)
+  }
+
+  companion object {
+    private const val TAG = "SignInViewModel"
+    private const val WEB_CLIENT_ID =
+        "816281112017-76ci0ij534q5q4h4qcafo7kp8bcna5vd.apps.googleusercontent.com"
+    private const val MICROSOFT_PROVIDER_ID = "microsoft.com"
 
     /**
-     * Clears the current error message from the UI state.
+     * Factory for creating [SignInViewModel] instances with proper context injection.
+     *
+     * @param context Application context to be injected into the ViewModel.
+     * @return A [ViewModelProvider.Factory] that creates [SignInViewModel] instances.
      */
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
-    companion object {
-        private const val TAG = "SignInViewModel"
-        private const val WEB_CLIENT_ID = "816281112017-76ci0ij534q5q4h4qcafo7kp8bcna5vd.apps.googleusercontent.com"
-        private const val MICROSOFT_PROVIDER_ID = "microsoft.com"
-
-        /**
-         * Factory for creating [SignInViewModel] instances with proper context injection.
-         *
-         * @param context Application context to be injected into the ViewModel.
-         * @return A [ViewModelProvider.Factory] that creates [SignInViewModel] instances.
-         */
-        fun factory(context: Context): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SignInViewModel(context.applicationContext) as T
-                }
-            }
-    }
+    fun factory(context: Context): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+          @Suppress("UNCHECKED_CAST")
+          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SignInViewModel(context.applicationContext) as T
+          }
+        }
+  }
 }
