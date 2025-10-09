@@ -35,6 +35,7 @@ import com.google.maps.android.compose.TileOverlay
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
+import com.swent.mapin.model.Location
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -72,21 +73,8 @@ fun MapScreen() {
             MapConstants.DEFAULT_ZOOM)
   }
 
-  LaunchedEffect(viewModel.bottomSheetState) {
-    if (viewModel.bottomSheetState == BottomSheetState.MEDIUM) {
-      viewModel.updateMediumReferenceZoom(cameraPositionState.position.zoom)
-    }
-  }
-
-  LaunchedEffect(Unit) {
-    snapshotFlow { cameraPositionState.position.zoom }
-        .distinctUntilChanged()
-        .collect { z ->
-          if (viewModel.checkZoomInteraction(z)) {
-            viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-          }
-        }
-  }
+  ObserveSheetStateForZoomUpdate(viewModel, cameraPositionState)
+  ObserveZoomForSheetCollapse(viewModel, cameraPositionState)
 
   val density = LocalDensity.current
   val densityDpi = remember(density) { density.density.toInt() * 160 }
@@ -107,36 +95,8 @@ fun MapScreen() {
                         },
                         checkTouchProximity = viewModel::checkTouchProximityToSheet)),
         cameraPositionState = cameraPositionState) {
-          // Display location markers
-          viewModel.locations.forEach { location ->
-            Marker(
-                state = MarkerState(position = LatLng(location.latitude, location.longitude)),
-                title = location.name,
-                snippet = "${location.attendees} attendees")
-          }
-
-          // Display weighted heatmap based on attendees
-          if (viewModel.showHeatmap && viewModel.locations.isNotEmpty()) {
-            val weightedData =
-                remember(viewModel.locations) {
-                  val max = viewModel.locations.maxOfOrNull { it.attendees } ?: 0
-                  // Create weighted points: more attendees = higher weight = more red
-                  viewModel.locations.map { location ->
-                    val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
-                    WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
-                  }
-                }
-
-            val heatmapProvider =
-                remember(weightedData) {
-                  HeatmapTileProvider.Builder()
-                      .weightedData(weightedData)
-                      .radius(50) // Radius in pixels
-                      .opacity(0.7) // Make it visible but not overwhelming
-                      .build()
-                }
-            TileOverlay(tileProvider = heatmapProvider)
-          }
+          MapMarkers(locations = viewModel.locations)
+          HeatmapOverlay(showHeatmap = viewModel.showHeatmap, locations = viewModel.locations)
         }
 
     TopGradient()
@@ -146,34 +106,14 @@ fun MapScreen() {
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
 
-    if (viewModel.bottomSheetState == BottomSheetState.FULL) {
-      MapInteractionBlocker()
-    }
+    ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-    // Floating action button positioned at a fixed location (above collapsed sheet)
     Box(
         modifier =
             Modifier.align(Alignment.BottomEnd)
                 .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp, end = 16.dp)) {
-          FloatingActionButton(
-              onClick = { viewModel.toggleHeatmap() },
-              modifier = Modifier.testTag("heatmapToggle"),
-              containerColor =
-                  if (viewModel.showHeatmap) {
-                    MaterialTheme.colorScheme.primary
-                  } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                  }) {
-                Icon(
-                    painter = painterResource(id = android.R.drawable.ic_dialog_map),
-                    contentDescription = if (viewModel.showHeatmap) "Heatmap ON" else "Heatmap OFF",
-                    tint =
-                        if (viewModel.showHeatmap) {
-                          MaterialTheme.colorScheme.onPrimary
-                        } else {
-                          MaterialTheme.colorScheme.onSecondaryContainer
-                        })
-              }
+          HeatmapToggleButton(
+              showHeatmap = viewModel.showHeatmap, onToggle = viewModel::toggleHeatmap)
         }
 
     BottomSheet(
@@ -280,3 +220,92 @@ private fun Modifier.mapPointerInput(
         }
       }
     }
+
+/** Observes bottom sheet state and updates zoom reference when transitioning to MEDIUM state. */
+@Composable
+private fun ObserveSheetStateForZoomUpdate(
+    viewModel: MapScreenViewModel,
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState
+) {
+  LaunchedEffect(viewModel.bottomSheetState) {
+    if (viewModel.bottomSheetState == BottomSheetState.MEDIUM) {
+      viewModel.updateMediumReferenceZoom(cameraPositionState.position.zoom)
+    }
+  }
+}
+
+/** Observes camera zoom changes and collapses sheet when user interacts with zoom. */
+@Composable
+private fun ObserveZoomForSheetCollapse(
+    viewModel: MapScreenViewModel,
+    cameraPositionState: com.google.maps.android.compose.CameraPositionState
+) {
+  LaunchedEffect(Unit) {
+    snapshotFlow { cameraPositionState.position.zoom }
+        .distinctUntilChanged()
+        .collect { z ->
+          if (viewModel.checkZoomInteraction(z)) {
+            viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+          }
+        }
+  }
+}
+
+/** Renders location markers on the map. */
+@Composable
+private fun MapMarkers(locations: List<Location>) {
+  locations.forEach { location ->
+    Marker(
+        state = MarkerState(position = LatLng(location.latitude, location.longitude)),
+        title = location.name,
+        snippet = "${location.attendees} attendees")
+  }
+}
+
+/** Renders weighted heatmap overlay based on activity attendees. */
+@Composable
+private fun HeatmapOverlay(showHeatmap: Boolean, locations: List<Location>) {
+  if (!showHeatmap || locations.isEmpty()) return
+
+  val weightedData =
+      remember(locations) {
+        val max = locations.maxOfOrNull { it.attendees } ?: 0
+        locations.map { location ->
+          val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
+          WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
+        }
+      }
+
+  val heatmapProvider =
+      remember(weightedData) {
+        HeatmapTileProvider.Builder().weightedData(weightedData).radius(50).opacity(0.7).build()
+      }
+
+  TileOverlay(tileProvider = heatmapProvider)
+}
+
+/** Conditionally displays map interaction blocker when sheet is fully expanded. */
+@Composable
+private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
+  if (bottomSheetState == BottomSheetState.FULL) {
+    MapInteractionBlocker()
+  }
+}
+
+/** Floating action button to toggle heatmap visualization. */
+@Composable
+private fun HeatmapToggleButton(showHeatmap: Boolean, onToggle: () -> Unit) {
+  FloatingActionButton(
+      onClick = onToggle,
+      modifier = Modifier.testTag("heatmapToggle"),
+      containerColor =
+          if (showHeatmap) MaterialTheme.colorScheme.primary
+          else MaterialTheme.colorScheme.secondaryContainer) {
+        Icon(
+            painter = painterResource(id = android.R.drawable.ic_dialog_map),
+            contentDescription = if (showHeatmap) "Heatmap ON" else "Heatmap OFF",
+            tint =
+                if (showHeatmap) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSecondaryContainer)
+      }
+}
