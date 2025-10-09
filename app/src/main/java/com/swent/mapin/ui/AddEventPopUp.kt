@@ -132,9 +132,9 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
           onDateClick()
         } else {
           val calendar = Calendar.getInstance()
-          val year = calendar.get(Calendar.YEAR)
-          val month = calendar.get(Calendar.MONTH)
-          val day = calendar.get(Calendar.DAY_OF_MONTH)
+          val year = calendar[Calendar.YEAR]
+          val month = calendar[Calendar.MONTH]
+          val day = calendar[Calendar.DAY_OF_MONTH]
 
           val datePickerDialog =
               DatePickerDialog(
@@ -181,8 +181,8 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
           onTimeClick()
         } else {
           val calendar = Calendar.getInstance()
-          val hour = calendar.get(Calendar.HOUR_OF_DAY)
-          val minute = calendar.get(Calendar.MINUTE)
+          val hour = calendar[Calendar.HOUR_OF_DAY]
+          val minute = calendar[Calendar.MINUTE]
 
           TimePickerDialog(
                   context,
