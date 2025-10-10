@@ -77,9 +77,9 @@ fun MapScreen() {
   ObserveZoomForSheetCollapse(viewModel, cameraPositionState)
 
   val density = LocalDensity.current
-  val densityDpi = remember(density) { density.density.toInt() * 160 }
-  val screenHeightPx = remember(screenHeightDp, density) { with(density) { screenHeightDp.toPx() } }
-  val sheetTopPx = screenHeightPx - with(density) { viewModel.currentSheetHeight.toPx() }
+  val densityDpi = remember(density) { (density.density * 160).toInt() }
+  val screenHeightPx = remember(screenHeightDp, density) { screenHeightDp.value * density.density }
+  val sheetTopPx = screenHeightPx - (viewModel.currentSheetHeight.value * density.density)
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     GoogleMap(
