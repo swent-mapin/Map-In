@@ -113,7 +113,6 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 }
 
 dependencies {
-
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
@@ -127,41 +126,43 @@ dependencies {
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
 
-    // UI testing (instrumentation)
+    // Compose UI testing
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // --- AndroidX ---
+    // ------------- AndroidX ------------------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // --- Firebase (BoM first, then artifacts without versions) ---
+    // ------------- Firebase ------------------
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
-    implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
 
-    // --- Maps ---
+    // ------------- Google Maps ------------------
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.maps.android:android-maps-utils:3.8.2")
 
-    // --- Networking ---
+    // ------------- Networking ------------------
     implementation(libs.okhttp)
 
-    // --- Coroutines Task.await() support ---
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
-
-    // --- Google Identity Services (for Firebase Auth) ---
+    // ------------- Google Identity & Auth ------------------
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("androidx.browser:browser:1.7.0")
 
-    // --- Local unit tests (JVM) ---
+    // ------------- Coroutines ------------------
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+
+    // ------------- Unit Tests (JVM) ------------------
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test:core:1.5.0")
+    testImplementation("androidx.test.ext:junit:1.1.5")
     testImplementation("org.mockito:mockito-core:5.12.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
     testImplementation("org.mockito:mockito-inline:5.2.0")
@@ -170,12 +171,12 @@ dependencies {
     testImplementation("org.json:json:20250517")
     testImplementation(libs.mockk)
 
-    // --- Instrumented tests (androidTest) ---
+    // ------------- Instrumented Tests (androidTest) ------------------
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.kaspresso)
     androidTestImplementation(libs.kaspresso.compose)
-    androidTestImplementation(libs.mockk.android)
 }
 
 
