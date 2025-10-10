@@ -42,7 +42,7 @@ fun SignInScreen(
     if (uiState.isSignInSuccessful) {
       Toast.makeText(
               context,
-              "✅ Connexion réussie ! Bienvenue ${uiState.currentUser?.email ?: ""}",
+              "✅ Connexion réussie ! Bienvenue ${uiState.currentUser?.displayName ?: ""}",
               Toast.LENGTH_SHORT)
           .show()
       onSignInSuccess()
