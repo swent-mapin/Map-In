@@ -12,6 +12,7 @@ local.properties
 
 # Log/OS Files
 *.log
+logs_*/
 .DS_Store
 
 # Android Studio

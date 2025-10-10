@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Info
@@ -130,9 +132,9 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
           onDateClick()
         } else {
           val calendar = Calendar.getInstance()
-          val year = calendar.get(Calendar.YEAR)
-          val month = calendar.get(Calendar.MONTH)
-          val day = calendar.get(Calendar.DAY_OF_MONTH)
+          val year = calendar[Calendar.YEAR]
+          val month = calendar[Calendar.MONTH]
+          val day = calendar[Calendar.DAY_OF_MONTH]
 
           val datePickerDialog =
               DatePickerDialog(
@@ -179,8 +181,8 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
           onTimeClick()
         } else {
           val calendar = Calendar.getInstance()
-          val hour = calendar.get(Calendar.HOUR_OF_DAY)
-          val minute = calendar.get(Calendar.MINUTE)
+          val hour = calendar[Calendar.HOUR_OF_DAY]
+          val minute = calendar[Calendar.MINUTE]
 
           TimePickerDialog(
                   context,
@@ -273,7 +275,7 @@ fun AddEventPopUp(
               Spacer(modifier = Modifier.padding(10.dp))
               Column(
                   horizontalAlignment = Alignment.CenterHorizontally,
-                  modifier = Modifier.fillMaxWidth()) {
+                  modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                       IconButton(onClick = onBack, Modifier.padding(start = 10.dp).size(25.dp)) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")

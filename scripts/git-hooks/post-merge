@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Remind to install git hooks after merge
+
+if [ ! -f ".git/hooks/pre-commit" ]; then
+  echo "⚠️  Run: ./scripts/setup-hooks.sh"
+fi

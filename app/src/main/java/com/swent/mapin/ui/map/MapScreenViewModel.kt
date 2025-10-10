@@ -25,9 +25,9 @@ import kotlin.math.abs
  * - Exposes optional pins and heatmap state for the map layer
  */
 class MapScreenViewModel(
-  initialSheetState: BottomSheetState,
-  private val sheetConfig: BottomSheetConfig,
-  private val onClearFocus: () -> Unit
+    initialSheetState: BottomSheetState,
+    private val sheetConfig: BottomSheetConfig,
+    private val onClearFocus: () -> Unit
 ) : ViewModel() {
 
   // ---------------- Existing state (unchanged) ----------------
@@ -134,10 +134,10 @@ class MapScreenViewModel(
 
   /** Calculate target state after drag based on current height */
   fun calculateTargetState(
-    currentHeightPx: Float,
-    collapsedPx: Float,
-    mediumPx: Float,
-    fullPx: Float
+      currentHeightPx: Float,
+      collapsedPx: Float,
+      mediumPx: Float,
+      fullPx: Float
   ): BottomSheetState {
     return when {
       currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
@@ -189,15 +189,15 @@ class MapScreenViewModel(
  */
 @Composable
 fun rememberMapScreenViewModel(
-  sheetConfig: BottomSheetConfig,
-  initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
+    sheetConfig: BottomSheetConfig,
+    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
 
   return viewModel {
     MapScreenViewModel(
-      initialSheetState = initialSheetState,
-      sheetConfig = sheetConfig,
-      onClearFocus = { focusManager.clearFocus(force = true) })
+        initialSheetState = initialSheetState,
+        sheetConfig = sheetConfig,
+        onClearFocus = { focusManager.clearFocus(force = true) })
   }
 }

@@ -67,7 +67,7 @@ class SignInScreenTest {
   fun signInScreen_microsoftSignInButton_isDisplayed() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -97,7 +97,7 @@ class SignInScreenTest {
 
     composeTestRule
         .onNodeWithContentDescription("Microsoft logo")
-        .assertExists()
+        .performScrollTo()
         .assertIsDisplayed()
   }
 

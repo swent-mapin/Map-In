@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.ui.AddEventPopUp
 import com.swent.mapin.ui.AddEventPopUpTestTags
@@ -39,26 +40,48 @@ class AddEventPopUpTests {
   fun displayAllComponents() {
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE)
+        .performScrollTo()
         .assertTextContains("Save", substring = true, ignoreCase = true)
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.EVENT_CANCEL)
+        .performScrollTo()
         .assertTextContains("Cancel", substring = true, ignoreCase = true)
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .performScrollTo()
+        .assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
+        .performScrollTo()
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_TIME)
+        .performScrollTo()
         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION)
+        .performScrollTo()
+        .assertIsDisplayed()
   }
 
   @Test
   fun showsErrorMessageInitially() {
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .performScrollTo()
+        .assertIsDisplayed()
   }
 
   @Test
@@ -85,7 +108,10 @@ class AddEventPopUpTests {
 
   @Test
   fun clickingCancelInvokesCallback() {
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.EVENT_CANCEL).performClick()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.EVENT_CANCEL)
+        .performScrollTo()
+        .performClick()
     assert(cancelClicked)
   }
 
