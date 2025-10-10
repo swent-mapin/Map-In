@@ -21,9 +21,6 @@ class AppNavHostTest {
       AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
-    composeTestRule.waitForIdle()
-
-    // AUTH_SCREEN is the root element, no need to scroll to it
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
@@ -35,9 +32,6 @@ class AppNavHostTest {
       AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
-    composeTestRule.waitForIdle()
-
-    // Click on continue
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_CONTINUE_BUTTON, useUnmergedTree = true)
         .performScrollTo()
@@ -45,7 +39,6 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-    // Map should be visible
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
