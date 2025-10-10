@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
@@ -20,6 +21,9 @@ class AppNavHostTest {
       AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
+    composeTestRule.waitForIdle()
+
+    // AUTH_SCREEN is the root element, no need to scroll to it
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
@@ -31,9 +35,12 @@ class AppNavHostTest {
       AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
 
+    composeTestRule.waitForIdle()
+
     // Click on continue
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_CONTINUE_BUTTON, useUnmergedTree = true)
+        .performScrollTo()
         .performClick()
 
     composeTestRule.waitForIdle()

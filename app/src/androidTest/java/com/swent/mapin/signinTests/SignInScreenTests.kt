@@ -118,6 +118,7 @@ class SignInScreenTests {
     var callbackInvoked = false
     val mockUser = mockk<FirebaseUser>()
     every { mockUser.email } returns "test@example.com"
+    every { mockUser.displayName } returns "Test User"
 
     composeTestRule.setContent {
       SignInScreen(viewModel = mockViewModel, onSignInSuccess = { callbackInvoked = true })
@@ -173,6 +174,7 @@ class SignInScreenTests {
   fun shouldHandleNullCurrentUserEmailInSuccessMessage() {
     val mockUser = mockk<FirebaseUser>()
     every { mockUser.email } returns null
+    every { mockUser.displayName } returns null
 
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
@@ -248,6 +250,7 @@ class SignInScreenTests {
   fun shouldHandleSuccessfulSignInWithValidUserEmail() {
     val mockUser = mockk<FirebaseUser>()
     every { mockUser.email } returns "test@gmail.com"
+    every { mockUser.displayName } returns "Test User"
 
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 

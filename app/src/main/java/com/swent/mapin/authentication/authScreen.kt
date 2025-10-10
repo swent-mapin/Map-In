@@ -1,6 +1,8 @@
 package com.swent.mapin.authentication
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,14 +20,16 @@ fun AuthScreen(
   Box(
       modifier = Modifier.fillMaxSize().testTag(UiTestTags.AUTH_SCREEN),
       contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text("Auth placeholder (Sign in / Sign up)")
-          Spacer(Modifier.height(12.dp))
-          Button(
-              onClick = onAuthSuccess,
-              modifier = Modifier.testTag(UiTestTags.AUTH_CONTINUE_BUTTON)) {
-                Text("Continue to Main Screen: Map")
-              }
-        }
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              Text("Auth placeholder (Sign in / Sign up)")
+              Spacer(Modifier.height(12.dp))
+              Button(
+                  onClick = onAuthSuccess,
+                  modifier = Modifier.testTag(UiTestTags.AUTH_CONTINUE_BUTTON)) {
+                    Text("Continue to Main Screen: Map")
+                  }
+            }
       }
 }
