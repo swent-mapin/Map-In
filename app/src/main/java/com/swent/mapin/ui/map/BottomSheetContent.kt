@@ -1,5 +1,11 @@
 package com.swent.mapin.ui.map
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,19 +81,7 @@ fun BottomSheetContent(
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {}
 ) {
-  // If showing memory form, display it instead of regular content
-  if (showMemoryForm) {
-    val memoryFormScrollState = remember { ScrollState(0) }
-    MemoryFormScreen(
-        scrollState = memoryFormScrollState,
-        availableEvents = availableEvents,
-        onSave = onMemorySave,
-        onCancel = onMemoryCancel)
-    return
-  }
-
   val isFull = state == BottomSheetState.FULL
-
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
@@ -99,61 +93,90 @@ fun BottomSheetContent(
     }
   }
 
-  Column(modifier = Modifier.fillMaxWidth()) {
-    SearchBar(
-        value = searchBarState.query,
-        onValueChange = searchBarState.onQueryChange,
-        isFull = isFull,
-        onTap = { if (!isFull) searchBarState.onTap() },
-        focusRequester = focusRequester,
-        onSearchAction = { focusManager.clearFocus() })
+  // Animated transition between regular content and memory form
+  AnimatedContent(
+      targetState = showMemoryForm,
+      transitionSpec = {
+        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+                slideInVertically(
+                    animationSpec = androidx.compose.animation.core.tween(300),
+                    initialOffsetY = { it / 4 }))
+            .togetherWith(
+                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                    slideOutVertically(
+                        animationSpec = androidx.compose.animation.core.tween(200),
+                        targetOffsetY = { -it / 4 }))
+      },
+      label = "memoryFormTransition") { showForm ->
+        if (showForm) {
+          // Memory form content
+          val memoryFormScrollState = remember { ScrollState(0) }
+          MemoryFormScreen(
+              scrollState = memoryFormScrollState,
+              availableEvents = availableEvents,
+              onSave = onMemorySave,
+              onCancel = onMemoryCancel)
+        } else {
+          // Regular bottom sheet content
+          Column(modifier = Modifier.fillMaxWidth()) {
+            SearchBar(
+                value = searchBarState.query,
+                onValueChange = searchBarState.onQueryChange,
+                isFull = isFull,
+                onTap = { if (!isFull) searchBarState.onTap() },
+                focusRequester = focusRequester,
+                onSearchAction = { focusManager.clearFocus() })
 
-    Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-    val contentModifier =
-        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
+            val contentModifier =
+                if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                else Modifier.fillMaxWidth()
 
-    Column(modifier = contentModifier) {
-      QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+            Column(modifier = contentModifier) {
+              QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
-      Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
 
-      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-      Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
 
-      Text(
-          text = "Recent Activities",
-          style = MaterialTheme.typography.titleMedium,
-          modifier = Modifier.padding(bottom = 8.dp))
+              Text(
+                  text = "Recent Activities",
+                  style = MaterialTheme.typography.titleMedium,
+                  modifier = Modifier.padding(bottom = 8.dp))
 
-      repeat(4) { index ->
-        ActivityItem(
-            title = "Activity ${index + 1}",
-            description = "Example description for activity ${index + 1}.")
-      }
+              repeat(4) { index ->
+                ActivityItem(
+                    title = "Activity ${index + 1}",
+                    description = "Example description for activity ${index + 1}.")
+              }
 
-      Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
 
-      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-      Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
 
-      Text(
-          text = "Discover",
-          style = MaterialTheme.typography.titleMedium,
-          modifier = Modifier.padding(bottom = 8.dp))
+              Text(
+                  text = "Discover",
+                  style = MaterialTheme.typography.titleMedium,
+                  modifier = Modifier.padding(bottom = 8.dp))
 
-      val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-      categories.forEach { category ->
-        OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-          Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+              val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
+              categories.forEach { category ->
+                OutlinedButton(
+                    onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                      Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+              }
+
+              Spacer(modifier = Modifier.height(24.dp))
+            }
+          }
         }
       }
-
-      Spacer(modifier = Modifier.height(24.dp))
-    }
-  }
 }
 
 /** Search bar that triggers full mode when tapped. */
