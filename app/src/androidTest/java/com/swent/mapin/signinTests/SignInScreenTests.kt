@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.ui.auth.SignInScreen
@@ -16,16 +17,13 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * UI tests for SignInScreen composable.
  *
  * Tests the UI rendering, user interactions, and state-based UI updates.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+@RunWith(AndroidJUnit4::class)
 class SignInScreenTests {
 
   @get:Rule val composeTestRule = createComposeRule()
