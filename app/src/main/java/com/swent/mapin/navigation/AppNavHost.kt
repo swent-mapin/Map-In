@@ -5,7 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.swent.mapin.authentication.AuthScreen
+import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.map.MapScreen
 
 @Composable
@@ -17,11 +17,11 @@ fun AppNavHost(
 
   NavHost(navController = navController, startDestination = startDest) {
     composable(Route.Auth.route) {
-      AuthScreen(
-          onAuthSuccess = {
+      SignInScreen(
+          onSignInSuccess = {
             navController.navigate(Route.Map.route) {
               popUpTo(Route.Auth.route) { inclusive = true }
-              launchSingleTop = true // not necessary here, but good practice
+              launchSingleTop = true
             }
           })
     }
