@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    // MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
     setContent {
       MapInTheme {
         // Check if user is already authenticated with Firebase

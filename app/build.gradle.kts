@@ -135,6 +135,7 @@ dependencies {
     implementation(libs.compose.viewmodel)
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Compose UI testing
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
@@ -151,6 +152,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage:20.3.0")
 
     // ------------- Google Maps ------------------
     implementation("com.google.maps.android:maps-compose:4.3.3")

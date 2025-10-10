@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -65,6 +68,15 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  // Show error messages in snackbar
+  LaunchedEffect(viewModel.errorMessage) {
+    viewModel.errorMessage?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearError()
+    }
+  }
 
   val cameraPositionState = rememberCameraPositionState {
     position =
@@ -138,8 +150,30 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
                       shouldRequestFocus = viewModel.shouldFocusSearch,
                       onQueryChange = viewModel::onSearchQueryChange,
                       onTap = viewModel::onSearchTap,
-                      onFocusHandled = viewModel::onSearchFocusHandled))
+                      onFocusHandled = viewModel::onSearchFocusHandled),
+              showMemoryForm = viewModel.showMemoryForm,
+              availableEvents = viewModel.availableEvents,
+              onCreateMemoryClick = viewModel::showMemoryForm,
+              onMemorySave = viewModel::onMemorySave,
+              onMemoryCancel = viewModel::onMemoryCancel)
         }
+
+    // Loading indicator while saving memory
+    if (viewModel.isSavingMemory) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize()
+                  .background(Color.Black.copy(alpha = 0.5f))
+                  .testTag("memoryLoadingIndicator"),
+          contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+          }
+    }
+
+    // Snackbar for error messages
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
   }
 }
 

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.model.event.Event
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -52,13 +53,39 @@ data class SearchBarState(
  * - Quick actions
  * - (Temporary) Recent activities
  * - (Temporary) Discover section
+ * - Memory creation form (when showMemoryForm is true)
  *
  * @param state Current bottom sheet state
  * @param fullEntryKey Increments each time we enter full mode - triggers scroll reset
  * @param searchBarState search bar state and callbacks
+ * @param showMemoryForm Whether to show memory creation form
+ * @param availableEvents List of events that can be linked to memories
+ * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
+ * @param onMemorySave Callback when memory is saved
+ * @param onMemoryCancel Callback when memory creation is cancelled
  */
 @Composable
-fun BottomSheetContent(state: BottomSheetState, fullEntryKey: Int, searchBarState: SearchBarState) {
+fun BottomSheetContent(
+    state: BottomSheetState,
+    fullEntryKey: Int,
+    searchBarState: SearchBarState,
+    showMemoryForm: Boolean = false,
+    availableEvents: List<Event> = emptyList(),
+    onCreateMemoryClick: () -> Unit = {},
+    onMemorySave: (MemoryFormData) -> Unit = {},
+    onMemoryCancel: () -> Unit = {}
+) {
+  // If showing memory form, display it instead of regular content
+  if (showMemoryForm) {
+    val memoryFormScrollState = remember { ScrollState(0) }
+    MemoryFormScreen(
+        scrollState = memoryFormScrollState,
+        availableEvents = availableEvents,
+        onSave = onMemorySave,
+        onCancel = onMemoryCancel)
+    return
+  }
+
   val isFull = state == BottomSheetState.FULL
 
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -87,7 +114,7 @@ fun BottomSheetContent(state: BottomSheetState, fullEntryKey: Int, searchBarStat
         if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
 
     Column(modifier = contentModifier) {
-      QuickActionsSection()
+      QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
       Spacer(modifier = Modifier.height(16.dp))
 
@@ -158,7 +185,7 @@ private fun SearchBar(
 
 /** Row of quick action buttons (Create Memory, Create Event, Filters). */
 @Composable
-private fun QuickActionsSection(modifier: Modifier = Modifier) {
+private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
   val focusManager = LocalFocusManager.current
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
@@ -168,9 +195,7 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       QuickActionButton(
-          text = "Create Memory",
-          modifier = Modifier.weight(1f),
-          onClick = { focusManager.clearFocus() })
+          text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
       QuickActionButton(
           text = "Create Event",
           modifier = Modifier.weight(1f),
