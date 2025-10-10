@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "816281112017-93sc6gr2rb0qbg03fuhiqcffnsqkop4e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.swent.mapin",
+            "certificate_hash": "739f4e69ca3212405f15afedafc2a57f25be43f9"
+          }
+        },
+        {
+          "client_id": "816281112017-b2e7fing8h1v405apjn06t0q7ha7vvg0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.swent.mapin",
+            "certificate_hash": "75eb351f1a5b9d3b62d802d4ef6849c82f7a069a"
+          }
+        },
+        {
           "client_id": "816281112017-hnh3u9pn27va9gca5gunsl0m9iie6f39.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
