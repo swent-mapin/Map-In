@@ -51,36 +51,36 @@ class SignInScreenTests {
   fun signInScreenShouldDisplayAppLogo() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
+    composeTestRule.onNodeWithContentDescription("App Logo").performScrollTo().assertExists()
   }
 
   @Test
   fun signInScreenShouldDisplaySloganText() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
+    composeTestRule.onNodeWithText("One Map. Every moment.").performScrollTo().assertExists()
   }
 
   @Test
   fun signInScreenShouldDisplayGoogleSignInButton() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertExists()
   }
 
   @Test
   fun signInScreenShouldDisplayMicrosoftSignInButton() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertExists()
   }
 
   @Test
   fun buttonsShouldBeClickableWhenNotLoading() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertIsEnabled()
   }
 
   @Test
@@ -101,7 +101,7 @@ class SignInScreenTests {
   fun googleSignInButtonShouldCallViewModelOnClick() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").performClick()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().performClick()
 
     verify { mockViewModel.signInWithGoogle(any(), any()) }
   }
@@ -110,7 +110,7 @@ class SignInScreenTests {
   fun shouldDisplayGoogleLogoInButton() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule.onNodeWithContentDescription("Google logo").assertExists()
+    composeTestRule.onNodeWithContentDescription("Google logo").performScrollTo().assertExists()
   }
 
   @Test
@@ -166,8 +166,8 @@ class SignInScreenTests {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     // Both buttons should exist with proper dimensions
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertExists()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertExists()
   }
 
   @Test
@@ -190,7 +190,7 @@ class SignInScreenTests {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     // Initially enabled - verify button exists and is enabled
-    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertIsEnabled()
 
     // Start loading - this will replace button content with progress indicator
     uiStateFlow.value = SignInUiState(isLoading = true)
@@ -216,8 +216,8 @@ class SignInScreenTests {
     composeTestRule.waitForIdle()
 
     // Should now be enabled and text visible again
-    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertIsEnabled()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertIsEnabled()
   }
 
   @Test
@@ -242,8 +242,8 @@ class SignInScreenTests {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     // Both buttons should exist
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().assertExists()
+    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertExists()
   }
 
   @Test
