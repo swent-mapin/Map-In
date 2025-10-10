@@ -267,13 +267,15 @@ private fun MapMarkers(locations: List<Location>) {
 private fun HeatmapOverlay(showHeatmap: Boolean, locations: List<Location>) {
   if (!showHeatmap || locations.isEmpty()) return
 
-  val max = remember(locations) { locations.maxOfOrNull { it.attendees } ?: 0 }
   val weightedData =
-      remember(locations, max) {
-        locations.map { location ->
-          val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
-          WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
-        }
+      remember(locations) {
+        val max = locations.maxOfOrNull { it.attendees } ?: 0
+        val data =
+            locations.map { location ->
+              val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
+              WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
+            }
+        data
       }
 
   val heatmapProvider =
