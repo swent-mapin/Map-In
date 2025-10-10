@@ -1,13 +1,7 @@
 #!/bin/bash
 
-# Post-merge hook to remind users to install git hooks if not already installed
+# Remind to install git hooks after merge
 
-# Check if pre-commit hook is installed
 if [ ! -f ".git/hooks/pre-commit" ]; then
-  echo ""
-  echo "=========================================="
-  echo "REMINDER: Git hooks are not installed!"
-  echo "Run: ./scripts/setup-hooks.sh"
-  echo "=========================================="
-  echo ""
+  echo "⚠️  Run: ./scripts/setup-hooks.sh"
 fi

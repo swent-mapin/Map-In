@@ -1,22 +1,13 @@
 #!/bin/bash
 
 # Pre-commit hook to automatically format Kotlin code with ktfmt
-# This runs before each commit to ensure code is properly formatted
 
 echo "Running ktfmtFormat..."
 
-# Run the Gradle format task
 ./gradlew ktfmtFormat --quiet
 
-# Check if formatting changed any files
-if ! git diff --quiet; then
-  echo "Code formatted successfully!"
-  echo ""
-  echo "Staged files have been formatted. Please review and commit again."
-  echo ""
-  echo "TIP: Run 'git add -u' to stage the formatted changes, then commit again."
-  exit 1
-fi
+# Auto-stage any formatted files
+git diff --name-only | xargs -I {} git add {}
 
-echo "Code already formatted correctly"
+echo "Code formatted successfully!"
 exit 0
