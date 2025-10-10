@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.*
+import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.ui.theme.MapInTheme
 
@@ -20,8 +20,8 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       MapInTheme {
-        // replace with real auth (e.g., FirebaseAuth.getInstance().currentUser != null)
-        var isLoggedIn by remember { mutableStateOf(false) }
+        // Check if user is already authenticated with Firebase
+        val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
         AppNavHost(isLoggedIn = isLoggedIn)
       }
     }
