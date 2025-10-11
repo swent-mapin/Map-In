@@ -31,6 +31,15 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES" | base64 --decode > app/google-services.json
           ls -l app/google-services.json
 
+      - name: Restore debug.keystore (from base64 secret)
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+        run: |
+          mkdir -p app
+          echo "$DEBUG_KEYSTORE" | base64 --decode > app/debug.keystore
+          ls -l app/debug.keystore
+          
+
 
       # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
       - name: Enable KVM group perms
