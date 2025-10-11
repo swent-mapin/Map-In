@@ -129,7 +129,7 @@ class LocalMemoryRepository : MemoryRepository {
   }
 
   override suspend fun deleteMemory(memoryId: String) {
-    if (!memories.remove(memoryId).let { it == null }) {
+    if (memories.remove(memoryId) == null) {
       throw NoSuchElementException("LocalMemoryRepository: Memory not found (id=$memoryId)")
     }
   }
