@@ -19,6 +19,10 @@ Run this once after cloning the repository to install git hooks: `./scripts/setu
 ## Coverage report
 - Run the unit + instrumentation commands above first. Then: 
 - `./gradlew jacocoTestReport`
+- Coverage: Run `open app/build/reports/jacoco/jacocoTestReport/html/index.html` or open the file in a browser.
+
+## One liner for everything
+- `./gradlew ktfmtFormat testDebugUnitTest connectedDebugAndroidTest jacocoTestReport && open app/build/reports/jacoco/jacocoTestReport/html/index.html`
 
 ## Cleanup and verification helpers
 - `./gradlew clean` : delete all build outputs.

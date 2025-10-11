@@ -1,15 +1,41 @@
 package com.swent.mapin.ui.map
 
+import android.content.Context
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.kotlin.whenever
 
 // Assisted by AI
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(MockitoJUnitRunner::class)
 class MapScreenViewModelTest {
+
+  private val testDispatcher = StandardTestDispatcher()
+
+  @Mock private lateinit var mockContext: Context
+  @Mock(lenient = true) private lateinit var mockMemoryRepository: MemoryRepository
+  @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
+  @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
+  @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -17,13 +43,32 @@ class MapScreenViewModelTest {
 
   @Before
   fun setup() {
+    Dispatchers.setMain(testDispatcher)
+
     clearFocusCalled = false
     config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn("testUserId")
+
+    runBlocking {
+      whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
+    }
+
     viewModel =
         MapScreenViewModel(
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true })
+            onClearFocus = { clearFocusCalled = true },
+            context = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+  }
+
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
   }
 
   @Test
