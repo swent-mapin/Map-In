@@ -28,7 +28,7 @@ jobs:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
         run: |
           mkdir -p app
-          printf '%s' "GOOGLE_SERVICES" | base64 --decode > app/google-services.json
+          printf '%s' "$GOOGLE_SERVICES" | base64 --decode > app/google-services.json
           ls -l app/google-services.json
 
 
