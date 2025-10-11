@@ -120,7 +120,11 @@ class SignInViewModel(context: Context) : ViewModel() {
                 "No Google accounts found on device"
               }
               else -> {
-                "Sign-in failed: ${e.message}"
+                if (e.message == null) {
+                  "Sign-in failed"
+                } else {
+                  "Sign-in failed: ${e.message}"
+                }
               }
             }
 
