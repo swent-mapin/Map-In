@@ -150,7 +150,7 @@ private fun EventSelectionSection(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MediaSelectionSection(
+internal fun MediaSelectionSection(
     selectedMediaUris: List<Uri>,
     onLaunchMediaPicker: () -> Unit,
     onRemoveMedia: (Uri) -> Unit
