@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map
 
+import android.net.Uri
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
@@ -340,5 +341,61 @@ class MemoryFormScreenTest {
     rule.onNodeWithText("Photos or videos (up to 5)").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Tag people").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Make this memory public").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun mediaSelectionSection_withSelectedMedia_showsThumbnailsAndRemoveButtons() {
+    rule.setContent {
+      MaterialTheme {
+        val selectedMediaUris =
+            listOf(Uri.parse("content://media/1"), Uri.parse("content://media/2"))
+
+        MediaSelectionSection(
+            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+      }
+    }
+
+    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
+  }
+
+  @Test
+  fun mediaSelectionSection_withMultipleMedia_displaysAllThumbnails() {
+    rule.setContent {
+      MaterialTheme {
+        val selectedMediaUris =
+            listOf(
+                Uri.parse("content://media/1"),
+                Uri.parse("content://media/2"),
+                Uri.parse("content://media/3"))
+
+        MediaSelectionSection(
+            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+      }
+    }
+
+    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
+  }
+
+  @Test
+  fun mediaSelectionSection_withMaxMedia_showsNoAddMoreButton() {
+    rule.setContent {
+      MaterialTheme {
+        val selectedMediaUris =
+            listOf(
+                Uri.parse("content://media/1"),
+                Uri.parse("content://media/2"),
+                Uri.parse("content://media/3"),
+                Uri.parse("content://media/4"),
+                Uri.parse("content://media/5"))
+
+        MediaSelectionSection(
+            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+      }
+    }
+
+    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
   }
 }
