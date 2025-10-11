@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -93,7 +94,7 @@ private fun EventSelectionSection(
       modifier = Modifier.padding(bottom = 8.dp))
 
   Card(
-      modifier = Modifier.fillMaxWidth().clickable { onEventClick() },
+      modifier = Modifier.fillMaxWidth().clickable { onEventClick() }.testTag("eventSelectionCard"),
       colors =
           CardDefaults.cardColors(
               containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -118,12 +119,13 @@ private fun EventSelectionSection(
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onEventClear) {
-                  Icon(
-                      imageVector = Icons.Default.Close,
-                      contentDescription = "Clear selection",
-                      tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                IconButton(
+                    onClick = onEventClear, modifier = Modifier.testTag("clearEventButton")) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Clear selection",
+                          tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
               } else {
                 Text(
                     text = "Tap to select an event",
@@ -169,7 +171,8 @@ private fun MediaSelectionSection(
                     color = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(8.dp))
                 .clickable { onLaunchMediaPicker() }
-                .padding(16.dp),
+                .padding(16.dp)
+                .testTag("addMediaButton"),
         contentAlignment = Alignment.Center) {
           Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
@@ -273,7 +276,8 @@ private fun UserTaggingSection(
                         color = MaterialTheme.colorScheme.outline,
                         shape = CircleShape)
                     .clickable { onAddUserClick() }
-                    .padding(8.dp),
+                    .padding(8.dp)
+                    .testTag("addUserButton"),
             contentAlignment = Alignment.Center) {
               Icon(
                   imageVector = Icons.Default.Add,
@@ -352,12 +356,12 @@ fun MemoryFormScreen(
 
   val isFormValid = description.isNotBlank()
 
-  Column(modifier = modifier.fillMaxSize()) {
+  Column(modifier = modifier.fillMaxSize().testTag("memoryFormScreen")) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = onCancel, modifier = Modifier.size(48.dp)) {
+          IconButton(onClick = onCancel, modifier = Modifier.size(48.dp).testTag("cancelButton")) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Cancel",
@@ -388,7 +392,8 @@ fun MemoryFormScreen(
                           color =
                               if (isFormValid) MaterialTheme.colorScheme.primaryContainer
                               else MaterialTheme.colorScheme.surfaceVariant,
-                          shape = CircleShape)) {
+                          shape = CircleShape)
+                      .testTag("saveButton")) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Save",
@@ -428,7 +433,7 @@ fun MemoryFormScreen(
           value = title,
           onValueChange = { title = it },
           placeholder = { Text("Name this memory") },
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("titleField"),
           singleLine = true)
 
       Spacer(modifier = Modifier.height(24.dp))
@@ -444,7 +449,8 @@ fun MemoryFormScreen(
           value = description,
           onValueChange = { description = it },
           placeholder = { Text("What happened?") },
-          modifier = Modifier.fillMaxWidth().height(DESCRIPTION_MIN_HEIGHT),
+          modifier =
+              Modifier.fillMaxWidth().height(DESCRIPTION_MIN_HEIGHT).testTag("descriptionField"),
           maxLines = 6)
 
       Spacer(modifier = Modifier.height(24.dp))
@@ -491,7 +497,10 @@ fun MemoryFormScreen(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+            Switch(
+                checked = isPublic,
+                onCheckedChange = { isPublic = it },
+                modifier = Modifier.testTag("publicSwitch"))
           }
 
       Spacer(modifier = Modifier.height(32.dp))

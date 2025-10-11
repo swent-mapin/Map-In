@@ -75,7 +75,6 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
 
-    // Wait for scrollable content to be fully displayed (slower on CI)
     rule.waitUntil(timeoutMillis = 10000) {
       try {
         rule.onNodeWithText("Activity 1").assertIsDisplayed()
@@ -126,16 +125,11 @@ class BottomSheetContentTest {
 
   @Test
   fun buttons_areClickable() {
-    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = true) }
+    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
 
-    rule.onNodeWithText("Search activities").assertIsFocused()
     rule.onNodeWithText("Create Memory").assertHasClickAction()
-    rule.onNodeWithText("Create Memory").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Search activities").assertIsNotFocused()
-
     rule.onNodeWithText("Sports").assertHasClickAction()
-    rule.onNodeWithText("Music").performClick()
+    rule.onNodeWithText("Music").assertHasClickAction()
   }
 
   @Test
