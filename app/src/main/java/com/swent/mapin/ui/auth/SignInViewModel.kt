@@ -106,25 +106,25 @@ class SignInViewModel(context: Context) : ViewModel() {
         Log.e(TAG, "Sign-in failed: ${e.javaClass.simpleName}", e)
 
         // Enhanced error logging for debugging
-        val errorDetails = when (e) {
-          is androidx.credentials.exceptions.GetCredentialException -> {
-            Log.e(TAG, "GetCredentialException - Type: ${e.type}")
-            Log.e(TAG, "GetCredentialException - Message: ${e.message}")
-            "Credential error: ${e.type}\n${e.message}"
-          }
-          is androidx.credentials.exceptions.GetCredentialCancellationException -> {
-            "Sign-in was cancelled"
-          }
-          is androidx.credentials.exceptions.NoCredentialException -> {
-            "No Google accounts found on device"
-          }
-          else -> {
-            "Sign-in failed: ${e.message}"
-          }
-        }
+        val errorDetails =
+            when (e) {
+              is androidx.credentials.exceptions.GetCredentialException -> {
+                Log.e(TAG, "GetCredentialException - Type: ${e.type}")
+                Log.e(TAG, "GetCredentialException - Message: ${e.message}")
+                "Credential error: ${e.type}\n${e.message}"
+              }
+              is androidx.credentials.exceptions.GetCredentialCancellationException -> {
+                "Sign-in was cancelled"
+              }
+              is androidx.credentials.exceptions.NoCredentialException -> {
+                "No Google accounts found on device"
+              }
+              else -> {
+                "Sign-in failed: ${e.message}"
+              }
+            }
 
-        _uiState.value =
-            _uiState.value.copy(isLoading = false, errorMessage = errorDetails)
+        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorDetails)
       }
     }
   }
