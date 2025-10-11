@@ -57,6 +57,14 @@ interface EventRepository {
   suspend fun getEventsByTitle(title: String): List<Event>
 
   /**
+   * Retrieves Event items where the specified user is a participant.
+   *
+   * @param userId The unique identifier of the user.
+   * @return A list of Event items where the specified user is participating.
+   */
+  suspend fun getEventsByParticipant(userId: String): List<Event>
+
+  /**
    * Adds a new Event item to the repository.
    *
    * @param event The Event item to add.

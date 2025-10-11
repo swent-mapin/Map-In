@@ -234,11 +234,17 @@ class MapScreenViewModel(
     loadEvents()
   }
 
-  /** Load events from the repository */
+  /** Load events from the repository - only events where user is a participant */
   private fun loadEvents() {
     viewModelScope.launch {
       try {
-        _availableEvents = eventRepository.getAllEvents()
+        val currentUserId = auth.currentUser?.uid
+        _availableEvents =
+            if (currentUserId != null) {
+              eventRepository.getEventsByParticipant(currentUserId)
+            } else {
+              emptyList()
+            }
       } catch (e: Exception) {
         // Handle error, for now just log and keep empty list
         android.util.Log.e("MapScreenViewModel", "Error loading events", e)

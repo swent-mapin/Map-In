@@ -16,6 +16,7 @@ import com.google.firebase.Timestamp
  * @property imageUrl url of the event image
  * @property capacity maximum number of attendees
  * @property attendeeCount current number of attendees
+ * @property participantIds list of user IDs who are participating in this event
  */
 data class Event(
     val uid: String = "",
@@ -32,4 +33,5 @@ data class Event(
     val imageUrl: String? = null,
     val capacity: Int? = null,
     val attendeeCount: Int? = 0,
+    val participantIds: List<String> = emptyList()
 )
