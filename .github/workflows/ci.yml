@@ -36,8 +36,8 @@ jobs:
           DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
         run: |
           mkdir -p app
-          echo "$DEBUG_KEYSTORE" | base64 --decode > app/debug.keystore
-          ls -l app/debug.keystore
+          echo "$DEBUG_KEYSTORE" | base64 --decode > keystore/debug.keystore
+          ls -l keystore/debug.keystore
           
 
 
