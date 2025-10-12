@@ -11,4 +11,9 @@
     <color name="salmon">#FFFA8072</color>
     <color name="red">#FFD30000</color>
     <color name="turquoise">#FF40E0D0</color>
+
+    <!-- Map marker themeable colors (light) -->
+    <color name="map_marker_fill">#D84D4D</color> <!-- desaturated red -->
+    <color name="map_marker_stroke">#7A1E1E</color> <!-- dark burgundy outline for contrast -->
+    <color name="map_marker_shadow">#33000000</color> <!-- ~20% black -->
 </resources>
