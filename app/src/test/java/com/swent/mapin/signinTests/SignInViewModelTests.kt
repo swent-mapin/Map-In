@@ -14,13 +14,25 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.ui.auth.SignInUiState
 import com.swent.mapin.ui.auth.SignInViewModel
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -297,7 +309,7 @@ class SignInViewModelTest {
     val stateFlow = viewModel.uiState
 
     assertNotNull(stateFlow)
-    assertTrue(stateFlow is kotlinx.coroutines.flow.StateFlow)
+    assertNotNull(stateFlow.value)
   }
 
   @Test
@@ -553,7 +565,8 @@ class SignInViewModelTest {
 
     val vm = factory.create(SignInViewModel::class.java)
     assertNotNull(vm)
-    assertTrue(vm is SignInViewModel)
+    // Type is already SignInViewModel from factory.create(), no need to check
+    assertEquals(SignInViewModel::class, vm::class)
   }
 
   @Test
@@ -626,8 +639,8 @@ class SignInViewModelTest {
   fun `ViewModel should expose uiState as immutable StateFlow`() = runTest {
     val stateFlow = viewModel.uiState
 
-    // StateFlow should be read-only
-    assertTrue(stateFlow is kotlinx.coroutines.flow.StateFlow)
+    // StateFlow should be read-only from the exposed property
+    assertNotNull(stateFlow)
     assertNotNull(stateFlow.value)
   }
 

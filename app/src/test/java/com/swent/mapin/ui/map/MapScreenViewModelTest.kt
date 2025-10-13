@@ -41,7 +41,7 @@ class MapScreenViewModelTest {
 
   private val testDispatcher = StandardTestDispatcher()
 
-  @Mock private lateinit var mockContext: Context
+  @Mock(lenient = true) private lateinit var mockContext: Context
   @Mock(lenient = true) private lateinit var mockMemoryRepository: MemoryRepository
   @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
@@ -66,6 +66,9 @@ class MapScreenViewModelTest {
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
 
+    // Mock applicationContext to return itself (or another mock)
+    whenever(mockContext.applicationContext).thenReturn(mockContext)
+
     runBlocking {
       whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
@@ -77,7 +80,7 @@ class MapScreenViewModelTest {
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig = config,
             onClearFocus = { clearFocusCalled = true },
-            context = mockContext,
+            applicationContext = mockContext,
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
             auth = mockAuth)

@@ -281,7 +281,6 @@ private fun MapLayers(
 ) {
   val context = LocalContext.current
   val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
-  val marker = remember(markerBitmap) { markerBitmap?.let { IconImage(it) } }
 
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
@@ -293,11 +292,15 @@ private fun MapLayers(
 
   val clusterConfig = remember { createClusterConfig() }
 
+  // Render heatmap layer when enabled
   if (viewModel.showHeatmap) {
     CreateHeatmapLayer(heatmapSource)
+  }
 
+  // Render annotations (with or without clustering)
+  if (viewModel.showHeatmap) {
     PointAnnotationGroup(annotations = annotations) {
-      marker?.let { iconImage = it }
+      markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState.onClicked { annotation ->
         findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
           onLocationClick(location)
@@ -307,7 +310,7 @@ private fun MapLayers(
     }
   } else {
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-      marker?.let { iconImage = it }
+      markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState
           .onClicked { annotation ->
             findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
