@@ -200,8 +200,63 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun currentSheetHeight_canBeUpdated() {
-    viewModel.currentSheetHeight = 250.dp
-    assertEquals(250.dp, viewModel.currentSheetHeight)
+  fun setBottomSheetState_updatesCurrentSheetHeight() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertEquals(config.mediumHeight, viewModel.currentSheetHeight)
+
+    viewModel.setBottomSheetState(BottomSheetState.FULL)
+    assertEquals(config.fullHeight, viewModel.currentSheetHeight)
+
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+    assertEquals(config.collapsedHeight, viewModel.currentSheetHeight)
+  }
+
+  @Test
+  fun onSearchQueryChange_emptyQuery_doesNotExpandSheet() {
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+    viewModel.onSearchQueryChange("")
+    assertEquals("", viewModel.searchQuery)
+  }
+
+  @Test
+  fun bottomSheetState_transitionFromMediumToCollapsed_clearsSearchQuery() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.onSearchQueryChange("test")
+
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+
+    assertEquals("", viewModel.searchQuery)
+  }
+
+  @Test
+  fun clearFocus_calledOnlyWhenLeavingFullState() {
+    clearFocusCalled = false
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertFalse(clearFocusCalled)
+
+    viewModel.setBottomSheetState(BottomSheetState.FULL)
+    assertFalse(clearFocusCalled)
+
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertTrue(clearFocusCalled)
+  }
+
+  @Test
+  fun onSearchTap_multipleCalls_maintainsFocusState() {
+    viewModel.onSearchTap()
+    assertTrue(viewModel.shouldFocusSearch)
+
+    viewModel.onSearchTap()
+    assertFalse(viewModel.shouldFocusSearch)
+  }
+
+  @Test
+  fun updateMediumReferenceZoom_multipleUpdates_usesLatest() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.updateMediumReferenceZoom(10f)
+    viewModel.updateMediumReferenceZoom(15f)
+
+    assertFalse(viewModel.checkZoomInteraction(15.4f))
+    assertTrue(viewModel.checkZoomInteraction(15.6f))
   }
 }
