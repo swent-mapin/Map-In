@@ -168,10 +168,6 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
                 ScaleBar()
               }
         }) {
-          if (viewModel.showHeatmap) {
-            CreateHeatmapLayer(heatmapSource)
-          }
-
           val context = LocalContext.current
           val markerBitmap =
               remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
@@ -189,31 +185,46 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
 
           val clusterConfig = remember { createClusterConfig() }
 
-          PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-            marker?.let { iconImage = it }
-            interactionsState
-                .onClicked { annotation ->
-                  findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
-                    onLocationClick(location)
-                    true
-                  } ?: false
-                }
-                .onClusterClicked { clusterFeature ->
-                  val feature = clusterFeature.originalFeature
-                  val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
-                  val currentZoom =
-                      mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-                  val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
+          if (viewModel.showHeatmap) {
+            CreateHeatmapLayer(heatmapSource)
 
-                  mapViewportState.easeTo(
-                      cameraOptions =
-                          cameraOptions {
-                            center(center)
-                            zoom((currentZoom + 2.0).coerceAtMost(18.0))
-                          },
-                      animationOptions = animationOptions)
+            PointAnnotationGroup(annotations = annotations) {
+              marker?.let { iconImage = it }
+              interactionsState.onClicked { annotation ->
+                findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
+                  onLocationClick(location)
                   true
-                }
+                } ?: false
+              }
+            }
+          } else {
+            // Enable clustering when heatmap is off to reduce pin noise
+            PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
+              marker?.let { iconImage = it }
+              interactionsState
+                  .onClicked { annotation ->
+                    findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
+                      onLocationClick(location)
+                      true
+                    } ?: false
+                  }
+                  .onClusterClicked { clusterFeature ->
+                    val feature = clusterFeature.originalFeature
+                    val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
+                    val currentZoom =
+                        mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+                    val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
+
+                    mapViewportState.easeTo(
+                        cameraOptions =
+                            cameraOptions {
+                              center(center)
+                              zoom((currentZoom + 2.0).coerceAtMost(18.0))
+                            },
+                        animationOptions = animationOptions)
+                    true
+                  }
+            }
           }
         }
 
