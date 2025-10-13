@@ -10,8 +10,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.Location
-import com.swent.mapin.model.SampleLocationRepository
+import com.swent.mapin.model.SampleEventRepository
+import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlin.math.abs
 
@@ -160,15 +160,15 @@ class MapScreenViewModel(
     super.onCleared()
   }
 
-  // ---------------- Locations & Heatmap ----------------
+  // ---------------- Events & Heatmap ----------------
 
-  /** Location data for display on the map */
-  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
-  val locations: List<Location>
-    get() = _locations
+  /** Event data for display on the map */
+  private var _events by mutableStateOf(SampleEventRepository.getSampleEvents())
+  val events: List<Event>
+    get() = _events
 
-  fun setLocations(newLocations: List<Location>) {
-    _locations = newLocations
+  fun setEvents(newEvents: List<Event>) {
+    _events = newEvents
   }
 
   // Heatmap visibility toggle
