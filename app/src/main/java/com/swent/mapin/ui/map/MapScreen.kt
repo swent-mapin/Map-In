@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
+import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
@@ -47,9 +50,16 @@ import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportS
 import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
 import com.mapbox.maps.extension.compose.style.BooleanValue
+import com.mapbox.maps.extension.compose.style.ColorValue
+import com.mapbox.maps.extension.compose.style.DoubleValue
+import com.mapbox.maps.extension.compose.style.LongValue
+import com.mapbox.maps.extension.compose.style.layers.generated.HeatmapLayer
+import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
+import com.mapbox.maps.extension.compose.style.sources.generated.rememberGeoJsonSourceState
 import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
+import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
 import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
 import com.mapbox.maps.extension.style.layers.properties.generated.TextAnchor
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
@@ -79,6 +89,7 @@ import kotlinx.coroutines.flow.filterNotNull
  *
  * State is managed by MapScreenViewModel.
  */
+@OptIn(MapboxDelicateApi::class)
 @Composable
 fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
@@ -124,6 +135,13 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
       showPointOfInterestLabels = BooleanValue(false)
     }
   }
+  val heatmapSource =
+      rememberGeoJsonSourceState(key = "locations-heatmap-source") {
+        data = GeoJSONData(viewModel.locationsToGeoJson(viewModel.locations))
+      }
+  LaunchedEffect(viewModel.locations) {
+    heatmapSource.data = GeoJSONData(viewModel.locationsToGeoJson(viewModel.locations))
+  }
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     MapboxMap(
         Modifier.fillMaxSize()
@@ -151,6 +169,82 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
                 ScaleBar()
               }
         }) {
+          if (viewModel.showHeatmap) {
+            HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
+              maxZoom = LongValue(18L)
+              heatmapOpacity = DoubleValue(0.65)
+              heatmapRadius =
+                  DoubleValue(
+                      interpolate {
+                        linear()
+                        zoom()
+                        stop {
+                          literal(0.0)
+                          literal(18.0)
+                        }
+                        stop {
+                          literal(14.0)
+                          literal(32.0)
+                        }
+                        stop {
+                          literal(22.0)
+                          literal(48.0)
+                        }
+                      })
+              heatmapWeight =
+                  DoubleValue(
+                      interpolate {
+                        linear()
+                        get { literal("weight") }
+                        stop {
+                          literal(0.0)
+                          literal(0.0)
+                        }
+                        stop {
+                          literal(5.0)
+                          literal(0.4)
+                        }
+                        stop {
+                          literal(25.0)
+                          literal(0.8)
+                        }
+                        stop {
+                          literal(100.0)
+                          literal(1.0)
+                        }
+                      })
+              heatmapColor =
+                  ColorValue(
+                      interpolate {
+                        linear()
+                        heatmapDensity()
+                        stop {
+                          literal(0.0)
+                          rgba(33.0, 102.0, 172.0, 0.0)
+                        }
+                        stop {
+                          literal(0.2)
+                          rgb(103.0, 169.0, 207.0)
+                        }
+                        stop {
+                          literal(0.4)
+                          rgb(209.0, 229.0, 240.0)
+                        }
+                        stop {
+                          literal(0.6)
+                          rgb(253.0, 219.0, 199.0)
+                        }
+                        stop {
+                          literal(0.8)
+                          rgb(239.0, 138.0, 98.0)
+                        }
+                        stop {
+                          literal(1.0)
+                          rgb(178.0, 24.0, 43.0)
+                        }
+                      })
+            }
+          }
           val context = LocalContext.current
           val markerBitmap =
               remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
@@ -249,6 +343,26 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
         currentHeightDp = viewModel.currentSheetHeight,
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
+
+    FloatingActionButton(
+        onClick = { viewModel.toggleHeatmap() },
+        containerColor =
+            if (viewModel.showHeatmap) {
+              MaterialTheme.colorScheme.primary
+            } else {
+              MaterialTheme.colorScheme.surface
+            },
+        contentColor =
+            if (viewModel.showHeatmap) {
+              MaterialTheme.colorScheme.onPrimary
+            } else {
+              MaterialTheme.colorScheme.onSurface
+            },
+        modifier =
+            Modifier.align(Alignment.BottomEnd)
+                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp)) {
+          Text(text = if (viewModel.showHeatmap) "Heat" else "Pins")
+        }
 
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
