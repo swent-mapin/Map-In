@@ -109,12 +109,9 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
     // Profile button in top-right corner
-    Box(
-        modifier =
-            Modifier.align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 16.dp)) {
-          ProfileButton(onClick = onNavigateToProfile)
-        }
+    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
+      ProfileButton(onClick = onNavigateToProfile)
+    }
 
     Box(
         modifier =
@@ -280,7 +277,9 @@ private fun HeatmapOverlay(showHeatmap: Boolean, events: List<Event>) {
         val maxAttendees = events.maxOfOrNull { it.attendeeCount ?: 0 } ?: 0
         val data =
             events.map { event ->
-              val weight = if (maxAttendees == 0) 1.0 else (event.attendeeCount ?: 0).toDouble() / maxAttendees
+              val weight =
+                  if (maxAttendees == 0) 1.0
+                  else (event.attendeeCount ?: 0).toDouble() / maxAttendees
               WeightedLatLng(LatLng(event.latitude, event.longitude), weight)
             }
         data

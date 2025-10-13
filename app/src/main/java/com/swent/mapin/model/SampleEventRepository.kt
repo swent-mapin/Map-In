@@ -5,14 +5,12 @@ import com.swent.mapin.model.event.Event
 import java.util.Date
 
 /**
- * A sample repository that provides hardcoded event data for development and testing. This can
- * be replaced with a real repository implementation that fetches data from a backend.
+ * A sample repository that provides hardcoded event data for development and testing. This can be
+ * replaced with a real repository implementation that fetches data from a backend.
  */
 object SampleEventRepository {
 
-  /**
-   * Returns a list of sample events positioned around EPFL in Lausanne, Switzerland.
-   */
+  /** Returns a list of sample events positioned around EPFL in Lausanne, Switzerland. */
   fun getSampleEvents(): List<Event> {
     val now = Timestamp(Date())
 
@@ -28,8 +26,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Festival"),
             public = true,
             ownerId = "user1",
-            attendeeCount = 200
-        ),
+            attendeeCount = 200),
         Event(
             uid = "event2",
             title = "Basketball Game",
@@ -41,8 +38,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Basketball"),
             public = true,
             ownerId = "user2",
-            attendeeCount = 50
-        ),
+            attendeeCount = 50),
         Event(
             uid = "event3",
             title = "Art Exhibition",
@@ -54,8 +50,7 @@ object SampleEventRepository {
             tags = listOf("Art", "Culture"),
             public = true,
             ownerId = "user3",
-            attendeeCount = 120
-        ),
+            attendeeCount = 120),
         Event(
             uid = "event4",
             title = "Food Market",
@@ -67,8 +62,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Market"),
             public = true,
             ownerId = "user4",
-            attendeeCount = 80
-        ),
+            attendeeCount = 80),
         Event(
             uid = "event5",
             title = "Yoga Class",
@@ -80,8 +74,6 @@ object SampleEventRepository {
             tags = listOf("Yoga", "Wellness"),
             public = true,
             ownerId = "user5",
-            attendeeCount = 30
-        )
-    )
+            attendeeCount = 30))
   }
 }

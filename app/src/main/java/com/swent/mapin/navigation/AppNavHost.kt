@@ -28,15 +28,11 @@ fun AppNavHost(
     }
 
     composable(Route.Map.route) {
-      MapScreen(onNavigateToProfile = {
-        navController.navigate(Route.Profile.route)
-      })
+      MapScreen(onNavigateToProfile = { navController.navigate(Route.Profile.route) })
     }
 
     composable(Route.Profile.route) {
-      ProfileScreen(onNavigateBack = {
-        navController.popBackStack()
-      })
+      ProfileScreen(onNavigateBack = { navController.popBackStack() })
     }
   }
 }

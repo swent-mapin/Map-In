@@ -23,9 +23,8 @@ import kotlinx.coroutines.launch
  * - Manage temporary edit state
  * - Validate user inputs
  */
-class ProfileViewModel(
-    private val repository: UserProfileRepository = UserProfileRepository()
-) : ViewModel() {
+class ProfileViewModel(private val repository: UserProfileRepository = UserProfileRepository()) :
+    ViewModel() {
 
   // Current user profile from Firestore
   private val _userProfile = MutableStateFlow(UserProfile())
@@ -87,10 +86,7 @@ class ProfileViewModel(
     loadUserProfile()
   }
 
-  /**
-   * Load user profile from Firestore.
-   * If profile doesn't exist, creates a default one.
-   */
+  /** Load user profile from Firestore. If profile doesn't exist, creates a default one. */
   fun loadUserProfile() {
     viewModelScope.launch {
       _isLoading.value = true
@@ -105,11 +101,11 @@ class ProfileViewModel(
           _userProfile.value = existingProfile
         } else {
           // No profile in Firestore, create default one
-          val defaultProfile = repository.createDefaultProfile(
-              userId = currentUser.uid,
-              name = currentUser.displayName ?: "Anonymous User",
-              profilePictureUrl = currentUser.photoUrl?.toString()
-          )
+          val defaultProfile =
+              repository.createDefaultProfile(
+                  userId = currentUser.uid,
+                  name = currentUser.displayName ?: "Anonymous User",
+                  profilePictureUrl = currentUser.photoUrl?.toString())
           _userProfile.value = defaultProfile
         }
       }
@@ -155,8 +151,7 @@ class ProfileViewModel(
     viewModelScope.launch {
       _isLoading.value = true
 
-      val hobbiesList =
-          editHobbies.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+      val hobbiesList = editHobbies.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
       val updatedProfile =
           _userProfile.value.copy(
@@ -221,37 +216,41 @@ class ProfileViewModel(
 
   /** Validate name field */
   private fun validateName() {
-    nameError = when {
-      editName.isEmpty() -> "Name cannot be empty"
-      editName.length < 2 -> "Name must be at least 2 characters"
-      editName.length > 50 -> "Name must be less than 50 characters"
-      else -> null
-    }
+    nameError =
+        when {
+          editName.isEmpty() -> "Name cannot be empty"
+          editName.length < 2 -> "Name must be at least 2 characters"
+          editName.length > 50 -> "Name must be less than 50 characters"
+          else -> null
+        }
   }
 
   /** Validate bio field */
   private fun validateBio() {
-    bioError = when {
-      editBio.length > 500 -> "Bio must be less than 500 characters"
-      else -> null
-    }
+    bioError =
+        when {
+          editBio.length > 500 -> "Bio must be less than 500 characters"
+          else -> null
+        }
   }
 
   /** Validate location field */
   private fun validateLocation() {
-    locationError = when {
-      editLocation.isEmpty() -> "Location cannot be empty"
-      editLocation.length > 100 -> "Location must be less than 100 characters"
-      else -> null
-    }
+    locationError =
+        when {
+          editLocation.isEmpty() -> "Location cannot be empty"
+          editLocation.length > 100 -> "Location must be less than 100 characters"
+          else -> null
+        }
   }
 
   /** Validate hobbies field */
   private fun validateHobbies() {
-    hobbiesError = when {
-      editHobbies.length > 200 -> "Hobbies must be less than 200 characters"
-      else -> null
-    }
+    hobbiesError =
+        when {
+          editHobbies.length > 200 -> "Hobbies must be less than 200 characters"
+          else -> null
+        }
   }
 
   /** Validate all fields */
