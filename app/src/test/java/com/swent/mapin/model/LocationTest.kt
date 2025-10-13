@@ -93,4 +93,3 @@ class LocationTest {
     assertEquals(1000, location.name.length)
   }
 }
-
