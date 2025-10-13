@@ -4,6 +4,5 @@ package com.swent.mapin.model
 data class Location(
     val name: String,
     val latitude: Double,
-    val longitude: Double,
-    val attendees: Int = 0
+    val longitude: Double
 )
