@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -57,6 +55,7 @@ import com.mapbox.maps.extension.compose.style.layers.generated.HeatmapLayer
 import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
 import com.mapbox.maps.extension.compose.style.sources.generated.rememberGeoJsonSourceState
 import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
+import com.mapbox.maps.extension.compose.style.standard.MapboxStandardSatelliteStyle
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
@@ -129,12 +128,15 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
 
   val isDarkTheme = isSystemInDarkTheme()
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
+
+  // Standard style state
   val standardStyleState = rememberStandardStyleState {
     configurationsState.apply {
       this.lightPreset = lightPreset
       showPointOfInterestLabels = BooleanValue(false)
     }
   }
+
   val heatmapSource =
       rememberGeoJsonSourceState(key = "locations-heatmap-source") {
         data = GeoJSONData(viewModel.locationsToGeoJson(viewModel.locations))
@@ -153,12 +155,19 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
                     onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
                     checkTouchProximity = viewModel::checkTouchProximityToSheet)),
         mapViewportState = mapViewportState,
-        style = { MapboxStandardStyle(standardStyleState = standardStyleState) },
+        style = {
+          // Switch between Standard and Satellite styles based on ViewModel state
+          if (viewModel.useSatelliteStyle) {
+            MapboxStandardSatelliteStyle()
+          } else {
+            MapboxStandardStyle(standardStyleState = standardStyleState)
+          }
+        },
         compass = {
           Compass(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 80.dp, end = 16.dp))
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
         },
         scaleBar = {
           AnimatedVisibility(
@@ -344,25 +353,13 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
 
-    FloatingActionButton(
-        onClick = { viewModel.toggleHeatmap() },
-        containerColor =
-            if (viewModel.showHeatmap) {
-              MaterialTheme.colorScheme.primary
-            } else {
-              MaterialTheme.colorScheme.surface
-            },
-        contentColor =
-            if (viewModel.showHeatmap) {
-              MaterialTheme.colorScheme.onPrimary
-            } else {
-              MaterialTheme.colorScheme.onSurface
-            },
+    // Modern map style selector - compact collapsible control
+    MapStyleSelector(
+        selectedStyle = viewModel.mapStyle,
+        onStyleSelected = { style -> viewModel.setMapStyle(style) },
         modifier =
             Modifier.align(Alignment.BottomEnd)
-                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp)) {
-          Text(text = if (viewModel.showHeatmap) "Heat" else "Pins")
-        }
+                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
 
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
