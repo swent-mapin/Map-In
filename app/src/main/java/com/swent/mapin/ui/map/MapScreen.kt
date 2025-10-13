@@ -53,10 +53,12 @@ import com.mapbox.maps.extension.compose.style.DoubleValue
 import com.mapbox.maps.extension.compose.style.LongValue
 import com.mapbox.maps.extension.compose.style.layers.generated.HeatmapLayer
 import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
+import com.mapbox.maps.extension.compose.style.sources.generated.GeoJsonSourceState
 import com.mapbox.maps.extension.compose.style.sources.generated.rememberGeoJsonSourceState
 import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardSatelliteStyle
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
+import com.mapbox.maps.extension.compose.style.standard.StandardStyleState
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
 import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
@@ -109,15 +111,14 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
   ObserveZoomForSheetCollapse(viewModel, mapViewportState)
 
-  val density = LocalDensity.current
-  val densityDpi = remember(density) { (density.density * 160).toInt() }
-  val screenHeightPx = remember(screenHeightDp, density) { screenHeightDp.value * density.density }
-  val sheetTopPx = screenHeightPx - (viewModel.currentSheetHeight.value * density.density)
+  val sheetMetrics =
+      rememberSheetInteractionMetrics(
+          screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
   val isDarkTheme = isSystemInDarkTheme()
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
-  // Disable POI labels to keep our annotations front-and-center
+  // Adjust POI labels alongside our custom annotations
   val standardStyleState = rememberStandardStyleState {
     configurationsState.apply {
       this.lightPreset = lightPreset
@@ -136,97 +137,14 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   }
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
-    MapboxMap(
-        Modifier.fillMaxSize()
-            .then(
-                Modifier.mapPointerInput(
-                    bottomSheetState = viewModel.bottomSheetState,
-                    sheetTopPx = sheetTopPx,
-                    densityDpi = densityDpi,
-                    onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
-                    checkTouchProximity = viewModel::checkTouchProximityToSheet)),
+    MapboxLayer(
+        viewModel = viewModel,
         mapViewportState = mapViewportState,
-        style = {
-          if (viewModel.useSatelliteStyle) {
-            MapboxStandardSatelliteStyle(styleInteractionsState = null)
-          } else {
-            MapboxStandardStyle(standardStyleState = standardStyleState)
-          }
-        },
-        compass = {
-          Compass(
-              modifier =
-                  Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
-        },
-        scaleBar = {
-          AnimatedVisibility(
-              visible = viewModel.isZooming,
-              enter = fadeIn(),
-              exit = fadeOut(),
-              modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
-                ScaleBar()
-              }
-        }) {
-          val context = LocalContext.current
-          val markerBitmap =
-              remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
-          val marker = remember(markerBitmap) { markerBitmap?.let { IconImage(it) } }
-
-          val annotationStyle =
-              remember(isDarkTheme, markerBitmap) {
-                createAnnotationStyle(isDarkTheme, markerBitmap)
-              }
-
-          val annotations =
-              remember(viewModel.locations, annotationStyle) {
-                createLocationAnnotations(viewModel.locations, annotationStyle)
-              }
-
-          val clusterConfig = remember { createClusterConfig() }
-
-          if (viewModel.showHeatmap) {
-            CreateHeatmapLayer(heatmapSource)
-
-            PointAnnotationGroup(annotations = annotations) {
-              marker?.let { iconImage = it }
-              interactionsState.onClicked { annotation ->
-                findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
-                  onLocationClick(location)
-                  true
-                } ?: false
-              }
-            }
-          } else {
-            // Enable clustering when heatmap is off to reduce pin noise
-            PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-              marker?.let { iconImage = it }
-              interactionsState
-                  .onClicked { annotation ->
-                    findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
-                      onLocationClick(location)
-                      true
-                    } ?: false
-                  }
-                  .onClusterClicked { clusterFeature ->
-                    val feature = clusterFeature.originalFeature
-                    val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
-                    val currentZoom =
-                        mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-                    val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
-
-                    mapViewportState.easeTo(
-                        cameraOptions =
-                            cameraOptions {
-                              center(center)
-                              zoom((currentZoom + 2.0).coerceAtMost(18.0))
-                            },
-                        animationOptions = animationOptions)
-                    true
-                  }
-            }
-          }
-        }
+        sheetMetrics = sheetMetrics,
+        standardStyleState = standardStyleState,
+        heatmapSource = heatmapSource,
+        isDarkTheme = isDarkTheme,
+        onLocationClick = onLocationClick)
 
     TopGradient()
 
@@ -287,6 +205,135 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   }
 }
 
+/**
+ * Composable that renders the Mapbox map with compass, scale bar, and location annotations.
+ *
+ * Handles map styling (standard vs satellite), pointer input for sheet interactions, and delegates
+ * the rendering of map layers to [MapLayers].
+ */
+@Composable
+private fun MapboxLayer(
+    viewModel: MapScreenViewModel,
+    mapViewportState: MapViewportState,
+    sheetMetrics: SheetInteractionMetrics,
+    standardStyleState: StandardStyleState,
+    heatmapSource: GeoJsonSourceState,
+    isDarkTheme: Boolean,
+    onLocationClick: (Location) -> Unit
+) {
+  MapboxMap(
+      Modifier.fillMaxSize()
+          .then(
+              Modifier.mapPointerInput(
+                  bottomSheetState = viewModel.bottomSheetState,
+                  sheetMetrics = sheetMetrics,
+                  onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
+                  checkTouchProximity = viewModel::checkTouchProximityToSheet)),
+      mapViewportState = mapViewportState,
+      style = {
+        if (viewModel.useSatelliteStyle) {
+          MapboxStandardSatelliteStyle(styleInteractionsState = null)
+        } else {
+          MapboxStandardStyle(standardStyleState = standardStyleState)
+        }
+      },
+      compass = {
+        Box(modifier = Modifier.fillMaxSize()) {
+          Compass(
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
+        }
+      },
+      scaleBar = {
+        Box(modifier = Modifier.fillMaxSize()) {
+          AnimatedVisibility(
+              visible = viewModel.isZooming,
+              enter = fadeIn(),
+              exit = fadeOut(),
+              modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
+                ScaleBar()
+              }
+        }
+      }) {
+        MapLayers(
+            viewModel = viewModel,
+            mapViewportState = mapViewportState,
+            heatmapSource = heatmapSource,
+            isDarkTheme = isDarkTheme,
+            onLocationClick = onLocationClick)
+      }
+}
+
+/**
+ * Renders map content including location markers, clusters, and optional heatmap.
+ *
+ * Switches between heatmap mode (with simple annotations) and clustering mode based on
+ * [MapScreenViewModel.showHeatmap].
+ */
+@Composable
+private fun MapLayers(
+    viewModel: MapScreenViewModel,
+    mapViewportState: MapViewportState,
+    heatmapSource: GeoJsonSourceState,
+    isDarkTheme: Boolean,
+    onLocationClick: (Location) -> Unit
+) {
+  val context = LocalContext.current
+  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+  val marker = remember(markerBitmap) { markerBitmap?.let { IconImage(it) } }
+
+  val annotationStyle =
+      remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
+
+  val annotations =
+      remember(viewModel.locations, annotationStyle) {
+        createLocationAnnotations(viewModel.locations, annotationStyle)
+      }
+
+  val clusterConfig = remember { createClusterConfig() }
+
+  if (viewModel.showHeatmap) {
+    CreateHeatmapLayer(heatmapSource)
+
+    PointAnnotationGroup(annotations = annotations) {
+      marker?.let { iconImage = it }
+      interactionsState.onClicked { annotation ->
+        findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
+          onLocationClick(location)
+          true
+        } ?: false
+      }
+    }
+  } else {
+    PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
+      marker?.let { iconImage = it }
+      interactionsState
+          .onClicked { annotation ->
+            findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
+              onLocationClick(location)
+              true
+            } ?: false
+          }
+          .onClusterClicked { clusterFeature ->
+            val feature = clusterFeature.originalFeature
+            val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
+            val currentZoom =
+                mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+            val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
+
+            mapViewportState.easeTo(
+                cameraOptions {
+                  center(center)
+                  zoom((currentZoom + 2.0).coerceAtMost(18.0))
+                },
+                animationOptions = animationOptions)
+            true
+          }
+    }
+  }
+}
+
 /** Top gradient overlay for better visibility of status bar icons on map */
 @Composable
 private fun TopGradient() {
@@ -335,22 +382,51 @@ private fun MapInteractionBlocker() {
           })
 }
 
+/**
+ * Data class holding metrics for sheet interaction calculations.
+ *
+ * @property densityDpi Screen density in DPI for touch proximity calculations
+ * @property sheetTopPx Current top position of the bottom sheet in pixels
+ */
+private data class SheetInteractionMetrics(val densityDpi: Int, val sheetTopPx: Float)
+
+/**
+ * Calculates and remembers sheet interaction metrics based on screen dimensions.
+ *
+ * Converts dp values to pixels and computes the sheet's top position for touch detection.
+ */
+@Composable
+private fun rememberSheetInteractionMetrics(
+    screenHeightDp: Dp,
+    currentSheetHeight: Dp
+): SheetInteractionMetrics {
+  val density = LocalDensity.current
+  val densityFactor = density.density
+  val densityDpi = remember(densityFactor) { (densityFactor * 160).toInt() }
+  val screenHeightPx =
+      remember(screenHeightDp, densityFactor) { screenHeightDp.value * densityFactor }
+  val sheetTopPx =
+      remember(screenHeightPx, currentSheetHeight, densityFactor) {
+        screenHeightPx - (currentSheetHeight.value * densityFactor)
+      }
+  return remember(densityDpi, sheetTopPx) { SheetInteractionMetrics(densityDpi, sheetTopPx) }
+}
+
 /** Pointer modifier that collapses the sheet when touches originate near its top edge. */
 private fun Modifier.mapPointerInput(
     bottomSheetState: BottomSheetState,
-    sheetTopPx: Float,
-    densityDpi: Int,
+    sheetMetrics: SheetInteractionMetrics,
     onCollapseSheet: () -> Unit,
     checkTouchProximity: (Float, Float, Int) -> Boolean
 ) =
-    this.pointerInput(bottomSheetState, sheetTopPx) {
+    this.pointerInput(bottomSheetState, sheetMetrics) {
       awaitPointerEventScope {
         while (true) {
           val event = awaitPointerEvent()
           if (event.type == PointerEventType.Move) {
             event.changes.firstOrNull()?.let { change ->
               val touchY = change.position.y
-              if (checkTouchProximity(touchY, sheetTopPx, densityDpi)) {
+              if (checkTouchProximity(touchY, sheetMetrics.sheetTopPx, sheetMetrics.densityDpi)) {
                 onCollapseSheet()
               }
             }
@@ -392,6 +468,11 @@ private fun ObserveZoomForSheetCollapse(
   }
 }
 
+/**
+ * Conditionally renders a map interaction blocker when the sheet is fully expanded.
+ *
+ * Prevents map gestures from interfering with sheet content interaction.
+ */
 @Composable
 private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
   if (bottomSheetState == BottomSheetState.FULL) {
@@ -399,6 +480,12 @@ private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
   }
 }
 
+/**
+ * Converts a drawable resource to a Bitmap for use in map annotations.
+ *
+ * @param drawableResId Resource ID of the drawable to convert
+ * @return Bitmap representation of the drawable, or null if conversion fails
+ */
 private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
   val drawable = AppCompatResources.getDrawable(this, drawableResId) ?: return null
   val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1
@@ -410,12 +497,26 @@ private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
   return bitmap
 }
 
+/**
+ * Holds styling information for map annotations.
+ *
+ * @property textColorInt Text color for annotation labels (ARGB integer)
+ * @property haloColorInt Halo color for text outline (ARGB integer)
+ * @property markerBitmap Optional bitmap for the marker icon
+ */
 private data class AnnotationStyle(
     val textColorInt: Int,
     val haloColorInt: Int,
     val markerBitmap: Bitmap?
 )
 
+/**
+ * Creates annotation styling based on current theme.
+ *
+ * @param isDarkTheme Whether dark theme is active
+ * @param markerBitmap Optional bitmap for marker icon
+ * @return AnnotationStyle with theme-appropriate colors
+ */
 private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
   val textColor = if (isDarkTheme) Color.White else Color.Black
   val haloColor =
@@ -431,6 +532,16 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
       markerBitmap = markerBitmap)
 }
 
+/**
+ * Converts a list of locations to Mapbox point annotation options.
+ *
+ * Each annotation includes position, icon, label, and custom styling. The index is stored as data
+ * for later retrieval.
+ *
+ * @param locations List of locations to convert
+ * @param style Styling to apply to annotations
+ * @return List of configured PointAnnotationOptions
+ */
 private fun createLocationAnnotations(
     locations: List<Location>,
     style: AnnotationStyle
@@ -451,6 +562,13 @@ private fun createLocationAnnotations(
   }
 }
 
+/**
+ * Creates clustering configuration for location annotations.
+ *
+ * Uses blue gradient colors for cluster sizes and enables touch interaction.
+ *
+ * @return AnnotationConfig with clustering enabled
+ */
 private fun createClusterConfig(): AnnotationConfig {
   val clusterColorLevels =
       listOf(
@@ -469,6 +587,15 @@ private fun createClusterConfig(): AnnotationConfig {
                       textSize = 12.0)))
 }
 
+/**
+ * Finds the Location associated with a clicked annotation.
+ *
+ * First tries to match by stored index data, then falls back to coordinate comparison.
+ *
+ * @param annotation The clicked point annotation
+ * @param locations List of all locations
+ * @return Matching Location or null if not found
+ */
 private fun findLocationForAnnotation(
     annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
     locations: List<Location>
@@ -481,10 +608,15 @@ private fun findLocationForAnnotation(
       }
 }
 
+/**
+ * Renders a heatmap layer showing location density.
+ *
+ * Uses interpolated colors, radius, and weight based on zoom level and location data.
+ *
+ * @param heatmapSource GeoJSON source containing location data
+ */
 @Composable
-private fun CreateHeatmapLayer(
-    heatmapSource: com.mapbox.maps.extension.compose.style.sources.generated.GeoJsonSourceState
-) {
+private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
   HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
     maxZoom = LongValue(18L)
     heatmapOpacity = DoubleValue(0.65)

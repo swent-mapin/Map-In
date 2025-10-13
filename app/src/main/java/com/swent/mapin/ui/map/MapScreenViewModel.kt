@@ -300,8 +300,7 @@ class MapScreenViewModel(
         android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
 
         hideMemoryForm()
-        _previousSheetState?.let { setBottomSheetState(it) }
-        _previousSheetState = null
+        restorePreviousSheetState()
       } catch (e: Exception) {
         _errorMessage = "Failed to save memory: ${e.message ?: "Unknown error"}"
         android.util.Log.e("MapScreenViewModel", "Error saving memory", e)
@@ -342,13 +341,17 @@ class MapScreenViewModel(
 
   fun onMemoryCancel() {
     hideMemoryForm()
-    _previousSheetState?.let { setBottomSheetState(it) }
-    _previousSheetState = null
+    restorePreviousSheetState()
   }
 
   override fun onCleared() {
     super.onCleared()
     hideScaleBarJob?.cancel()
+  }
+
+  private fun restorePreviousSheetState() {
+    _previousSheetState?.let { setBottomSheetState(it) }
+    _previousSheetState = null
   }
 }
 
