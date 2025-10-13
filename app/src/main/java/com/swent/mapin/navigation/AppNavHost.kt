@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.map.MapScreen
+import com.swent.mapin.ui.profile.ProfileScreen
 
 @Composable
 fun AppNavHost(
@@ -26,6 +27,16 @@ fun AppNavHost(
           })
     }
 
-    composable(Route.Map.route) { MapScreen() }
+    composable(Route.Map.route) {
+      MapScreen(onNavigateToProfile = {
+        navController.navigate(Route.Profile.route)
+      })
+    }
+
+    composable(Route.Profile.route) {
+      ProfileScreen(onNavigateBack = {
+        navController.popBackStack()
+      })
+    }
   }
 }
