@@ -5,8 +5,8 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import com.swent.mapin.ui.AddEventPopUpTestTags
-import com.swent.mapin.ui.FutureDatePickerButton
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.components.FutureDatePickerButton
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

@@ -11,8 +11,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.ui.AddEventPopUp
-import com.swent.mapin.ui.AddEventPopUpTestTags
+import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
