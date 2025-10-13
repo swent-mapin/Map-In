@@ -35,7 +35,7 @@ import com.google.maps.android.compose.TileOverlay
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -56,7 +56,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * State is managed by MapScreenViewModel.
  */
 @Composable
-fun MapScreen() {
+fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   val sheetConfig =
       BottomSheetConfig(
@@ -95,8 +95,8 @@ fun MapScreen() {
                         },
                         checkTouchProximity = viewModel::checkTouchProximityToSheet)),
         cameraPositionState = cameraPositionState) {
-          MapMarkers(locations = viewModel.locations)
-          HeatmapOverlay(showHeatmap = viewModel.showHeatmap, locations = viewModel.locations)
+          MapMarkers(events = viewModel.events)
+          HeatmapOverlay(showHeatmap = viewModel.showHeatmap, events = viewModel.events)
         }
 
     TopGradient()
@@ -107,6 +107,14 @@ fun MapScreen() {
         fullHeightDp = sheetConfig.fullHeight)
 
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
+
+    // Profile button in top-right corner
+    Box(
+        modifier =
+            Modifier.align(Alignment.TopEnd)
+                .padding(top = 48.dp, end = 16.dp)) {
+          ProfileButton(onClick = onNavigateToProfile)
+        }
 
     Box(
         modifier =
@@ -251,29 +259,29 @@ private fun ObserveZoomForSheetCollapse(
   }
 }
 
-/** Renders location markers on the map. */
+/** Renders event markers on the map with title and attendee count. */
 @Composable
-private fun MapMarkers(locations: List<Location>) {
-  locations.forEach { location ->
+private fun MapMarkers(events: List<Event>) {
+  events.forEach { event ->
     Marker(
-        state = MarkerState(position = LatLng(location.latitude, location.longitude)),
-        title = location.name,
-        snippet = "${location.attendees} attendees")
+        state = MarkerState(position = LatLng(event.latitude, event.longitude)),
+        title = event.title,
+        snippet = "${event.attendeeCount ?: 0} attendees")
   }
 }
 
-/** Renders weighted heatmap overlay based on activity attendees. */
+/** Renders heatmap overlay based on event attendee density. */
 @Composable
-private fun HeatmapOverlay(showHeatmap: Boolean, locations: List<Location>) {
-  if (!showHeatmap || locations.isEmpty()) return
+private fun HeatmapOverlay(showHeatmap: Boolean, events: List<Event>) {
+  if (!showHeatmap || events.isEmpty()) return
 
   val weightedData =
-      remember(locations) {
-        val max = locations.maxOfOrNull { it.attendees } ?: 0
+      remember(events) {
+        val maxAttendees = events.maxOfOrNull { it.attendeeCount ?: 0 } ?: 0
         val data =
-            locations.map { location ->
-              val weight = if (max == 0) 0.0 else location.attendees.toDouble() / max
-              WeightedLatLng(LatLng(location.latitude, location.longitude), weight)
+            events.map { event ->
+              val weight = if (maxAttendees == 0) 1.0 else (event.attendeeCount ?: 0).toDouble() / maxAttendees
+              WeightedLatLng(LatLng(event.latitude, event.longitude), weight)
             }
         data
       }
@@ -309,5 +317,19 @@ private fun HeatmapToggleButton(showHeatmap: Boolean, onToggle: () -> Unit) {
             tint =
                 if (showHeatmap) MaterialTheme.colorScheme.onPrimary
                 else MaterialTheme.colorScheme.onSecondaryContainer)
+      }
+}
+
+/** Profile button for navigating to user profile screen. */
+@Composable
+private fun ProfileButton(onClick: () -> Unit) {
+  FloatingActionButton(
+      onClick = onClick,
+      modifier = Modifier.testTag("profileButton"),
+      containerColor = MaterialTheme.colorScheme.primaryContainer) {
+        Icon(
+            painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
+            contentDescription = "Profile",
+            tint = MaterialTheme.colorScheme.onPrimaryContainer)
       }
 }
