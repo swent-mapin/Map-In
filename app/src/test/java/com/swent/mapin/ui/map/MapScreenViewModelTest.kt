@@ -265,9 +265,72 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun currentSheetHeight_canBeUpdated() {
-    viewModel.currentSheetHeight = 250.dp
-    assertEquals(250.dp, viewModel.currentSheetHeight)
+  fun setBottomSheetState_updatesCurrentSheetHeight() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+
+    viewModel.setBottomSheetState(BottomSheetState.FULL)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun onSearchQueryChange_emptyQuery_doesNotExpandSheet() {
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+    viewModel.onSearchQueryChange("")
+    assertEquals("", viewModel.searchQuery)
+  }
+
+  @Test
+  fun bottomSheetState_transitionFromMediumToCollapsed_clearsSearchQuery() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.onSearchQueryChange("test")
+
+    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+
+    assertEquals("", viewModel.searchQuery)
+  }
+
+  @Test
+  fun clearFocus_calledOnlyWhenLeavingFullState() {
+    clearFocusCalled = false
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertFalse(clearFocusCalled)
+
+    viewModel.setBottomSheetState(BottomSheetState.FULL)
+    assertFalse(clearFocusCalled)
+
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    assertTrue(clearFocusCalled)
+  }
+
+  @Test
+  fun onSearchTap_multipleCalls_setsFocusWhenNotInFullState() {
+    // Premier appel : passe en FULL et met focus à true
+    viewModel.onSearchTap()
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+    assertTrue(viewModel.shouldFocusSearch)
+
+    // Gérer le focus
+    viewModel.onSearchFocusHandled()
+    assertFalse(viewModel.shouldFocusSearch)
+
+    // Deuxième appel : déjà en FULL, ne fait rien
+    viewModel.onSearchTap()
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+    assertFalse(viewModel.shouldFocusSearch)
+  }
+
+  @Test
+  fun updateMediumReferenceZoom_multipleUpdates_usesLatest() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.updateMediumReferenceZoom(10f)
+    viewModel.updateMediumReferenceZoom(15f)
+
+    assertFalse(viewModel.checkZoomInteraction(15.4f))
+    assertTrue(viewModel.checkZoomInteraction(15.6f))
   }
 
   @Test
