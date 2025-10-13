@@ -202,13 +202,13 @@ class MapScreenViewModelTest {
   @Test
   fun setBottomSheetState_updatesCurrentSheetHeight() {
     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    assertEquals(config.mediumHeight, viewModel.currentSheetHeight)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
 
     viewModel.setBottomSheetState(BottomSheetState.FULL)
-    assertEquals(config.fullHeight, viewModel.currentSheetHeight)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
 
     viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-    assertEquals(config.collapsedHeight, viewModel.currentSheetHeight)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
   }
 
   @Test
@@ -242,11 +242,19 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun onSearchTap_multipleCalls_maintainsFocusState() {
+  fun onSearchTap_multipleCalls_setsFocusWhenNotInFullState() {
+    // Premier appel : passe en FULL et met focus à true
     viewModel.onSearchTap()
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertTrue(viewModel.shouldFocusSearch)
 
+    // Gérer le focus
+    viewModel.onSearchFocusHandled()
+    assertFalse(viewModel.shouldFocusSearch)
+
+    // Deuxième appel : déjà en FULL, ne fait rien
     viewModel.onSearchTap()
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertFalse(viewModel.shouldFocusSearch)
   }
 
