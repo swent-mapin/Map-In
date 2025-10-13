@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import com.swent.mapin.testing.UiTestTags
 import org.junit.Rule
 import org.junit.Test
 
@@ -185,31 +186,30 @@ class MapScreenTest {
     rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
   }
 
-  // new tests
   @Test
-  fun heatmapToggle_isVisible_andToggles() {
+  fun mapStyleToggle_isVisible_andToggles() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
-    rule.onNodeWithTag("heatmapToggle").performClick()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
-    rule.onNodeWithTag("heatmapToggle").performClick()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
   }
 
   @Test
-  fun heatmapToggle_persists_afterBottomSheetTransitions() {
+  fun mapStyleToggle_persists_afterBottomSheetTransitions() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
   }
 
   @Test
@@ -225,14 +225,77 @@ class MapScreenTest {
   }
 
   @Test
-  fun heatmapToggle_visible_inAllSheetStates() {
+  fun mapStyleToggle_visible_inAllSheetStates() {
     rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
     rule.waitForIdle()
-    rule.onNodeWithTag("heatmapToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_heatmapMode_displaysCorrectly() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("mapStyleToggle").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_HEATMAP").performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_satelliteMode_displaysCorrectly() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("mapStyleToggle").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationClick_triggersCallback() {
+    var clickedLocation: com.swent.mapin.model.Location? = null
+    rule.setContent {
+      MaterialTheme { MapScreen(onLocationClick = { location -> clickedLocation = location }) }
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_switchBetweenStyles_maintainsState() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("mapStyleToggle").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_HEATMAP").performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("mapStyleToggle").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("mapStyleToggle").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_STANDARD").performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 }

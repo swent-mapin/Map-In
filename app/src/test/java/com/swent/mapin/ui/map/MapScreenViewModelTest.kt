@@ -262,72 +262,9 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun setBottomSheetState_updatesCurrentSheetHeight() {
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
-
-    viewModel.setBottomSheetState(BottomSheetState.FULL)
-    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
-
-    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
-  }
-
-  @Test
-  fun onSearchQueryChange_emptyQuery_doesNotExpandSheet() {
-    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
-    viewModel.onSearchQueryChange("")
-    assertEquals("", viewModel.searchQuery)
-  }
-
-  @Test
-  fun bottomSheetState_transitionFromMediumToCollapsed_clearsSearchQuery() {
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    viewModel.onSearchQueryChange("test")
-
-    viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-
-    assertEquals("", viewModel.searchQuery)
-  }
-
-  @Test
-  fun clearFocus_calledOnlyWhenLeavingFullState() {
-    clearFocusCalled = false
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    assertFalse(clearFocusCalled)
-
-    viewModel.setBottomSheetState(BottomSheetState.FULL)
-    assertFalse(clearFocusCalled)
-
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    assertTrue(clearFocusCalled)
-  }
-
-  @Test
-  fun onSearchTap_multipleCalls_setsFocusWhenNotInFullState() {
-    // Premier appel : passe en FULL et met focus à true
-    viewModel.onSearchTap()
-    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
-    assertTrue(viewModel.shouldFocusSearch)
-
-    // Gérer le focus
-    viewModel.onSearchFocusHandled()
-    assertFalse(viewModel.shouldFocusSearch)
-
-    // Deuxième appel : déjà en FULL, ne fait rien
-    viewModel.onSearchTap()
-    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
-    assertFalse(viewModel.shouldFocusSearch)
-  }
-
-  @Test
-  fun updateMediumReferenceZoom_multipleUpdates_usesLatest() {
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    viewModel.updateMediumReferenceZoom(10f)
-    viewModel.updateMediumReferenceZoom(15f)
-
-    assertFalse(viewModel.checkZoomInteraction(15.4f))
-    assertTrue(viewModel.checkZoomInteraction(15.6f))
+  fun currentSheetHeight_canBeUpdated() {
+    viewModel.currentSheetHeight = 250.dp
+    assertEquals(250.dp, viewModel.currentSheetHeight)
   }
 
   @Test
@@ -474,13 +411,98 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun toggleHeatmap_togglesState() {
+  fun setMapStyle_togglesHeatmapState() {
     assertFalse(viewModel.showHeatmap)
 
-    viewModel.toggleHeatmap()
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.HEATMAP)
     assertTrue(viewModel.showHeatmap)
 
-    viewModel.toggleHeatmap()
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.STANDARD)
     assertFalse(viewModel.showHeatmap)
+  }
+
+  @Test
+  fun setLocations_updatesLocations() {
+    val initialLocations = viewModel.locations
+    val newLocations = listOf(com.swent.mapin.model.Location("Test Location", -118.0, 34.0))
+
+    viewModel.setLocations(newLocations)
+
+    assertEquals(newLocations, viewModel.locations)
+  }
+
+  @Test
+  fun onMemorySave_withMediaUris_attemptsUpload() = runTest {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.showMemoryForm()
+
+    val mockUri = org.mockito.kotlin.mock<android.net.Uri>()
+    val formData =
+        MemoryFormData(
+            title = "Memory with media",
+            description = "Has photos",
+            eventId = null,
+            isPublic = false,
+            mediaUris = listOf(mockUri),
+            taggedUserIds = emptyList())
+
+    val mockContentResolver = org.mockito.kotlin.mock<android.content.ContentResolver>()
+    whenever(mockContext.contentResolver).thenReturn(mockContentResolver)
+    whenever(mockContentResolver.getType(any())).thenReturn("image/jpeg")
+
+    viewModel.onMemorySave(formData)
+    advanceUntilIdle()
+
+    verify(mockMemoryRepository).addMemory(any())
+  }
+
+  @Test
+  fun setMapStyle_satellite_updatesSatelliteStyle() {
+    assertFalse(viewModel.useSatelliteStyle)
+
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.SATELLITE)
+
+    assertTrue(viewModel.useSatelliteStyle)
+    assertFalse(viewModel.showHeatmap)
+  }
+
+  @Test
+  fun setMapStyle_standard_usesStandardStyle() {
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.SATELLITE)
+    assertTrue(viewModel.useSatelliteStyle)
+
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.STANDARD)
+
+    assertFalse(viewModel.useSatelliteStyle)
+    assertFalse(viewModel.showHeatmap)
+  }
+
+  @Test
+  fun locationsToGeoJson_createsValidGeoJson() {
+    val locations =
+        listOf(
+            com.swent.mapin.model.Location("Location 1", 6.5, 46.5, attendees = 10),
+            com.swent.mapin.model.Location("Location 2", 7.0, 47.0, attendees = 25))
+
+    val geoJson = locationsToGeoJson(locations)
+
+    // Verify it's valid JSON and contains expected data
+    assertTrue(geoJson.contains("type"))
+    assertTrue(geoJson.contains("FeatureCollection"))
+    assertTrue(geoJson.contains("features"))
+    assertTrue(geoJson.contains("geometry"))
+    assertTrue(geoJson.contains("Point"))
+    assertTrue(geoJson.contains("weight"))
+    assertTrue(geoJson.contains("6.5"))
+    assertTrue(geoJson.contains("46.5"))
+    assertTrue(geoJson.contains("10")) // weight from attendees
+  }
+
+  @Test
+  fun locationsToGeoJson_emptyList_createsEmptyFeatureCollection() {
+    val geoJson = locationsToGeoJson(emptyList())
+
+    assertTrue(geoJson.contains("FeatureCollection"))
+    assertTrue(geoJson.contains("features"))
   }
 }

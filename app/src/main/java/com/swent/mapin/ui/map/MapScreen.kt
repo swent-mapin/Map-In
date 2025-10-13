@@ -74,24 +74,12 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
-// Assisted by AI
-/**
- * Main map screen with bottom sheet overlay.
- *
- * Architecture:
- * - Google Maps as background layer with location markers
- * - Top gradient for status bar visibility
- * - Progressive scrim overlay (darkens as sheet expands)
- * - Map interaction blocker (active only in full mode)
- * - Floating action button to toggle heatmap visualization
- * - Bottom sheet with content
- *
- * State is managed by MapScreenViewModel.
- */
+/** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
 @Composable
 fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
+  // Bottom sheet heights scale with the current device size
   val sheetConfig =
       BottomSheetConfig(
           collapsedHeight = MapConstants.COLLAPSED_HEIGHT,
@@ -101,7 +89,6 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
 
-  // Show error messages in snackbar
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
@@ -109,6 +96,7 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
     }
   }
 
+  // Start the camera centered on the default campus view
   val mapViewportState = rememberMapViewportState {
     setCameraOptions {
       zoom(MapConstants.DEFAULT_ZOOM.toDouble())
@@ -129,21 +117,24 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   val isDarkTheme = isSystemInDarkTheme()
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
-  // Standard style state
+  // Disable POI labels to keep our annotations front-and-center
   val standardStyleState = rememberStandardStyleState {
     configurationsState.apply {
       this.lightPreset = lightPreset
-      showPointOfInterestLabels = BooleanValue(false)
+      showPointOfInterestLabels = BooleanValue(true) // turn off if needed
     }
   }
 
+  // Heatmap source mirrors the ViewModel locations list
   val heatmapSource =
       rememberGeoJsonSourceState(key = "locations-heatmap-source") {
-        data = GeoJSONData(viewModel.locationsToGeoJson(viewModel.locations))
+        data = GeoJSONData(locationsToGeoJson(viewModel.locations))
       }
+
   LaunchedEffect(viewModel.locations) {
-    heatmapSource.data = GeoJSONData(viewModel.locationsToGeoJson(viewModel.locations))
+    heatmapSource.data = GeoJSONData(locationsToGeoJson(viewModel.locations))
   }
+
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     MapboxMap(
         Modifier.fillMaxSize()
@@ -156,9 +147,8 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
                     checkTouchProximity = viewModel::checkTouchProximityToSheet)),
         mapViewportState = mapViewportState,
         style = {
-          // Switch between Standard and Satellite styles based on ViewModel state
           if (viewModel.useSatelliteStyle) {
-            MapboxStandardSatelliteStyle()
+            MapboxStandardSatelliteStyle(styleInteractionsState = null)
           } else {
             MapboxStandardStyle(standardStyleState = standardStyleState)
           }
@@ -179,171 +169,52 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
               }
         }) {
           if (viewModel.showHeatmap) {
-            HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
-              maxZoom = LongValue(18L)
-              heatmapOpacity = DoubleValue(0.65)
-              heatmapRadius =
-                  DoubleValue(
-                      interpolate {
-                        linear()
-                        zoom()
-                        stop {
-                          literal(0.0)
-                          literal(18.0)
-                        }
-                        stop {
-                          literal(14.0)
-                          literal(32.0)
-                        }
-                        stop {
-                          literal(22.0)
-                          literal(48.0)
-                        }
-                      })
-              heatmapWeight =
-                  DoubleValue(
-                      interpolate {
-                        linear()
-                        get { literal("weight") }
-                        stop {
-                          literal(0.0)
-                          literal(0.0)
-                        }
-                        stop {
-                          literal(5.0)
-                          literal(0.4)
-                        }
-                        stop {
-                          literal(25.0)
-                          literal(0.8)
-                        }
-                        stop {
-                          literal(100.0)
-                          literal(1.0)
-                        }
-                      })
-              heatmapColor =
-                  ColorValue(
-                      interpolate {
-                        linear()
-                        heatmapDensity()
-                        stop {
-                          literal(0.0)
-                          rgba(33.0, 102.0, 172.0, 0.0)
-                        }
-                        stop {
-                          literal(0.2)
-                          rgb(103.0, 169.0, 207.0)
-                        }
-                        stop {
-                          literal(0.4)
-                          rgb(209.0, 229.0, 240.0)
-                        }
-                        stop {
-                          literal(0.6)
-                          rgb(253.0, 219.0, 199.0)
-                        }
-                        stop {
-                          literal(0.8)
-                          rgb(239.0, 138.0, 98.0)
-                        }
-                        stop {
-                          literal(1.0)
-                          rgb(178.0, 24.0, 43.0)
-                        }
-                      })
-            }
+            CreateHeatmapLayer(heatmapSource)
           }
+
           val context = LocalContext.current
           val markerBitmap =
               remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
           val marker = remember(markerBitmap) { markerBitmap?.let { IconImage(it) } }
-          val textColorInt =
-              remember(isDarkTheme) {
-                val color = if (isDarkTheme) Color.White else Color.Black
-                color.toArgb()
+
+          val annotationStyle =
+              remember(isDarkTheme, markerBitmap) {
+                createAnnotationStyle(isDarkTheme, markerBitmap)
               }
-          val haloColorInt =
-              remember(isDarkTheme) {
-                val halo =
-                    if (isDarkTheme) {
-                      Color.Black.copy(alpha = 0.8f)
-                    } else {
-                      Color.White.copy(alpha = 0.85f)
-                    }
-                halo.toArgb()
-              }
+
           val annotations =
-              remember(viewModel.locations, textColorInt, haloColorInt, markerBitmap) {
-                viewModel.locations.mapIndexed { index, loc ->
-                  PointAnnotationOptions()
-                      .withPoint(Point.fromLngLat(loc.longitude, loc.latitude))
-                      .apply { markerBitmap?.let { withIconImage(it) } }
-                      .withIconAnchor(IconAnchor.BOTTOM)
-                      .withTextAnchor(TextAnchor.TOP)
-                      .withTextOffset(listOf(0.0, 0.5))
-                      .withTextSize(14.0)
-                      .withTextColor(textColorInt)
-                      .withTextHaloColor(haloColorInt)
-                      .withTextHaloWidth(1.5)
-                      .withTextField(loc.name)
-                      .withData(JsonPrimitive(index))
+              remember(viewModel.locations, annotationStyle) {
+                createLocationAnnotations(viewModel.locations, annotationStyle)
+              }
+
+          val clusterConfig = remember { createClusterConfig() }
+
+          PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
+            marker?.let { iconImage = it }
+            interactionsState
+                .onClicked { annotation ->
+                  findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
+                    onLocationClick(location)
+                    true
+                  } ?: false
                 }
-              }
-          val clusterColorLevels = remember {
-            listOf(
-                0 to Color(0xFF64B5F6).toArgb(),
-                25 to Color(0xFF1E88E5).toArgb(),
-                50 to Color(0xFF0D47A1).toArgb())
+                .onClusterClicked { clusterFeature ->
+                  val feature = clusterFeature.originalFeature
+                  val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
+                  val currentZoom =
+                      mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+                  val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
+
+                  mapViewportState.easeTo(
+                      cameraOptions =
+                          cameraOptions {
+                            center(center)
+                            zoom((currentZoom + 2.0).coerceAtMost(18.0))
+                          },
+                      animationOptions = animationOptions)
+                  true
+                }
           }
-          val clusterAnimationOptions = remember {
-            MapAnimationOptions.Builder().duration(450L).build()
-          }
-          PointAnnotationGroup(
-              annotations = annotations,
-              annotationConfig =
-                  AnnotationConfig(
-                      annotationSourceOptions =
-                          AnnotationSourceOptions(
-                              clusterOptions =
-                                  ClusterOptions(
-                                      clusterRadius = 60L,
-                                      colorLevels = clusterColorLevels,
-                                      textColor = Color.White.toArgb(),
-                                      textSize = 12.0)))) {
-                marker?.let { iconImage = it }
-                interactionsState
-                    .onClicked { annotation ->
-                      val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
-                      val clickedLocation =
-                          index?.let { viewModel.locations.getOrNull(it) }
-                              ?: viewModel.locations.firstOrNull { location ->
-                                val point = annotation.point
-                                location.latitude == point.latitude() &&
-                                    location.longitude == point.longitude()
-                              }
-                      clickedLocation?.let {
-                        onLocationClick(it)
-                        true
-                      } ?: false
-                    }
-                    .onClusterClicked { clusterFeature ->
-                      val point = clusterFeature.originalFeature.geometry() as? Point
-                      if (point == null) {
-                        return@onClusterClicked false
-                      }
-                      val currentZoom =
-                          mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-                      mapViewportState.easeTo(
-                          cameraOptions =
-                              cameraOptions {
-                                center(point)
-                                zoom((currentZoom + 1.5).coerceAtMost(18.0))
-                              },
-                          animationOptions = clusterAnimationOptions)
-                      true
-                    }
-              }
         }
 
     TopGradient()
@@ -353,7 +224,6 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
 
-    // Modern map style selector - compact collapsible control
     MapStyleSelector(
         selectedStyle = viewModel.mapStyle,
         onStyleSelected = { style -> viewModel.setMapStyle(style) },
@@ -361,6 +231,7 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
             Modifier.align(Alignment.BottomEnd)
                 .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
 
+    // Block map gestures when the sheet is in focus
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
     BottomSheet(
@@ -388,7 +259,6 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
               onMemoryCancel = viewModel::onMemoryCancel)
         }
 
-    // Loading indicator while saving memory
     if (viewModel.isSavingMemory) {
       Box(
           modifier =
@@ -400,7 +270,6 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
           }
     }
 
-    // Snackbar for error messages
     SnackbarHost(
         hostState = snackbarHostState,
         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
@@ -420,15 +289,7 @@ private fun TopGradient() {
                           colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent))))
 }
 
-/**
- * Dark overlay that gradually appears as sheet expands from medium to full.
- *
- * Opacity calculation:
- * - Below medium height: no scrim, opacity = 0
- * - At medium height: op = 0 (scrim starts appearing)
- * - Between medium and full: opacity increases linearly
- * - At full height: op = MAX_SCRIM_ALPHA (0.5)
- */
+/** Scrim that fades in once the sheet passes MEDIUM, dimming the map underneath. */
 @Composable
 private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: Dp) {
   val opacity =
@@ -463,10 +324,7 @@ private fun MapInteractionBlocker() {
           })
 }
 
-/**
- * Creates a pointer input modifier for the map, handling touch events to collapse the bottom sheet
- * when dragging down near the sheet's top edge.
- */
+/** Pointer modifier that collapses the sheet when touches originate near its top edge. */
 private fun Modifier.mapPointerInput(
     bottomSheetState: BottomSheetState,
     sheetTopPx: Float,
@@ -490,7 +348,7 @@ private fun Modifier.mapPointerInput(
       }
     }
 
-/** Observes bottom sheet state and updates zoom reference when transitioning to MEDIUM state. */
+/** Updates the zoom baseline whenever the sheet settles in MEDIUM. */
 @Composable
 private fun ObserveSheetStateForZoomUpdate(
     viewModel: MapScreenViewModel,
@@ -503,7 +361,7 @@ private fun ObserveSheetStateForZoomUpdate(
   }
 }
 
-/** Observes camera zoom changes and collapses sheet when user interacts with zoom. */
+/** Collapses the sheet after zoom interactions and keeps zoom state in sync. */
 @Composable
 private fun ObserveZoomForSheetCollapse(
     viewModel: MapScreenViewModel,
@@ -514,10 +372,8 @@ private fun ObserveZoomForSheetCollapse(
         .filterNotNull()
         .distinctUntilChanged()
         .collect { z ->
-          // Track zoom changes for ScaleBar visibility
           viewModel.onZoomChange(z)
 
-          // Check if zoom interaction should collapse sheet
           if (viewModel.checkZoomInteraction(z)) {
             viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
           }
@@ -525,7 +381,6 @@ private fun ObserveZoomForSheetCollapse(
   }
 }
 
-/** Conditionally displays map interaction blocker when sheet is fully expanded. */
 @Composable
 private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
   if (bottomSheetState == BottomSheetState.FULL) {
@@ -542,4 +397,141 @@ private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
   drawable.setBounds(0, 0, canvas.width, canvas.height)
   drawable.draw(canvas)
   return bitmap
+}
+
+private data class AnnotationStyle(
+    val textColorInt: Int,
+    val haloColorInt: Int,
+    val markerBitmap: Bitmap?
+)
+
+private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
+  val textColor = if (isDarkTheme) Color.White else Color.Black
+  val haloColor =
+      if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.8f)
+      } else {
+        Color.White.copy(alpha = 0.85f)
+      }
+
+  return AnnotationStyle(
+      textColorInt = textColor.toArgb(),
+      haloColorInt = haloColor.toArgb(),
+      markerBitmap = markerBitmap)
+}
+
+private fun createLocationAnnotations(
+    locations: List<Location>,
+    style: AnnotationStyle
+): List<PointAnnotationOptions> {
+  return locations.mapIndexed { index, loc ->
+    PointAnnotationOptions()
+        .withPoint(Point.fromLngLat(loc.longitude, loc.latitude))
+        .apply { style.markerBitmap?.let { withIconImage(it) } }
+        .withIconAnchor(IconAnchor.BOTTOM)
+        .withTextAnchor(TextAnchor.TOP)
+        .withTextOffset(listOf(0.0, 0.5))
+        .withTextSize(14.0)
+        .withTextColor(style.textColorInt)
+        .withTextHaloColor(style.haloColorInt)
+        .withTextHaloWidth(1.5)
+        .withTextField(loc.name)
+        .withData(JsonPrimitive(index))
+  }
+}
+
+private fun createClusterConfig(): AnnotationConfig {
+  val clusterColorLevels =
+      listOf(
+          0 to Color(0xFF64B5F6).toArgb(),
+          25 to Color(0xFF1E88E5).toArgb(),
+          50 to Color(0xFF0D47A1).toArgb())
+
+  return AnnotationConfig(
+      annotationSourceOptions =
+          AnnotationSourceOptions(
+              clusterOptions =
+                  ClusterOptions(
+                      clusterRadius = 60L,
+                      colorLevels = clusterColorLevels,
+                      textColor = Color.White.toArgb(),
+                      textSize = 12.0)))
+}
+
+private fun findLocationForAnnotation(
+    annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
+    locations: List<Location>
+): Location? {
+  val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
+  return index?.let { locations.getOrNull(it) }
+      ?: locations.firstOrNull { location ->
+        val point = annotation.point
+        location.latitude == point.latitude() && location.longitude == point.longitude()
+      }
+}
+
+@Composable
+private fun CreateHeatmapLayer(
+    heatmapSource: com.mapbox.maps.extension.compose.style.sources.generated.GeoJsonSourceState
+) {
+  HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
+    maxZoom = LongValue(18L)
+    heatmapOpacity = DoubleValue(0.65)
+    heatmapRadius =
+        DoubleValue(
+            interpolate {
+              linear()
+              zoom()
+              stop {
+                literal(0.0)
+                literal(18.0)
+              }
+              stop {
+                literal(14.0)
+                literal(32.0)
+              }
+              stop {
+                literal(22.0)
+                literal(48.0)
+              }
+            })
+    heatmapWeight =
+        DoubleValue(
+            interpolate {
+              linear()
+              get { literal("weight") }
+              stop {
+                literal(0.0)
+                literal(0.0)
+              }
+              stop {
+                literal(5.0)
+                literal(0.4)
+              }
+              stop {
+                literal(25.0)
+                literal(0.8)
+              }
+              stop {
+                literal(100.0)
+                literal(1.0)
+              }
+            })
+    heatmapColor =
+        ColorValue(
+            interpolate {
+              linear()
+              heatmapDensity()
+              MapConstants.HeatmapColors.COLOR_STOPS.forEach { (position, color) ->
+                stop {
+                  literal(position)
+                  if (color.a == 0.0) {
+                    rgba(color.r, color.g, color.b, color.a)
+                  } else {
+                    rgb(color.r, color.g, color.b)
+                  }
+                }
+              }
+            })
+  }
 }

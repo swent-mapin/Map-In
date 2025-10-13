@@ -34,28 +34,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 // Assisted by AI
+
 /**
- * ViewModel for MapScreen that encapsulates all state management and business logic.
- * - Manages bottom sheet state transitions
- * - Handles search interactions
- * - Detects zoom-based map interactions
- * - Coordinates scroll resets and focus management
- * - Exposes optional pins and heatmap state for the map layer
+ * Coordinates MapScreen state: sheet transitions, search focus, zoom behavior, and memory creation.
  */
 class MapScreenViewModel(
     initialSheetState: BottomSheetState,
     private val sheetConfig: BottomSheetConfig,
     private val onClearFocus: () -> Unit,
-    private val context: Context,
+    private val applicationContext: Context,
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository =
         EventRepositoryFirestore(com.google.firebase.firestore.FirebaseFirestore.getInstance()),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
-
-  // ---------------- Existing state (unchanged) ----------------
-
+  // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
     get() = _bottomSheetState
@@ -66,6 +60,7 @@ class MapScreenViewModel(
 
   var currentSheetHeight by mutableStateOf(sheetConfig.collapsedHeight)
 
+  // Search input state
   private var _searchQuery by mutableStateOf("")
   val searchQuery: String
     get() = _searchQuery
@@ -74,11 +69,10 @@ class MapScreenViewModel(
   val shouldFocusSearch: Boolean
     get() = _shouldFocusSearch
 
+  // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
-
   private var isInMediumMode = false
 
-  // ScaleBar visibility tracking
   private var _isZooming by mutableStateOf(false)
   val isZooming: Boolean
     get() = _isZooming
@@ -86,24 +80,112 @@ class MapScreenViewModel(
   private var _lastZoom by mutableFloatStateOf(0f)
   private var hideScaleBarJob: kotlinx.coroutines.Job? = null
 
-  /** Update zoom state and trigger ScaleBar visibility */
+  // Locations backing the map
+  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
+  val locations: List<Location>
+    get() = _locations
+
+  enum class MapStyle {
+    STANDARD,
+    SATELLITE,
+    HEATMAP
+  }
+
+  private var _mapStyle by mutableStateOf(MapStyle.STANDARD)
+  val mapStyle: MapStyle
+    get() = _mapStyle
+
+  val showHeatmap: Boolean
+    get() = _mapStyle == MapStyle.HEATMAP
+
+  val useSatelliteStyle: Boolean
+    get() = _mapStyle == MapStyle.SATELLITE
+
+  // Memory creation form state
+  private var _showMemoryForm by mutableStateOf(false)
+  val showMemoryForm: Boolean
+    get() = _showMemoryForm
+
+  private var _previousSheetState: BottomSheetState? = null
+
+  // Error and progress state
+  private var _errorMessage by mutableStateOf<String?>(null)
+  val errorMessage: String?
+    get() = _errorMessage
+
+  private var _isSavingMemory by mutableStateOf(false)
+  val isSavingMemory: Boolean
+    get() = _isSavingMemory
+
+  // Event catalog for memory linking
+  private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
+  val availableEvents: List<Event>
+    get() = _availableEvents
+
+  init {
+    // Preload events so the form has immediate data
+    loadEvents()
+  }
+
   fun onZoomChange(newZoom: Float) {
-    // Only show ScaleBar if zoom actually changed
+    // Ignore micro-changes to avoid flickering the scale bar
     if (abs(newZoom - _lastZoom) > 0.01f) {
       _isZooming = true
       _lastZoom = newZoom
 
-      // Cancel previous hide job and schedule new one
       hideScaleBarJob?.cancel()
       hideScaleBarJob =
           viewModelScope.launch {
-            kotlinx.coroutines.delay(300) // Hide after 2 seconds of no zoom activity
+            kotlinx.coroutines.delay(300)
             _isZooming = false
           }
     }
   }
 
-  /** Update bottom sheet state and handle side effects */
+  fun updateMediumReferenceZoom(zoom: Float) {
+    if (isInMediumMode) {
+      _mediumReferenceZoom = zoom
+    }
+  }
+
+  fun checkZoomInteraction(currentZoom: Float): Boolean {
+    if (!isInMediumMode) return false
+
+    val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
+    return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
+  }
+
+  fun checkTouchProximityToSheet(touchY: Float, sheetTopY: Float, densityDpi: Int): Boolean {
+    if (!isInMediumMode) return false
+
+    // Convert dp threshold to pixels before comparing the gesture location
+    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
+    val distance = abs(touchY - sheetTopY)
+
+    return distance <= thresholdPx
+  }
+
+  fun calculateTargetState(
+      currentHeightPx: Float,
+      collapsedPx: Float,
+      mediumPx: Float,
+      fullPx: Float
+  ): BottomSheetState {
+    return when {
+      currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
+      currentHeightPx < (mediumPx + fullPx) / 2f -> BottomSheetState.MEDIUM
+      else -> BottomSheetState.FULL
+    }
+  }
+
+  fun getHeightForState(state: BottomSheetState): Dp {
+    return when (state) {
+      BottomSheetState.COLLAPSED -> sheetConfig.collapsedHeight
+      BottomSheetState.MEDIUM -> sheetConfig.mediumHeight
+      BottomSheetState.FULL -> sheetConfig.fullHeight
+    }
+  }
+
   fun setBottomSheetState(target: BottomSheetState) {
     if (target == BottomSheetState.FULL && _bottomSheetState != BottomSheetState.FULL) {
       _fullEntryKey += 1
@@ -118,7 +200,6 @@ class MapScreenViewModel(
     _bottomSheetState = target
   }
 
-  /** Handle search query changes - automatically expands to full mode */
   fun onSearchQueryChange(query: String) {
     if (_bottomSheetState != BottomSheetState.FULL) {
       _shouldFocusSearch = true
@@ -127,7 +208,6 @@ class MapScreenViewModel(
     _searchQuery = query
   }
 
-  /** Handle search bar tap - expands to full mode */
   fun onSearchTap() {
     if (_bottomSheetState != BottomSheetState.FULL) {
       _shouldFocusSearch = true
@@ -135,12 +215,10 @@ class MapScreenViewModel(
     }
   }
 
-  /** Clear focus flag after search bar has been focused */
   fun onSearchFocusHandled() {
     _shouldFocusSearch = false
   }
 
-  /** Clear search and dismiss keyboard */
   private fun clearSearch() {
     _shouldFocusSearch = false
     onClearFocus()
@@ -149,136 +227,19 @@ class MapScreenViewModel(
     }
   }
 
-  /** Set reference zoom when entering medium mode */
-  fun updateMediumReferenceZoom(zoom: Float) {
-    if (isInMediumMode) {
-      _mediumReferenceZoom = zoom
-    }
-  }
-
-  /** Check if zoom change should trigger collapse */
-  fun checkZoomInteraction(currentZoom: Float): Boolean {
-    if (!isInMediumMode) return false
-
-    val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
-    return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
-  }
-
-  /**
-   * Check if touch position is within proximity of sheet top edge. Returns true if the touch is
-   * close enough to trigger collapse.
-   *
-   * @param touchY Y coordinate of touch position in pixels
-   * @param sheetTopY Y coordinate of sheet top edge in pixels
-   * @param densityDpi Screen density in DPI for dp-to-px conversion
-   */
-  fun checkTouchProximityToSheet(touchY: Float, sheetTopY: Float, densityDpi: Int): Boolean {
-    if (!isInMediumMode) return false
-
-    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
-    val distance = abs(touchY - sheetTopY)
-
-    return distance <= thresholdPx
-  }
-
-  /** Calculate target state after drag based on current height */
-  fun calculateTargetState(
-      currentHeightPx: Float,
-      collapsedPx: Float,
-      mediumPx: Float,
-      fullPx: Float
-  ): BottomSheetState {
-    return when {
-      currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
-      currentHeightPx < (mediumPx + fullPx) / 2f -> BottomSheetState.MEDIUM
-      else -> BottomSheetState.FULL
-    }
-  }
-
-  /** Map state to height */
-  fun getHeightForState(state: BottomSheetState): Dp {
-    return when (state) {
-      BottomSheetState.COLLAPSED -> sheetConfig.collapsedHeight
-      BottomSheetState.MEDIUM -> sheetConfig.mediumHeight
-      BottomSheetState.FULL -> sheetConfig.fullHeight
-    }
-  }
-
-  /** Cleanup when ViewModel is destroyed. Later: add cleanup for coroutines/resources. */
-  override fun onCleared() {
-    super.onCleared()
-  }
-
-  // ---------------- Locations & Heatmap ----------------
-
-  /** Location data for display on the map */
-  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
-  val locations: List<Location>
-    get() = _locations
-
   fun setLocations(newLocations: List<Location>) {
     _locations = newLocations
   }
-
-  // Map style selection (Standard, Satellite, or Heatmap)
-  enum class MapStyle {
-    STANDARD,
-    SATELLITE,
-    HEATMAP // Heatmap overlay on standard map
-  }
-
-  private var _mapStyle by mutableStateOf(MapStyle.STANDARD)
-  val mapStyle: MapStyle
-    get() = _mapStyle
 
   fun setMapStyle(style: MapStyle) {
     _mapStyle = style
   }
 
-  // Derived property: show heatmap when MapStyle is HEATMAP
-  val showHeatmap: Boolean
-    get() = _mapStyle == MapStyle.HEATMAP
-
-  // Derived property: use satellite style when MapStyle is SATELLITE
-  val useSatelliteStyle: Boolean
-    get() = _mapStyle == MapStyle.SATELLITE
-
-  // ---------------- Memory Creation Form ----------------
-
-  /** Whether the memory creation form is currently displayed */
-  private var _showMemoryForm by mutableStateOf(false)
-  val showMemoryForm: Boolean
-    get() = _showMemoryForm
-
-  /** State of the bottom sheet before showing the memory form */
-  private var _previousSheetState: BottomSheetState? = null
-
-  /** Error message to display to user */
-  private var _errorMessage by mutableStateOf<String?>(null)
-  val errorMessage: String?
-    get() = _errorMessage
-
-  /** Loading state for memory saving */
-  private var _isSavingMemory by mutableStateOf(false)
-  val isSavingMemory: Boolean
-    get() = _isSavingMemory
-
-  /** Clear error message */
   fun clearError() {
     _errorMessage = null
   }
 
-  /** Available events for linking to memories */
-  private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
-  val availableEvents: List<Event>
-    get() = _availableEvents
-
-  init {
-    // Load events from repository
-    loadEvents()
-  }
-
-  /** Load events from the repository - only events where user is a participant */
+  /** Loads events the signed-in user can attach to memories. */
   private fun loadEvents() {
     viewModelScope.launch {
       try {
@@ -290,30 +251,24 @@ class MapScreenViewModel(
               emptyList()
             }
       } catch (e: Exception) {
-        // Handle error, for now just log and keep empty list
         android.util.Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
       }
     }
   }
 
-  /** Show the memory creation form and expand to full mode */
+  /** Opens the creation form while preserving the previous sheet state. */
   fun showMemoryForm() {
     _previousSheetState = _bottomSheetState
     _showMemoryForm = true
     setBottomSheetState(BottomSheetState.FULL)
   }
 
-  /** Hide the memory creation form */
   fun hideMemoryForm() {
     _showMemoryForm = false
   }
 
-  /**
-   * Handle memory form save action
-   *
-   * @param formData Form data containing title, description, eventId, visibility, media, and tags
-   */
+  /** Saves a memory from the form and restores the sheet on success. */
   fun onMemorySave(formData: MemoryFormData) {
     viewModelScope.launch {
       _isSavingMemory = true
@@ -327,10 +282,8 @@ class MapScreenViewModel(
           return@launch
         }
 
-        // Upload media files to Firebase Storage
         val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
 
-        // Create and save memory
         val memory =
             Memory(
                 uid = memoryRepository.getNewUid(),
@@ -346,7 +299,6 @@ class MapScreenViewModel(
         memoryRepository.addMemory(memory)
         android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
 
-        // Success, close form and restore previous sheet state
         hideMemoryForm()
         _previousSheetState?.let { setBottomSheetState(it) }
         _previousSheetState = null
@@ -359,13 +311,7 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Upload media files to Firebase Storage
-   *
-   * @param uris List of media URIs to upload
-   * @param userId User ID to organize uploads
-   * @return List of download URLs for uploaded media
-   */
+  /** Uploads media to Firebase Storage and returns download URLs. */
   private suspend fun uploadMediaFiles(uris: List<Uri>, userId: String): List<String> {
     if (uris.isEmpty()) return emptyList()
 
@@ -373,7 +319,8 @@ class MapScreenViewModel(
 
     for (uri in uris) {
       try {
-        val extension = context.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
+        val extension =
+            applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
         val filename =
             "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
 
@@ -393,31 +340,18 @@ class MapScreenViewModel(
     return downloadUrls
   }
 
-  /** Handle memory form cancel action */
   fun onMemoryCancel() {
     hideMemoryForm()
     _previousSheetState?.let { setBottomSheetState(it) }
     _previousSheetState = null
   }
 
-  fun locationsToGeoJson(locations: List<Location>): String {
-    val features =
-        locations.map { location ->
-          Feature.fromGeometry(
-              Point.fromLngLat(location.longitude, location.latitude),
-              JsonObject().apply { addProperty("weight", location.attendees) })
-        }
-    return FeatureCollection.fromFeatures(features).toJson()
+  override fun onCleared() {
+    super.onCleared()
+    hideScaleBarJob?.cancel()
   }
 }
 
-/**
- * Creates MapScreenViewModel with configuration.
- *
- * @param sheetConfig Configuration for bottom sheet heights
- * @param context Application context for media operations
- * @param initialSheetState Initial state of the bottom sheet
- */
 @Composable
 fun rememberMapScreenViewModel(
     sheetConfig: BottomSheetConfig,
@@ -425,12 +359,25 @@ fun rememberMapScreenViewModel(
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
+  // Avoid leaking the composition by promoting to application context
+  val appContext = context.applicationContext
 
   return viewModel {
     MapScreenViewModel(
         initialSheetState = initialSheetState,
         sheetConfig = sheetConfig,
         onClearFocus = { focusManager.clearFocus(force = true) },
-        context = context)
+        applicationContext = appContext)
   }
+}
+
+/** Converts locations into a GeoJSON payload consumable by Mapbox heatmaps. */
+fun locationsToGeoJson(locations: List<Location>): String {
+  val features =
+      locations.map { location ->
+        Feature.fromGeometry(
+            Point.fromLngLat(location.longitude, location.latitude),
+            JsonObject().apply { addProperty("weight", location.attendees) })
+      }
+  return FeatureCollection.fromFeatures(features).toJson()
 }

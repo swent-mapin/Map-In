@@ -119,7 +119,6 @@ fun MapStyleSelector(
               }
             }
 
-        // Toggle button - shows current selection icon or close icon
         FloatingActionButton(
             onClick = { isExpanded = !isExpanded },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -130,7 +129,6 @@ fun MapStyleSelector(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close map style selector")
               } else {
-                // Show current selection icon when collapsed
                 Icon(
                     imageVector =
                         when (selectedStyle) {
