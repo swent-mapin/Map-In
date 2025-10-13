@@ -1,6 +1,11 @@
 package com.swent.mapin.ui.map
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,26 +28,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
+import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
+import com.mapbox.maps.dsl.cameraOptions
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
-import com.mapbox.maps.extension.compose.annotation.rememberIconImage
+import com.mapbox.maps.extension.compose.annotation.IconImage
+import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
 import com.mapbox.maps.extension.style.layers.properties.generated.TextAnchor
+import com.mapbox.maps.plugin.animation.MapAnimationOptions
+import com.mapbox.maps.plugin.annotation.AnnotationConfig
+import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
+import com.mapbox.maps.plugin.annotation.ClusterOptions
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
 import com.swent.mapin.testing.UiTestTags
@@ -137,34 +151,96 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
                 ScaleBar()
               }
         }) {
-          val marker =
-              rememberIconImage(
-                  key = R.drawable.ic_map_marker,
-                  painter = painterResource(R.drawable.ic_map_marker))
-          viewModel.locations.forEach { loc ->
-            PointAnnotation(point = Point.fromLngLat(loc.longitude, loc.latitude)) {
-              iconImage = marker
-              // Place label below marker icon
-              iconAnchor = IconAnchor.BOTTOM
-              textAnchor = TextAnchor.TOP
-              textOffset = listOf(0.0, 0.5) // x, y (ems). Positive y moves label downward
-              textSize = 14.0
-              // Adapt text color to theme + add halo for readability
-              if (isDarkTheme) {
-                textColor = Color.White
-                textHaloColor = Color.Black.copy(alpha = 0.8f)
-              } else {
-                textColor = Color.Black
-                textHaloColor = Color.White.copy(alpha = 0.85f)
+          val context = LocalContext.current
+          val markerBitmap =
+              remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+          val marker = remember(markerBitmap) { markerBitmap?.let { IconImage(it) } }
+          val textColorInt =
+              remember(isDarkTheme) {
+                val color = if (isDarkTheme) Color.White else Color.Black
+                color.toArgb()
               }
-              textHaloWidth = 1.5
-              textField = loc.name
-              interactionsState.onClicked {
-                onLocationClick(loc)
-                true
+          val haloColorInt =
+              remember(isDarkTheme) {
+                val halo =
+                    if (isDarkTheme) {
+                      Color.Black.copy(alpha = 0.8f)
+                    } else {
+                      Color.White.copy(alpha = 0.85f)
+                    }
+                halo.toArgb()
               }
-            }
+          val annotations =
+              remember(viewModel.locations, textColorInt, haloColorInt, markerBitmap) {
+                viewModel.locations.mapIndexed { index, loc ->
+                  PointAnnotationOptions()
+                      .withPoint(Point.fromLngLat(loc.longitude, loc.latitude))
+                      .apply { markerBitmap?.let { withIconImage(it) } }
+                      .withIconAnchor(IconAnchor.BOTTOM)
+                      .withTextAnchor(TextAnchor.TOP)
+                      .withTextOffset(listOf(0.0, 0.5))
+                      .withTextSize(14.0)
+                      .withTextColor(textColorInt)
+                      .withTextHaloColor(haloColorInt)
+                      .withTextHaloWidth(1.5)
+                      .withTextField(loc.name)
+                      .withData(JsonPrimitive(index))
+                }
+              }
+          val clusterColorLevels = remember {
+            listOf(
+                0 to Color(0xFF64B5F6).toArgb(),
+                25 to Color(0xFF1E88E5).toArgb(),
+                50 to Color(0xFF0D47A1).toArgb())
           }
+          val clusterAnimationOptions = remember {
+            MapAnimationOptions.Builder().duration(450L).build()
+          }
+          PointAnnotationGroup(
+              annotations = annotations,
+              annotationConfig =
+                  AnnotationConfig(
+                      annotationSourceOptions =
+                          AnnotationSourceOptions(
+                              clusterOptions =
+                                  ClusterOptions(
+                                      clusterRadius = 60L,
+                                      colorLevels = clusterColorLevels,
+                                      textColor = Color.White.toArgb(),
+                                      textSize = 12.0)))) {
+                marker?.let { iconImage = it }
+                interactionsState
+                    .onClicked { annotation ->
+                      val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
+                      val clickedLocation =
+                          index?.let { viewModel.locations.getOrNull(it) }
+                              ?: viewModel.locations.firstOrNull { location ->
+                                val point = annotation.point
+                                location.latitude == point.latitude() &&
+                                    location.longitude == point.longitude()
+                              }
+                      clickedLocation?.let {
+                        onLocationClick(it)
+                        true
+                      } ?: false
+                    }
+                    .onClusterClicked { clusterFeature ->
+                      val point = clusterFeature.originalFeature.geometry() as? Point
+                      if (point == null) {
+                        return@onClusterClicked false
+                      }
+                      val currentZoom =
+                          mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+                      mapViewportState.easeTo(
+                          cameraOptions =
+                              cameraOptions {
+                                center(point)
+                                zoom((currentZoom + 1.5).coerceAtMost(18.0))
+                              },
+                          animationOptions = clusterAnimationOptions)
+                      true
+                    }
+              }
         }
 
     TopGradient()
@@ -344,4 +420,15 @@ private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
   if (bottomSheetState == BottomSheetState.FULL) {
     MapInteractionBlocker()
   }
+}
+
+private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
+  val drawable = AppCompatResources.getDrawable(this, drawableResId) ?: return null
+  val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1
+  val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 1
+  val bitmap = createBitmap(width, height)
+  val canvas = Canvas(bitmap)
+  drawable.setBounds(0, 0, canvas.width, canvas.height)
+  drawable.draw(canvas)
+  return bitmap
 }
