@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -36,6 +37,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.heatmaps.WeightedLatLng
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -80,6 +82,7 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
   val densityDpi = remember(density) { (density.density * 160).toInt() }
   val screenHeightPx = remember(screenHeightDp, density) { screenHeightDp.value * density.density }
   val sheetTopPx = screenHeightPx - (viewModel.currentSheetHeight.value * density.density)
+  val searchViewModel = remember { SearchViewModel(EventRepositoryFirestore(FirebaseFirestore.getInstance())) }
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     GoogleMap(
@@ -132,13 +135,9 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
           BottomSheetContent(
               state = viewModel.bottomSheetState,
               fullEntryKey = viewModel.fullEntryKey,
-              searchBarState =
-                  SearchBarState(
-                      query = viewModel.searchQuery,
-                      shouldRequestFocus = viewModel.shouldFocusSearch,
-                      onQueryChange = viewModel::onSearchQueryChange,
-                      onTap = viewModel::onSearchTap,
-                      onFocusHandled = viewModel::onSearchFocusHandled))
+              searchViewModel = searchViewModel,
+              onExitSearch = { viewModel.setBottomSheetState(BottomSheetState.MEDIUM) }
+          )
         }
   }
 }

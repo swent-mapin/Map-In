@@ -1,29 +1,15 @@
 package com.swent.mapin.ui.map
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -35,101 +21,110 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-// Assisted by AI
-/** States for search bar interactions. */
-@Stable
-data class SearchBarState(
-    val query: String,
-    val shouldRequestFocus: Boolean,
-    val onQueryChange: (String) -> Unit,
-    val onTap: () -> Unit,
-    val onFocusHandled: () -> Unit
-)
-
+/** Content of the bottom sheet, including search bar, quick actions, recent activities, and discover section. */
 /**
- * Content for the bottom sheet
- * - Search bar (always visible)
- * - Quick actions
- * - (Temporary) Recent activities
- * - (Temporary) Discover section
+ * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover section.
  *
- * @param state Current bottom sheet state
- * @param fullEntryKey Increments each time we enter full mode - triggers scroll reset
- * @param searchBarState search bar state and callbacks
+ * @param state Current state of the bottom sheet (COLLAPSED, MEDIUM, FULL)
+ * @param fullEntryKey Key that changes when entering full state to reset scroll position
+ * @param searchViewModel ViewModel managing search state and logic
+ * @param onExitSearch Callback when exiting search mode (optional)
  */
 @Composable
-fun BottomSheetContent(state: BottomSheetState, fullEntryKey: Int, searchBarState: SearchBarState) {
-  val isFull = state == BottomSheetState.FULL
+fun BottomSheetContent(
+    state: BottomSheetState,
+    fullEntryKey: Int,
+    searchViewModel: SearchViewModel,
+    onExitSearch: () -> Unit = {}
+) {
+    val ui = searchViewModel.ui.collectAsState().value
 
-  val scrollState = remember(fullEntryKey) { ScrollState(0) }
-  val focusRequester = remember { FocusRequester() }
-  val focusManager = LocalFocusManager.current
+    val isFull = state == BottomSheetState.FULL || ui.searchMode
 
-  LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
-    if (isFull && searchBarState.shouldRequestFocus) {
-      focusRequester.requestFocus()
-      searchBarState.onFocusHandled()
-    }
-  }
+    val scrollState = remember(fullEntryKey) { ScrollState(0) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
-  Column(modifier = Modifier.fillMaxWidth()) {
-    SearchBar(
-        value = searchBarState.query,
-        onValueChange = searchBarState.onQueryChange,
-        isFull = isFull,
-        onTap = { if (!isFull) searchBarState.onTap() },
-        focusRequester = focusRequester,
-        onSearchAction = { focusManager.clearFocus() })
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    val contentModifier =
-        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
-
-    Column(modifier = contentModifier) {
-      QuickActionsSection()
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      Text(
-          text = "Recent Activities",
-          style = MaterialTheme.typography.titleMedium,
-          modifier = Modifier.padding(bottom = 8.dp))
-
-      repeat(4) { index ->
-        ActivityItem(
-            title = "Activity ${index + 1}",
-            description = "Example description for activity ${index + 1}.")
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      Text(
-          text = "Discover",
-          style = MaterialTheme.typography.titleMedium,
-          modifier = Modifier.padding(bottom = 8.dp))
-
-      val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-      categories.forEach { category ->
-        OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-          Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    LaunchedEffect(ui.shouldRequestFocus) {
+        if (ui.shouldRequestFocus) {
+            focusRequester.requestFocus()
+            searchViewModel.onFocusHandled()
         }
-      }
-
-      Spacer(modifier = Modifier.height(24.dp))
     }
-  }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SearchBar(
+            value = ui.query,
+            onValueChange = searchViewModel::onQueryChange,
+            isFull = isFull,
+            onTap = { if (!isFull) searchViewModel.onSearchTapped() },
+            focusRequester = focusRequester,
+            onSearchAction = { focusManager.clearFocus() },
+            onClear = {
+                focusManager.clearFocus()
+                searchViewModel.onClearSearch()
+                onExitSearch()
+            }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val contentModifier =
+            if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+            else Modifier.fillMaxWidth()
+
+        Column(modifier = contentModifier) {
+            if (ui.searchMode) {
+                SearchResultsList(
+                    items = ui.results,
+                    showEmpty = ui.showNoResults,
+                    onClear = {
+                        focusManager.clearFocus()
+                        searchViewModel.onClearSearch()
+                        onExitSearch()
+                    }
+                )
+            } else {
+                QuickActionsSection()
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Recent Activities",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+
+                repeat(4) { index ->
+                    ActivityItem(
+                        title = "Activity ${index + 1}",
+                        description = "Example description for activity ${index + 1}.")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Discover",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+
+                val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
+                categories.forEach { category ->
+                    OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
 }
 
-/** Search bar that triggers full mode when tapped. */
+/** Search bar that triggers full mode when tapped, includes Clear (X). */
 @Composable
 private fun SearchBar(
     value: String,
@@ -138,22 +133,62 @@ private fun SearchBar(
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-  OutlinedTextField(
-      value = value,
-      onValueChange = onValueChange,
-      placeholder = { Text("Search activities") },
-      modifier =
-          modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
-            if (!isFull && focusState.isFocused) {
-              onTap()
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text("Search activities") },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = onClear) {
+                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                }
             }
-          },
-      singleLine = true,
-      textStyle = MaterialTheme.typography.bodyLarge,
-      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-      keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
+        },
+        modifier =
+            modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
+                if (!isFull && focusState.isFocused) onTap()
+            },
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
+    )
+}
+
+/** Results list + empty state. */
+@Composable
+fun SearchResultsList(
+    items: List<com.swent.mapin.model.event.Event>,
+    showEmpty: Boolean,
+    onClear: () -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Results", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onClear) { Text("Clear") }
+        }
+
+        if (showEmpty) {
+            Text(
+                text = "No results found",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 8.dp))
+        } else {
+            items.forEach { e ->
+                Text(e.title, style = MaterialTheme.typography.bodyLarge)
+                if (e.locationName.isNotBlank()) {
+                    Text(e.locationName, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
 }
 
 /** Row of quick action buttons (Create Memory, Create Event, Filters). */
