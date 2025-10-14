@@ -20,20 +20,6 @@ android {
     if (localPropsFile.exists()) localProps.load(FileInputStream(localPropsFile))
     val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY") ?: ""
 
-    defaultConfig {
-        applicationId = "com.swent.mapin"
-        minSdk = 28
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables { useSupportLibrary = true }
-
-        // Injection de la clé Maps dans le manifeste
-        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
-    }
-
     val sharedKeystoreProps = Properties()
     val sharedKeystorePropsFile = rootProject.file("android/gradle.properties")
     if (sharedKeystorePropsFile.exists()) {
@@ -50,7 +36,6 @@ android {
     val teamDebugStorePassword = findSharedKeystoreProperty("TEAM_DEBUG_STORE_PASSWORD")
     val teamDebugKeyAlias = findSharedKeystoreProperty("TEAM_DEBUG_KEY_ALIAS")
     val teamDebugKeyPassword = findSharedKeystoreProperty("TEAM_DEBUG_KEY_PASSWORD")
-
 
     signingConfigs {
         getByName("debug") {
@@ -73,6 +58,20 @@ android {
     }
 
 
+    defaultConfig {
+        applicationId = "com.swent.mapin"
+        minSdk = 28
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+
+        // Injection de la clé Maps dans le manifeste
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -84,7 +83,6 @@ android {
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
-                signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -94,6 +92,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -111,6 +110,14 @@ android {
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/LICENSE-notice.md"
         }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.protobuf:protobuf-javalite:3.21.12")
+            force("com.google.protobuf:protobuf-java:3.21.12")
+        }
+        exclude(group = "com.google.protobuf", module = "protobuf-lite")
     }
 
     testOptions {
@@ -153,6 +160,15 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 }
 
 dependencies {
+
+    implementation("org.shredzone.commons:commons-suncalc:3.11")
+
+    // ------------- Protobuf (fix for Firebase conflict) ------------------
+    implementation("com.google.protobuf:protobuf-javalite:3.21.12")
+    androidTestImplementation("com.google.protobuf:protobuf-javalite:3.21.12")
+
+
+
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
@@ -167,6 +183,9 @@ dependencies {
     debugImplementation(libs.compose.tooling)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Material Icons Extended - for additional icons
+    implementation("androidx.compose.material:material-icons-extended")
+
     // Compose UI testing
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -179,10 +198,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ------------- Firebase ------------------
-    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-storage:20.3.0")
+    implementation("com.google.firebase:firebase-storage")
 
     // ------------- Google Maps ------------------
     implementation("com.google.maps.android:maps-compose:4.3.3")
