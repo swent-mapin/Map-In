@@ -266,9 +266,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_locationClick_triggersCallback() {
-    var clickedLocation: com.swent.mapin.model.Location? = null
+    var clickedEvent: com.swent.mapin.model.event.Event? = null
     rule.setContent {
-      MaterialTheme { MapScreen(onLocationClick = { location -> clickedLocation = location }) }
+      MaterialTheme { MapScreen(onEventClick = { event -> clickedEvent = event }) }
     }
     rule.waitForIdle()
 
