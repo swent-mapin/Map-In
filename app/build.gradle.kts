@@ -34,14 +34,44 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    val sharedKeystoreProps = Properties()
+    val sharedKeystorePropsFile = rootProject.file("android/gradle.properties")
+    if (sharedKeystorePropsFile.exists()) {
+        FileInputStream(sharedKeystorePropsFile).use(sharedKeystoreProps::load)
+    }
+
+    fun findSharedKeystoreProperty(name: String): String? {
+        val fromProject = project.findProperty(name) as? String
+        val fromFile = sharedKeystoreProps.getProperty(name)
+        return (fromProject ?: fromFile)?.takeIf { it.isNotBlank() }
+    }
+
+    val teamDebugStoreFile = findSharedKeystoreProperty("TEAM_DEBUG_STORE_FILE")
+    val teamDebugStorePassword = findSharedKeystoreProperty("TEAM_DEBUG_STORE_PASSWORD")
+    val teamDebugKeyAlias = findSharedKeystoreProperty("TEAM_DEBUG_KEY_ALIAS")
+    val teamDebugKeyPassword = findSharedKeystoreProperty("TEAM_DEBUG_KEY_PASSWORD")
+
+
     signingConfigs {
         getByName("debug") {
-            storeFile = file("../keystore/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val missingProperty = listOf(
+                "TEAM_DEBUG_STORE_FILE" to teamDebugStoreFile,
+                "TEAM_DEBUG_STORE_PASSWORD" to teamDebugStorePassword,
+                "TEAM_DEBUG_KEY_ALIAS" to teamDebugKeyAlias,
+                "TEAM_DEBUG_KEY_PASSWORD" to teamDebugKeyPassword
+            ).firstOrNull { it.second.isNullOrBlank() }
+
+            check(missingProperty == null) {
+                "Missing shared debug keystore property: ${missingProperty?.first}. Add it to android/gradle.properties or your local gradle.properties."
+            }
+
+            storeFile = rootProject.file(teamDebugStoreFile!!)
+            storePassword = teamDebugStorePassword
+            keyAlias = teamDebugKeyAlias
+            keyPassword = teamDebugKeyPassword
         }
     }
+
 
     buildTypes {
         release {

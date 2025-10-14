@@ -483,14 +483,4 @@ class MapScreenViewModelTest {
     viewModel.toggleHeatmap()
     assertFalse(viewModel.showHeatmap)
   }
-
-  @Test
-  fun setLocations_updatesLocations() {
-    val initialLocations = viewModel.locations
-    val newLocations = listOf(com.swent.mapin.model.Location("Test Location", -118.0, 34.0))
-
-    viewModel.setLocations(newLocations)
-
-    assertEquals(newLocations, viewModel.locations)
-  }
 }

@@ -23,10 +23,10 @@ import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import kotlin.math.abs
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 // Assisted by AI
 /**

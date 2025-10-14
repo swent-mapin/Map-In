@@ -1,15 +1,14 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
 
 /**
  * @property uid event id
  * @property title event title
  * @property description event description
  * @property date event date
- * @property locationName name of the event location
- * @property latitude latitude of the event location
- * @property longitude longitude of the event location
+ * @property location location of the event (name, latitude, longitude)
  * @property tags list of event types
  * @property public is event public or private
  * @property ownerId user id of the event creator
@@ -24,9 +23,7 @@ data class Event(
     val url: String? = null,
     val description: String = "",
     val date: Timestamp? = null,
-    val locationName: String = "",
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0,
+    val location: Location = Location("", 0.0, 0.0),
     val tags: List<String> = emptyList(),
     val public: Boolean = true,
     val ownerId: String = "",

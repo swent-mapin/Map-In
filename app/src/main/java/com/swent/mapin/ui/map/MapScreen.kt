@@ -295,7 +295,7 @@ private fun ObserveZoomForSheetCollapse(
 private fun MapMarkers(events: List<Event>) {
   events.forEach { event ->
     Marker(
-        state = MarkerState(position = LatLng(event.latitude, event.longitude)),
+        state = MarkerState(position = LatLng(event.location.latitude, event.location.longitude)),
         title = event.title,
         snippet = "${event.attendeeCount ?: 0} attendees")
   }
@@ -314,7 +314,7 @@ private fun HeatmapOverlay(showHeatmap: Boolean, events: List<Event>) {
               val weight =
                   if (maxAttendees == 0) 1.0
                   else (event.attendeeCount ?: 0).toDouble() / maxAttendees
-              WeightedLatLng(LatLng(event.latitude, event.longitude), weight)
+              WeightedLatLng(LatLng(event.location.latitude, event.location.longitude), weight)
             }
         data
       }

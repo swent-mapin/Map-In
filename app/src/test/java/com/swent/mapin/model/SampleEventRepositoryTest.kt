@@ -57,9 +57,10 @@ class SampleEventRepositoryTest {
   fun getSampleEvents_allEventsHaveValidLocations() {
     val events = SampleEventRepository.getSampleEvents()
     events.forEach { event ->
-      assertNotNull(event.locationName)
-      assertTrue(event.locationName.isNotEmpty())
-      assertTrue(event.latitude != 0.0 || event.longitude != 0.0)
+      assertNotNull(event.location)
+      assertNotNull(event.location.name)
+      assertTrue(event.location.name.isNotEmpty())
+      assertTrue(event.location.latitude != 0.0 || event.location.longitude != 0.0)
     }
   }
 
@@ -67,8 +68,8 @@ class SampleEventRepositoryTest {
   fun getSampleEvents_allEventsHaveValidCoordinates() {
     val events = SampleEventRepository.getSampleEvents()
     events.forEach { event ->
-      assertTrue(event.latitude in -90.0..90.0)
-      assertTrue(event.longitude in -180.0..180.0)
+      assertTrue(event.location.latitude in -90.0..90.0)
+      assertTrue(event.location.longitude in -180.0..180.0)
     }
   }
 
@@ -164,8 +165,8 @@ class SampleEventRepositoryTest {
     val epflLongitude = 6.5668
 
     events.forEach { event ->
-      val latDiff = kotlin.math.abs(event.latitude - epflLatitude)
-      val lonDiff = kotlin.math.abs(event.longitude - epflLongitude)
+      val latDiff = kotlin.math.abs(event.location.latitude - epflLatitude)
+      val lonDiff = kotlin.math.abs(event.location.longitude - epflLongitude)
       assertTrue(latDiff < 0.01)
       assertTrue(lonDiff < 0.01)
     }
