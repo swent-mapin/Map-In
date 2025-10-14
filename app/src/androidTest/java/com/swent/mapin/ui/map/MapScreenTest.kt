@@ -238,7 +238,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_heatmapMode_displaysCorrectly() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
     rule.onNodeWithTag("mapStyleToggle").performClick()
@@ -252,7 +252,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_satelliteMode_displaysCorrectly() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
     rule.onNodeWithTag("mapStyleToggle").performClick()
@@ -277,7 +277,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_switchBetweenStyles_maintainsState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
     rule.onNodeWithTag("mapStyleToggle").performClick()

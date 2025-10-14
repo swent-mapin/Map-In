@@ -79,7 +79,7 @@ import kotlinx.coroutines.flow.filterNotNull
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
 @Composable
-fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
+fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = true) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
   val sheetConfig =
@@ -137,14 +137,16 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}) {
   }
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
-    MapboxLayer(
-        viewModel = viewModel,
-        mapViewportState = mapViewportState,
-        sheetMetrics = sheetMetrics,
-        standardStyleState = standardStyleState,
-        heatmapSource = heatmapSource,
-        isDarkTheme = isDarkTheme,
-        onLocationClick = onLocationClick)
+    if (renderMap) {
+      MapboxLayer(
+          viewModel = viewModel,
+          mapViewportState = mapViewportState,
+          sheetMetrics = sheetMetrics,
+          standardStyleState = standardStyleState,
+          heatmapSource = heatmapSource,
+          isDarkTheme = isDarkTheme,
+          onLocationClick = onLocationClick)
+    }
 
     TopGradient()
 
