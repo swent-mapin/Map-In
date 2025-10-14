@@ -190,26 +190,26 @@ class MapScreenTest {
   fun mapStyleToggle_isVisible_andToggles() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag("mapStyleToggle").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag("mapStyleToggle").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
   }
 
   @Test
   fun mapStyleToggle_persists_afterBottomSheetTransitions() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -227,13 +227,13 @@ class MapScreenTest {
   @Test
   fun mapStyleToggle_visible_inAllSheetStates() {
     rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
     rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").assertIsDisplayed()
+    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
   }
 
   @Test

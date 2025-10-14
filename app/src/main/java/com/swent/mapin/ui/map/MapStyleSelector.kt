@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Map
@@ -49,7 +51,7 @@ fun MapStyleSelector(
   var isExpanded by remember { mutableStateOf(false) }
 
   Row(
-      modifier = modifier.testTag("mapStyleSelector"),
+      modifier = modifier.testTag("mapStyleSelector").verticalScroll(rememberScrollState()),
       verticalAlignment = Alignment.CenterVertically) {
         AnimatedVisibility(
             visible = isExpanded,
