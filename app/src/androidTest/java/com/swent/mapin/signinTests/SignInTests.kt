@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 
 /**
  * Instrumented tests for SignInScreen composable.
- *
+
  * Tests the UI components, user interactions, and visual elements of the sign-in screen using
  * Compose testing framework.
  */
@@ -50,38 +50,38 @@ class SignInScreenTest {
     composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
 
     // Verify Google sign-in button is displayed
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
 
     // Verify Microsoft sign-in button is displayed
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
   fun signInScreen_googleSignInButton_isDisplayed() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists().assertIsDisplayed()
   }
 
   @Test
   fun signInScreen_microsoftSignInButton_isDisplayed() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Continue with Microsoft").performScrollTo().assertIsDisplayed()
   }
 
   @Test
   fun signInScreen_googleSignInButton_isEnabled() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
+    composeTestRule.onNodeWithText("Continue with Google").assertIsEnabled()
   }
 
   @Test
   fun signInScreen_microsoftSignInButton_isEnabled() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertIsEnabled()
   }
 
   @Test
@@ -119,23 +119,23 @@ class SignInScreenTest {
   fun signInScreen_googleButton_hasCorrectText() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Google", substring = true).assertExists()
+    composeTestRule.onNodeWithText("Continue with Google", substring = true).assertExists()
   }
 
   @Test
   fun signInScreen_microsoftButton_hasCorrectText() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft", substring = true).assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft", substring = true).assertExists()
   }
 
   @Test
   fun signInScreen_bothButtons_areClickable() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertHasClickAction()
+    composeTestRule.onNodeWithText("Continue with Google").assertHasClickAction()
 
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertHasClickAction()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertHasClickAction()
   }
 
   @Test
@@ -154,7 +154,7 @@ class SignInScreenTest {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
     // Verify screen is rendered (callback will be tested when sign-in succeeds)
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
   }
 
   @Test
@@ -163,8 +163,8 @@ class SignInScreenTest {
 
     // Count that we have multiple important elements
     composeTestRule.onAllNodesWithContentDescription("App Logo").assertCountEquals(1)
-    composeTestRule.onAllNodesWithText("Sign in with Google").assertCountEquals(1)
-    composeTestRule.onAllNodesWithText("Sign in with Microsoft").assertCountEquals(1)
+    composeTestRule.onAllNodesWithText("Continue with Google").assertCountEquals(1)
+    composeTestRule.onAllNodesWithText("Continue with Microsoft").assertCountEquals(1)
   }
 
   @Test
@@ -172,8 +172,8 @@ class SignInScreenTest {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
     // Verify Google button appears before Microsoft button in the tree
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
@@ -189,8 +189,8 @@ class SignInScreenTest {
     composeTestRule.setContent { SignInScreen(onSignInSuccess = {}) }
 
     // Should still render with default ViewModel from factory
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
@@ -200,7 +200,7 @@ class SignInScreenTest {
     // Verify visual hierarchy exists
     composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
     composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
   }
 
   @Test
@@ -209,8 +209,8 @@ class SignInScreenTest {
       SignInScreen(viewModel = viewModel, onSignInSuccess = { /* Custom callback */})
     }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
@@ -228,8 +228,8 @@ class SignInScreenTest {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
     // Both buttons should exist with consistent styling
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
@@ -254,11 +254,11 @@ class SignInScreenTest {
   fun signInScreen_multipleRenders_work() {
     // First render
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
 
     // For second render, we need to verify we can't call setContent twice
     // This test should verify that the first render works properly instead
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
     composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
   }
 
@@ -269,15 +269,15 @@ class SignInScreenTest {
     // Verify all elements exist, implying proper layout
     composeTestRule.onNodeWithContentDescription("App Logo").assertExists()
     composeTestRule.onNodeWithText("One Map. Every moment.").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Google").assertExists()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertExists()
+    composeTestRule.onNodeWithText("Continue with Google").assertExists()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertExists()
   }
 
   @Test
   fun signInScreen_buttonsAreNotDisabled() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Sign in with Google").assertIsEnabled()
-    composeTestRule.onNodeWithText("Sign in with Microsoft").assertIsEnabled()
+    composeTestRule.onNodeWithText("Continue with Google").assertIsEnabled()
+    composeTestRule.onNodeWithText("Continue with Microsoft").assertIsEnabled()
   }
 }
