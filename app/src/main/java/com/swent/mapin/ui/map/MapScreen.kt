@@ -82,7 +82,9 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
   val densityDpi = remember(density) { (density.density * 160).toInt() }
   val screenHeightPx = remember(screenHeightDp, density) { screenHeightDp.value * density.density }
   val sheetTopPx = screenHeightPx - (viewModel.currentSheetHeight.value * density.density)
-  val searchViewModel = remember { SearchViewModel(EventRepositoryFirestore(FirebaseFirestore.getInstance())) }
+  val searchViewModel = remember {
+    SearchViewModel(EventRepositoryFirestore(FirebaseFirestore.getInstance()))
+  }
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     GoogleMap(
@@ -136,8 +138,7 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
               state = viewModel.bottomSheetState,
               fullEntryKey = viewModel.fullEntryKey,
               searchViewModel = searchViewModel,
-              onExitSearch = { viewModel.setBottomSheetState(BottomSheetState.MEDIUM) }
-          )
+              onExitSearch = { viewModel.setBottomSheetState(BottomSheetState.MEDIUM) })
         }
   }
 }

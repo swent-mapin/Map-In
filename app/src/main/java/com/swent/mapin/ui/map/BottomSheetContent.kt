@@ -21,9 +21,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** Content of the bottom sheet, including search bar, quick actions, recent activities, and discover section. */
 /**
- * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover section.
+ * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover
+ * section.
+ */
+/**
+ * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover
+ * section.
  *
  * @param state Current state of the bottom sheet (COLLAPSED, MEDIUM, FULL)
  * @param fullEntryKey Key that changes when entering full state to reset scroll position
@@ -37,91 +41,89 @@ fun BottomSheetContent(
     searchViewModel: SearchViewModel,
     onExitSearch: () -> Unit = {}
 ) {
-    val ui = searchViewModel.ui.collectAsState().value
+  val ui = searchViewModel.ui.collectAsState().value
 
-    val isFull = state == BottomSheetState.FULL || ui.searchMode
+  val isFull = state == BottomSheetState.FULL || ui.searchMode
 
-    val scrollState = remember(fullEntryKey) { ScrollState(0) }
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
+  val scrollState = remember(fullEntryKey) { ScrollState(0) }
+  val focusRequester = remember { FocusRequester() }
+  val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(ui.shouldRequestFocus) {
-        if (ui.shouldRequestFocus) {
-            focusRequester.requestFocus()
-            searchViewModel.onFocusHandled()
-        }
+  LaunchedEffect(ui.shouldRequestFocus) {
+    if (ui.shouldRequestFocus) {
+      focusRequester.requestFocus()
+      searchViewModel.onFocusHandled()
     }
+  }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        SearchBar(
-            value = ui.query,
-            onValueChange = searchViewModel::onQueryChange,
-            isFull = isFull,
-            onTap = { if (!isFull) searchViewModel.onSearchTapped() },
-            focusRequester = focusRequester,
-            onSearchAction = { focusManager.clearFocus() },
+  Column(modifier = Modifier.fillMaxWidth()) {
+    SearchBar(
+        value = ui.query,
+        onValueChange = searchViewModel::onQueryChange,
+        isFull = isFull,
+        onTap = { if (!isFull) searchViewModel.onSearchTapped() },
+        focusRequester = focusRequester,
+        onSearchAction = { focusManager.clearFocus() },
+        onClear = {
+          focusManager.clearFocus()
+          searchViewModel.onClearSearch()
+          onExitSearch()
+        })
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    val contentModifier =
+        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
+
+    Column(modifier = contentModifier) {
+      if (ui.searchMode) {
+        SearchResultsList(
+            items = ui.results,
+            showEmpty = ui.showNoResults,
             onClear = {
-                focusManager.clearFocus()
-                searchViewModel.onClearSearch()
-                onExitSearch()
-            }
-        )
+              focusManager.clearFocus()
+              searchViewModel.onClearSearch()
+              onExitSearch()
+            })
+      } else {
+        QuickActionsSection()
+
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Recent Activities",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp))
+
+        repeat(4) { index ->
+          ActivityItem(
+              title = "Activity ${index + 1}",
+              description = "Example description for activity ${index + 1}.")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Discover",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp))
+
+        val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
+        categories.forEach { category ->
+          OutlinedButton(
+              onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+              }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        val contentModifier =
-            if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-            else Modifier.fillMaxWidth()
-
-        Column(modifier = contentModifier) {
-            if (ui.searchMode) {
-                SearchResultsList(
-                    items = ui.results,
-                    showEmpty = ui.showNoResults,
-                    onClear = {
-                        focusManager.clearFocus()
-                        searchViewModel.onClearSearch()
-                        onExitSearch()
-                    }
-                )
-            } else {
-                QuickActionsSection()
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Recent Activities",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp))
-
-                repeat(4) { index ->
-                    ActivityItem(
-                        title = "Activity ${index + 1}",
-                        description = "Example description for activity ${index + 1}.")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Discover",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp))
-
-                val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-                categories.forEach { category ->
-                    OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
+      }
     }
+  }
 }
 
 /** Search bar that triggers full mode when tapped, includes Clear (X). */
@@ -136,26 +138,26 @@ private fun SearchBar(
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text("Search activities") },
-        trailingIcon = {
-            if (value.isNotEmpty()) {
-                IconButton(onClick = onClear) {
-                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                }
-            }
-        },
-        modifier =
-            modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
-                if (!isFull && focusState.isFocused) onTap()
-            },
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
-    )
+  OutlinedTextField(
+      value = value,
+      onValueChange = onValueChange,
+      placeholder = { Text("Search activities") },
+      trailingIcon = {
+        if (value.isNotEmpty()) {
+          IconButton(onClick = onClear) {
+            Icon(Icons.Filled.Close, contentDescription = "Clear search")
+          }
+        }
+      },
+      modifier =
+          modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
+            if (!isFull && focusState.isFocused) onTap()
+          },
+      singleLine = true,
+      textStyle = MaterialTheme.typography.bodyLarge,
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+      keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
+  )
 }
 
 /** Results list + empty state. */
@@ -165,30 +167,30 @@ fun SearchResultsList(
     showEmpty: Boolean,
     onClear: () -> Unit
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Results", style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onClear) { Text("Clear") }
-        }
-
-        if (showEmpty) {
-            Text(
-                text = "No results found",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 8.dp))
-        } else {
-            items.forEach { e ->
-                Text(e.title, style = MaterialTheme.typography.bodyLarge)
-                if (e.locationName.isNotBlank()) {
-                    Text(e.locationName, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                Spacer(Modifier.height(8.dp))
-            }
-        }
+  Column(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+      Text("Results", style = MaterialTheme.typography.titleMedium)
+      TextButton(onClick = onClear) { Text("Clear") }
     }
+
+    if (showEmpty) {
+      Text(
+          text = "No results found",
+          style = MaterialTheme.typography.bodyMedium,
+          color = Color.Gray,
+          modifier = Modifier.padding(top = 8.dp))
+    } else {
+      items.forEach { e ->
+        Text(e.title, style = MaterialTheme.typography.bodyLarge)
+        if (e.locationName.isNotBlank()) {
+          Text(e.locationName, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+        Spacer(Modifier.height(8.dp))
+      }
+    }
+  }
 }
 
 /** Row of quick action buttons (Create Memory, Create Event, Filters). */
