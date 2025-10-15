@@ -52,6 +52,7 @@ import org.robolectric.annotation.Config
 class SignInViewModelTest {
 
   private lateinit var context: Context
+  private lateinit var activity: Activity
   private lateinit var viewModel: SignInViewModel
   private val testDispatcher = StandardTestDispatcher()
 
@@ -68,12 +69,15 @@ class SignInViewModelTest {
       FirebaseApp.initializeApp(context)
     }
 
+    activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+
     // Create ViewModel instance
     viewModel = SignInViewModel(context)
   }
 
   @After
   fun tearDown() {
+    activity.finish()
     Dispatchers.resetMain()
     unmockkAll()
   }
@@ -207,13 +211,13 @@ class SignInViewModelTest {
         val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
         // Start first sign-in (this will set isLoading to true)
-        viewModel.signInWithGoogle(mockCredentialManager) {}
+        viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
         // Get state after first call
         advanceUntilIdle()
 
         // Try to start another sign-in while loading - should be blocked
-        viewModel.signInWithGoogle(mockCredentialManager) {}
+        viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
         advanceUntilIdle()
 
@@ -316,7 +320,7 @@ class SignInViewModelTest {
   fun `signInWithGoogle should set loading state to true initially`() = runTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
     // The loading state should be set immediately
     val state = viewModel.uiState.first()
@@ -332,7 +336,7 @@ class SignInViewModelTest {
       mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
     } throws RuntimeException("Credential error")
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
@@ -349,7 +353,7 @@ class SignInViewModelTest {
       mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
     } throws RuntimeException("Network error")
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
@@ -366,7 +370,7 @@ class SignInViewModelTest {
       mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
     } throws RuntimeException()
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
@@ -378,7 +382,7 @@ class SignInViewModelTest {
   fun `signInWithGoogle onSuccess callback should be invoked on successful sign-in`() = runTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
     advanceUntilIdle()
 
@@ -453,7 +457,7 @@ class SignInViewModelTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
     viewModel.clearError()
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
     advanceUntilIdle()
 
@@ -493,11 +497,11 @@ class SignInViewModelTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
     // Set viewModel to loading state by starting a sign-in
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     // Try to sign in again while loading - second call should be blocked
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     // State should exist and be valid
@@ -525,7 +529,7 @@ class SignInViewModelTest {
   fun `signInWithGoogle should handle success with null user`() = runTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     // Even if Firebase returns null user, state should be updated
@@ -539,7 +543,7 @@ class SignInViewModelTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
     // Call without explicit callback (uses default empty callback)
-    viewModel.signInWithGoogle(mockCredentialManager)
+    viewModel.signInWithGoogle(mockCredentialManager, activity)
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
@@ -613,7 +617,7 @@ class SignInViewModelTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
     // Sign in - the initial state update clears errors
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
@@ -680,7 +684,7 @@ class SignInViewModelTest {
   fun `signInWithGoogle should handle coroutine cancellation gracefully`() = runTest {
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.signInWithGoogle(mockCredentialManager, activity) {}
 
     // Cancel the coroutine
     testScheduler.advanceTimeBy(100)

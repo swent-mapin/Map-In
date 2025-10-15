@@ -103,7 +103,7 @@ class SignInScreenTests {
 
     composeTestRule.onNodeWithText("Sign in with Google").performScrollTo().performClick()
 
-    verify { mockViewModel.signInWithGoogle(any(), any()) }
+    verify { mockViewModel.signInWithGoogle(any(), any(), any()) }
   }
 
   @Test
