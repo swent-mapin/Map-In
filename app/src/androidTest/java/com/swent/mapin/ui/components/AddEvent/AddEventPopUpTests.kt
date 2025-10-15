@@ -120,20 +120,29 @@ class AddEventPopUpTests {
 
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
         .assertTextContains("Public", substring = true, ignoreCase = true)
 
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH).performClick()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
         .assertTextContains("Private", substring = true, ignoreCase = true)
 
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH).performClick()
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
         .assertTextContains("Public", substring = true, ignoreCase = true)
   }
 
