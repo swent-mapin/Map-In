@@ -32,7 +32,11 @@ fun AppNavHost(
     }
 
     composable(Route.Profile.route) {
-      ProfileScreen(onNavigateBack = { navController.popBackStack() })
+      ProfileScreen(onNavigateBack = {
+        if (navController.previousBackStackEntry != null) {
+          navController.popBackStack()
+        }
+      })
     }
   }
 }
