@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -221,28 +220,28 @@ fun ProfileScreen(
                       }
                 }
 
-                Column(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 20.dp)
-                            .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
-                            .animateContentSize(
-                                animationSpec =
-                                    spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow)),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                      if (viewModel.isEditMode) {
-                        EditProfileContent(viewModel = viewModel)
-                      } else {
-                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
-                      }
+            Column(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 20.dp)
+                        .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
+                        .animateContentSize(
+                            animationSpec =
+                                spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow)),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  if (viewModel.isEditMode) {
+                    EditProfileContent(viewModel = viewModel)
+                  } else {
+                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+                  }
 
-                      Spacer(modifier = Modifier.height(16.dp))
-                    }
-              }
+                  Spacer(modifier = Modifier.height(16.dp))
+                }
+          }
 
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {

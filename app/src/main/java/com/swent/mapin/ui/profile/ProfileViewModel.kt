@@ -330,100 +330,101 @@ class ProfileViewModel(
     _userProfile.value = UserProfile()
     isEditMode = false
     clearErrors()
-  /** Show delete confirmation dialog */
-  fun showDeleteDialog() {
-    showDeleteConfirmation = true
-  }
+    /** Show delete confirmation dialog */
+    fun showDeleteDialog() {
+      showDeleteConfirmation = true
+    }
 
-  /** Hide delete confirmation dialog */
-  fun hideDeleteDialog() {
-    showDeleteConfirmation = false
-  }
-
-  /** Delete/reset profile to default values */
-  fun deleteProfile() {
-    viewModelScope.launch {
-      _isLoading.value = true
-
-      val currentUser = FirebaseAuth.getInstance().currentUser
-
-      if (currentUser != null) {
-        // Delete old avatar and banner images from Firebase Storage if they exist
-        val currentProfile = _userProfile.value
-
-        // Delete avatar image if it's a Firebase Storage URL
-        if (!currentProfile.avatarUrl.isNullOrEmpty() &&
-            currentProfile.avatarUrl!!.contains("firebasestorage")) {
-          val avatarDeleted = imageUploadHelper.deleteImage(currentProfile.avatarUrl!!)
-          if (!avatarDeleted) {
-            println("ProfileViewModel - Failed to delete avatar image")
-          }
-        }
-
-        // Delete banner image if it's a Firebase Storage URL
-        if (!currentProfile.bannerUrl.isNullOrEmpty() &&
-            currentProfile.bannerUrl!!.contains("firebasestorage")) {
-          val bannerDeleted = imageUploadHelper.deleteImage(currentProfile.bannerUrl!!)
-          if (!bannerDeleted) {
-            println("ProfileViewModel - Failed to delete banner image")
-          }
-        }
-
-        // Create a new default profile
-        val defaultProfile =
-            repository.createDefaultProfile(
-                userId = currentUser.uid,
-                name = currentUser.displayName ?: "Anonymous User",
-                profilePictureUrl = currentUser.photoUrl?.toString())
-
-        // Save the default profile to Firestore (this will overwrite the existing profile)
-        val success = repository.saveUserProfile(defaultProfile)
-
-        if (success) {
-          // Update local state
-          _userProfile.value = defaultProfile
-          println("ProfileViewModel - Profile reset to default successfully")
-        } else {
-          println("ProfileViewModel - Failed to reset profile")
-        }
-      }
-
+    /** Hide delete confirmation dialog */
+    fun hideDeleteDialog() {
       showDeleteConfirmation = false
-      _isLoading.value = false
     }
-  }
 
-  /** Upload avatar image from gallery */
-  fun uploadAvatarImage(uri: Uri) {
-    viewModelScope.launch {
-      isUploadingImage = true
-      val currentUser = FirebaseAuth.getInstance().currentUser
+    /** Delete/reset profile to default values */
+    fun deleteProfile() {
+      viewModelScope.launch {
+        _isLoading.value = true
 
-      if (currentUser != null) {
-        val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "avatar")
-        if (downloadUrl != null) {
-          selectedAvatar = downloadUrl
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        if (currentUser != null) {
+          // Delete old avatar and banner images from Firebase Storage if they exist
+          val currentProfile = _userProfile.value
+
+          // Delete avatar image if it's a Firebase Storage URL
+          if (!currentProfile.avatarUrl.isNullOrEmpty() &&
+              currentProfile.avatarUrl!!.contains("firebasestorage")) {
+            val avatarDeleted = imageUploadHelper.deleteImage(currentProfile.avatarUrl!!)
+            if (!avatarDeleted) {
+              println("ProfileViewModel - Failed to delete avatar image")
+            }
+          }
+
+          // Delete banner image if it's a Firebase Storage URL
+          if (!currentProfile.bannerUrl.isNullOrEmpty() &&
+              currentProfile.bannerUrl!!.contains("firebasestorage")) {
+            val bannerDeleted = imageUploadHelper.deleteImage(currentProfile.bannerUrl!!)
+            if (!bannerDeleted) {
+              println("ProfileViewModel - Failed to delete banner image")
+            }
+          }
+
+          // Create a new default profile
+          val defaultProfile =
+              repository.createDefaultProfile(
+                  userId = currentUser.uid,
+                  name = currentUser.displayName ?: "Anonymous User",
+                  profilePictureUrl = currentUser.photoUrl?.toString())
+
+          // Save the default profile to Firestore (this will overwrite the existing profile)
+          val success = repository.saveUserProfile(defaultProfile)
+
+          if (success) {
+            // Update local state
+            _userProfile.value = defaultProfile
+            println("ProfileViewModel - Profile reset to default successfully")
+          } else {
+            println("ProfileViewModel - Failed to reset profile")
+          }
         }
-      }
 
-      isUploadingImage = false
+        showDeleteConfirmation = false
+        _isLoading.value = false
+      }
     }
-  }
 
-  /** Upload banner image from gallery */
-  fun uploadBannerImage(uri: Uri) {
-    viewModelScope.launch {
-      isUploadingImage = true
-      val currentUser = FirebaseAuth.getInstance().currentUser
+    /** Upload avatar image from gallery */
+    fun uploadAvatarImage(uri: Uri) {
+      viewModelScope.launch {
+        isUploadingImage = true
+        val currentUser = FirebaseAuth.getInstance().currentUser
 
-      if (currentUser != null) {
-        val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "banner")
-        if (downloadUrl != null) {
-          selectedBanner = downloadUrl
+        if (currentUser != null) {
+          val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "avatar")
+          if (downloadUrl != null) {
+            selectedAvatar = downloadUrl
+          }
         }
-      }
 
-      isUploadingImage = false
+        isUploadingImage = false
+      }
+    }
+
+    /** Upload banner image from gallery */
+    fun uploadBannerImage(uri: Uri) {
+      viewModelScope.launch {
+        isUploadingImage = true
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        if (currentUser != null) {
+          val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "banner")
+          if (downloadUrl != null) {
+            selectedBanner = downloadUrl
+          }
+        }
+
+        isUploadingImage = false
+      }
     }
   }
 }

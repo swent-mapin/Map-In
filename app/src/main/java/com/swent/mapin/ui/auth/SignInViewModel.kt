@@ -71,14 +71,14 @@ class SignInViewModel(context: Context) : ViewModel() {
       try {
         Log.d(TAG, "Starting Google Sign-In process with GetGoogleIdOption...")
 
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(WEB_CLIENT_ID)
-            .setAutoSelectEnabled(false)
-            .build()
+        val googleIdOption =
+            GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(WEB_CLIENT_ID)
+                .setAutoSelectEnabled(false)
+                .build()
 
-        val request =
-            GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+        val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
         val credentialResult = credentialManager.getCredential(applicationContext, request)
         val credential = credentialResult.credential
