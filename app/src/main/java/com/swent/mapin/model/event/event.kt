@@ -8,13 +8,14 @@ import com.swent.mapin.model.Location
  * @property title event title
  * @property description event description
  * @property date event date
- * @property location event location
+ * @property location location of the event (name, latitude, longitude)
  * @property tags list of event types
  * @property public is event public or private
  * @property ownerId user id of the event creator
  * @property imageUrl url of the event image
  * @property capacity maximum number of attendees
  * @property attendeeCount current number of attendees
+ * @property participantIds list of user IDs who are participating in this event
  */
 data class Event(
     val uid: String = "",
@@ -29,4 +30,5 @@ data class Event(
     val imageUrl: String? = null,
     val capacity: Int? = null,
     val attendeeCount: Int? = 0,
+    val participantIds: List<String> = emptyList()
 )

@@ -23,22 +23,60 @@ jobs:
           submodules: recursive
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
 
+      - name: Restore shared debug keystore
+        env:
+          TEAM_DEBUG_KEYSTORE_B64: ${{ secrets.TEAM_DEBUG_KEYSTORE_B64 }}
+          TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
+          TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TEAM_DEBUG_KEYSTORE_B64" ] || [ -z "$TEAM_DEBUG_STORE_PASSWORD" ] || [ -z "$TEAM_DEBUG_KEY_PASSWORD" ]; then
+            echo "Shared debug keystore secrets are not configured" >&2
+            exit 1
+          fi
+          mkdir -p android/keystores
+          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug.keystore
+          cat <<EOF > android/gradle.properties
+          TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
+          TEAM_DEBUG_STORE_PASSWORD=$TEAM_DEBUG_STORE_PASSWORD
+          TEAM_DEBUG_KEY_ALIAS=teamDebug
+          TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
+          EOF
+
+      - name: Verify shared SHA-1
+        env:
+          TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
+          TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
+        run: |
+          keytool -list -v -keystore android/keystores/team-debug.keystore -alias teamDebug \
+            -storepass "$TEAM_DEBUG_STORE_PASSWORD" -keypass "$TEAM_DEBUG_KEY_PASSWORD" | grep 'SHA1:'
+
       - name: Restore google-services.json (from base64 secret)
         env:
-          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+          FIREBASE_SERVICE_JSON_B64: ${{ secrets.FIREBASE_SERVICE_JSON_B64 }}
         run: |
+          if [ -z "$FIREBASE_SERVICE_JSON_B64" ]; then
+            echo "FIREBASE_SERVICE_JSON_B64 secret is not set" >&2
+            exit 1
+          fi
           mkdir -p app
-          printf '%s' "$GOOGLE_SERVICES" | base64 --decode > app/google-services.json
+          echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
           ls -l app/google-services.json
 
-      - name: Restore debug.keystore (from base64 secret)
+      - name: Restore Mapbox access token resource
         env:
-          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
-          mkdir -p keystore
-          echo "$DEBUG_KEYSTORE" | base64 --decode > keystore/debug.keystore
-          ls -l keystore/debug.keystore
-          
+          if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
+            echo "MAPBOX_ACCESS_TOKEN secret is not set" >&2
+            exit 1
+          fi
+          mkdir -p app/src/main/res/values
+          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
+          </resources>
+          EOF
 
 
       # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.

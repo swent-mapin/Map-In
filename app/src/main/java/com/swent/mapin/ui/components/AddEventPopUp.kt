@@ -264,7 +264,7 @@ fun AddEventPopUp(
 
   val locationExpanded = remember { mutableStateOf(false) }
   val gotLocation = remember {
-    mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT, ATTENDEES_DEFAULT))
+    mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
   }
   val locations by locationViewModel.locations.collectAsState()
 

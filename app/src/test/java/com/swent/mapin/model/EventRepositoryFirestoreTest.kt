@@ -3,17 +3,30 @@ package com.swent.mapin.model
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.*
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 import com.swent.mapin.model.event.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import kotlinx.coroutines.test.runTest
-import org.junit.*
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 // Test writing and documentation assisted by AI tools
 /**
@@ -86,7 +99,7 @@ class EventRepositoryFirestoreTest {
             url = "u",
             description = "d",
             date = Timestamp.now(),
-            location = Location("Zurich", 8.5417, 47.3769),
+            location = Location("Zurich", 47.3769, 8.5417),
             tags = listOf("music"),
             public = true,
             ownerId = "owner",
@@ -122,7 +135,7 @@ class EventRepositoryFirestoreTest {
             url = "u",
             description = "d",
             date = Timestamp.now(),
-            location = Location("Zurich", 8.54, 47.37),
+            location = Location("Zurich", 47.37, 8.54),
             tags = listOf("tag"),
             public = true,
             ownerId = "o",
@@ -153,46 +166,46 @@ class EventRepositoryFirestoreTest {
   fun getEventsByTitle_filtersClientSide_caseInsensitive_trim() = runTest {
     val e1 =
         Event(
-            "",
-            " Rock Night ",
-            "u",
-            "d",
-            Timestamp.now(),
-            Location("ZRH", 0.0, 0.0),
-            listOf("m"),
-            true,
-            "a",
-            null,
-            1,
-            0)
+            uid = "",
+            title = " Rock Night ",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("ZRH", 0.0, 0.0),
+            tags = listOf("m"),
+            public = true,
+            ownerId = "a",
+            imageUrl = null,
+            capacity = 1,
+            attendeeCount = 0)
     val e2 =
         Event(
-            "",
-            "rock night",
-            "u",
-            "d",
-            Timestamp.now(),
-            Location("ZRH", 0.0, 0.0),
-            listOf("m"),
-            true,
-            "b",
-            null,
-            1,
-            0)
+            uid = "",
+            title = "rock night",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("ZRH", 0.0, 0.0),
+            tags = listOf("m"),
+            public = true,
+            ownerId = "b",
+            imageUrl = null,
+            capacity = 1,
+            attendeeCount = 0)
     val e3 =
         Event(
-            "",
-            "Jazz",
-            "u",
-            "d",
-            Timestamp.now(),
-            Location("ZRH", 0.0, 0.0),
-            listOf("m"),
-            true,
-            "c",
-            null,
-            1,
-            0)
+            uid = "",
+            title = "Jazz",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("ZRH", 0.0, 0.0),
+            tags = listOf("m"),
+            public = true,
+            ownerId = "c",
+            imageUrl = null,
+            capacity = 1,
+            attendeeCount = 0)
 
     val snap = qs(doc("1", e1), doc("2", e2), doc("3", e3))
 
@@ -265,5 +278,113 @@ class EventRepositoryFirestoreTest {
     whenever(document.delete()).thenReturn(voidTask())
     repo.deleteEvent("E1")
     verify(document).delete()
+  }
+
+  @Test
+  fun getEventsByParticipant_returnsMatchingEvents() = runTest {
+    val e1 =
+        Event(
+            uid = "",
+            title = "Event 1",
+            url = "u1",
+            description = "d1",
+            date = Timestamp.now(),
+            location = Location("Zurich", 8.5417, 47.3769),
+            tags = listOf("music"),
+            public = true,
+            ownerId = "owner1",
+            imageUrl = null,
+            capacity = 50,
+            attendeeCount = 2,
+            participantIds = listOf("user1", "user2"))
+
+    val e2 =
+        Event(
+            uid = "",
+            title = "Event 2",
+            url = "u2",
+            description = "d2",
+            date = Timestamp.now(),
+            location = Location("Zurich", 8.5417, 47.3769),
+            tags = listOf("sports"),
+            public = true,
+            ownerId = "owner2",
+            imageUrl = null,
+            capacity = 30,
+            attendeeCount = 1,
+            participantIds = listOf("user1", "user3"))
+
+    val snap = qs(doc("E1", e1), doc("E2", e2))
+
+    whenever(collection.whereArrayContains(eq("participantIds"), eq("user1"))).thenReturn(query)
+    whenever(query.orderBy(eq("date"))).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByParticipant("user1")
+    assertEquals(2, result.size)
+    assertEquals(listOf("E1", "E2"), result.map { it.uid })
+    assertTrue(result.all { it.participantIds.contains("user1") })
+  }
+
+  @Test
+  fun addEvent_autoAddsOwnerToParticipants_whenNotPresent() = runTest {
+    whenever(document.id).thenReturn("NEWID")
+    whenever(document.set(any<Event>())).thenReturn(voidTask())
+
+    val input =
+        Event(
+            uid = "",
+            title = "New Event",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "owner123",
+            imageUrl = null,
+            capacity = 10,
+            attendeeCount = 0,
+            participantIds = listOf("user1", "user2"))
+
+    repo.addEvent(input)
+
+    argumentCaptor<Event>().apply {
+      verify(document).set(capture())
+      assertEquals("NEWID", firstValue.uid)
+      assertEquals("New Event", firstValue.title)
+      assertTrue(firstValue.participantIds.contains("owner123"))
+      assertEquals(3, firstValue.participantIds.size)
+    }
+  }
+
+  @Test
+  fun addEvent_doesNotDuplicateOwnerInParticipants_whenAlreadyPresent() = runTest {
+    whenever(document.id).thenReturn("NEWID")
+    whenever(document.set(any<Event>())).thenReturn(voidTask())
+
+    val input =
+        Event(
+            uid = "",
+            title = "New Event",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "owner123",
+            imageUrl = null,
+            capacity = 10,
+            attendeeCount = 0,
+            participantIds = listOf("user1", "owner123", "user2"))
+
+    repo.addEvent(input)
+
+    argumentCaptor<Event>().apply {
+      verify(document).set(capture())
+      assertEquals(3, firstValue.participantIds.size)
+      assertEquals(1, firstValue.participantIds.count { it == "owner123" })
+    }
   }
 }

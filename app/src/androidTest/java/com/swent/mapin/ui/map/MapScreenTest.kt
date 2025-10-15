@@ -85,7 +85,6 @@ class MapScreenTest {
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
 
-    // Wait for scrollable content to be fully displayed (slower on CI)
     rule.waitUntil(timeoutMillis = 10000) {
       try {
         rule.onNodeWithText("Quick Actions").performScrollTo().assertIsDisplayed()
@@ -116,7 +115,7 @@ class MapScreenTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").performClick()
     rule.waitForIdle()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
+    rule.onNodeWithText("New Memory").assertIsDisplayed()
   }
 
   @Test

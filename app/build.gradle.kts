@@ -20,6 +20,44 @@ android {
     if (localPropsFile.exists()) localProps.load(FileInputStream(localPropsFile))
     val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY") ?: ""
 
+    val sharedKeystoreProps = Properties()
+    val sharedKeystorePropsFile = rootProject.file("android/gradle.properties")
+    if (sharedKeystorePropsFile.exists()) {
+        FileInputStream(sharedKeystorePropsFile).use(sharedKeystoreProps::load)
+    }
+
+    fun findSharedKeystoreProperty(name: String): String? {
+        val fromProject = project.findProperty(name) as? String
+        val fromFile = sharedKeystoreProps.getProperty(name)
+        return (fromProject ?: fromFile)?.takeIf { it.isNotBlank() }
+    }
+
+    val teamDebugStoreFile = findSharedKeystoreProperty("TEAM_DEBUG_STORE_FILE")
+    val teamDebugStorePassword = findSharedKeystoreProperty("TEAM_DEBUG_STORE_PASSWORD")
+    val teamDebugKeyAlias = findSharedKeystoreProperty("TEAM_DEBUG_KEY_ALIAS")
+    val teamDebugKeyPassword = findSharedKeystoreProperty("TEAM_DEBUG_KEY_PASSWORD")
+
+    signingConfigs {
+        getByName("debug") {
+            val missingProperty = listOf(
+                "TEAM_DEBUG_STORE_FILE" to teamDebugStoreFile,
+                "TEAM_DEBUG_STORE_PASSWORD" to teamDebugStorePassword,
+                "TEAM_DEBUG_KEY_ALIAS" to teamDebugKeyAlias,
+                "TEAM_DEBUG_KEY_PASSWORD" to teamDebugKeyPassword
+            ).firstOrNull { it.second.isNullOrBlank() }
+
+            check(missingProperty == null) {
+                "Missing shared debug keystore property: ${missingProperty?.first}. Add it to android/gradle.properties or your local gradle.properties."
+            }
+
+            storeFile = rootProject.file(teamDebugStoreFile!!)
+            storePassword = teamDebugStorePassword
+            keyAlias = teamDebugKeyAlias
+            keyPassword = teamDebugKeyPassword
+        }
+    }
+
+
     defaultConfig {
         applicationId = "com.swent.mapin"
         minSdk = 28
@@ -34,15 +72,6 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
-    signingConfigs {
-        getByName("debug") {
-            storeFile = file("../keystore/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -54,7 +83,6 @@ android {
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
-                signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -64,6 +92,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -81,6 +110,14 @@ android {
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/LICENSE-notice.md"
         }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.protobuf:protobuf-javalite:3.21.12")
+            force("com.google.protobuf:protobuf-java:3.21.12")
+        }
+        exclude(group = "com.google.protobuf", module = "protobuf-lite")
     }
 
     testOptions {
@@ -123,6 +160,15 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 }
 
 dependencies {
+
+    implementation("org.shredzone.commons:commons-suncalc:3.11")
+
+    // ------------- Protobuf (fix for Firebase conflict) ------------------
+    implementation("com.google.protobuf:protobuf-javalite:3.21.12")
+    androidTestImplementation("com.google.protobuf:protobuf-javalite:3.21.12")
+
+
+
     // ------------- Jetpack Compose ------------------
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
@@ -135,6 +181,10 @@ dependencies {
     implementation(libs.compose.viewmodel)
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Material Icons Extended - for additional icons
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Compose UI testing
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
@@ -148,9 +198,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ------------- Firebase ------------------
-    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
 
     // ------------- Google Maps ------------------
     implementation("com.google.maps.android:maps-compose:4.3.3")

@@ -108,16 +108,16 @@ class SignInViewModel(context: Context) : ViewModel() {
         // Enhanced error logging for debugging
         val errorDetails =
             when (e) {
-              is androidx.credentials.exceptions.GetCredentialException -> {
-                Log.e(TAG, "GetCredentialException - Type: ${e.type}")
-                Log.e(TAG, "GetCredentialException - Message: ${e.message}")
-                "Credential error: ${e.type}\n${e.message}"
-              }
               is androidx.credentials.exceptions.GetCredentialCancellationException -> {
                 "Sign-in was cancelled"
               }
               is androidx.credentials.exceptions.NoCredentialException -> {
                 "No Google accounts found on device"
+              }
+              is androidx.credentials.exceptions.GetCredentialException -> {
+                Log.e(TAG, "GetCredentialException - Type: ${e.type}")
+                Log.e(TAG, "GetCredentialException - Message: ${e.message}")
+                "Credential error: ${e.type}\n${e.message}"
               }
               else -> {
                 if (e.message == null) {

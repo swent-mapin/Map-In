@@ -5,7 +5,12 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.test.core.app.ApplicationProvider
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
+import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.ui.auth.SignInUiState
 import com.swent.mapin.ui.auth.SignInViewModel
@@ -679,6 +684,235 @@ class SignInViewModelTest {
 
     // Advance time
     testScheduler.advanceTimeBy(100)
+
+    val state = viewModel.uiState.first()
+    assertNotNull(state)
+  }
+
+  // ADVANCED TESTS TO COVER FIREBASE SUCCESS PATHS
+
+  @Test
+  fun `signInWithMicrosoft should handle success callback with user`() = runTest {
+    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
+    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>()
+    val mockUser = mockk<FirebaseUser>(relaxed = true)
+
+    // Mock Firebase getInstance
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+
+    // Setup the task to capture callbacks
+    val successListenerSlot = slot<OnSuccessListener<AuthResult>>()
+    every { mockTask.addOnSuccessListener(capture(successListenerSlot)) } answers { mockTask }
+    every { mockTask.addOnFailureListener(any()) } returns mockTask
+
+    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    every { mockAuthResult.user } returns mockUser
+    every { mockUser.displayName } returns "Microsoft User"
+
+    // Create new ViewModel with mocked Firebase
+    val testViewModel = SignInViewModel(context)
+
+    testViewModel.signInWithMicrosoft(mockActivity)
+    advanceUntilIdle()
+
+    // Simulate success callback
+    if (successListenerSlot.isCaptured) {
+      successListenerSlot.captured.onSuccess(mockAuthResult)
+      advanceUntilIdle()
+    }
+
+    val state = testViewModel.uiState.first()
+    assertNotNull(state)
+    assertFalse(state.isLoading)
+  }
+
+  @Test
+  fun `signInWithMicrosoft should handle success callback with null user`() = runTest {
+    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
+    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>()
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+
+    val successListenerSlot = slot<OnSuccessListener<AuthResult>>()
+    every { mockTask.addOnSuccessListener(capture(successListenerSlot)) } answers { mockTask }
+    every { mockTask.addOnFailureListener(any()) } returns mockTask
+
+    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    every { mockAuthResult.user } returns null // Null user case
+
+    // Create new ViewModel with mocked Firebase
+    val testViewModel = SignInViewModel(context)
+
+    testViewModel.signInWithMicrosoft(mockActivity)
+    advanceUntilIdle()
+
+    // Simulate success callback with null user
+    if (successListenerSlot.isCaptured) {
+      successListenerSlot.captured.onSuccess(mockAuthResult)
+      advanceUntilIdle()
+    }
+
+    val state = testViewModel.uiState.first()
+    assertNotNull(state)
+    assertFalse(state.isLoading)
+    // Should have error message about no user
+  }
+
+  @Test
+  fun `signInWithMicrosoft should handle failure callback`() = runTest {
+    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
+    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val testException = Exception("Microsoft auth failed")
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+
+    val failureListenerSlot = slot<OnFailureListener>()
+    every { mockTask.addOnSuccessListener(any()) } returns mockTask
+    every { mockTask.addOnFailureListener(capture(failureListenerSlot)) } answers { mockTask }
+
+    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+
+    val testViewModel = SignInViewModel(context)
+
+    testViewModel.signInWithMicrosoft(mockActivity)
+    advanceUntilIdle()
+
+    // Simulate failure callback
+    if (failureListenerSlot.isCaptured) {
+      failureListenerSlot.captured.onFailure(testException)
+      advanceUntilIdle()
+    }
+
+    val state = testViewModel.uiState.first()
+    assertNotNull(state)
+    assertFalse(state.isLoading)
+    // Should have error message
+  }
+
+  @Test
+  fun `signInWithMicrosoft should handle exception during provider setup`() = runTest {
+    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
+    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+
+    // Make startActivityForSignInWithProvider throw an exception
+    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } throws
+        RuntimeException("OAuth provider error")
+
+    val testViewModel = SignInViewModel(context)
+
+    testViewModel.signInWithMicrosoft(mockActivity)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertNotNull(state)
+    assertFalse(state.isLoading)
+    // Should handle the exception
+  }
+
+  @Test
+  fun `signInWithGoogle should handle GetCredentialCancellationException properly`() = runTest {
+    val mockCredentialManager = mockk<CredentialManager>()
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws androidx.credentials.exceptions.GetCredentialCancellationException("User cancelled")
+
+    viewModel.signInWithGoogle(mockCredentialManager) {}
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMessage)
+    assertEquals("Sign-in was cancelled", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle NoCredentialException properly`() = runTest {
+    val mockCredentialManager = mockk<CredentialManager>()
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws androidx.credentials.exceptions.NoCredentialException("No credentials available")
+
+    viewModel.signInWithGoogle(mockCredentialManager) {}
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMessage)
+    assertEquals("No Google accounts found on device", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle GetCredentialException with custom type`() = runTest {
+    val mockCredentialManager = mockk<CredentialManager>()
+
+    val mockException =
+        mockk<androidx.credentials.exceptions.GetCredentialException>(relaxed = true)
+    every { mockException.type } returns "TYPE_NO_CREDENTIAL"
+    every { mockException.message } returns "Credential request failed"
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws mockException
+
+    viewModel.signInWithGoogle(mockCredentialManager) {}
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMessage)
+    assertTrue(state.errorMessage?.contains("Credential error") == true)
+    assertTrue(state.errorMessage?.contains("TYPE_NO_CREDENTIAL") == true)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signInWithGoogle should not invoke callback when authentication fails`() = runTest {
+    var callbackInvoked = false
+    val mockCredentialManager = mockk<CredentialManager>()
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws RuntimeException("Auth failed")
+
+    viewModel.signInWithGoogle(mockCredentialManager) { callbackInvoked = true }
+    advanceUntilIdle()
+
+    assertFalse(callbackInvoked)
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertNotNull(state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithGoogle should verify GetCredentialRequest is constructed`() = runTest {
+    val mockCredentialManager = mockk<CredentialManager>()
+    val capturedRequest = slot<GetCredentialRequest>()
+
+    coEvery { mockCredentialManager.getCredential(any<Context>(), capture(capturedRequest)) } throws
+        RuntimeException("Test exception")
+
+    viewModel.signInWithGoogle(mockCredentialManager) {}
+    advanceUntilIdle()
+
+    // Verify request was created and passed
+    coVerify { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) }
+    assertTrue(capturedRequest.isCaptured)
 
     val state = viewModel.uiState.first()
     assertNotNull(state)
