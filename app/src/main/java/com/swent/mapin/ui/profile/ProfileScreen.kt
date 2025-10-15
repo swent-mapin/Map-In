@@ -1130,8 +1130,7 @@ private fun AvatarSelectionGrid(
                     contentDescription = avatar.id,
                     modifier = Modifier.size(40.dp),
                     tint =
-                        if (isSelected) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
               }
         }
       }
