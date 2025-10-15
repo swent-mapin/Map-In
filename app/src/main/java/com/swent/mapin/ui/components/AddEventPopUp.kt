@@ -391,9 +391,8 @@ fun AddEventPopUp(
                                     public = true, // Add logic for public/private later
                                     ownerId = Firebase.auth.currentUser?.uid ?: "",
                                     imageUrl = null, // Add logic for URLS later
-                                    capacity =
-                                        null, // Add logic for capacity later, no capacity by
-                                              // default
+                                    capacity = null, // Add logic for capacity later, no capacity by
+                                    // default
                                     attendeeCount = ATTENDEES_DEFAULT)
                             eventViewModel.addEvent(newEvent)
                             onDone

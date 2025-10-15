@@ -187,6 +187,7 @@ dependencies {
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.kaspresso)
     androidTestImplementation(libs.kaspresso.compose)
+    testImplementation(kotlin("test"))
 }
 
 
