@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.AddEvent
+package com.swent.mapin.ui.components.AddEvent
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -31,7 +31,7 @@ class AddEventPopUpTests {
       AddEventPopUp(
           onBack = { backClicked = true },
           onDismiss = { dismissCalled = true },
-          onSave = { saveClicked = true },
+          onDone = { saveClicked = true },
           onCancel = { cancelClicked = true })
     }
   }
@@ -113,6 +113,32 @@ class AddEventPopUpTests {
         .performScrollTo()
         .performClick()
     assert(cancelClicked)
+  }
+
+  @Test
+  fun publicPrivateSwitchTogglesCorrectly() {
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .assertTextContains("Public", substring = true, ignoreCase = true)
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .assertTextContains("Private", substring = true, ignoreCase = true)
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .assertTextContains("Public", substring = true, ignoreCase = true)
   }
 
   @Test
