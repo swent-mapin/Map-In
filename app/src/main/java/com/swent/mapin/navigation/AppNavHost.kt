@@ -32,7 +32,14 @@ fun AppNavHost(
     }
 
     composable(Route.Profile.route) {
-      ProfileScreen(onNavigateBack = { navController.popBackStack() })
+      ProfileScreen(
+          onNavigateBack = { navController.popBackStack() },
+          onNavigateToSignIn = {
+            navController.navigate(Route.Auth.route) {
+              popUpTo(0) { inclusive = true }
+              launchSingleTop = true
+            }
+          })
     }
   }
 }

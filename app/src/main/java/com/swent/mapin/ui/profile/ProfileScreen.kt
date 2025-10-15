@@ -80,7 +80,11 @@ import com.swent.mapin.model.UserProfile
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = viewModel()) {
+fun ProfileScreen(
+    onNavigateBack: () -> Unit,
+        onNavigateToSignIn: () -> Unit,
+    viewModel: ProfileViewModel = viewModel()
+) {
   val userProfile by viewModel.userProfile.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
 
@@ -165,6 +169,33 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
                     EditProfileContent(viewModel = viewModel)
                   } else {
                     ViewProfileContent(userProfile = userProfile)
+
+                    // Logout button
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                          viewModel.signOut()
+                          onNavigateToSignIn()
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp).testTag("logoutButton"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
+                          Row(
+                              verticalAlignment = Alignment.CenterVertically,
+                              horizontalArrangement = Arrangement.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Logout",
+                                    modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Logout",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyLarge)
+                              }
+                        }
                   }
 
                   Spacer(modifier = Modifier.height(16.dp))

@@ -295,4 +295,24 @@ class ProfileViewModel(private val repository: UserProfileRepository = UserProfi
   fun toggleHobbiesVisibility() {
     hobbiesVisible = !hobbiesVisible
   }
+
+    /**
+   * Signs out the current user from Firebase Auth and resets the profile state.
+   *
+   * This method performs the following actions:
+   * - Signs out the user from Firebase Authentication.
+   * - Resets the user profile to a default, empty state.
+   * - Exits edit mode.
+   * - Clears any validation or input errors.
+   *
+   * Call this method when the user chooses to sign out, to ensure all profile-related
+   * state in the ViewModel is cleared and ready for a new session.
+   */
+  fun signOut() {
+    FirebaseAuth.getInstance().signOut()
+    // Reset the profile state
+    _userProfile.value = UserProfile()
+    isEditMode = false
+    clearErrors()
+  }
 }
