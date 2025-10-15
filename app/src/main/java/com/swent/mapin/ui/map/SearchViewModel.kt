@@ -16,6 +16,7 @@ private const val SEARCH_DEBOUNCE_MS = 250L
 
 /**
  * UI state for the search screen.
+ *
  * @param query Current search query
  * @param isLoading Whether a search is in progress
  * @param results List of events matching the search query
@@ -31,7 +32,9 @@ data class SearchUiState(
     val searchMode: Boolean = false, // true = show dedicated search results content
     val shouldRequestFocus: Boolean = false, // one-shot: request focus when entering search
 )
-/** ViewModel for managing search state and logic.
+/**
+ * ViewModel for managing search state and logic.
+ *
  * @param repo Event repository for fetching events
  */
 class SearchViewModel(private val repo: EventRepository) : ViewModel() {
