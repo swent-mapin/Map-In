@@ -41,7 +41,7 @@ class MapScreenViewModelTest {
 
   private val testDispatcher = StandardTestDispatcher()
 
-  @Mock private lateinit var mockContext: Context
+  @Mock(lenient = true) private lateinit var mockContext: Context
   @Mock(lenient = true) private lateinit var mockMemoryRepository: MemoryRepository
   @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
@@ -66,6 +66,9 @@ class MapScreenViewModelTest {
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
 
+    // Mock applicationContext to return itself (or another mock)
+    whenever(mockContext.applicationContext).thenReturn(mockContext)
+
     runBlocking {
       whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
@@ -77,7 +80,7 @@ class MapScreenViewModelTest {
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig = config,
             onClearFocus = { clearFocusCalled = true },
-            context = mockContext,
+            applicationContext = mockContext,
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
             auth = mockAuth)
@@ -474,13 +477,66 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun toggleHeatmap_togglesState() {
+  fun setMapStyle_togglesHeatmapState() {
     assertFalse(viewModel.showHeatmap)
 
-    viewModel.toggleHeatmap()
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.HEATMAP)
     assertTrue(viewModel.showHeatmap)
 
-    viewModel.toggleHeatmap()
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.STANDARD)
     assertFalse(viewModel.showHeatmap)
+  }
+
+  @Test
+  fun setEvents_updatesEvents() {
+    val initialEvents = viewModel.events
+    val newEvents =
+        listOf(
+            com.swent.mapin.model.event.Event(
+                uid = "test1",
+                title = "Test Event",
+                location = com.swent.mapin.model.Location("Test Location", 34.0, -118.0),
+                attendeeCount = 50))
+
+    viewModel.setEvents(newEvents)
+
+    assertEquals(newEvents, viewModel.events)
+  }
+
+  @Test
+  fun eventsToGeoJson_createsValidGeoJson() {
+    val events =
+        listOf(
+            com.swent.mapin.model.event.Event(
+                uid = "event1",
+                title = "Event 1",
+                location = com.swent.mapin.model.Location("Location 1", 46.5, 6.5),
+                attendeeCount = 10),
+            com.swent.mapin.model.event.Event(
+                uid = "event2",
+                title = "Event 2",
+                location = com.swent.mapin.model.Location("Location 2", 47.0, 7.0),
+                attendeeCount = 25))
+
+    val geoJson = eventsToGeoJson(events)
+
+    // Verify it's valid JSON and contains expected data
+    assertTrue(geoJson.contains("type"))
+    assertTrue(geoJson.contains("FeatureCollection"))
+    assertTrue(geoJson.contains("features"))
+    assertTrue(geoJson.contains("geometry"))
+    assertTrue(geoJson.contains("Point"))
+    assertTrue(geoJson.contains("weight"))
+    assertTrue(geoJson.contains("6.5"))
+    assertTrue(geoJson.contains("46.5"))
+    assertTrue(geoJson.contains("10")) // weight from attendeeCount
+  }
+
+  @Test
+  fun eventsToGeoJson_emptyList_createsEmptyFeatureCollection() {
+    val geoJson = eventsToGeoJson(emptyList())
+
+    assertTrue(geoJson.contains("FeatureCollection"))
+    assertTrue(geoJson.contains("features"))
   }
 }

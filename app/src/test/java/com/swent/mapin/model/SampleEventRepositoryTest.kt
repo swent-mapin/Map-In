@@ -17,7 +17,7 @@ class SampleEventRepositoryTest {
   @Test
   fun getSampleEvents_returnsExactly5Events() {
     val events = SampleEventRepository.getSampleEvents()
-    assertEquals(5, events.size)
+    assertEquals(50, events.size)
   }
 
   @Test
@@ -57,7 +57,6 @@ class SampleEventRepositoryTest {
   fun getSampleEvents_allEventsHaveValidLocations() {
     val events = SampleEventRepository.getSampleEvents()
     events.forEach { event ->
-      assertNotNull(event.location)
       assertNotNull(event.location.name)
       assertTrue(event.location.name.isNotEmpty())
       assertTrue(event.location.latitude != 0.0 || event.location.longitude != 0.0)
@@ -68,8 +67,8 @@ class SampleEventRepositoryTest {
   fun getSampleEvents_allEventsHaveValidCoordinates() {
     val events = SampleEventRepository.getSampleEvents()
     events.forEach { event ->
-      assertTrue(event.location.latitude in -90.0..90.0)
-      assertTrue(event.location.longitude in -180.0..180.0)
+      assertTrue(event.location.latitude >= -90.0 && event.location.latitude <= 90.0)
+      assertTrue(event.location.longitude >= -180.0 && event.location.longitude <= 180.0)
     }
   }
 
@@ -120,7 +119,7 @@ class SampleEventRepositoryTest {
     val events = SampleEventRepository.getSampleEvents()
     val basketballGame = events.find { it.title == "Basketball Game" }
     assertNotNull(basketballGame)
-    assertEquals("event2", basketballGame?.uid)
+    assertEquals("event4", basketballGame?.uid)
     assertTrue(basketballGame?.tags?.contains("Sports") == true)
   }
 
@@ -129,7 +128,7 @@ class SampleEventRepositoryTest {
     val events = SampleEventRepository.getSampleEvents()
     val artExhibition = events.find { it.title == "Art Exhibition" }
     assertNotNull(artExhibition)
-    assertEquals("event3", artExhibition?.uid)
+    assertEquals("event7", artExhibition?.uid)
     assertTrue(artExhibition?.tags?.contains("Art") == true)
   }
 
@@ -138,7 +137,7 @@ class SampleEventRepositoryTest {
     val events = SampleEventRepository.getSampleEvents()
     val foodMarket = events.find { it.title == "Food Market" }
     assertNotNull(foodMarket)
-    assertEquals("event4", foodMarket?.uid)
+    assertEquals("event12", foodMarket?.uid)
     assertTrue(foodMarket?.tags?.contains("Food") == true)
   }
 
@@ -147,7 +146,7 @@ class SampleEventRepositoryTest {
     val events = SampleEventRepository.getSampleEvents()
     val yogaClass = events.find { it.title == "Yoga Class" }
     assertNotNull(yogaClass)
-    assertEquals("event5", yogaClass?.uid)
+    assertEquals("event16", yogaClass?.uid)
     assertTrue(yogaClass?.tags?.contains("Yoga") == true)
   }
 

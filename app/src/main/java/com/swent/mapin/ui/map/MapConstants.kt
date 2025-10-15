@@ -31,7 +31,6 @@ object MapConstants {
   /** Overscroll allowance in dp - allows slight dragging beyond bounds for natural feel */
   const val OVERSCROLL_ALLOWANCE_DP = 60f
 
-  // Default camera position (EPFL)
   /** Default map latitude */
   const val DEFAULT_LATITUDE = 46.5197
 
@@ -40,4 +39,18 @@ object MapConstants {
 
   /** Default map zoom level */
   const val DEFAULT_ZOOM = 15f
+
+  /** Heatmap color stops for visualization */
+  object HeatmapColors {
+    val COLOR_STOPS =
+        listOf(
+            0.0 to ColorStop(33.0, 102.0, 172.0, 0.0),
+            0.2 to ColorStop(103.0, 169.0, 207.0, 255.0),
+            0.4 to ColorStop(209.0, 229.0, 240.0, 255.0),
+            0.6 to ColorStop(253.0, 219.0, 199.0, 255.0),
+            0.8 to ColorStop(239.0, 138.0, 98.0, 255.0),
+            1.0 to ColorStop(178.0, 24.0, 43.0, 255.0))
+  }
+
+  data class ColorStop(val r: Double, val g: Double, val b: Double, val a: Double)
 }
