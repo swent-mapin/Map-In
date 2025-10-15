@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 
 /**
  * Instrumented tests for SignInScreen composable.
-
+ *
  * Tests the UI components, user interactions, and visual elements of the sign-in screen using
  * Compose testing framework.
  */

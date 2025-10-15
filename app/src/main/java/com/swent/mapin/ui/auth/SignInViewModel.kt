@@ -240,7 +240,7 @@ class SignInViewModel(context: Context) : ViewModel() {
    * Creates a new user account with email and password.
    *
    * @param email The user's email address.
-      * @param password The user's password.
+   * @param password The user's password.
    *
    * Validation rules:
    * - Both email and password must be non-empty.
@@ -289,7 +289,8 @@ class SignInViewModel(context: Context) : ViewModel() {
             when {
               e.message?.contains("email address is already in use", ignoreCase = true) == true ->
                   "An account with this email already exists"
-              e.message?.contains("badly formatted", ignoreCase = true) == true -> "Invalid email format"
+              e.message?.contains("badly formatted", ignoreCase = true) == true ->
+                  "Invalid email format"
               e.message?.contains("weak", ignoreCase = true) == true -> "Password is too weak"
               else -> "Sign-up failed: ${e.message}"
             }

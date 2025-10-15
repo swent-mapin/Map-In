@@ -82,7 +82,7 @@ import com.swent.mapin.model.UserProfile
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
-        onNavigateToSignIn: () -> Unit,
+    onNavigateToSignIn: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
   val userProfile by viewModel.userProfile.collectAsState()

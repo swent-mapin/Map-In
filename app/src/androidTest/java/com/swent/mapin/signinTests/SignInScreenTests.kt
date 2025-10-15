@@ -243,10 +243,7 @@ class SignInScreenTests {
   fun emailTextFieldShouldAcceptInput() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule
-        .onNodeWithText("Email")
-        .performScrollTo()
-        .performTextInput("test@example.com")
+    composeTestRule.onNodeWithText("Email").performScrollTo().performTextInput("test@example.com")
 
     composeTestRule.onNodeWithText("test@example.com").assertExists()
   }
@@ -255,10 +252,7 @@ class SignInScreenTests {
   fun passwordTextFieldShouldAcceptInput() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule
-        .onNodeWithText("Password")
-        .performScrollTo()
-        .performTextInput("password123")
+    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput("password123")
 
     // Password should be masked, but text field should contain the value
     composeTestRule.waitForIdle()
@@ -271,9 +265,7 @@ class SignInScreenTests {
     composeTestRule.onNodeWithText("Password").performScrollTo()
 
     // Look for the visibility toggle button (eye icon)
-    composeTestRule
-        .onNodeWithContentDescription("Show password")
-        .assertExists()
+    composeTestRule.onNodeWithContentDescription("Show password").assertExists()
   }
 
   @Test
@@ -500,10 +492,7 @@ class SignInScreenTests {
   fun signInScreenShouldHandleSpecialCharactersInPassword() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    composeTestRule
-        .onNodeWithText("Password")
-        .performScrollTo()
-        .performTextInput("p@ssw0rd!#$%")
+    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput("p@ssw0rd!#$%")
 
     composeTestRule.waitForIdle()
     // Should not crash with special characters

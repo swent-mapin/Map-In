@@ -18,8 +18,8 @@ import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.*
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -326,7 +326,6 @@ class SignInViewModelTest {
     testViewModel.signInWithEmail("test@example.com", "password123")
     advanceUntilIdle()
 
-
     // Second call while first is potentially still processing
     testViewModel.signInWithEmail("test2@example.com", "password456")
     advanceUntilIdle()
@@ -607,7 +606,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -632,7 +631,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -656,7 +655,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -680,7 +679,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -704,7 +703,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -728,7 +727,7 @@ class SignInViewModelTest {
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
-    
+
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
     every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
@@ -762,7 +761,9 @@ class SignInViewModelTest {
     every { mockCredential.data } returns android.os.Bundle()
     every { mockCredentialResult.credential } returns mockCredential
 
-    coEvery { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } returns mockCredentialResult
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } returns mockCredentialResult
 
     every { mockAuth.signInWithCredential(any()) } returns mockTask
     every { mockTask.isComplete } returns true
@@ -771,14 +772,15 @@ class SignInViewModelTest {
     every { mockAuthResult.user } returns mockUser
     every { mockUser.displayName } returns "Test User"
 
-    every { mockTask.addOnCompleteListener(any()) } answers {
-      val listener = firstArg<com.google.android.gms.tasks.OnCompleteListener<AuthResult>>()
-      listener.onComplete(mockTask)
-      mockTask
-    }
+    every { mockTask.addOnCompleteListener(any()) } answers
+        {
+          val listener = firstArg<com.google.android.gms.tasks.OnCompleteListener<AuthResult>>()
+          listener.onComplete(mockTask)
+          mockTask
+        }
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signInWithGoogle(mockCredentialManager) { }
+    testViewModel.signInWithGoogle(mockCredentialManager) {}
     advanceUntilIdle()
 
     // Verify the success path was attempted (may not complete due to mocking complexity)
@@ -790,13 +792,16 @@ class SignInViewModelTest {
   fun `signInWithGoogle should handle cancellation exception`() = runTest {
     val mockAuth = mockk<FirebaseAuth>(relaxed = true)
     val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-    val exception = androidx.credentials.exceptions.GetCredentialCancellationException("User cancelled")
+    val exception =
+        androidx.credentials.exceptions.GetCredentialCancellationException("User cancelled")
 
     mockkStatic(FirebaseAuth::class)
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
 
-    coEvery { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws exception
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
 
     val testViewModel = SignInViewModel(context)
     testViewModel.signInWithGoogle(mockCredentialManager)
@@ -817,7 +822,9 @@ class SignInViewModelTest {
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
 
-    coEvery { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws exception
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
 
     val testViewModel = SignInViewModel(context)
     testViewModel.signInWithGoogle(mockCredentialManager)
@@ -838,7 +845,9 @@ class SignInViewModelTest {
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
 
-    coEvery { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws exception
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
 
     val testViewModel = SignInViewModel(context)
     testViewModel.signInWithGoogle(mockCredentialManager)
@@ -859,7 +868,9 @@ class SignInViewModelTest {
     every { FirebaseAuth.getInstance() } returns mockAuth
     every { mockAuth.currentUser } returns null
 
-    coEvery { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws exception
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
 
     val testViewModel = SignInViewModel(context)
     testViewModel.signInWithGoogle(mockCredentialManager)
@@ -889,10 +900,11 @@ class SignInViewModelTest {
     every { mockUser.displayName } returns "Microsoft User"
 
     var successListener: OnSuccessListener<AuthResult>? = null
-    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers {
-      successListener = firstArg()
-      mockTask
-    }
+    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers
+        {
+          successListener = firstArg()
+          mockTask
+        }
     every { mockTask.addOnFailureListener(any()) } returns mockTask
 
     val testViewModel = SignInViewModel(context)
@@ -924,10 +936,11 @@ class SignInViewModelTest {
 
     var failureListener: OnFailureListener? = null
     every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } returns mockTask
-    every { mockTask.addOnFailureListener(any()) } answers {
-      failureListener = firstArg()
-      mockTask
-    }
+    every { mockTask.addOnFailureListener(any()) } answers
+        {
+          failureListener = firstArg()
+          mockTask
+        }
 
     val testViewModel = SignInViewModel(context)
     testViewModel.signInWithMicrosoft(mockActivity)
@@ -956,10 +969,11 @@ class SignInViewModelTest {
     every { mockAuthResult.user } returns null
 
     var successListener: OnSuccessListener<AuthResult>? = null
-    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers {
-      successListener = firstArg()
-      mockTask
-    }
+    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers
+        {
+          successListener = firstArg()
+          mockTask
+        }
     every { mockTask.addOnFailureListener(any()) } returns mockTask
 
     val testViewModel = SignInViewModel(context)
@@ -1091,7 +1105,8 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle weak password error`() = runTest {
     val mockAuth = mockk<FirebaseAuth>(relaxed = true)
     val mockTask = mockk<Task<AuthResult>>(relaxed = true)
-    val exception = Exception("The given password is invalid. [ Password should be at least 6 characters ]")
+    val exception =
+        Exception("The given password is invalid. [ Password should be at least 6 characters ]")
 
     mockkStatic(FirebaseAuth::class)
     mockkStatic("kotlinx.coroutines.tasks.TasksKt")
@@ -1109,7 +1124,9 @@ class SignInViewModelTest {
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     // Since the error doesn't contain "weak password", it will be a generic error
-    assertEquals("Sign-up failed: The given password is invalid. [ Password should be at least 6 characters ]", state.errorMessage)
+    assertEquals(
+        "Sign-up failed: The given password is invalid. [ Password should be at least 6 characters ]",
+        state.errorMessage)
   }
 
   @Test
@@ -1149,10 +1166,11 @@ class SignInViewModelTest {
     every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
 
     // Never complete the task to keep isLoading true
-    coEvery { mockTask.await<AuthResult>() } coAnswers {
-      kotlinx.coroutines.delay(10000)
-      mockk()
-    }
+    coEvery { mockTask.await<AuthResult>() } coAnswers
+        {
+          kotlinx.coroutines.delay(10000)
+          mockk()
+        }
 
     val testViewModel = SignInViewModel(context)
 
@@ -1214,11 +1232,12 @@ class SignInViewModelTest {
 
   @Test
   fun `signInWithEmail error messages are properly mapped`() = runTest {
-    val testCases = listOf(
-      "There is no user record corresponding to this identifier" to "No account found with this email",
-      "The password is invalid or the user does not have a password" to "Invalid password",
-      "The email address is badly formatted" to "Invalid email format"
-    )
+    val testCases =
+        listOf(
+            "There is no user record corresponding to this identifier" to
+                "No account found with this email",
+            "The password is invalid or the user does not have a password" to "Invalid password",
+            "The email address is badly formatted" to "Invalid email format")
 
     for ((firebaseError, expectedMessage) in testCases) {
       val mockAuth = mockk<FirebaseAuth>(relaxed = true)
@@ -1247,11 +1266,12 @@ class SignInViewModelTest {
 
   @Test
   fun `signUpWithEmail error messages are properly mapped`() = runTest {
-    val testCases = listOf(
-      "The email address is already in use by another account" to "An account with this email already exists",
-      "The email address is badly formatted" to "Invalid email format",
-      "The password is too weak" to "Password is too weak"
-    )
+    val testCases =
+        listOf(
+            "The email address is already in use by another account" to
+                "An account with this email already exists",
+            "The email address is badly formatted" to "Invalid email format",
+            "The password is too weak" to "Password is too weak")
 
     for ((firebaseError, expectedMessage) in testCases) {
       val mockAuth = mockk<FirebaseAuth>(relaxed = true)
@@ -1263,7 +1283,8 @@ class SignInViewModelTest {
 
       every { FirebaseAuth.getInstance() } returns mockAuth
       every { mockAuth.currentUser } returns null
-      every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+      every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns
+          mockTask
 
       coEvery { mockTask.await<AuthResult>() } throws exception
 
