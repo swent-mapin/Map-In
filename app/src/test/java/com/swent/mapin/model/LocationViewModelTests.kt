@@ -25,7 +25,7 @@ class LocationViewModelTest {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     fakeRepository = FakeLocationRepository()
-    fakeRepository.results = listOf(Location("X", 0.0, 0.0, 1))
+    fakeRepository.results = listOf(Location("X", 0.0, 0.0))
     viewModel = LocationViewModel(fakeRepository)
   }
 
