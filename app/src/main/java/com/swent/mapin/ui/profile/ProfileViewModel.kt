@@ -330,6 +330,27 @@ class ProfileViewModel(
       val currentUser = FirebaseAuth.getInstance().currentUser
 
       if (currentUser != null) {
+        // Delete old avatar and banner images from Firebase Storage if they exist
+        val currentProfile = _userProfile.value
+
+        // Delete avatar image if it's a Firebase Storage URL
+        if (!currentProfile.avatarUrl.isNullOrEmpty() &&
+            currentProfile.avatarUrl!!.contains("firebasestorage")) {
+          val avatarDeleted = imageUploadHelper.deleteImage(currentProfile.avatarUrl!!)
+          if (!avatarDeleted) {
+            println("ProfileViewModel - Failed to delete avatar image")
+          }
+        }
+
+        // Delete banner image if it's a Firebase Storage URL
+        if (!currentProfile.bannerUrl.isNullOrEmpty() &&
+            currentProfile.bannerUrl!!.contains("firebasestorage")) {
+          val bannerDeleted = imageUploadHelper.deleteImage(currentProfile.bannerUrl!!)
+          if (!bannerDeleted) {
+            println("ProfileViewModel - Failed to delete banner image")
+          }
+        }
+
         // Create a new default profile
         val defaultProfile =
             repository.createDefaultProfile(
