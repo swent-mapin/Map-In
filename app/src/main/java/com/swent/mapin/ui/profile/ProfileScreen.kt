@@ -888,64 +888,16 @@ private fun AvatarSelectorDialog(
       text = {
         Column(modifier = Modifier.fillMaxWidth()) {
           // Import from gallery button
-          OutlinedButton(
-              onClick = { imagePickerLauncher.launch("image/*") },
-              modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Icon(
-                          imageVector = Icons.Default.Face,
-                          contentDescription = "Import from gallery",
-                          modifier = Modifier.size(20.dp))
-                      Spacer(modifier = Modifier.width(8.dp))
-                      Text("Import from Gallery", fontWeight = FontWeight.Bold)
-                    }
-              }
+          ImportFromGalleryButton(onClick = { imagePickerLauncher.launch("image/*") })
 
-          Text(
-              text = "Or choose a preset avatar:",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp))
+          // Preset selection label
+          PresetSelectionLabel(itemType = "avatar")
 
-          LazyVerticalGrid(
-              columns = GridCells.Fixed(4),
-              horizontalArrangement = Arrangement.spacedBy(12.dp),
-              verticalArrangement = Arrangement.spacedBy(12.dp),
-              modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                items(availableAvatars) { avatar ->
-                  val isSelected = selectedAvatar == avatar.id
-                  Box(
-                      modifier =
-                          Modifier.size(70.dp)
-                              .clip(CircleShape)
-                              .background(
-                                  if (isSelected) {
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))
-                                  } else {
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                MaterialTheme.colorScheme.surfaceVariant,
-                                                MaterialTheme.colorScheme.surfaceVariant))
-                                  })
-                              .clickable { onAvatarSelected(avatar.id) }
-                              .testTag("avatar_${avatar.id}"),
-                      contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = avatar.icon,
-                            contentDescription = avatar.id,
-                            modifier = Modifier.size(40.dp),
-                            tint =
-                                if (isSelected) Color.White
-                                else MaterialTheme.colorScheme.onSurfaceVariant)
-                      }
-                }
-              }
+          // Avatar selection grid
+          AvatarSelectionGrid(
+              availableAvatars = availableAvatars,
+              selectedAvatar = selectedAvatar,
+              onAvatarSelected = onAvatarSelected)
         }
       },
       confirmButton = {
@@ -1050,67 +1002,16 @@ private fun BannerSelectorDialog(
       text = {
         Column(modifier = Modifier.fillMaxWidth()) {
           // Import from gallery button
-          OutlinedButton(
-              onClick = { bannerPickerLauncher.launch("image/*") },
-              modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Icon(
-                          imageVector = Icons.Default.Face,
-                          contentDescription = "Import from gallery",
-                          modifier = Modifier.size(20.dp))
-                      Spacer(modifier = Modifier.width(8.dp))
-                      Text("Import from Gallery", fontWeight = FontWeight.Bold)
-                    }
-              }
+          ImportFromGalleryButton(onClick = { bannerPickerLauncher.launch("image/*") })
 
-          Text(
-              text = "Or choose a preset banner:",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp))
+          // Preset selection label
+          PresetSelectionLabel(itemType = "banner")
 
-          LazyVerticalGrid(
-              columns = GridCells.Fixed(2),
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp),
-              modifier = Modifier.fillMaxWidth().height(250.dp)) {
-                items(availableBanners) { banner ->
-                  val isSelected = selectedBanner == banner.id
-                  Column(
-                      horizontalAlignment = Alignment.CenterHorizontally,
-                      modifier = Modifier.fillMaxWidth()) {
-                        Box(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(50.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        brush = Brush.horizontalGradient(colors = banner.colors))
-                                    .clickable { onBannerSelected(banner.id) }
-                                    .testTag("banner_${banner.id}"),
-                            contentAlignment = Alignment.Center) {
-                              if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp))
-                              }
-                            }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = banner.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.85)
-                      }
-                }
-              }
+          // Banner selection grid
+          BannerSelectionGrid(
+              availableBanners = availableBanners,
+              selectedBanner = selectedBanner,
+              onBannerSelected = onBannerSelected)
         }
       },
       confirmButton = {
@@ -1159,4 +1060,125 @@ fun DeleteProfileConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(16.dp))
+}
+
+/** Reusable button for importing images from the gallery */
+@Composable
+fun ImportFromGalleryButton(onClick: () -> Unit) {
+  OutlinedButton(
+      onClick = onClick,
+      modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+      shape = RoundedCornerShape(12.dp),
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  imageVector = Icons.Default.Face,
+                  contentDescription = "Import from gallery",
+                  modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Import from Gallery", fontWeight = FontWeight.Bold)
+            }
+      }
+}
+
+/** Reusable preset selection label */
+@Composable
+private fun PresetSelectionLabel(itemType: String) {
+  Text(
+      text = "Or choose a preset $itemType:",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.padding(bottom = 8.dp))
+}
+
+/** Reusable grid for avatar selection */
+@Composable
+private fun AvatarSelectionGrid(
+    availableAvatars: List<AvatarOption>,
+    selectedAvatar: String,
+    onAvatarSelected: (String) -> Unit
+) {
+  LazyVerticalGrid(
+      columns = GridCells.Fixed(4),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+      modifier = Modifier.fillMaxWidth().height(300.dp)) {
+        items(availableAvatars) { avatar ->
+          val isSelected = selectedAvatar == avatar.id
+          Box(
+              modifier =
+                  Modifier.size(70.dp)
+                      .clip(CircleShape)
+                      .background(
+                          if (isSelected) {
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))
+                          } else {
+                            Brush.linearGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        MaterialTheme.colorScheme.surfaceVariant))
+                          })
+                      .clickable { onAvatarSelected(avatar.id) }
+                      .testTag("avatar_${avatar.id}"),
+              contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = avatar.icon,
+                    contentDescription = avatar.id,
+                    modifier = Modifier.size(40.dp),
+                    tint =
+                        if (isSelected) Color.White
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+        }
+      }
+}
+
+/** Reusable grid for banner selection */
+@Composable
+private fun BannerSelectionGrid(
+    availableBanners: List<BannerOption>,
+    selectedBanner: String,
+    onBannerSelected: (String) -> Unit
+) {
+  LazyVerticalGrid(
+      columns = GridCells.Fixed(2),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.fillMaxWidth().height(250.dp)) {
+        items(availableBanners) { banner ->
+          val isSelected = selectedBanner == banner.id
+          Column(
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(brush = Brush.horizontalGradient(colors = banner.colors))
+                            .clickable { onBannerSelected(banner.id) }
+                            .testTag("banner_${banner.id}"),
+                    contentAlignment = Alignment.Center) {
+                      if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp))
+                      }
+                    }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = banner.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.85)
+              }
+        }
+      }
 }
