@@ -2,6 +2,7 @@ package com.swent.mapin.ui.profile
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import io.mockk.coEvery
@@ -30,6 +31,7 @@ class ProfileViewModelTest {
 
   private lateinit var viewModel: ProfileViewModel
   private lateinit var mockRepository: UserProfileRepository
+  private lateinit var mockImageUploadHelper: ImageUploadHelper
   private lateinit var mockAuth: FirebaseAuth
   private lateinit var mockUser: FirebaseUser
   private val testDispatcher = UnconfinedTestDispatcher()
@@ -62,6 +64,9 @@ class ProfileViewModelTest {
 
     // Mock Repository
     mockRepository = mockk(relaxed = true)
+
+    // Mock ImageUploadHelper
+    mockImageUploadHelper = mockk(relaxed = true)
   }
 
   @After
@@ -73,7 +78,7 @@ class ProfileViewModelTest {
   fun `initial state has default values`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     assertFalse(viewModel.isEditMode)
     assertFalse(viewModel.showAvatarSelector)
@@ -89,7 +94,7 @@ class ProfileViewModelTest {
   fun `loadUserProfile loads existing profile successfully`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     val loadedProfile = viewModel.userProfile.first()
     assertEquals(testProfile, loadedProfile)
@@ -108,7 +113,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns null
     coEvery { mockRepository.createDefaultProfile(any(), any(), any()) } returns defaultProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     val loadedProfile = viewModel.userProfile.first()
     assertEquals(defaultProfile, loadedProfile)
@@ -119,7 +124,7 @@ class ProfileViewModelTest {
   fun `startEditing enables edit mode and populates fields`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
 
     assertTrue(viewModel.isEditMode)
@@ -136,7 +141,7 @@ class ProfileViewModelTest {
   fun `cancelEditing disables edit mode and clears fields`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("Changed Name")
     viewModel.cancelEditing()
@@ -153,7 +158,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     coEvery { mockRepository.saveUserProfile(any()) } returns true
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("Jane Doe")
     viewModel.updateEditBio("Updated bio")
@@ -174,7 +179,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with empty name`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("")
     viewModel.saveProfile()
@@ -189,7 +194,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with short name`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("A")
     viewModel.saveProfile()
@@ -203,7 +208,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with long name`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("A".repeat(51))
     viewModel.saveProfile()
@@ -217,7 +222,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with long bio`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditBio("A".repeat(501))
     viewModel.saveProfile()
@@ -231,7 +236,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with empty location`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditLocation("")
     viewModel.saveProfile()
@@ -245,7 +250,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with long location`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditLocation("A".repeat(101))
     viewModel.saveProfile()
@@ -259,7 +264,7 @@ class ProfileViewModelTest {
   fun `saveProfile fails validation with long hobbies`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditHobbies("A".repeat(201))
     viewModel.saveProfile()
@@ -273,7 +278,7 @@ class ProfileViewModelTest {
   fun `updateEditName updates name and validates`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("Valid Name")
 
@@ -285,7 +290,7 @@ class ProfileViewModelTest {
   fun `updateEditBio updates bio and validates`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditBio("Valid bio")
 
@@ -297,7 +302,7 @@ class ProfileViewModelTest {
   fun `updateEditLocation updates location and validates`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditLocation("Valid Location")
 
@@ -309,7 +314,7 @@ class ProfileViewModelTest {
   fun `updateEditHobbies updates hobbies and validates`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditHobbies("Reading, Gaming")
 
@@ -321,7 +326,7 @@ class ProfileViewModelTest {
   fun `updateAvatarSelection updates selected avatar`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     val newAvatarUrl = "https://example.com/new-avatar.jpg"
     viewModel.updateAvatarSelection(newAvatarUrl)
 
@@ -332,7 +337,7 @@ class ProfileViewModelTest {
   fun `updateBannerSelection updates selected banner`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     val newBannerUrl = "https://example.com/new-banner.jpg"
     viewModel.updateBannerSelection(newBannerUrl)
 
@@ -343,7 +348,7 @@ class ProfileViewModelTest {
   fun `toggleAvatarSelector toggles avatar selector visibility`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     assertFalse(viewModel.showAvatarSelector)
     viewModel.toggleAvatarSelector()
@@ -356,7 +361,7 @@ class ProfileViewModelTest {
   fun `toggleBannerSelector toggles banner selector visibility`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     assertFalse(viewModel.showBannerSelector)
     viewModel.toggleBannerSelector()
@@ -369,7 +374,7 @@ class ProfileViewModelTest {
   fun `toggleHobbiesVisibility toggles hobbies visibility`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
 
     assertTrue(viewModel.hobbiesVisible)
@@ -384,7 +389,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     coEvery { mockRepository.saveUserProfile(any()) } returns false
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditName("Valid Name")
     viewModel.saveProfile()
@@ -398,7 +403,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     coEvery { mockRepository.saveUserProfile(any()) } returns true
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditHobbies("  Reading  ,  Gaming  ,  Coding  ")
     viewModel.saveProfile()
@@ -412,7 +417,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     coEvery { mockRepository.saveUserProfile(any()) } returns true
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
     viewModel.startEditing()
     viewModel.updateEditHobbies("")
     viewModel.saveProfile()
@@ -425,7 +430,7 @@ class ProfileViewModelTest {
   fun `isLoading is true during profile load`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     // After init, loading should be false
     assertFalse(viewModel.isLoading.first())

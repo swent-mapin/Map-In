@@ -1,5 +1,8 @@
 package com.swent.mapin.ui.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
@@ -64,10 +69,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.swent.mapin.model.UserProfile
 
 /**
@@ -198,13 +205,49 @@ fun ProfileScreen(
                         }
                   }
 
-                  Spacer(modifier = Modifier.height(16.dp))
+                  // Avatar positionné en haut, chevauchant la bannière
+                  Box(
+                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
+                      contentAlignment = Alignment.Center) {
+                        ProfilePicture(
+                            avatarUrl =
+                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                                  viewModel.selectedAvatar
+                                } else {
+                                  userProfile.avatarUrl
+                                },
+                            isEditMode = viewModel.isEditMode,
+                            onAvatarClick = { viewModel.toggleAvatarSelector() })
+                      }
                 }
-          }
+
+                Column(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 20.dp)
+                            .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
+                            .animateContentSize(
+                                animationSpec =
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow)),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                      if (viewModel.isEditMode) {
+                        EditProfileContent(viewModel = viewModel)
+                      } else {
+                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+                      }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+                    }
+              }
 
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {
             AvatarSelectorDialog(
+                viewModel = viewModel,
                 selectedAvatar = viewModel.selectedAvatar,
                 onAvatarSelected = { avatarUrl ->
                   viewModel.updateAvatarSelection(avatarUrl)
@@ -216,12 +259,20 @@ fun ProfileScreen(
           // Banner Selector Dialog
           if (viewModel.showBannerSelector) {
             BannerSelectorDialog(
+                viewModel = viewModel,
                 selectedBanner = viewModel.selectedBanner,
                 onBannerSelected = { bannerUrl ->
                   viewModel.updateBannerSelection(bannerUrl)
                   viewModel.toggleBannerSelector()
                 },
                 onDismiss = { viewModel.toggleBannerSelector() })
+          }
+
+          // Delete Confirmation Dialog
+          if (viewModel.showDeleteConfirmation) {
+            DeleteProfileConfirmationDialog(
+                onConfirm = { viewModel.deleteProfile() },
+                onDismiss = { viewModel.hideDeleteDialog() })
           }
         }
       }
@@ -279,39 +330,48 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                                           MaterialTheme.colorScheme.tertiaryContainer)))
                       .testTag("profilePicture"),
               contentAlignment = Alignment.Center) {
-                val avatar = getAvatarIcon(avatarUrl)
-                Icon(
-                    imageVector = avatar,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.size(46.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
-              }
-
-          // Edit indicator
-          if (isEditMode) {
-            Box(
-                modifier =
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(4.dp)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF667eea))
-                        .shadow(4.dp, CircleShape),
-                contentAlignment = Alignment.Center) {
+                // Check if avatarUrl is an HTTP URL (uploaded image) or an icon ID
+                if (avatarUrl != null && avatarUrl.startsWith("http")) {
+                  // Display uploaded image from Firebase Storage
+                  AsyncImage(
+                      model = avatarUrl,
+                      contentDescription = "Profile Picture",
+                      modifier = Modifier.fillMaxSize().clip(CircleShape))
+                } else {
+                  // Display icon for preset avatars
                   Icon(
-                      imageVector = Icons.Default.Edit,
-                      contentDescription = "Change Avatar",
-                      tint = Color.White,
-                      modifier = Modifier.size(14.dp))
+                      imageVector = getAvatarIcon(avatarUrl),
+                      contentDescription = "Profile Picture",
+                      modifier = Modifier.size(46.dp),
+                      tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
-          }
+
+                // Edit indicator
+                if (isEditMode) {
+                  Box(
+                      modifier =
+                          Modifier.align(Alignment.BottomEnd)
+                              .padding(4.dp)
+                              .size(28.dp)
+                              .clip(CircleShape)
+                              .background(Color(0xFF667eea))
+                              .shadow(4.dp, CircleShape),
+                      contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Change Avatar",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp))
+                      }
+                }
+              }
         }
   }
 }
 
 /** View mode: displays profile information in cards. */
 @Composable
-private fun ViewProfileContent(userProfile: UserProfile) {
+private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
   // Name card with gradient and large prominence
   Card(
       modifier =
@@ -417,6 +477,30 @@ private fun ViewProfileContent(userProfile: UserProfile) {
                           fontWeight = FontWeight.Medium)
                     }
                   }
+            }
+      }
+
+  Spacer(modifier = Modifier.height(24.dp))
+
+  // Delete Profile Button
+  OutlinedButton(
+      onClick = { viewModel.showDeleteDialog() },
+      modifier = Modifier.fillMaxWidth().height(48.dp).testTag("deleteProfileButton"),
+      shape = RoundedCornerShape(12.dp),
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350)),
+      border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  imageVector = Icons.Default.Delete,
+                  contentDescription = "Delete Profile",
+                  modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                  "Delete Profile",
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontWeight = FontWeight.Bold)
             }
       }
 }
@@ -833,13 +917,26 @@ private fun getAvatarIcon(avatarUrl: String?): ImageVector {
   return availableAvatars.find { it.id == avatarUrl }?.icon ?: Icons.Default.Person
 }
 
-/** Avatar selector dialog */
+/** Avatar selector dialog with gallery import option */
 @Composable
 private fun AvatarSelectorDialog(
+    viewModel: ProfileViewModel,
     selectedAvatar: String,
     onAvatarSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+  val context = LocalContext.current
+
+  // Image picker launcher
+  val imagePickerLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
+        ->
+        uri?.let {
+          viewModel.uploadAvatarImage(it)
+          onDismiss()
+        }
+      }
+
   AlertDialog(
       onDismissRequest = onDismiss,
       title = {
@@ -849,41 +946,19 @@ private fun AvatarSelectorDialog(
             fontWeight = FontWeight.Bold)
       },
       text = {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth().height(400.dp)) {
-              items(availableAvatars) { avatar ->
-                val isSelected = selectedAvatar == avatar.id
-                Box(
-                    modifier =
-                        Modifier.size(70.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) {
-                                  Brush.linearGradient(
-                                      colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))
-                                } else {
-                                  Brush.linearGradient(
-                                      colors =
-                                          listOf(
-                                              MaterialTheme.colorScheme.surfaceVariant,
-                                              MaterialTheme.colorScheme.surfaceVariant))
-                                })
-                            .clickable { onAvatarSelected(avatar.id) }
-                            .testTag("avatar_${avatar.id}"),
-                    contentAlignment = Alignment.Center) {
-                      Icon(
-                          imageVector = avatar.icon,
-                          contentDescription = avatar.id,
-                          modifier = Modifier.size(40.dp),
-                          tint =
-                              if (isSelected) Color.White
-                              else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-              }
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // Import from gallery button
+          ImportFromGalleryButton(onClick = { imagePickerLauncher.launch("image/*") })
+
+          // Preset selection label
+          PresetSelectionLabel(itemType = "avatar")
+
+          // Avatar selection grid
+          AvatarSelectionGrid(
+              availableAvatars = availableAvatars,
+              selectedAvatar = selectedAvatar,
+              onAvatarSelected = onAvatarSelected)
+        }
       },
       confirmButton = {
         Button(
@@ -959,10 +1034,23 @@ fun ProfileBanner(bannerUrl: String?, isEditMode: Boolean, onBannerClick: () -> 
 /** Banner selector dialog */
 @Composable
 private fun BannerSelectorDialog(
+    viewModel: ProfileViewModel,
     selectedBanner: String,
     onBannerSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+  val context = LocalContext.current
+
+  // Image picker launcher for banner
+  val bannerPickerLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
+        ->
+        uri?.let {
+          viewModel.uploadBannerImage(it)
+          onDismiss()
+        }
+      }
+
   AlertDialog(
       onDismissRequest = onDismiss,
       title = {
@@ -972,44 +1060,19 @@ private fun BannerSelectorDialog(
             fontWeight = FontWeight.Bold)
       },
       text = {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().height(300.dp)) {
-              items(availableBanners) { banner ->
-                val isSelected = selectedBanner == banner.id
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()) {
-                      Box(
-                          modifier =
-                              Modifier.fillMaxWidth()
-                                  .height(50.dp)
-                                  .clip(RoundedCornerShape(8.dp))
-                                  .background(
-                                      brush = Brush.horizontalGradient(colors = banner.colors))
-                                  .clickable { onBannerSelected(banner.id) }
-                                  .testTag("banner_${banner.id}"),
-                          contentAlignment = Alignment.Center) {
-                            if (isSelected) {
-                              Icon(
-                                  imageVector = Icons.Default.Check,
-                                  contentDescription = "Selected",
-                                  tint = Color.White,
-                                  modifier = Modifier.size(24.dp))
-                            }
-                          }
-                      Spacer(modifier = Modifier.height(2.dp))
-                      Text(
-                          text = banner.name,
-                          style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.onSurface,
-                          maxLines = 1,
-                          fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.85)
-                    }
-              }
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // Import from gallery button
+          ImportFromGalleryButton(onClick = { bannerPickerLauncher.launch("image/*") })
+
+          // Preset selection label
+          PresetSelectionLabel(itemType = "banner")
+
+          // Banner selection grid
+          BannerSelectionGrid(
+              availableBanners = availableBanners,
+              selectedBanner = selectedBanner,
+              onBannerSelected = onBannerSelected)
+        }
       },
       confirmButton = {
         Button(
@@ -1020,4 +1083,161 @@ private fun BannerSelectorDialog(
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(20.dp))
+}
+
+/** Confirmation dialog for profile deletion */
+@Composable
+fun DeleteProfileConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      title = {
+        Text(
+            text = "Confirm Deletion",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold)
+      },
+      text = {
+        Text(
+            text = "Are you sure you want to delete your profile? This action cannot be undone.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+      },
+      confirmButton = {
+        Button(
+            onClick = onConfirm,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFef5350))) {
+              Text("Delete Profile", color = Color.White)
+            }
+      },
+      dismissButton = {
+        OutlinedButton(
+            onClick = onDismiss,
+            colors =
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary)) {
+              Text("Cancel")
+            }
+      },
+      containerColor = MaterialTheme.colorScheme.surface,
+      shape = RoundedCornerShape(16.dp))
+}
+
+/** Reusable button for importing images from the gallery */
+@Composable
+fun ImportFromGalleryButton(onClick: () -> Unit) {
+  OutlinedButton(
+      onClick = onClick,
+      modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+      shape = RoundedCornerShape(12.dp),
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  imageVector = Icons.Default.Face,
+                  contentDescription = "Import from gallery",
+                  modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Import from Gallery", fontWeight = FontWeight.Bold)
+            }
+      }
+}
+
+/** Reusable preset selection label */
+@Composable
+private fun PresetSelectionLabel(itemType: String) {
+  Text(
+      text = "Or choose a preset $itemType:",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.padding(bottom = 8.dp))
+}
+
+/** Reusable grid for avatar selection */
+@Composable
+private fun AvatarSelectionGrid(
+    availableAvatars: List<AvatarOption>,
+    selectedAvatar: String,
+    onAvatarSelected: (String) -> Unit
+) {
+  LazyVerticalGrid(
+      columns = GridCells.Fixed(4),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+      modifier = Modifier.fillMaxWidth().height(300.dp)) {
+        items(availableAvatars) { avatar ->
+          val isSelected = selectedAvatar == avatar.id
+          Box(
+              modifier =
+                  Modifier.size(70.dp)
+                      .clip(CircleShape)
+                      .background(
+                          if (isSelected) {
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))
+                          } else {
+                            Brush.linearGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        MaterialTheme.colorScheme.surfaceVariant))
+                          })
+                      .clickable { onAvatarSelected(avatar.id) }
+                      .testTag("avatar_${avatar.id}"),
+              contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = avatar.icon,
+                    contentDescription = avatar.id,
+                    modifier = Modifier.size(40.dp),
+                    tint =
+                        if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+        }
+      }
+}
+
+/** Reusable grid for banner selection */
+@Composable
+private fun BannerSelectionGrid(
+    availableBanners: List<BannerOption>,
+    selectedBanner: String,
+    onBannerSelected: (String) -> Unit
+) {
+  LazyVerticalGrid(
+      columns = GridCells.Fixed(2),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.fillMaxWidth().height(250.dp)) {
+        items(availableBanners) { banner ->
+          val isSelected = selectedBanner == banner.id
+          Column(
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(brush = Brush.horizontalGradient(colors = banner.colors))
+                            .clickable { onBannerSelected(banner.id) }
+                            .testTag("banner_${banner.id}"),
+                    contentAlignment = Alignment.Center) {
+                      if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp))
+                      }
+                    }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = banner.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.85)
+              }
+        }
+      }
 }

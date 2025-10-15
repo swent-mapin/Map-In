@@ -1,11 +1,13 @@
 package com.swent.mapin.ui.profile
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +24,12 @@ import kotlinx.coroutines.launch
  * - Save profile changes to Firestore
  * - Manage temporary edit state
  * - Validate user inputs
+ * - Upload images to Firebase Storage
  */
-class ProfileViewModel(private val repository: UserProfileRepository = UserProfileRepository()) :
-    ViewModel() {
+class ProfileViewModel(
+    private val repository: UserProfileRepository = UserProfileRepository(),
+    private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper()
+) : ViewModel() {
 
   // Current user profile from Firestore
   private val _userProfile = MutableStateFlow(UserProfile())
@@ -44,6 +49,14 @@ class ProfileViewModel(private val repository: UserProfileRepository = UserProfi
 
   // Whether the banner selector dialog is shown
   var showBannerSelector by mutableStateOf(false)
+    private set
+
+  // Whether the delete confirmation dialog is shown
+  var showDeleteConfirmation by mutableStateOf(false)
+    private set
+
+  // Whether uploading an image
+  var isUploadingImage by mutableStateOf(false)
     private set
 
   // Temporary fields for editing (before saving)
@@ -118,8 +131,11 @@ class ProfileViewModel(private val repository: UserProfileRepository = UserProfi
     isEditMode = true
     val profile = _userProfile.value
     editName = profile.name
-    editBio = profile.bio
-    editLocation = profile.location
+
+    // Clear default placeholder values when editing
+    editBio = if (profile.bio == "Tell us about yourself...") "" else profile.bio
+    editLocation = if (profile.location == "Unknown") "" else profile.location
+
     editHobbies = profile.hobbies.joinToString(", ")
     selectedAvatar = profile.avatarUrl ?: ""
     selectedBanner = profile.bannerUrl ?: ""
@@ -314,5 +330,100 @@ class ProfileViewModel(private val repository: UserProfileRepository = UserProfi
     _userProfile.value = UserProfile()
     isEditMode = false
     clearErrors()
+  /** Show delete confirmation dialog */
+  fun showDeleteDialog() {
+    showDeleteConfirmation = true
+  }
+
+  /** Hide delete confirmation dialog */
+  fun hideDeleteDialog() {
+    showDeleteConfirmation = false
+  }
+
+  /** Delete/reset profile to default values */
+  fun deleteProfile() {
+    viewModelScope.launch {
+      _isLoading.value = true
+
+      val currentUser = FirebaseAuth.getInstance().currentUser
+
+      if (currentUser != null) {
+        // Delete old avatar and banner images from Firebase Storage if they exist
+        val currentProfile = _userProfile.value
+
+        // Delete avatar image if it's a Firebase Storage URL
+        if (!currentProfile.avatarUrl.isNullOrEmpty() &&
+            currentProfile.avatarUrl!!.contains("firebasestorage")) {
+          val avatarDeleted = imageUploadHelper.deleteImage(currentProfile.avatarUrl!!)
+          if (!avatarDeleted) {
+            println("ProfileViewModel - Failed to delete avatar image")
+          }
+        }
+
+        // Delete banner image if it's a Firebase Storage URL
+        if (!currentProfile.bannerUrl.isNullOrEmpty() &&
+            currentProfile.bannerUrl!!.contains("firebasestorage")) {
+          val bannerDeleted = imageUploadHelper.deleteImage(currentProfile.bannerUrl!!)
+          if (!bannerDeleted) {
+            println("ProfileViewModel - Failed to delete banner image")
+          }
+        }
+
+        // Create a new default profile
+        val defaultProfile =
+            repository.createDefaultProfile(
+                userId = currentUser.uid,
+                name = currentUser.displayName ?: "Anonymous User",
+                profilePictureUrl = currentUser.photoUrl?.toString())
+
+        // Save the default profile to Firestore (this will overwrite the existing profile)
+        val success = repository.saveUserProfile(defaultProfile)
+
+        if (success) {
+          // Update local state
+          _userProfile.value = defaultProfile
+          println("ProfileViewModel - Profile reset to default successfully")
+        } else {
+          println("ProfileViewModel - Failed to reset profile")
+        }
+      }
+
+      showDeleteConfirmation = false
+      _isLoading.value = false
+    }
+  }
+
+  /** Upload avatar image from gallery */
+  fun uploadAvatarImage(uri: Uri) {
+    viewModelScope.launch {
+      isUploadingImage = true
+      val currentUser = FirebaseAuth.getInstance().currentUser
+
+      if (currentUser != null) {
+        val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "avatar")
+        if (downloadUrl != null) {
+          selectedAvatar = downloadUrl
+        }
+      }
+
+      isUploadingImage = false
+    }
+  }
+
+  /** Upload banner image from gallery */
+  fun uploadBannerImage(uri: Uri) {
+    viewModelScope.launch {
+      isUploadingImage = true
+      val currentUser = FirebaseAuth.getInstance().currentUser
+
+      if (currentUser != null) {
+        val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "banner")
+        if (downloadUrl != null) {
+          selectedBanner = downloadUrl
+        }
+      }
+
+      isUploadingImage = false
+    }
   }
 }
