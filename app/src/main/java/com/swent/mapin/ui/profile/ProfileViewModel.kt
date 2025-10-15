@@ -331,11 +331,11 @@ class ProfileViewModel(
 
       if (currentUser != null) {
         // Create a new default profile
-        val defaultProfile = repository.createDefaultProfile(
-            userId = currentUser.uid,
-            name = currentUser.displayName ?: "Anonymous User",
-            profilePictureUrl = currentUser.photoUrl?.toString()
-        )
+        val defaultProfile =
+            repository.createDefaultProfile(
+                userId = currentUser.uid,
+                name = currentUser.displayName ?: "Anonymous User",
+                profilePictureUrl = currentUser.photoUrl?.toString())
 
         // Save the default profile to Firestore (this will overwrite the existing profile)
         val success = repository.saveUserProfile(defaultProfile)

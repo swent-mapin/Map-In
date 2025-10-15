@@ -128,61 +128,61 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
           Column(
-              modifier = Modifier
-                  .fillMaxSize()
-                  .verticalScroll(rememberScrollState())
-                  .imePadding() // Add IME padding to handle keyboard
-          ) {
-            // Banner Section
-            Box(modifier = Modifier.fillMaxWidth()) {
-              ProfileBanner(
-                  bannerUrl =
-                      if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
-                        viewModel.selectedBanner
-                      } else {
-                        userProfile.bannerUrl
-                      },
-                  isEditMode = viewModel.isEditMode,
-                  onBannerClick = { viewModel.toggleBannerSelector() })
+              modifier =
+                  Modifier.fillMaxSize()
+                      .verticalScroll(rememberScrollState())
+                      .imePadding() // Add IME padding to handle keyboard
+              ) {
+                // Banner Section
+                Box(modifier = Modifier.fillMaxWidth()) {
+                  ProfileBanner(
+                      bannerUrl =
+                          if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
+                            viewModel.selectedBanner
+                          } else {
+                            userProfile.bannerUrl
+                          },
+                      isEditMode = viewModel.isEditMode,
+                      onBannerClick = { viewModel.toggleBannerSelector() })
 
-              // Avatar positionné en haut, chevauchant la bannière
-              Box(
-                  modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
-                  contentAlignment = Alignment.Center) {
-                    ProfilePicture(
-                        avatarUrl =
-                            if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                              viewModel.selectedAvatar
-                            } else {
-                              userProfile.avatarUrl
-                            },
-                        isEditMode = viewModel.isEditMode,
-                        onAvatarClick = { viewModel.toggleAvatarSelector() })
-                  }
-            }
-
-            Column(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 20.dp)
-                        .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
-                        .animateContentSize(
-                            animationSpec =
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow)),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                  if (viewModel.isEditMode) {
-                    EditProfileContent(viewModel = viewModel)
-                  } else {
-                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
-                  }
-
-                  Spacer(modifier = Modifier.height(16.dp))
+                  // Avatar positionné en haut, chevauchant la bannière
+                  Box(
+                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
+                      contentAlignment = Alignment.Center) {
+                        ProfilePicture(
+                            avatarUrl =
+                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                                  viewModel.selectedAvatar
+                                } else {
+                                  userProfile.avatarUrl
+                                },
+                            isEditMode = viewModel.isEditMode,
+                            onAvatarClick = { viewModel.toggleAvatarSelector() })
+                      }
                 }
-          }
+
+                Column(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 20.dp)
+                            .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
+                            .animateContentSize(
+                                animationSpec =
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow)),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                      if (viewModel.isEditMode) {
+                        EditProfileContent(viewModel = viewModel)
+                      } else {
+                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+                      }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+                    }
+              }
 
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {
@@ -276,8 +276,7 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                   AsyncImage(
                       model = avatarUrl,
                       contentDescription = "Profile Picture",
-                      modifier = Modifier.fillMaxSize().clip(CircleShape)
-                  )
+                      modifier = Modifier.fillMaxSize().clip(CircleShape))
                 } else {
                   // Display icon for preset avatars
                   Icon(
@@ -307,8 +306,8 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                 }
               }
         }
-    }
   }
+}
 
 /** View mode: displays profile information in cards. */
 @Composable
@@ -428,28 +427,22 @@ private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewM
       onClick = { viewModel.showDeleteDialog() },
       modifier = Modifier.fillMaxWidth().height(48.dp).testTag("deleteProfileButton"),
       shape = RoundedCornerShape(12.dp),
-      colors = ButtonDefaults.outlinedButtonColors(
-          contentColor = Color(0xFFef5350)
-      ),
-      border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))
-  ) {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-      Icon(
-          imageVector = Icons.Default.Delete,
-          contentDescription = "Delete Profile",
-          modifier = Modifier.size(20.dp)
-      )
-      Spacer(modifier = Modifier.width(8.dp))
-      Text(
-          "Delete Profile",
-          style = MaterialTheme.typography.bodyLarge,
-          fontWeight = FontWeight.Bold
-      )
-    }
-  }
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350)),
+      border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  imageVector = Icons.Default.Delete,
+                  contentDescription = "Delete Profile",
+                  modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                  "Delete Profile",
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontWeight = FontWeight.Bold)
+            }
+      }
 }
 
 /** Reusable card component for displaying profile information. */
@@ -875,14 +868,14 @@ private fun AvatarSelectorDialog(
   val context = LocalContext.current
 
   // Image picker launcher
-  val imagePickerLauncher = rememberLauncherForActivityResult(
-      contract = ActivityResultContracts.GetContent()
-  ) { uri: Uri? ->
-    uri?.let {
-      viewModel.uploadAvatarImage(it)
-      onDismiss()
-    }
-  }
+  val imagePickerLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
+        ->
+        uri?.let {
+          viewModel.uploadAvatarImage(it)
+          onDismiss()
+        }
+      }
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -899,30 +892,24 @@ private fun AvatarSelectorDialog(
               onClick = { imagePickerLauncher.launch("image/*") },
               modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
               shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.outlinedButtonColors(
-                  contentColor = Color(0xFF667eea)
-              )
-          ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                  imageVector = Icons.Default.Face,
-                  contentDescription = "Import from gallery",
-                  modifier = Modifier.size(20.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Import from Gallery", fontWeight = FontWeight.Bold)
-            }
-          }
+              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                          imageVector = Icons.Default.Face,
+                          contentDescription = "Import from gallery",
+                          modifier = Modifier.size(20.dp))
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text("Import from Gallery", fontWeight = FontWeight.Bold)
+                    }
+              }
 
           Text(
               text = "Or choose a preset avatar:",
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp)
-          )
+              modifier = Modifier.padding(bottom = 8.dp))
 
           LazyVerticalGrid(
               columns = GridCells.Fixed(4),
@@ -1043,14 +1030,14 @@ private fun BannerSelectorDialog(
   val context = LocalContext.current
 
   // Image picker launcher for banner
-  val bannerPickerLauncher = rememberLauncherForActivityResult(
-      contract = ActivityResultContracts.GetContent()
-  ) { uri: Uri? ->
-    uri?.let {
-      viewModel.uploadBannerImage(it)
-      onDismiss()
-    }
-  }
+  val bannerPickerLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
+        ->
+        uri?.let {
+          viewModel.uploadBannerImage(it)
+          onDismiss()
+        }
+      }
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -1067,30 +1054,24 @@ private fun BannerSelectorDialog(
               onClick = { bannerPickerLauncher.launch("image/*") },
               modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
               shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.outlinedButtonColors(
-                  contentColor = Color(0xFF667eea)
-              )
-          ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                  imageVector = Icons.Default.Face,
-                  contentDescription = "Import from gallery",
-                  modifier = Modifier.size(20.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Import from Gallery", fontWeight = FontWeight.Bold)
-            }
-          }
+              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF667eea))) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                          imageVector = Icons.Default.Face,
+                          contentDescription = "Import from gallery",
+                          modifier = Modifier.size(20.dp))
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text("Import from Gallery", fontWeight = FontWeight.Bold)
+                    }
+              }
 
           Text(
               text = "Or choose a preset banner:",
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp)
-          )
+              modifier = Modifier.padding(bottom = 8.dp))
 
           LazyVerticalGrid(
               columns = GridCells.Fixed(2),
@@ -1170,10 +1151,11 @@ fun DeleteProfileConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit
       dismissButton = {
         OutlinedButton(
             onClick = onDismiss,
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary)) {
-          Text("Cancel")
-        }
+            colors =
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary)) {
+              Text("Cancel")
+            }
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(16.dp))
