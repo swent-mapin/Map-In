@@ -26,39 +26,38 @@ fun LocationDropDownMenu(
     locations: List<Location>,
     gotLocation: MutableState<Location>
 ) {
-    Column {
-        AddEventTextField(
-            location,
-            locationError,
-            stringResource(R.string.location_place_holder),
-            isLocation = true,
-            modifier =
-                Modifier.padding(horizontal = 32.dp)
-                    .testTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION),
-            locationQuery = {
-                locationViewModel.onQueryChanged(location.value)
-                expanded.value = true
-            }
-        )
-        DropdownMenu(
-            properties =
-                PopupProperties(
-                    focusable = false,
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true,
-                ),
-            expanded = expanded.value && locations.isNotEmpty(),
-            onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth()) {
-            locations.forEach { loc ->
-                DropdownMenuItem(
-                    text = { Text(loc.name) },
-                    onClick = {
-                        location.value = loc.name
-                        gotLocation.value = loc
-                        expanded.value = false
-                    })
-            }
+  Column {
+    AddEventTextField(
+        location,
+        locationError,
+        stringResource(R.string.location_place_holder),
+        isLocation = true,
+        modifier =
+            Modifier.padding(horizontal = 32.dp)
+                .testTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION),
+        locationQuery = {
+          locationViewModel.onQueryChanged(location.value)
+          expanded.value = true
+        })
+    DropdownMenu(
+        properties =
+            PopupProperties(
+                focusable = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+            ),
+        expanded = expanded.value && locations.isNotEmpty(),
+        onDismissRequest = { expanded.value = false },
+        modifier = Modifier.fillMaxWidth()) {
+          locations.forEach { loc ->
+            DropdownMenuItem(
+                text = { Text(loc.name) },
+                onClick = {
+                  location.value = loc.name
+                  gotLocation.value = loc
+                  expanded.value = false
+                })
+          }
         }
-    }
+  }
 }

@@ -24,7 +24,6 @@ fun isValidTagInput(input: String): Boolean {
  * The input string is expected to follow the same format checked by [isValidTagInput], where each
  * tag starts with a '#' followed by letters, digits, or underscores, and multiple tags can be
  * separated by spaces or commas.
- *
  * * Examples:
  * * - Input: "#food" → Output: ["#food"]
  * * - Input: "#food , #travel" → Output: ["#food", "#travel"]

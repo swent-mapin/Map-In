@@ -13,39 +13,38 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-
 @OptIn(FlowPreview::class)
 class LocationViewModel(
     private val repository: LocationRepository =
         NominatimLocationRepository(HttpClientProvider.client)
 ) : ViewModel() {
 
-    private val _locations = MutableStateFlow<List<Location>>(emptyList())
-    val locations: StateFlow<List<Location>> = _locations
+  private val _locations = MutableStateFlow<List<Location>>(emptyList())
+  val locations: StateFlow<List<Location>> = _locations
 
-    private val queryFlow = MutableStateFlow("")
+  private val queryFlow = MutableStateFlow("")
 
-    init {
-        viewModelScope.launch {
-            queryFlow
-                .debounce(1000) // wait 1 second after typing stops
-                .distinctUntilChanged()
-                .collect { query ->
-                    if (query.isNotBlank()) {
-                        try {
-                            val results = repository.search(query)
-                            _locations.value = results
-                        } catch (e: Exception) {
-                            _locations.value = emptyList<Location>()
-                        }
-                    } else {
-                        _locations.value = emptyList()
-                    }
-                }
-        }
+  init {
+    viewModelScope.launch {
+      queryFlow
+          .debounce(1000) // wait 1 second after typing stops
+          .distinctUntilChanged()
+          .collect { query ->
+            if (query.isNotBlank()) {
+              try {
+                val results = repository.search(query)
+                _locations.value = results
+              } catch (e: Exception) {
+                _locations.value = emptyList<Location>()
+              }
+            } else {
+              _locations.value = emptyList()
+            }
+          }
     }
+  }
 
-    fun onQueryChanged(newQuery: String) {
-        queryFlow.value = newQuery
-    }
+  fun onQueryChanged(newQuery: String) {
+    queryFlow.value = newQuery
+  }
 }

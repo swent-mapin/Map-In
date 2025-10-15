@@ -15,46 +15,46 @@ import kotlinx.coroutines.launch
 
 class EventViewModel(
     private val eventRepository: EventRepository = EventRepositoryFirestore(db = Firebase.firestore)
-): ViewModel() {
-    private val _events = MutableStateFlow<List<Event>>(emptyList())
-    val events: StateFlow<List<Event>> = _events.asStateFlow()
+) : ViewModel() {
+  private val _events = MutableStateFlow<List<Event>>(emptyList())
+  val events: StateFlow<List<Event>> = _events.asStateFlow()
 
-    private val _gotEvent = MutableStateFlow<Event?>(null)
-    val gotEvent: StateFlow<Event?> = _gotEvent.asStateFlow()
+  private val _gotEvent = MutableStateFlow<Event?>(null)
+  val gotEvent: StateFlow<Event?> = _gotEvent.asStateFlow()
 
-    fun getNewUid(): String{
-        return eventRepository.getNewUid()
-    }
+  fun getNewUid(): String {
+    return eventRepository.getNewUid()
+  }
 
-    fun getAllEvents(){
-        viewModelScope.launch { _events.value = eventRepository.getAllEvents() }
-    }
+  fun getAllEvents() {
+    viewModelScope.launch { _events.value = eventRepository.getAllEvents() }
+  }
 
-    fun getEvent(eventID: String) {
-        viewModelScope.launch { _gotEvent.value = eventRepository.getEvent(eventID) }
-    }
+  fun getEvent(eventID: String) {
+    viewModelScope.launch { _gotEvent.value = eventRepository.getEvent(eventID) }
+  }
 
-    fun getEventByTags(tags: List<String>) {
-        viewModelScope.launch { _events.value = eventRepository.getEventsByTags(tags) }
-    }
+  fun getEventByTags(tags: List<String>) {
+    viewModelScope.launch { _events.value = eventRepository.getEventsByTags(tags) }
+  }
 
-    fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp) {
-        viewModelScope.launch { _events.value = eventRepository.getEventsOnDay(dayStart, dayEnd) }
-    }
+  fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp) {
+    viewModelScope.launch { _events.value = eventRepository.getEventsOnDay(dayStart, dayEnd) }
+  }
 
-    fun getEventsByOwner(ownerId: String) {
-        viewModelScope.launch { _events.value = eventRepository.getEventsByOwner(ownerId) }
-    }
+  fun getEventsByOwner(ownerId: String) {
+    viewModelScope.launch { _events.value = eventRepository.getEventsByOwner(ownerId) }
+  }
 
-    fun addEvent(event: Event) {
-        viewModelScope.launch { eventRepository.addEvent(event) }
-    }
+  fun addEvent(event: Event) {
+    viewModelScope.launch { eventRepository.addEvent(event) }
+  }
 
-    fun editEvent(eventID: String, event: Event) {
-        viewModelScope.launch { eventRepository.editEvent(eventID, event) }
-    }
+  fun editEvent(eventID: String, event: Event) {
+    viewModelScope.launch { eventRepository.editEvent(eventID, event) }
+  }
 
-    fun deleteEvent(eventID: String) {
-        viewModelScope.launch { eventRepository.deleteEvent(eventID) }
-    }
+  fun deleteEvent(eventID: String) {
+    viewModelScope.launch { eventRepository.deleteEvent(eventID) }
+  }
 }

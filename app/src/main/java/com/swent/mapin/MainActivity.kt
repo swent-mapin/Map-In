@@ -9,7 +9,6 @@ import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.ui.theme.MapInTheme
 import okhttp3.OkHttpClient
 
-
 object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }

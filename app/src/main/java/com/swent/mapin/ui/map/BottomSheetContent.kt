@@ -178,20 +178,19 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
           text = "Create Event",
           modifier = Modifier.weight(1f),
           onClick = {
-              focusManager.clearFocus()
-              showDialog.value = true
-          }
-      )
+            focusManager.clearFocus()
+            showDialog.value = true
+          })
       QuickActionButton(
           text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
   }
-    if (showDialog.value) {
-        AddEventPopUp(
-            modifier = Modifier,
-            onDone = { showDialog.value = false },
-        )
-    }
+  if (showDialog.value) {
+    AddEventPopUp(
+        modifier = Modifier,
+        onDone = { showDialog.value = false },
+    )
+  }
 }
 
 /** button for quick actions */

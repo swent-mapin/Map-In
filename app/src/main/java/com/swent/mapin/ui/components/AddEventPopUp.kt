@@ -258,7 +258,9 @@ fun AddEventPopUp(
   val tagError = remember { mutableStateOf(false) }
 
   val locationExpanded = remember { mutableStateOf(false) }
-  val gotLocation = remember { mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT, ATTENDEES_DEFAULT)) }
+  val gotLocation = remember {
+    mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT, ATTENDEES_DEFAULT))
+  }
   val locations by locationViewModel.locations.collectAsState()
 
   val error =
@@ -331,8 +333,7 @@ fun AddEventPopUp(
                         locationViewModel,
                         locationExpanded,
                         locations,
-                        gotLocation
-                    )
+                        gotLocation)
                     Spacer(modifier = Modifier.padding(10.dp))
                     Text(
                         stringResource(R.string.description_field),
@@ -379,19 +380,21 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                            val newEvent = Event(
-                                uid = eventViewModel.getNewUid(),
-                                title = title.value,
-                                url = null, //Add logic for URLS later
-                                description = description.value,
-                                location = gotLocation.value,
-                                tags = extractTags(tag.value),
-                                public = true, //Add logic for public/private later
-                                ownerId = Firebase.auth.currentUser?.uid ?: "",
-                                imageUrl = null, //Add logic for URLS later
-                                capacity = null, //Add logic for capacity later, no capacity by default
-                                attendeeCount = ATTENDEES_DEFAULT
-                            )
+                            val newEvent =
+                                Event(
+                                    uid = eventViewModel.getNewUid(),
+                                    title = title.value,
+                                    url = null, // Add logic for URLS later
+                                    description = description.value,
+                                    location = gotLocation.value,
+                                    tags = extractTags(tag.value),
+                                    public = true, // Add logic for public/private later
+                                    ownerId = Firebase.auth.currentUser?.uid ?: "",
+                                    imageUrl = null, // Add logic for URLS later
+                                    capacity =
+                                        null, // Add logic for capacity later, no capacity by
+                                              // default
+                                    attendeeCount = ATTENDEES_DEFAULT)
                             eventViewModel.addEvent(newEvent)
                             onDone
                           },
