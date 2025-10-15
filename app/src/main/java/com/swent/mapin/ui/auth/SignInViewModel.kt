@@ -8,7 +8,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -69,12 +69,16 @@ class SignInViewModel(context: Context) : ViewModel() {
 
     viewModelScope.launch {
       try {
-        Log.d(TAG, "Starting Google Sign-In process with GetSignInWithGoogleOption...")
+        Log.d(TAG, "Starting Google Sign-In process with GetGoogleIdOption...")
 
-        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build()
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(WEB_CLIENT_ID)
+            .setAutoSelectEnabled(false)
+            .build()
 
         val request =
-            GetCredentialRequest.Builder().addCredentialOption(signInWithGoogleOption).build()
+            GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
         val credentialResult = credentialManager.getCredential(applicationContext, request)
         val credential = credentialResult.credential
