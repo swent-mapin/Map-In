@@ -174,7 +174,7 @@ fun ProfileScreen(
                   if (viewModel.isEditMode) {
                     EditProfileContent(viewModel = viewModel)
                   } else {
-                    ViewProfileContent(userProfile = userProfile)
+                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
 
                     // Logout button
                     Spacer(modifier = Modifier.height(24.dp))
@@ -202,41 +202,6 @@ fun ProfileScreen(
                                     style = MaterialTheme.typography.bodyLarge)
                               }
                         }
-                  }
-
-                  // Avatar positionné en haut, chevauchant la bannière
-                  Box(
-                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
-                      contentAlignment = Alignment.Center) {
-                        ProfilePicture(
-                            avatarUrl =
-                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                                  viewModel.selectedAvatar
-                                } else {
-                                  userProfile.avatarUrl
-                                },
-                            isEditMode = viewModel.isEditMode,
-                            onAvatarClick = { viewModel.toggleAvatarSelector() })
-                      }
-                }
-
-            Column(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 20.dp)
-                        .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
-                        .animateContentSize(
-                            animationSpec =
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow)),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                  if (viewModel.isEditMode) {
-                    EditProfileContent(viewModel = viewModel)
-                  } else {
-                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
                   }
 
                   Spacer(modifier = Modifier.height(16.dp))
