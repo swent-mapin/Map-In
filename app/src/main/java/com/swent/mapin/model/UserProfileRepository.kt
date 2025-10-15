@@ -68,7 +68,10 @@ class UserProfileRepository(
             bio = "Tell us about yourself...",
             hobbies = emptyList(),
             location = "Unknown",
-            profilePictureUrl = profilePictureUrl)
+            profilePictureUrl = profilePictureUrl,
+            avatarUrl = "person", // Default avatar icon
+            bannerUrl = "purple_blue", // Default banner gradient
+            hobbiesVisible = true)
 
     saveUserProfile(defaultProfile)
     return defaultProfile
