@@ -48,119 +48,109 @@ fun BottomSheetContent(
     // Called when user clears search to let parent collapse to MEDIUM, etc.
     onExitSearch: () -> Unit = {}
 ) {
-    val ui = searchViewModel.ui.collectAsState().value
-    val isFull = state == BottomSheetState.FULL || ui.searchMode
+  val ui = searchViewModel.ui.collectAsState().value
+  val isFull = state == BottomSheetState.FULL || ui.searchMode
 
-    val scrollState = remember(fullEntryKey) { ScrollState(0) }
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
+  val scrollState = remember(fullEntryKey) { ScrollState(0) }
+  val focusRequester = remember { FocusRequester() }
+  val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(ui.shouldRequestFocus) {
-        if (ui.shouldRequestFocus) {
-            focusRequester.requestFocus()
-            searchViewModel.onFocusHandled()
-        }
+  LaunchedEffect(ui.shouldRequestFocus) {
+    if (ui.shouldRequestFocus) {
+      focusRequester.requestFocus()
+      searchViewModel.onFocusHandled()
     }
+  }
 
-    AnimatedContent(
-        targetState = showMemoryForm,
-        transitionSpec = {
-            (fadeIn(tween(300)) + slideInVertically(tween(300), initialOffsetY = { it / 4 }))
-                .togetherWith(
-                    fadeOut(tween(200)) + slideOutVertically(tween(200), targetOffsetY = { -it / 4 })
-                )
-        },
-        label = "bottomSheetMemoryFormTransition"
-    ) { showForm ->
+  AnimatedContent(
+      targetState = showMemoryForm,
+      transitionSpec = {
+        (fadeIn(tween(300)) + slideInVertically(tween(300), initialOffsetY = { it / 4 }))
+            .togetherWith(
+                fadeOut(tween(200)) + slideOutVertically(tween(200), targetOffsetY = { -it / 4 }))
+      },
+      label = "bottomSheetMemoryFormTransition") { showForm ->
         if (showForm) {
-            // Memory form screen
-            val memoryFormScroll = remember { ScrollState(0) }
-            MemoryFormScreen(
-                scrollState = memoryFormScroll,
-                availableEvents = availableEvents,
-                onSave = onMemorySave,
-                onCancel = onMemoryCancel
-            )
+          // Memory form screen
+          val memoryFormScroll = remember { ScrollState(0) }
+          MemoryFormScreen(
+              scrollState = memoryFormScroll,
+              availableEvents = availableEvents,
+              onSave = onMemorySave,
+              onCancel = onMemoryCancel)
         } else {
-            // Regular sheet (search + default content or search results)
-            Column(modifier = Modifier.fillMaxWidth()) {
-                SearchBar(
-                    value = ui.query,
-                    onValueChange = searchViewModel::onQueryChange,
-                    isFull = isFull,
-                    onTap = { if (!isFull) searchViewModel.onSearchTapped() },
-                    focusRequester = focusRequester,
-                    onSearchAction = { focusManager.clearFocus() },
+          // Regular sheet (search + default content or search results)
+          Column(modifier = Modifier.fillMaxWidth()) {
+            SearchBar(
+                value = ui.query,
+                onValueChange = searchViewModel::onQueryChange,
+                isFull = isFull,
+                onTap = { if (!isFull) searchViewModel.onSearchTapped() },
+                focusRequester = focusRequester,
+                onSearchAction = { focusManager.clearFocus() },
+                onClear = {
+                  focusManager.clearFocus()
+                  searchViewModel.onClearSearch()
+                  onExitSearch()
+                })
+
+            Spacer(Modifier.height(24.dp))
+
+            val contentModifier =
+                if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                else Modifier.fillMaxWidth()
+
+            Column(modifier = contentModifier) {
+              if (ui.searchMode) {
+                SearchResultsList(
+                    items = ui.results,
+                    showEmpty = ui.showNoResults,
                     onClear = {
-                        focusManager.clearFocus()
-                        searchViewModel.onClearSearch()
-                        onExitSearch()
-                    }
-                )
+                      focusManager.clearFocus()
+                      searchViewModel.onClearSearch()
+                      onExitSearch()
+                    })
+              } else {
+                QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Recent Activities",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+
+                repeat(4) { i ->
+                  ActivityItem(
+                      title = "Activity ${i + 1}",
+                      description = "Example description for activity ${i + 1}.")
+                }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Discover",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+
+                val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
+                categories.forEach { category ->
+                  OutlinedButton(
+                      onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                      }
+                }
 
                 Spacer(Modifier.height(24.dp))
-
-                val contentModifier =
-                    if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                    else Modifier.fillMaxWidth()
-
-                Column(modifier = contentModifier) {
-                    if (ui.searchMode) {
-                        SearchResultsList(
-                            items = ui.results,
-                            showEmpty = ui.showNoResults,
-                            onClear = {
-                                focusManager.clearFocus()
-                                searchViewModel.onClearSearch()
-                                onExitSearch()
-                            }
-                        )
-                    } else {
-                        QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
-
-                        Spacer(Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(Modifier.height(16.dp))
-
-                        Text(
-                            text = "Recent Activities",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        repeat(4) { i ->
-                            ActivityItem(
-                                title = "Activity ${i + 1}",
-                                description = "Example description for activity ${i + 1}."
-                            )
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(Modifier.height(16.dp))
-
-                        Text(
-                            text = "Discover",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-                        categories.forEach { category ->
-                            OutlinedButton(
-                                onClick = {},
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-                    }
-                }
+              }
             }
+          }
         }
-    }
+      }
 }
 
 /** Search bar with clear (X); taps expand to FULL/search mode. */
@@ -175,122 +165,104 @@ private fun SearchBar(
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text("Search activities") },
-        trailingIcon = {
-            if (value.isNotEmpty()) {
-                IconButton(onClick = onClear) {
-                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                }
-            }
-        },
-        modifier = modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester)
-            .onFocusChanged { fs -> if (!isFull && fs.isFocused) onTap() },
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
-    )
+  OutlinedTextField(
+      value = value,
+      onValueChange = onValueChange,
+      placeholder = { Text("Search activities") },
+      trailingIcon = {
+        if (value.isNotEmpty()) {
+          IconButton(onClick = onClear) {
+            Icon(Icons.Filled.Close, contentDescription = "Clear search")
+          }
+        }
+      },
+      modifier =
+          modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { fs ->
+            if (!isFull && fs.isFocused) onTap()
+          },
+      singleLine = true,
+      textStyle = MaterialTheme.typography.bodyLarge,
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+      keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
+  )
 }
 
 /** Results list + empty state. */
 @Composable
-private fun SearchResultsList(
-    items: List<Event>,
-    showEmpty: Boolean,
-    onClear: () -> Unit
-) {
-    Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Results", style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onClear) { Text("Clear") }
-        }
-
-        if (showEmpty) {
-            Text(
-                text = "No results found",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        } else {
-            items.forEach { e ->
-                Text(e.title, style = MaterialTheme.typography.bodyLarge)
-                if (e.location.name.isNotBlank()) {
-                    Text(e.location.name, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                Spacer(Modifier.height(8.dp))
-            }
-        }
+private fun SearchResultsList(items: List<Event>, showEmpty: Boolean, onClear: () -> Unit) {
+  Column(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+      Text("Results", style = MaterialTheme.typography.titleMedium)
+      TextButton(onClick = onClear) { Text("Clear") }
     }
+
+    if (showEmpty) {
+      Text(
+          text = "No results found",
+          style = MaterialTheme.typography.bodyMedium,
+          color = Color.Gray,
+          modifier = Modifier.padding(top = 8.dp))
+    } else {
+      items.forEach { e ->
+        Text(e.title, style = MaterialTheme.typography.bodyLarge)
+        if (e.location.name.isNotBlank()) {
+          Text(e.location.name, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+        Spacer(Modifier.height(8.dp))
+      }
+    }
+  }
 }
 
 /** Quick actions; “Create Memory” triggers memory form mode in parent. */
 @Composable
-private fun QuickActionsSection(
-    modifier: Modifier = Modifier,
-    onCreateMemoryClick: () -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
+  val focusManager = LocalFocusManager.current
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 16.dp))
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickActionButton(
-                text = "Create Memory",
-                modifier = Modifier.weight(1f),
-                onClick = onCreateMemoryClick
-            )
-            QuickActionButton(
-                text = "Create Event",
-                modifier = Modifier.weight(1f),
-                onClick = { focusManager.clearFocus() }
-            )
-            QuickActionButton(
-                text = "Filters",
-                modifier = Modifier.weight(1f),
-                onClick = { focusManager.clearFocus() }
-            )
-        }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      QuickActionButton(
+          text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
+      QuickActionButton(
+          text = "Create Event",
+          modifier = Modifier.weight(1f),
+          onClick = { focusManager.clearFocus() })
+      QuickActionButton(
+          text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
+  }
 }
 
 @Composable
 private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.defaultMinSize(minHeight = 44.dp).padding(horizontal = 4.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-    ) {
+  Button(
+      onClick = onClick,
+      modifier = modifier.defaultMinSize(minHeight = 44.dp).padding(horizontal = 4.dp),
+      shape = RoundedCornerShape(20.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary)) {
         Text(
             text = text,
             textAlign = TextAlign.Center,
             maxLines = 2,
             softWrap = true,
-            style = MaterialTheme.typography.labelLarge
-        )
-    }
+            style = MaterialTheme.typography.labelLarge)
+      }
 }
 
 @Composable
 private fun ActivityItem(title: String, description: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-    }
+  Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Text(text = title, style = MaterialTheme.typography.titleSmall)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+  }
 }
