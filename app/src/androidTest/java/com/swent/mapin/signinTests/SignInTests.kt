@@ -60,7 +60,11 @@ class SignInScreenTest {
   fun signInScreen_googleSignInButton_isDisplayed() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithText("Continue with Google").assertExists().assertIsDisplayed()
+    composeTestRule
+        .onNodeWithText("Continue with Google")
+        .performScrollTo()
+        .assertExists()
+        .assertIsDisplayed()
   }
 
   @Test
@@ -88,7 +92,11 @@ class SignInScreenTest {
   fun signInScreen_googleLogo_isDisplayed() {
     composeTestRule.setContent { SignInScreen(viewModel = viewModel, onSignInSuccess = {}) }
 
-    composeTestRule.onNodeWithContentDescription("Google logo").assertExists().assertIsDisplayed()
+    composeTestRule
+        .onNodeWithContentDescription("Google logo")
+        .performScrollTo()
+        .assertExists()
+        .assertIsDisplayed()
   }
 
   @Test
