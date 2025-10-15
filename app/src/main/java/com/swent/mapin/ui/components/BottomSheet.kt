@@ -75,7 +75,7 @@ fun <T> BottomSheet(
   LaunchedEffect(targetHeight) {
     currentHeight.animateTo(
         targetValue = targetHeight.value.coerceAtMost(config.fullHeight.value),
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 280f))
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f))
   }
 
   // Report every height change to parent (here, for gradual map scrim )
@@ -100,7 +100,7 @@ fun <T> BottomSheet(
 
                     currentHeight.animateTo(
                         targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
-                        animationSpec = spring(dampingRatio = 0.85f, stiffness = 280f))
+                        animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
                   }
                 },
                 onVerticalDrag = { _, dragAmount ->

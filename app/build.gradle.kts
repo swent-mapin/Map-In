@@ -167,6 +167,9 @@ dependencies {
     implementation("com.google.protobuf:protobuf-javalite:3.21.12")
     androidTestImplementation("com.google.protobuf:protobuf-javalite:3.21.12")
 
+    // ------------- Mapbox ------------------
+    implementation(libs.android.ndk27)
+    implementation(libs.maps.compose.ndk27)
 
 
     // ------------- Jetpack Compose ------------------
@@ -198,7 +201,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ------------- Firebase ------------------
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
