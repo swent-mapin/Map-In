@@ -24,7 +24,7 @@ fun LocationDropDownMenu(
     locationViewModel: LocationViewModel,
     expanded: MutableState<Boolean>,
     locations: List<Location>,
-    gotLocation: MutableState<Location>
+    gotLocation: MutableState<Location>,
 ) {
   Column {
     AddEventTextField(
@@ -38,6 +38,7 @@ fun LocationDropDownMenu(
         locationQuery = {
           locationViewModel.onQueryChanged(location.value)
           expanded.value = true
+          locationError.value = !isValidLocation(location.value, locations)
         })
     DropdownMenu(
         properties =
@@ -56,6 +57,7 @@ fun LocationDropDownMenu(
                   location.value = loc.name
                   gotLocation.value = loc
                   expanded.value = false
+                  locationError.value = false
                 })
           }
         }

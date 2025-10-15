@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.components
 
+import com.swent.mapin.model.Location
+
 /**
  * With help of GPT: Helper function which checks if the user's input string for tags are of valid
  * format. The regex means: “A string that starts with #, followed by letters/numbers/underscores,
@@ -14,6 +16,7 @@ package com.swent.mapin.ui.components
  * @return true if the input matches the valid tag format, false if not.
  */
 fun isValidTagInput(input: String): Boolean {
+  if (input.isBlank()) return true
   val tagRegex = Regex("^(#\\w+)(?:[ ,]+#\\w+)*$")
   return input.matches(tagRegex)
 }
@@ -35,4 +38,15 @@ fun isValidTagInput(input: String): Boolean {
 fun extractTags(input: String): List<String> {
   val tagRegex = Regex("#\\w+")
   return tagRegex.findAll(input).map { it.value }.toList()
+}
+
+/**
+ * Checks if the input string is a valid location party of the List of locations from the valid
+ * location list returned from Nominatim query
+ *
+ * @param input The string location entered by the user
+ * @param locations The list of valid locations
+ */
+fun isValidLocation(input: String, locations: List<Location>): Boolean {
+  return locations.any { it.name.equals(input, ignoreCase = true) }
 }

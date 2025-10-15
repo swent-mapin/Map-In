@@ -189,6 +189,9 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
     AddEventPopUp(
         modifier = Modifier,
         onDone = { showDialog.value = false },
+        onBack = { showDialog.value = false },
+        onCancel = { showDialog.value = false },
+        onDismiss = { showDialog.value = false },
     )
   }
 }

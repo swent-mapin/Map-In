@@ -28,6 +28,7 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -39,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -74,6 +76,10 @@ object AddEventPopUpTestTags {
   const val EVENT_CANCEL = "eventCancel"
   const val EVENT_SAVE = "eventSave"
   const val ERROR_MESSAGE = "errorMessage"
+
+  const val PUBLIC_SWITCH = "publicSwitch"
+
+  const val PUBLIC_TEXT = "publicText"
 }
 
 /**
@@ -228,12 +234,7 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
  * required fields are missing or invalid.
  *
  * @param modifier [Modifier] to customize the pop-up layout.
- * @param onBack Callback triggered when the user clicks the back/close button.
- * @param onSave Callback triggered when the user clicks the Save button. Only called if no errors
- *   are present.
- * @param onCancel Callback triggered when the user clicks the Cancel button.
- * @param onDismiss Callback triggered when the dialog is dismissed by clicking outside or pressing
- *   back.
+ * @param onDone callback triggered when the user is done with the event creation popup
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -241,7 +242,10 @@ fun AddEventPopUp(
     modifier: Modifier = Modifier,
     eventViewModel: EventViewModel = viewModel(),
     locationViewModel: LocationViewModel = viewModel(),
-    onDone: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onCancel: () -> Unit = {},
+    onDismiss: () -> Unit = {},
+    onDone: () -> Unit = {},
 ) {
 
   val title = remember { mutableStateOf("") }
@@ -250,6 +254,7 @@ fun AddEventPopUp(
   val date = remember { mutableStateOf("") }
   val tag = remember { mutableStateOf("") }
   val time = remember { mutableStateOf("") }
+  val isPublic = remember { mutableStateOf(true) }
 
   val titleError = remember { mutableStateOf(true) }
   val descriptionError = remember { mutableStateOf(true) }
@@ -280,7 +285,7 @@ fun AddEventPopUp(
           if (time.value.isBlank()) stringResource(R.string.time) else null)
 
   Dialog(
-      onDismissRequest = onDone,
+      onDismissRequest = onDismiss,
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
         Card(
             modifier =
@@ -296,7 +301,7 @@ fun AddEventPopUp(
                   horizontalAlignment = Alignment.CenterHorizontally,
                   modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                      IconButton(onClick = onDone, Modifier.padding(start = 10.dp).size(25.dp)) {
+                      IconButton(onClick = onBack, Modifier.padding(start = 10.dp).size(25.dp)) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
                       }
                       Spacer(modifier = Modifier.padding(10.dp))
@@ -333,7 +338,8 @@ fun AddEventPopUp(
                         locationViewModel,
                         locationExpanded,
                         locations,
-                        gotLocation)
+                        gotLocation,
+                    )
                     Spacer(modifier = Modifier.padding(10.dp))
                     Text(
                         stringResource(R.string.description_field),
@@ -357,6 +363,33 @@ fun AddEventPopUp(
                                 .padding(horizontal = 32.dp)
                                 .testTag(AddEventPopUpTestTags.INPUT_EVENT_TAG),
                         isTag = true)
+                    Spacer(modifier = Modifier.padding(bottom = 5.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                      if (isPublic.value) {
+                        Text(
+                            stringResource(R.string.public_event),
+                            fontSize = 12.sp,
+                            modifier =
+                                Modifier.padding(end = 15.dp)
+                                    .testTag(AddEventPopUpTestTags.PUBLIC_TEXT))
+                      } else {
+                        Text(
+                            stringResource(R.string.private_event),
+                            fontSize = 12.sp,
+                            modifier =
+                                Modifier.padding(end = 15.dp)
+                                    .testTag(AddEventPopUpTestTags.PUBLIC_TEXT))
+                      }
+                      Switch(
+                          isPublic.value,
+                          onCheckedChange = { isPublic.value = it },
+                          modifier =
+                              Modifier.scale(0.7f)
+                                  .size(30.dp)
+                                  .testTag(AddEventPopUpTestTags.PUBLIC_SWITCH))
+                    }
                     if (error) {
                       Row(
                           verticalAlignment = Alignment.CenterVertically,
@@ -388,14 +421,13 @@ fun AddEventPopUp(
                                     description = description.value,
                                     location = gotLocation.value,
                                     tags = extractTags(tag.value),
-                                    public = true, // Add logic for public/private later
+                                    public = isPublic.value,
                                     ownerId = Firebase.auth.currentUser?.uid ?: "",
                                     imageUrl = null, // Add logic for URLS later
-                                    capacity = null, // Add logic for capacity later, no capacity by
-                                    // default
+                                    capacity = null, // Add logic for capacity later
                                     attendeeCount = ATTENDEES_DEFAULT)
                             eventViewModel.addEvent(newEvent)
-                            onDone
+                            onDone()
                           },
                           enabled = !error,
                           colors =
@@ -410,7 +442,7 @@ fun AddEventPopUp(
                           }
                       Spacer(modifier = Modifier.padding(10.dp))
                       ElevatedButton(
-                          onClick = onDone,
+                          onClick = onCancel,
                           colors =
                               ButtonColors(
                                   containerColor = colorResource(R.color.salmon),
