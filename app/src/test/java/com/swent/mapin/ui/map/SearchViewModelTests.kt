@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.map
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import kotlinx.coroutines.Dispatchers
@@ -19,10 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** Assisted by AI */
-/** ViewModel tests for [SearchViewModel]. */
-
-/** Simple fake repo that returns an in-memory list. */
+/** --- Fake in-memory repository --- */
 private class FakeEventRepository(private val data: List<Event>) : EventRepository {
   override fun getNewUid(): String = "fake"
 
@@ -41,6 +39,9 @@ private class FakeEventRepository(private val data: List<Event>) : EventReposito
   override suspend fun getEventsByTitle(title: String): List<Event> =
       data.filter { it.title.equals(title, ignoreCase = true) }
 
+  override suspend fun getEventsByParticipant(userId: String): List<Event> =
+      data.filter { userId in it.participantIds }
+
   override suspend fun addEvent(event: Event) {}
 
   override suspend fun editEvent(eventID: String, newValue: Event) {}
@@ -55,61 +56,40 @@ class SearchViewModelTest {
 
   private lateinit var vm: SearchViewModel
 
-  // Sample data that covers title, description, locationName and tags
+  // Échantillon adapté: Event.location = Location(name, lat, lon)
   private val sample =
       listOf(
           Event(
               uid = "1",
               title = "Rock Night",
-              url = null,
               description = "Live music downtown",
-              date = null,
-              locationName = "Zurich",
-              latitude = 47.3769,
-              longitude = 8.5417,
+              location = Location(name = "Zurich", latitude = 47.3769, longitude = 8.5417),
               tags = listOf("music", "nightlife"),
-              public = true,
               ownerId = "a",
-              imageUrl = null,
-              capacity = null,
               attendeeCount = 10),
           Event(
               uid = "2",
               title = "Morning Run",
-              url = null,
               description = "Easy pace 5k",
-              date = null,
-              locationName = "Lake Park",
-              latitude = 0.0,
-              longitude = 0.0,
+              location = Location(name = "Lake Park", latitude = 0.0, longitude = 0.0),
               tags = listOf("sports", "outdoors"),
-              public = true,
               ownerId = "b",
-              imageUrl = null,
-              capacity = null,
               attendeeCount = 5),
           Event(
               uid = "3",
               title = "Jazz Jam",
-              url = null,
               description = "impro session · bring your instrument",
-              date = null,
-              locationName = "Basel",
-              latitude = 0.0,
-              longitude = 0.0,
+              location = Location(name = "Basel", latitude = 0.0, longitude = 0.0),
               tags = listOf("music", "jam"),
-              public = true,
               ownerId = "c",
-              imageUrl = null,
-              capacity = null,
               attendeeCount = 3))
 
   @OptIn(ExperimentalCoroutinesApi::class)
   @Before
   fun setUp() {
     dispatcher = StandardTestDispatcher()
-    Dispatchers.setMain(dispatcher)
-    // Create VM AFTER setting Main dispatcher
+    Dispatchers.setMain(
+        dispatcher) // nécessaire car SearchViewModel lance dans viewModelScope(Main)
     vm = SearchViewModel(FakeEventRepository(sample))
   }
 
@@ -122,7 +102,6 @@ class SearchViewModelTest {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `init loads events into results`() = runTest {
-    // Let the init { repo.getAllEvents() } finish
     advanceUntilIdle()
     val ui = vm.ui.value
     assertFalse(ui.isLoading)
@@ -146,13 +125,13 @@ class SearchViewModelTest {
 
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  fun `onQueryChange filters across title, description, location and tags (case-insensitive)`() =
+  fun `onQueryChange filters across title, description, location_name and tags (case-insensitive)`() =
       runTest {
         advanceUntilIdle()
 
         // Title match: "rock"
         vm.onQueryChange("rOcK")
-        advanceTimeBy(300) // pass debounce
+        advanceTimeBy(300) // debounce > 250ms
         var ui = vm.ui.value
         assertEquals(listOf("1"), ui.results.map { it.uid })
 
@@ -162,7 +141,7 @@ class SearchViewModelTest {
         ui = vm.ui.value
         assertEquals(listOf("2"), ui.results.map { it.uid })
 
-        // Location match: "basel"
+        // Location.name match: "basel"
         vm.onQueryChange("basel")
         advanceTimeBy(300)
         ui = vm.ui.value
@@ -209,11 +188,11 @@ class SearchViewModelTest {
   fun `typing then replacing query applies latest filter only (debounce)`() = runTest {
     advanceUntilIdle()
 
-    vm.onQueryChange("ro") // first partial
-    advanceTimeBy(100) // not enough to fire
+    vm.onQueryChange("ro") // premier partiel
+    advanceTimeBy(100) // pas assez pour déclencher
 
-    vm.onQueryChange("rock") // replace before 250ms
-    advanceTimeBy(300) // now debounce window passes
+    vm.onQueryChange("rock") // remplace avant 250ms
+    advanceTimeBy(300) // laisse passer le debounce
 
     val ui = vm.ui.value
     assertEquals(listOf("1"), ui.results.map { it.uid })
