@@ -67,9 +67,29 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
     return events.filter { it.title.trim().lowercase() == lowerTitle }
   }
 
+  override suspend fun getEventsByParticipant(userId: String): List<Event> {
+    val snap =
+        db.collection(EVENTS_COLLECTION_PATH)
+            .whereArrayContains("participantIds", userId)
+            .orderBy("date")
+            .get()
+            .await()
+    return snap.documents.mapNotNull { documentToEvent(it) }
+  }
+
   override suspend fun addEvent(event: Event) {
     val id = event.uid.ifBlank { getNewUid() }
-    db.collection(EVENTS_COLLECTION_PATH).document(id).set(event.copy(uid = id)).await()
+
+    // Automatically add owner to participants if not already included
+    val participantIds =
+        if (event.ownerId.isNotBlank() && !event.participantIds.contains(event.ownerId)) {
+          event.participantIds + event.ownerId
+        } else {
+          event.participantIds
+        }
+
+    val eventToSave = event.copy(uid = id, participantIds = participantIds)
+    db.collection(EVENTS_COLLECTION_PATH).document(id).set(eventToSave).await()
   }
 
   override suspend fun editEvent(eventID: String, newValue: Event) {

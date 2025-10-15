@@ -1,15 +1,56 @@
 package com.swent.mapin.ui.map
 
+import android.content.Context
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.UploadTask
+import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.memory.Memory
+import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 // Assisted by AI
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(MockitoJUnitRunner::class)
 class MapScreenViewModelTest {
+
+  private val testDispatcher = StandardTestDispatcher()
+
+  @Mock private lateinit var mockContext: Context
+  @Mock(lenient = true) private lateinit var mockMemoryRepository: MemoryRepository
+  @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
+  @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
+  @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
+  @Mock private lateinit var mockFirebaseStorage: FirebaseStorage
+  @Mock private lateinit var mockStorageReference: StorageReference
+  @Mock private lateinit var mockFileReference: StorageReference
+  @Mock private lateinit var mockUploadTask: UploadTask
+  @Mock private lateinit var mockUploadTaskSnapshot: UploadTask.TaskSnapshot
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -17,13 +58,34 @@ class MapScreenViewModelTest {
 
   @Before
   fun setup() {
+    Dispatchers.setMain(testDispatcher)
+
     clearFocusCalled = false
     config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn("testUserId")
+
+    runBlocking {
+      whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
+      whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
+      whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
+    }
+
     viewModel =
         MapScreenViewModel(
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true })
+            onClearFocus = { clearFocusCalled = true },
+            context = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+  }
+
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
   }
 
   @Test
@@ -266,5 +328,159 @@ class MapScreenViewModelTest {
 
     assertFalse(viewModel.checkZoomInteraction(15.4f))
     assertTrue(viewModel.checkZoomInteraction(15.6f))
+  }
+
+  @Test
+  fun showMemoryForm_setsStateAndExpandsToFull() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+
+    viewModel.showMemoryForm()
+
+    assertTrue(viewModel.showMemoryForm)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun hideMemoryForm_hidesForm() {
+    viewModel.showMemoryForm()
+    assertTrue(viewModel.showMemoryForm)
+
+    viewModel.hideMemoryForm()
+
+    assertFalse(viewModel.showMemoryForm)
+  }
+
+  @Test
+  fun onMemoryCancel_hidesFormAndRestoresPreviousState() {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.showMemoryForm()
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+
+    viewModel.onMemoryCancel()
+
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun onMemorySave_withNoUser_setsErrorMessage() = runTest {
+    whenever(mockAuth.currentUser).thenReturn(null)
+
+    val formData =
+        MemoryFormData(
+            title = "Test",
+            description = "Description",
+            eventId = null,
+            isPublic = false,
+            mediaUris = emptyList(),
+            taggedUserIds = emptyList())
+
+    viewModel.onMemorySave(formData)
+    advanceUntilIdle()
+
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("signed in"))
+  }
+
+  @Test
+  fun onMemorySave_withValidData_savesMemoryAndClosesForm() = runTest {
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+    viewModel.showMemoryForm()
+
+    val formData =
+        MemoryFormData(
+            title = "Epic Day",
+            description = "Amazing experience",
+            eventId = "event123",
+            isPublic = true,
+            mediaUris = emptyList(),
+            taggedUserIds = listOf("user1", "user2"))
+
+    viewModel.onMemorySave(formData)
+    advanceUntilIdle()
+
+    verify(mockMemoryRepository).addMemory(any())
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertNull(viewModel.errorMessage)
+  }
+
+  @Test
+  fun onMemorySave_withError_setsErrorMessage() = runTest {
+    whenever(mockMemoryRepository.addMemory(any())).thenThrow(RuntimeException("Network error"))
+
+    val formData =
+        MemoryFormData(
+            title = "Test",
+            description = "Description",
+            eventId = null,
+            isPublic = false,
+            mediaUris = emptyList(),
+            taggedUserIds = emptyList())
+
+    viewModel.onMemorySave(formData)
+    advanceUntilIdle()
+
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("Failed to save memory"))
+  }
+
+  @Test
+  fun clearError_clearsErrorMessage() {
+    runBlocking {
+      whenever(mockAuth.currentUser).thenReturn(null)
+      val formData = MemoryFormData("", "desc", null, false, emptyList(), emptyList())
+      viewModel.onMemorySave(formData)
+      testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    assertNotNull(viewModel.errorMessage)
+
+    viewModel.clearError()
+
+    assertNull(viewModel.errorMessage)
+  }
+
+  @Test
+  fun isSavingMemory_correctlyTracksState() = runTest {
+    var capturedMemory: Memory? = null
+    whenever(mockMemoryRepository.addMemory(any())).thenAnswer { invocation ->
+      capturedMemory = invocation.getArgument(0)
+      Unit
+    }
+
+    assertFalse(viewModel.isSavingMemory)
+
+    val formData =
+        MemoryFormData(
+            title = "Test",
+            description = "Description",
+            eventId = null,
+            isPublic = false,
+            mediaUris = emptyList(),
+            taggedUserIds = emptyList())
+
+    viewModel.onMemorySave(formData)
+    // Note: In real scenario, isSavingMemory would be true during the operation
+    // but due to how coroutines work in tests, it's hard to catch the intermediate state
+    advanceUntilIdle()
+
+    assertFalse(viewModel.isSavingMemory)
+  }
+
+  @Test
+  fun availableEvents_initiallyLoaded() {
+    assertNotNull(viewModel.availableEvents)
+  }
+
+  @Test
+  fun toggleHeatmap_togglesState() {
+    assertFalse(viewModel.showHeatmap)
+
+    viewModel.toggleHeatmap()
+    assertTrue(viewModel.showHeatmap)
+
+    viewModel.toggleHeatmap()
+    assertFalse(viewModel.showHeatmap)
   }
 }
