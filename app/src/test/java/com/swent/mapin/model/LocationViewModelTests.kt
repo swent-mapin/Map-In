@@ -52,15 +52,16 @@ class LocationViewModelTest {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `query with valid string updates locations`() = runTest {
-    val fakeRepo = object : LocationRepository {
-      override suspend fun forwardGeocode(query: String): List<Location> {
-        return listOf(Location("Test", 0.0, 0.0))
-      }
+    val fakeRepo =
+        object : LocationRepository {
+          override suspend fun forwardGeocode(query: String): List<Location> {
+            return listOf(Location("Test", 0.0, 0.0))
+          }
 
-      override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
-        throw UnsupportedOperationException("Reverse not used in this test")
-      }
-    }
+          override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+            throw UnsupportedOperationException("Reverse not used in this test")
+          }
+        }
 
     val viewModel = LocationViewModel(fakeRepo)
 

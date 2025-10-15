@@ -15,8 +15,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class LocationViewModel(
-    private val repository: LocationRepository =
-        NominatimForwardGeocoder(HttpClientProvider.client)
+    private val repository: LocationRepository = NominatimForwardGeocoder(HttpClientProvider.client)
 ) : ViewModel() {
 
   private val _locations = MutableStateFlow<List<Location>>(emptyList())
