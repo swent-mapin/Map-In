@@ -107,7 +107,7 @@ class SearchViewModel(private val repo: EventRepository) : ViewModel() {
         allEvents.filter { e ->
           norm(e.title).contains(needle) ||
               norm(e.description).contains(needle) ||
-              norm(e.locationName).contains(needle) ||
+              norm(e.location.name).contains(needle) ||
               e.tags.any { norm(it).contains(needle) }
         }
     _ui.updateResults(filtered, query = q)

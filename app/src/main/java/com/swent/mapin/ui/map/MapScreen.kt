@@ -72,16 +72,7 @@ import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.TileOverlay
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.google.maps.android.heatmaps.WeightedLatLng
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.testing.UiTestTags
@@ -153,6 +144,8 @@ fun MapScreen(
   LaunchedEffect(viewModel.events) {
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
+  val eventRepo = EventRepositoryFirestore(FirebaseFirestore.getInstance())
+  val searchViewModel = SearchViewModel(eventRepo)
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     if (renderMap) {
