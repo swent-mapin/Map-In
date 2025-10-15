@@ -37,15 +37,21 @@ class ImageUploadHelper(private val storage: FirebaseStorage = FirebaseStorage.g
    * Delete an image from Firebase Storage
    *
    * @param imageUrl The URL of the image to delete
+   * @return true if deletion was successful, false otherwise
    */
-  suspend fun deleteImage(imageUrl: String) {
-    try {
+  suspend fun deleteImage(imageUrl: String): Boolean {
+    return try {
       if (imageUrl.startsWith("http")) {
         val storageRef = storage.getReferenceFromUrl(imageUrl)
         storageRef.delete().await()
+        true
+      } else {
+        // Not a valid Firebase Storage URL, consider it a success (nothing to delete)
+        true
       }
     } catch (e: Exception) {
       e.printStackTrace()
+      false
     }
   }
 }
