@@ -1,5 +1,11 @@
 package com.swent.mapin.ui.map
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.model.event.Event
 
 /**
  * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover
@@ -28,11 +35,25 @@ import androidx.compose.ui.unit.dp
 /**
  * Content of the bottom sheet, including search bar, quick actions, recent activities, and discover
  * section.
+ * Content for the bottom sheet
+ * - Search bar (always visible)
+ * - Quick actions
+ * - (Temporary) Recent activities
+ * - (Temporary) Discover section
+ * - Memory creation form (when showMemoryForm is true)
  *
  * @param state Current state of the bottom sheet (COLLAPSED, MEDIUM, FULL)
  * @param fullEntryKey Key that changes when entering full state to reset scroll position
  * @param searchViewModel ViewModel managing search state and logic
  * @param onExitSearch Callback when exiting search mode (optional)
+ * @param state Current bottom sheet state
+ * @param fullEntryKey Increments each time we enter full mode - triggers scroll reset
+ * @param searchBarState search bar state and callbacks
+ * @param showMemoryForm Whether to show memory creation form
+ * @param availableEvents List of events that can be linked to memories
+ * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
+ * @param onMemorySave Callback when memory is saved
+ * @param onMemoryCancel Callback when memory creation is cancelled
  */
 @Composable
 fun BottomSheetContent(
@@ -45,6 +66,17 @@ fun BottomSheetContent(
 
   val isFull = state == BottomSheetState.FULL || ui.searchMode
 
+fun BottomSheetContent(
+    state: BottomSheetState,
+    fullEntryKey: Int,
+    searchBarState: SearchBarState,
+    showMemoryForm: Boolean = false,
+    availableEvents: List<Event> = emptyList(),
+    onCreateMemoryClick: () -> Unit = {},
+    onMemorySave: (MemoryFormData) -> Unit = {},
+    onMemoryCancel: () -> Unit = {}
+) {
+  val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
@@ -69,11 +101,45 @@ fun BottomSheetContent(
           searchViewModel.onClearSearch()
           onExitSearch()
         })
+  // Animated transition between regular content and memory form
+  AnimatedContent(
+      targetState = showMemoryForm,
+      transitionSpec = {
+        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+                slideInVertically(
+                    animationSpec = androidx.compose.animation.core.tween(300),
+                    initialOffsetY = { it / 4 }))
+            .togetherWith(
+                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                    slideOutVertically(
+                        animationSpec = androidx.compose.animation.core.tween(200),
+                        targetOffsetY = { -it / 4 }))
+      },
+      label = "memoryFormTransition") { showForm ->
+        if (showForm) {
+          // Memory form content
+          val memoryFormScrollState = remember { ScrollState(0) }
+          MemoryFormScreen(
+              scrollState = memoryFormScrollState,
+              availableEvents = availableEvents,
+              onSave = onMemorySave,
+              onCancel = onMemoryCancel)
+        } else {
+          // Regular bottom sheet content
+          Column(modifier = Modifier.fillMaxWidth()) {
+            SearchBar(
+                value = searchBarState.query,
+                onValueChange = searchBarState.onQueryChange,
+                isFull = isFull,
+                onTap = { if (!isFull) searchBarState.onTap() },
+                focusRequester = focusRequester,
+                onSearchAction = { focusManager.clearFocus() })
 
-    Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-    val contentModifier =
-        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState) else Modifier.fillMaxWidth()
+            val contentModifier =
+                if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                else Modifier.fillMaxWidth()
 
     Column(modifier = contentModifier) {
       if (ui.searchMode) {
@@ -87,30 +153,55 @@ fun BottomSheetContent(
             })
       } else {
         QuickActionsSection()
+            Column(modifier = contentModifier) {
+              QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
         Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
+
+              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+              Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Recent Activities",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp))
+              Text(
+                  text = "Recent Activities",
+                  style = MaterialTheme.typography.titleMedium,
+                  modifier = Modifier.padding(bottom = 8.dp))
 
         repeat(4) { index ->
           ActivityItem(
               title = "Activity ${index + 1}",
               description = "Example description for activity ${index + 1}.")
         }
+              repeat(4) { index ->
+                ActivityItem(
+                    title = "Activity ${index + 1}",
+                    description = "Example description for activity ${index + 1}.")
+              }
 
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
         Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
+
+              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+              Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Discover",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp))
+              Text(
+                  text = "Discover",
+                  style = MaterialTheme.typography.titleMedium,
+                  modifier = Modifier.padding(bottom = 8.dp))
 
         val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
         categories.forEach { category ->
@@ -119,11 +210,23 @@ fun BottomSheetContent(
                 Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
               }
         }
+              val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
+              categories.forEach { category ->
+                OutlinedButton(
+                    onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                      Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+              }
 
         Spacer(modifier = Modifier.height(24.dp))
       }
     }
   }
+              Spacer(modifier = Modifier.height(24.dp))
+            }
+          }
+        }
+      }
 }
 
 /** Search bar that triggers full mode when tapped, includes Clear (X). */
@@ -195,7 +298,7 @@ fun SearchResultsList(
 
 /** Row of quick action buttons (Create Memory, Create Event, Filters). */
 @Composable
-private fun QuickActionsSection(modifier: Modifier = Modifier) {
+private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
   val focusManager = LocalFocusManager.current
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
@@ -205,9 +308,7 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       QuickActionButton(
-          text = "Create Memory",
-          modifier = Modifier.weight(1f),
-          onClick = { focusManager.clearFocus() })
+          text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
       QuickActionButton(
           text = "Create Event",
           modifier = Modifier.weight(1f),

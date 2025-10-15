@@ -4,10 +4,17 @@
 
 echo "Running ktfmtFormat..."
 
+# Save the list of staged files before formatting
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
 ./gradlew ktfmtFormat --quiet
 
-# Auto-stage any formatted files
-git diff --name-only | xargs -I {} git add {}
+# Re-stage only the files that were originally staged AND got modified by the formatter
+echo "$STAGED_FILES" | while IFS= read -r file; do
+  if [ -n "$file" ] && git diff --name-only | grep -q "^${file}$"; then
+    git add "$file"
+  fi
+done
 
 echo "Code formatted successfully!"
 exit 0

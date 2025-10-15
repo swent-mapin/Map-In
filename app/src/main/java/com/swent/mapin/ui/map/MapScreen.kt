@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -67,6 +70,15 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  // Show error messages in snackbar
+  LaunchedEffect(viewModel.errorMessage) {
+    viewModel.errorMessage?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearError()
+    }
+  }
 
   val cameraPositionState = rememberCameraPositionState {
     position =
@@ -140,6 +152,23 @@ fun MapScreen(onNavigateToProfile: () -> Unit = {}) {
               searchViewModel = searchViewModel,
               onExitSearch = { viewModel.setBottomSheetState(BottomSheetState.MEDIUM) })
         }
+
+    // Loading indicator while saving memory
+    if (viewModel.isSavingMemory) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize()
+                  .background(Color.Black.copy(alpha = 0.5f))
+                  .testTag("memoryLoadingIndicator"),
+          contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+          }
+    }
+
+    // Snackbar for error messages
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
   }
 }
 
@@ -261,7 +290,7 @@ private fun ObserveZoomForSheetCollapse(
 private fun MapMarkers(events: List<Event>) {
   events.forEach { event ->
     Marker(
-        state = MarkerState(position = LatLng(event.latitude, event.longitude)),
+        state = MarkerState(position = LatLng(event.location.latitude, event.location.longitude)),
         title = event.title,
         snippet = "${event.attendeeCount ?: 0} attendees")
   }
@@ -280,7 +309,7 @@ private fun HeatmapOverlay(showHeatmap: Boolean, events: List<Event>) {
               val weight =
                   if (maxAttendees == 0) 1.0
                   else (event.attendeeCount ?: 0).toDouble() / maxAttendees
-              WeightedLatLng(LatLng(event.latitude, event.longitude), weight)
+              WeightedLatLng(LatLng(event.location.latitude, event.location.longitude), weight)
             }
         data
       }
