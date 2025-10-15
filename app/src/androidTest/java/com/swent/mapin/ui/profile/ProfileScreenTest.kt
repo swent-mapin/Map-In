@@ -92,6 +92,9 @@ class ProfileScreenTest {
     // Wait for the content to load
     composeTestRule.waitForIdle()
 
+    // Scroll to the logout button to make it visible
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
+
     // Verify the logout button exists and is displayed
     composeTestRule.onNodeWithTag("logoutButton").assertExists().assertIsDisplayed()
   }
@@ -104,6 +107,9 @@ class ProfileScreenTest {
 
     composeTestRule.waitForIdle()
 
+    // Scroll to the logout button
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
+
     // Verify the logout button contains the text "Logout"
     composeTestRule.onNodeWithTag("logoutButton").assertTextContains("Logout")
   }
@@ -115,6 +121,9 @@ class ProfileScreenTest {
     }
 
     composeTestRule.waitForIdle()
+
+    // Scroll to the logout button
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
 
     // Verify the logout button is clickable
     composeTestRule.onNodeWithTag("logoutButton").assertHasClickAction()
@@ -134,8 +143,11 @@ class ProfileScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Click the logout button
+    // Scroll to and click the logout button
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton").performClick()
+
+    composeTestRule.waitForIdle()
 
     // Verify that signOut was called
     verify { mockAuth.signOut() }
@@ -161,8 +173,11 @@ class ProfileScreenTest {
     // Verify profile content is displayed before logout
     composeTestRule.onNodeWithText("John Doe").assertExists()
 
-    // Click the logout button
+    // Scroll to and click the logout button
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton").performClick()
+
+    composeTestRule.waitForIdle()
 
     // Verify navigation callback was triggered
     assert(navigatedToSignIn) { "Navigation to sign-in screen should be triggered" }
@@ -178,10 +193,12 @@ class ProfileScreenTest {
 
     composeTestRule.waitForIdle()
 
-    // Verify logout button exists initially
+    // Scroll to verify logout button exists initially
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton").assertExists()
 
-    // Enter edit mode
+    // Scroll up to find the edit button
+    composeTestRule.onNodeWithTag("editButton").assertExists()
     composeTestRule.onNodeWithTag("editButton").performClick()
     composeTestRule.waitForIdle()
 
@@ -204,18 +221,23 @@ class ProfileScreenTest {
     composeTestRule.waitForIdle()
 
     // Enter edit mode
+    composeTestRule.onNodeWithTag("editButton").assertExists()
     composeTestRule.onNodeWithTag("editButton").performClick()
     composeTestRule.waitForIdle()
 
     // Exit edit mode (cancel)
+    composeTestRule.onNodeWithText("Cancel").performScrollTo()
     composeTestRule.onNodeWithText("Cancel").performClick()
     composeTestRule.waitForIdle()
 
     // Now logout button should be visible again
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton").assertExists()
 
     // Click logout
     composeTestRule.onNodeWithTag("logoutButton").performClick()
+
+    composeTestRule.waitForIdle()
 
     // Verify signOut was called
     verify { mockAuth.signOut() }

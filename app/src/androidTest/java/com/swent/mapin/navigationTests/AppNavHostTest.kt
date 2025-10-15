@@ -1,9 +1,7 @@
 package com.swent.mapin.navigationTests
 
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
@@ -72,7 +70,8 @@ class AppNavHostTest {
     // Verify we're on profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
 
-    // Click logout button
+    // Scroll to the logout button and click it
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
@@ -96,7 +95,8 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-    // Logout
+    // Scroll to and click logout
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
@@ -124,7 +124,8 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-    // Logout
+    // Scroll to and click logout
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
