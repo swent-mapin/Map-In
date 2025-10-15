@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,6 +37,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
@@ -69,7 +72,7 @@ import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -79,7 +82,11 @@ import kotlinx.coroutines.flow.filterNotNull
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
 @Composable
-fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = true) {
+fun MapScreen(
+    onEventClick: (Event) -> Unit = {},
+    renderMap: Boolean = true,
+    onNavigateToProfile: () -> Unit = {}
+) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
   val sheetConfig =
@@ -126,14 +133,14 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = tru
     }
   }
 
-  // Heatmap source mirrors the ViewModel locations list
+  // Heatmap source mirrors the ViewModel events list
   val heatmapSource =
-      rememberGeoJsonSourceState(key = "locations-heatmap-source") {
-        data = GeoJSONData(locationsToGeoJson(viewModel.locations))
+      rememberGeoJsonSourceState(key = "events-heatmap-source") {
+        data = GeoJSONData(eventsToGeoJson(viewModel.events))
       }
 
-  LaunchedEffect(viewModel.locations) {
-    heatmapSource.data = GeoJSONData(locationsToGeoJson(viewModel.locations))
+  LaunchedEffect(viewModel.events) {
+    heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
@@ -145,7 +152,7 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = tru
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
-          onLocationClick = onLocationClick)
+          onEventClick = onEventClick)
     }
 
     TopGradient()
@@ -164,6 +171,11 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = tru
 
     // Block map gestures when the sheet is in focus
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
+
+    // Profile button in top-right corner
+    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
+      ProfileButton(onClick = onNavigateToProfile)
+    }
 
     BottomSheet(
         config = sheetConfig,
@@ -208,7 +220,7 @@ fun MapScreen(onLocationClick: (Location) -> Unit = {}, renderMap: Boolean = tru
 }
 
 /**
- * Composable that renders the Mapbox map with compass, scale bar, and location annotations.
+ * Composable that renders the Mapbox map with compass, scale bar, and event annotations.
  *
  * Handles map styling (standard vs satellite), pointer input for sheet interactions, and delegates
  * the rendering of map layers to [MapLayers].
@@ -221,7 +233,7 @@ private fun MapboxLayer(
     standardStyleState: StandardStyleState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
-    onLocationClick: (Location) -> Unit
+    onEventClick: (Event) -> Unit
 ) {
   MapboxMap(
       Modifier.fillMaxSize()
@@ -263,7 +275,7 @@ private fun MapboxLayer(
             mapViewportState = mapViewportState,
             heatmapSource = heatmapSource,
             isDarkTheme = isDarkTheme,
-            onLocationClick = onLocationClick)
+            onEventClick = onEventClick)
       }
 }
 
@@ -279,7 +291,7 @@ private fun MapLayers(
     mapViewportState: MapViewportState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
-    onLocationClick: (Location) -> Unit
+    onEventClick: (Event) -> Unit
 ) {
   val context = LocalContext.current
   val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
@@ -288,8 +300,8 @@ private fun MapLayers(
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
   val annotations =
-      remember(viewModel.locations, annotationStyle) {
-        createLocationAnnotations(viewModel.locations, annotationStyle)
+      remember(viewModel.events, annotationStyle) {
+        createEventAnnotations(viewModel.events, annotationStyle)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -304,8 +316,8 @@ private fun MapLayers(
     PointAnnotationGroup(annotations = annotations) {
       markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState.onClicked { annotation ->
-        findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
-          onLocationClick(location)
+        findEventForAnnotation(annotation, viewModel.events)?.let { event ->
+          onEventClick(event)
           true
         } ?: false
       }
@@ -315,8 +327,8 @@ private fun MapLayers(
       markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState
           .onClicked { annotation ->
-            findLocationForAnnotation(annotation, viewModel.locations)?.let { location ->
-              onLocationClick(location)
+            findEventForAnnotation(annotation, viewModel.events)?.let { event ->
+              onEventClick(event)
               true
             } ?: false
           }
@@ -538,22 +550,22 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
 }
 
 /**
- * Converts a list of locations to Mapbox point annotation options.
+ * Converts a list of events to Mapbox point annotation options.
  *
  * Each annotation includes position, icon, label, and custom styling. The index is stored as data
  * for later retrieval.
  *
- * @param locations List of locations to convert
+ * @param events List of events to convert
  * @param style Styling to apply to annotations
  * @return List of configured PointAnnotationOptions
  */
-private fun createLocationAnnotations(
-    locations: List<Location>,
+private fun createEventAnnotations(
+    events: List<Event>,
     style: AnnotationStyle
 ): List<PointAnnotationOptions> {
-  return locations.mapIndexed { index, loc ->
+  return events.mapIndexed { index, event ->
     PointAnnotationOptions()
-        .withPoint(Point.fromLngLat(loc.longitude, loc.latitude))
+        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
         .apply { style.markerBitmap?.let { withIconImage(it) } }
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
@@ -562,7 +574,7 @@ private fun createLocationAnnotations(
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
         .withTextHaloWidth(1.5)
-        .withTextField(loc.name)
+        .withTextField(event.title)
         .withData(JsonPrimitive(index))
   }
 }
@@ -593,23 +605,23 @@ private fun createClusterConfig(): AnnotationConfig {
 }
 
 /**
- * Finds the Location associated with a clicked annotation.
+ * Finds the Event associated with a clicked annotation.
  *
  * First tries to match by stored index data, then falls back to coordinate comparison.
  *
  * @param annotation The clicked point annotation
- * @param locations List of all locations
- * @return Matching Location or null if not found
+ * @param events List of all events
+ * @return Matching Event or null if not found
  */
-private fun findLocationForAnnotation(
+private fun findEventForAnnotation(
     annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
-    locations: List<Location>
-): Location? {
+    events: List<Event>
+): Event? {
   val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
-  return index?.let { locations.getOrNull(it) }
-      ?: locations.firstOrNull { location ->
+  return index?.let { events.getOrNull(it) }
+      ?: events.firstOrNull { event ->
         val point = annotation.point
-        location.latitude == point.latitude() && location.longitude == point.longitude()
+        event.location.latitude == point.latitude() && event.location.longitude == point.longitude()
       }
 }
 
@@ -682,4 +694,18 @@ private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
               }
             })
   }
+}
+
+/** Profile button for navigating to user profile screen. */
+@Composable
+private fun ProfileButton(onClick: () -> Unit) {
+  FloatingActionButton(
+      onClick = onClick,
+      modifier = Modifier.testTag("profileButton"),
+      containerColor = MaterialTheme.colorScheme.primaryContainer) {
+        Icon(
+            painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
+            contentDescription = "Profile",
+            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+      }
 }

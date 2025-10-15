@@ -14,7 +14,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
-import com.swent.mapin.util.findActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +45,7 @@ data class SignInUiState(
  * @property context Application context used for credential manager operations.
  */
 class SignInViewModel(context: Context) : ViewModel() {
+  private val applicationContext = context.applicationContext
   private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
   private val _uiState = MutableStateFlow(SignInUiState(currentUser = auth.currentUser))
@@ -58,14 +58,9 @@ class SignInViewModel(context: Context) : ViewModel() {
    * multiple simultaneous sign-in attempts and updates the UI state accordingly.
    *
    * @param credentialManager The [CredentialManager] instance for handling credentials.
-   * @param context The context used to launch the sign-in UI. Must resolve to an [Activity].
    * @param onSuccess Callback invoked when sign-in is successful.
    */
-  fun signInWithGoogle(
-      credentialManager: CredentialManager,
-      context: Context,
-      onSuccess: () -> Unit = {}
-  ) {
+  fun signInWithGoogle(credentialManager: CredentialManager, onSuccess: () -> Unit = {}) {
     if (_uiState.value.isLoading) {
       return
     }
@@ -81,16 +76,7 @@ class SignInViewModel(context: Context) : ViewModel() {
         val request =
             GetCredentialRequest.Builder().addCredentialOption(signInWithGoogleOption).build()
 
-        val activityContext = context.findActivity()
-        if (activityContext == null) {
-          Log.e(TAG, "Google sign-in requires an Activity context, but none was provided")
-          _uiState.value =
-              _uiState.value.copy(
-                  isLoading = false, errorMessage = "Unable to launch Google sign-in UI.")
-          return@launch
-        }
-
-        val credentialResult = credentialManager.getCredential(activityContext, request)
+        val credentialResult = credentialManager.getCredential(applicationContext, request)
         val credential = credentialResult.credential
 
         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)

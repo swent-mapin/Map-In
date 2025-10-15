@@ -72,15 +72,6 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
-    signingConfigs {
-        getByName("debug") {
-            storeFile = file("../keystore/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -92,7 +83,6 @@ android {
         debug {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
-                signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -20,8 +20,7 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
-import com.swent.mapin.model.Location
-import com.swent.mapin.model.SampleLocationRepository
+import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryFirestore
@@ -79,11 +78,6 @@ class MapScreenViewModel(
 
   private var _lastZoom by mutableFloatStateOf(0f)
   private var hideScaleBarJob: kotlinx.coroutines.Job? = null
-
-  // Locations backing the map
-  private var _locations by mutableStateOf(SampleLocationRepository.getSampleLocations())
-  val locations: List<Location>
-    get() = _locations
 
   enum class MapStyle {
     STANDARD,
@@ -227,10 +221,6 @@ class MapScreenViewModel(
     }
   }
 
-  fun setLocations(newLocations: List<Location>) {
-    _locations = newLocations
-  }
-
   fun setMapStyle(style: MapStyle) {
     _mapStyle = style
   }
@@ -353,6 +343,17 @@ class MapScreenViewModel(
     _previousSheetState?.let { setBottomSheetState(it) }
     _previousSheetState = null
   }
+
+  // EVENTS
+
+  /** Event data for display on the map */
+  private var _events by mutableStateOf(SampleEventRepository.getSampleEvents())
+  val events: List<Event>
+    get() = _events
+
+  fun setEvents(newEvents: List<Event>) {
+    _events = newEvents
+  }
 }
 
 @Composable
@@ -374,13 +375,13 @@ fun rememberMapScreenViewModel(
   }
 }
 
-/** Converts locations into a GeoJSON payload consumable by Mapbox heatmaps. */
-fun locationsToGeoJson(locations: List<Location>): String {
+/** Converts events into a GeoJSON payload consumable by Mapbox heatmaps. */
+fun eventsToGeoJson(events: List<Event>): String {
   val features =
-      locations.map { location ->
+      events.map { event ->
         Feature.fromGeometry(
-            Point.fromLngLat(location.longitude, location.latitude),
-            JsonObject().apply { addProperty("weight", location.attendees) })
+            Point.fromLngLat(event.location.longitude, event.location.latitude),
+            JsonObject().apply { addProperty("weight", event.attendeeCount) })
       }
   return FeatureCollection.fromFeatures(features).toJson()
 }

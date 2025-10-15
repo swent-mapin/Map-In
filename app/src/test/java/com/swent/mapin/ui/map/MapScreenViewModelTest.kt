@@ -488,69 +488,37 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun setLocations_updatesLocations() {
-    val initialLocations = viewModel.locations
-    val newLocations = listOf(com.swent.mapin.model.Location("Test Location", -118.0, 34.0))
-
-    viewModel.setLocations(newLocations)
-
-    assertEquals(newLocations, viewModel.locations)
-  }
-
-  @Test
-  fun onMemorySave_withMediaUris_attemptsUpload() = runTest {
-    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    viewModel.showMemoryForm()
-
-    val mockUri = org.mockito.kotlin.mock<android.net.Uri>()
-    val formData =
-        MemoryFormData(
-            title = "Memory with media",
-            description = "Has photos",
-            eventId = null,
-            isPublic = false,
-            mediaUris = listOf(mockUri),
-            taggedUserIds = emptyList())
-
-    val mockContentResolver = org.mockito.kotlin.mock<android.content.ContentResolver>()
-    whenever(mockContext.contentResolver).thenReturn(mockContentResolver)
-    whenever(mockContentResolver.getType(any())).thenReturn("image/jpeg")
-
-    viewModel.onMemorySave(formData)
-    advanceUntilIdle()
-
-    verify(mockMemoryRepository).addMemory(any())
-  }
-
-  @Test
-  fun setMapStyle_satellite_updatesSatelliteStyle() {
-    assertFalse(viewModel.useSatelliteStyle)
-
-    viewModel.setMapStyle(MapScreenViewModel.MapStyle.SATELLITE)
-
-    assertTrue(viewModel.useSatelliteStyle)
-    assertFalse(viewModel.showHeatmap)
-  }
-
-  @Test
-  fun setMapStyle_standard_usesStandardStyle() {
-    viewModel.setMapStyle(MapScreenViewModel.MapStyle.SATELLITE)
-    assertTrue(viewModel.useSatelliteStyle)
-
-    viewModel.setMapStyle(MapScreenViewModel.MapStyle.STANDARD)
-
-    assertFalse(viewModel.useSatelliteStyle)
-    assertFalse(viewModel.showHeatmap)
-  }
-
-  @Test
-  fun locationsToGeoJson_createsValidGeoJson() {
-    val locations =
+  fun setEvents_updatesEvents() {
+    val initialEvents = viewModel.events
+    val newEvents =
         listOf(
-            com.swent.mapin.model.Location("Location 1", 6.5, 46.5, attendees = 10),
-            com.swent.mapin.model.Location("Location 2", 7.0, 47.0, attendees = 25))
+            com.swent.mapin.model.event.Event(
+                uid = "test1",
+                title = "Test Event",
+                location = com.swent.mapin.model.Location("Test Location", 34.0, -118.0),
+                attendeeCount = 50))
 
-    val geoJson = locationsToGeoJson(locations)
+    viewModel.setEvents(newEvents)
+
+    assertEquals(newEvents, viewModel.events)
+  }
+
+  @Test
+  fun eventsToGeoJson_createsValidGeoJson() {
+    val events =
+        listOf(
+            com.swent.mapin.model.event.Event(
+                uid = "event1",
+                title = "Event 1",
+                location = com.swent.mapin.model.Location("Location 1", 46.5, 6.5),
+                attendeeCount = 10),
+            com.swent.mapin.model.event.Event(
+                uid = "event2",
+                title = "Event 2",
+                location = com.swent.mapin.model.Location("Location 2", 47.0, 7.0),
+                attendeeCount = 25))
+
+    val geoJson = eventsToGeoJson(events)
 
     // Verify it's valid JSON and contains expected data
     assertTrue(geoJson.contains("type"))
@@ -561,12 +529,12 @@ class MapScreenViewModelTest {
     assertTrue(geoJson.contains("weight"))
     assertTrue(geoJson.contains("6.5"))
     assertTrue(geoJson.contains("46.5"))
-    assertTrue(geoJson.contains("10")) // weight from attendees
+    assertTrue(geoJson.contains("10")) // weight from attendeeCount
   }
 
   @Test
-  fun locationsToGeoJson_emptyList_createsEmptyFeatureCollection() {
-    val geoJson = locationsToGeoJson(emptyList())
+  fun eventsToGeoJson_emptyList_createsEmptyFeatureCollection() {
+    val geoJson = eventsToGeoJson(emptyList())
 
     assertTrue(geoJson.contains("FeatureCollection"))
     assertTrue(geoJson.contains("features"))

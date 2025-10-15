@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.auth
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,6 @@ import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.R
 import com.swent.mapin.testing.UiTestTags
-import com.swent.mapin.util.findActivity
 
 /**
  * Sign-in screen that provides authentication options for users.
@@ -92,15 +92,7 @@ fun SignInScreen(
               Spacer(modifier = Modifier.height(150.dp))
 
               OutlinedButton(
-                  onClick = {
-                    val activity = context.findActivity()
-                    if (activity != null) {
-                      viewModel.signInWithGoogle(credentialManager, activity) {}
-                    } else {
-                      Toast.makeText(context, "Unable to start Google sign-in", Toast.LENGTH_SHORT)
-                          .show()
-                    }
-                  },
+                  onClick = { viewModel.signInWithGoogle(credentialManager) {} },
                   modifier = Modifier.fillMaxWidth().height(65.dp),
                   enabled = !uiState.isLoading) {
                     if (uiState.isLoading) {
@@ -126,7 +118,7 @@ fun SignInScreen(
               OutlinedButton(
                   onClick = {
                     // Microsoft sign-in requires Activity context for authentication flow
-                    val activity = context.findActivity()
+                    val activity = context as? Activity
                     if (activity != null) {
                       viewModel.signInWithMicrosoft(activity)
                     } else {
