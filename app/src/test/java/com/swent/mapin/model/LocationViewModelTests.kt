@@ -18,13 +18,13 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
-  private lateinit var fakeRepository: FakeLocationRepository
+  private lateinit var fakeRepository: FakeNominatimRepository
   private lateinit var viewModel: LocationViewModel
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    fakeRepository = FakeLocationRepository()
+    fakeRepository = FakeNominatimRepository()
     fakeRepository.results = listOf(Location("X", 0.0, 0.0))
     viewModel = LocationViewModel(fakeRepository)
   }
@@ -52,11 +52,15 @@ class LocationViewModelTest {
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
   fun `query with valid string updates locations`() = runTest {
-    val fakeRepo =
-        object : LocationRepository {
-          override suspend fun search(query: String): List<Location> =
-              listOf(Location("Test", 0.0, 0.0))
-        }
+    val fakeRepo = object : LocationRepository {
+      override suspend fun forwardGeocode(query: String): List<Location> {
+        return listOf(Location("Test", 0.0, 0.0))
+      }
+
+      override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+        throw UnsupportedOperationException("Reverse not used in this test")
+      }
+    }
 
     val viewModel = LocationViewModel(fakeRepo)
 
@@ -93,13 +97,17 @@ class LocationViewModelTest {
   }
 
   // Fake repository
-  private class FakeLocationRepository : LocationRepository {
-    var results: List<Location> = emptyList()
+  class FakeNominatimRepository : LocationRepository {
     var shouldThrow = false
+    var results = listOf(Location("MockCity", 0.0, 0.0))
 
-    override suspend fun search(query: String): List<Location> {
-      if (shouldThrow) throw Exception("Fake exception")
+    override suspend fun forwardGeocode(query: String): List<Location> {
+      if (shouldThrow) throw LocationSearchException("Fake error")
       return results
+    }
+
+    override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+      throw UnsupportedOperationException()
     }
   }
 }

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.swent.mapin.HttpClientProvider
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationRepository
-import com.swent.mapin.model.NominatimLocationRepository
+import com.swent.mapin.model.NominatimForwardGeocoder
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class LocationViewModel(
     private val repository: LocationRepository =
-        NominatimLocationRepository(HttpClientProvider.client)
+        NominatimForwardGeocoder(HttpClientProvider.client)
 ) : ViewModel() {
 
   private val _locations = MutableStateFlow<List<Location>>(emptyList())
@@ -32,7 +32,7 @@ class LocationViewModel(
           .collect { query ->
             if (query.isNotBlank()) {
               try {
-                val results = repository.search(query)
+                val results = repository.forwardGeocode(query)
                 _locations.value = results
               } catch (e: Exception) {
                 _locations.value = emptyList<Location>()
