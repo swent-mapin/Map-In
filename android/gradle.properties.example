@@ -1,0 +1,5 @@
+# Copy to android/gradle.properties and fill with the shared team keystore values
+TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
+TEAM_DEBUG_STORE_PASSWORD=<store-password>
+TEAM_DEBUG_KEY_ALIAS=teamDebug
+TEAM_DEBUG_KEY_PASSWORD=<key-password>
