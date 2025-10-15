@@ -33,6 +33,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -47,10 +49,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.se.bootcamp.ui.map.LocationViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.swent.mapin.R
+import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.theme.MapInTheme
 import java.util.Calendar
 import java.util.Locale
+
+const val ATTENDEES_DEFAULT = 1
+const val LONGITUDE_DEFAULT = 0.0
+const val LATITUDE_DEFAULT = 0.0
 
 object AddEventPopUpTestTags {
   const val INPUT_EVENT_TITLE = "inputEventTitle"
@@ -84,15 +96,17 @@ fun AddEventTextField(
     placeholderString: String,
     modifier: Modifier = Modifier,
     isLocation: Boolean = false,
-    isTag: Boolean = false
+    isTag: Boolean = false,
+    locationQuery: () -> Unit = {}
 ) {
+
   TextField(
       modifier = modifier.border(1.dp, Color.Gray, RoundedCornerShape(12.dp)),
       value = textField.value,
       onValueChange = {
         textField.value = it
         if (isLocation) {
-          // TODO add Nominatim location logic
+          locationQuery()
         } else if (isTag) {
           error.value = !isValidTagInput(it)
         } else {
@@ -225,10 +239,9 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
 @Composable
 fun AddEventPopUp(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit = {},
-    onSave: () -> Unit = {},
-    onCancel: () -> Unit = {},
-    onDismiss: () -> Unit = {}
+    eventViewModel: EventViewModel = viewModel(),
+    locationViewModel: LocationViewModel = viewModel(),
+    onDone: () -> Unit = {}
 ) {
 
   val title = remember { mutableStateOf("") }
@@ -243,6 +256,10 @@ fun AddEventPopUp(
   val locationError = remember { mutableStateOf(true) }
   val dateError = remember { mutableStateOf(true) }
   val tagError = remember { mutableStateOf(false) }
+
+  val locationExpanded = remember { mutableStateOf(false) }
+  val gotLocation = remember { mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT, ATTENDEES_DEFAULT)) }
+  val locations by locationViewModel.locations.collectAsState()
 
   val error =
       titleError.value ||
@@ -261,7 +278,7 @@ fun AddEventPopUp(
           if (time.value.isBlank()) stringResource(R.string.time) else null)
 
   Dialog(
-      onDismissRequest = onDismiss,
+      onDismissRequest = onDone,
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
         Card(
             modifier =
@@ -277,7 +294,7 @@ fun AddEventPopUp(
                   horizontalAlignment = Alignment.CenterHorizontally,
                   modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                      IconButton(onClick = onBack, Modifier.padding(start = 10.dp).size(25.dp)) {
+                      IconButton(onClick = onDone, Modifier.padding(start = 10.dp).size(25.dp)) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
                       }
                       Spacer(modifier = Modifier.padding(10.dp))
@@ -308,14 +325,14 @@ fun AddEventPopUp(
                         stringResource(R.string.location_field),
                         modifier = Modifier.padding(end = 150.dp).padding(bottom = 2.dp),
                         fontSize = 16.sp)
-                    AddEventTextField(
+                    LocationDropDownMenu(
                         location,
                         locationError,
-                        stringResource(R.string.location_place_holder),
-                        isLocation = true,
-                        modifier =
-                            Modifier.padding(horizontal = 32.dp)
-                                .testTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION))
+                        locationViewModel,
+                        locationExpanded,
+                        locations,
+                        gotLocation
+                    )
                     Spacer(modifier = Modifier.padding(10.dp))
                     Text(
                         stringResource(R.string.description_field),
@@ -362,8 +379,21 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                            // TODO add backend store operation
-                            onSave()
+                            val newEvent = Event(
+                                uid = eventViewModel.getNewUid(),
+                                title = title.value,
+                                url = null, //Add logic for URLS later
+                                description = description.value,
+                                location = gotLocation.value,
+                                tags = extractTags(tag.value),
+                                public = true, //Add logic for public/private later
+                                ownerId = Firebase.auth.currentUser?.uid ?: "",
+                                imageUrl = null, //Add logic for URLS later
+                                capacity = null, //Add logic for capacity later, no capacity by default
+                                attendeeCount = ATTENDEES_DEFAULT
+                            )
+                            eventViewModel.addEvent(newEvent)
+                            onDone
                           },
                           enabled = !error,
                           colors =
@@ -378,7 +408,7 @@ fun AddEventPopUp(
                           }
                       Spacer(modifier = Modifier.padding(10.dp))
                       ElevatedButton(
-                          onClick = onCancel,
+                          onClick = onDone,
                           colors =
                               ButtonColors(
                                   containerColor = colorResource(R.color.salmon),

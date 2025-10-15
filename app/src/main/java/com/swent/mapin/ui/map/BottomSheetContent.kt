@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.ui.components.AddEventPopUp
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -160,6 +162,7 @@ private fun SearchBar(
 @Composable
 private fun QuickActionsSection(modifier: Modifier = Modifier) {
   val focusManager = LocalFocusManager.current
+  val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -174,11 +177,21 @@ private fun QuickActionsSection(modifier: Modifier = Modifier) {
       QuickActionButton(
           text = "Create Event",
           modifier = Modifier.weight(1f),
-          onClick = { focusManager.clearFocus() })
+          onClick = {
+              focusManager.clearFocus()
+              showDialog.value = true
+          }
+      )
       QuickActionButton(
           text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
   }
+    if (showDialog.value) {
+        AddEventPopUp(
+            modifier = Modifier,
+            onDone = { showDialog.value = false },
+        )
+    }
 }
 
 /** button for quick actions */

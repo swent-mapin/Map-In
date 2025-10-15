@@ -17,3 +17,23 @@ fun isValidTagInput(input: String): Boolean {
   val tagRegex = Regex("^(#\\w+)(?:[ ,]+#\\w+)*$")
   return input.matches(tagRegex)
 }
+
+/**
+ * With Help of GPT: Helper function that extracts individual tags from a valid input string.
+ *
+ * The input string is expected to follow the same format checked by [isValidTagInput], where each
+ * tag starts with a '#' followed by letters, digits, or underscores, and multiple tags can be
+ * separated by spaces or commas.
+ *
+ * * Examples:
+ * * - Input: "#food" → Output: ["#food"]
+ * * - Input: "#food , #travel" → Output: ["#food", "#travel"]
+ * * - Input: "#fun_2025,#study" → Output: ["#fun_2025", "#study"]
+ *
+ * @param input The user input string containing one or more valid tags.
+ * @return A list of strings, each representing an extracted tag (including the '#' prefix).
+ */
+fun extractTags(input: String): List<String> {
+  val tagRegex = Regex("#\\w+")
+  return tagRegex.findAll(input).map { it.value }.toList()
+}
