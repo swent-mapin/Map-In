@@ -15,181 +15,163 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.*
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
 import org.junit.runner.RunWith
 
-// ---- Small fake repo matching your EventRepository ----
+//generated with the help of AI
+// ---- Fake repo  ----
 private class FakeEventRepository(private val data: List<Event>) : EventRepository {
-  override fun getNewUid(): String = "fake"
-
-  override suspend fun getAllEvents(): List<Event> = data
-
-  override suspend fun getEvent(eventID: String): Event = data.first { it.uid == eventID }
-
-  override suspend fun getEventsByTags(tags: List<String>): List<Event> =
-      data.filter { it.tags.any(tags::contains) }
-
-  override suspend fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp): List<Event> = data
-
-  override suspend fun getEventsByOwner(ownerId: String): List<Event> =
-      data.filter { it.ownerId == ownerId }
-
-  override suspend fun getEventsByTitle(title: String): List<Event> =
-      data.filter { it.title.equals(title, ignoreCase = true) }
-
-  override suspend fun getEventsByParticipant(userId: String): List<Event> =
-      data.filter { userId in it.participantIds }
-
-  override suspend fun addEvent(event: Event) {}
-
-  override suspend fun editEvent(eventID: String, newValue: Event) {}
-
-  override suspend fun deleteEvent(eventID: String) {}
+    override fun getNewUid(): String = "fake"
+    override suspend fun getAllEvents(): List<Event> = data
+    override suspend fun getEvent(eventID: String): Event = data.first { it.uid == eventID }
+    override suspend fun getEventsByTags(tags: List<String>): List<Event> =
+        data.filter { it.tags.any(tags::contains) }
+    override suspend fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp): List<Event> = data
+    override suspend fun getEventsByOwner(ownerId: String): List<Event> =
+        data.filter { it.ownerId == ownerId }
+    override suspend fun getEventsByTitle(title: String): List<Event> =
+        data.filter { it.title.equals(title, ignoreCase = true) }
+    override suspend fun getEventsByParticipant(userId: String): List<Event> =
+        data.filter { userId in it.participantIds }
+    override suspend fun addEvent(event: Event) {}
+    override suspend fun editEvent(eventID: String, newValue: Event) {}
+    override suspend fun deleteEvent(eventID: String) {}
 }
 
 @RunWith(AndroidJUnit4::class)
 class BottomSheetContentTest {
 
-  @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<ComponentActivity>()
 
-  @OptIn(ExperimentalCoroutinesApi::class) private lateinit var dispatcher: TestDispatcher
+    // Sample events that match your current Event schema (with Location)
+    private val sample = listOf(
+        Event(
+            uid = "1",
+            title = "Rock Night",
+            description = "Live music downtown",
+            location = Location("Zurich", 47.37, 8.54),
+            tags = listOf("music", "nightlife"),
+            ownerId = "a",
+            attendeeCount = 10,
+            participantIds = listOf("u1", "u2")
+        ),
+        Event(
+            uid = "2",
+            title = "Morning Run",
+            description = "Easy pace 5k",
+            location = Location("Lake Park", 0.0, 0.0),
+            tags = listOf("sports", "outdoors"),
+            ownerId = "b",
+            attendeeCount = 5
+        ),
+        Event(
+            uid = "3",
+            title = "Jazz Jam",
+            description = "impro session · bring your instrument",
+            location = Location("Basel", 0.0, 0.0),
+            tags = listOf("music", "jam"),
+            ownerId = "c",
+            attendeeCount = 3
+        )
+    )
 
-  private lateinit var vm: SearchViewModel
+    private fun newVm(): SearchViewModel =
+        SearchViewModel(FakeEventRepository(sample))
 
-  private val sample =
-      listOf(
-          Event(
-              uid = "1",
-              title = "Rock Night",
-              description = "Live music downtown",
-              location = Location("Zurich", 47.37, 8.54),
-              tags = listOf("music", "nightlife"),
-              ownerId = "a",
-              attendeeCount = 10,
-              participantIds = listOf("u1", "u2")),
-          Event(
-              uid = "2",
-              title = "Morning Run",
-              description = "Easy pace 5k",
-              location = Location("Lake Park", 0.0, 0.0),
-              tags = listOf("sports", "outdoors"),
-              ownerId = "b",
-              attendeeCount = 5),
-          Event(
-              uid = "3",
-              title = "Jazz Jam",
-              description = "impro session · bring your instrument",
-              location = Location("Basel", 0.0, 0.0),
-              tags = listOf("music", "jam"),
-              ownerId = "c",
-              attendeeCount = 3))
-
-  @OptIn(ExperimentalCoroutinesApi::class)
-  @Before
-  fun setup() {
-    dispatcher = StandardTestDispatcher()
-    Dispatchers.setMain(dispatcher) // make VM predictable
-    vm = SearchViewModel(FakeEventRepository(sample))
-  }
-
-  @OptIn(ExperimentalCoroutinesApi::class)
-  @After
-  fun tearDown() {
-    Dispatchers.resetMain()
-  }
-
-  private fun setSheet(state: BottomSheetState) {
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = state,
-            fullEntryKey = 0,
-            searchViewModel = vm,
-            showMemoryForm = false,
-            availableEvents = emptyList(),
-            onCreateMemoryClick = {},
-            onMemorySave = {},
-            onMemoryCancel = {},
-            onExitSearch = {})
-      }
+    private fun setSheet(state: BottomSheetState, vm: SearchViewModel = newVm()) {
+        rule.setContent {
+            MaterialTheme {
+                BottomSheetContent(
+                    state = state,
+                    fullEntryKey = 0,
+                    searchViewModel = vm,
+                    showMemoryForm = false,
+                    availableEvents = emptyList(),
+                    onCreateMemoryClick = {},
+                    onMemorySave = {},
+                    onMemoryCancel = {},
+                    onExitSearch = {}
+                )
+            }
+        }
+        // Let initial composition, VM init, and animations settle
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(500) // finish AnimatedContent/Search focus effects
     }
-  }
 
-  @OptIn(ExperimentalCoroutinesApi::class)
-  @Test
-  fun collapsed_showsSearchBar() = runTest {
-    // allow VM init to complete
-    // (no need to call advanceUntilIdle with instrumented tests)
-    setSheet(BottomSheetState.COLLAPSED)
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-  }
+    @Test
+    fun collapsed_showsSearchBar() {
+        setSheet(BottomSheetState.COLLAPSED)
+        rule.onNodeWithText("Search activities").assertIsDisplayed()
+    }
 
-  @Test
-  fun medium_showsQuickActions() {
-    setSheet(BottomSheetState.MEDIUM)
+    @Test
+    fun medium_showsQuickActions() {
+        setSheet(BottomSheetState.MEDIUM)
 
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithText("Create Memory").assertIsDisplayed()
-    rule.onNodeWithText("Create Event").assertIsDisplayed()
-    rule.onNodeWithText("Filters").assertIsDisplayed()
-  }
+        rule.onNodeWithText("Search activities").assertIsDisplayed()
+        rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+        rule.onNodeWithText("Create Memory").assertIsDisplayed()
+        rule.onNodeWithText("Create Event").assertIsDisplayed()
+        rule.onNodeWithText("Filters").assertIsDisplayed()
+    }
 
-  @Test
-  fun full_showsRecentAndDiscover_whenNotInSearchMode() {
-    setSheet(BottomSheetState.FULL)
+    @Test
+    fun full_showsRecentAndDiscover_whenNotInSearchMode() {
+        setSheet(BottomSheetState.FULL)
 
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Discover").assertIsDisplayed()
-  }
+        rule.onNodeWithText("Search activities").assertIsDisplayed()
+        rule.onNodeWithText("Recent Activities").assertIsDisplayed()
+        rule.onNodeWithText("Discover").assertIsDisplayed()
+    }
 
-  @Test
-  fun searchBar_tapAndType_updatesQuery() {
-    setSheet(BottomSheetState.COLLAPSED)
+    @Test
+    fun searchBar_tapAndType_updatesQuery() {
+        val vm = newVm()
+        setSheet(BottomSheetState.COLLAPSED, vm)
 
-    rule.onNodeWithText("Search activities").performClick()
-    rule.onNodeWithText("Search activities").performTextInput("Test")
+        rule.onNodeWithText("Search activities").performClick()
+        rule.onNodeWithText("Search activities").performTextInput("Test")
 
-    Assert.assertEquals("Test", vm.ui.value.query)
-  }
+        assertEquals("Test", vm.ui.value.query)
+    }
 
-  @OptIn(ExperimentalCoroutinesApi::class)
-  @Test
-  fun searchFocus_requestedAfterOnSearchTapped() = runTest {
-    setSheet(BottomSheetState.FULL)
+    @Test
+    fun searchFocus_requestedAfterOnSearchTapped() {
+        val vm = newVm()
+        setSheet(BottomSheetState.FULL, vm)
 
-    rule.runOnIdle { vm.onSearchTapped() } // sets shouldRequestFocus=true
-    // allow LaunchedEffect to request focus
-    // (instrumented tests process posted tasks automatically)
-    rule.onNodeWithText("Search activities").assertIsFocused()
-  }
+        // Trigger the one-shot focus request from the VM
+        rule.runOnIdle { vm.onSearchTapped() }
+        rule.mainClock.advanceTimeBy(300) // let LaunchedEffect run
+        rule.waitForIdle()
 
-  @Test
-  fun collapsed_notFocusedByDefault() {
-    setSheet(BottomSheetState.COLLAPSED)
-    rule.onNodeWithText("Search activities").assertIsNotFocused()
-  }
+        rule.onNodeWithText("Search activities").assertIsFocused()
+    }
 
-  @Test
-  fun buttons_clickable() {
-    setSheet(BottomSheetState.FULL)
-    rule.onNodeWithText("Create Memory").assertHasClickAction()
-    rule.onNodeWithText("Sports").assertHasClickAction()
-    rule.onNodeWithText("Music").assertHasClickAction()
-  }
+    @Test
+    fun collapsed_notFocusedByDefault() {
+        setSheet(BottomSheetState.COLLAPSED)
+        rule.onNodeWithText("Search activities").assertIsNotFocused()
+    }
 
-  @Test
-  fun searchText_persistsInField() {
-    setSheet(BottomSheetState.COLLAPSED)
-    rule.onNodeWithText("Search activities").performTextInput("Coffee")
-    rule.onNodeWithText("Coffee").assertIsDisplayed()
-  }
+    @Test
+    fun buttons_clickable() {
+        setSheet(BottomSheetState.FULL)
+        rule.onNodeWithText("Create Memory").assertHasClickAction()
+        rule.onNodeWithText("Sports").assertHasClickAction()
+        rule.onNodeWithText("Music").assertHasClickAction()
+    }
+
+    @Test
+    fun searchText_persistsInField() {
+        val vm = newVm()
+        setSheet(BottomSheetState.COLLAPSED, vm)
+
+        rule.onNodeWithText("Search activities").performTextInput("Coffee")
+        rule.onNodeWithText("Coffee").assertIsDisplayed()
+    }
 }
