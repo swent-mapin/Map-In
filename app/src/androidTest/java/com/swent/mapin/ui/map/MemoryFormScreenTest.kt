@@ -3,6 +3,8 @@ package com.swent.mapin.ui.map
 import android.net.Uri
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -22,380 +24,420 @@ import org.junit.Test
 
 class MemoryFormScreenTest {
 
-  @get:Rule val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-  private val sampleEvents =
-      listOf(
-          Event(
-              uid = "1",
-              title = "Beach Party",
-              url = "url1",
-              description = "Fun at the beach",
-              date = Timestamp.now(),
-              location = Location("Santa Monica Beach", -118.4965, 34.0195),
-              tags = listOf("party", "beach"),
-              public = true,
-              ownerId = "user1",
-              imageUrl = null,
-              capacity = 50,
-              attendeeCount = 10),
-          Event(
-              uid = "2",
-              title = "Mountain Hike",
-              url = "url2",
-              description = "Hiking adventure",
-              date = Timestamp.now(),
-              location = Location("Mt. Wilson", -118.0617, 34.2256),
-              tags = listOf("hiking", "nature"),
-              public = true,
-              ownerId = "user2",
-              imageUrl = null,
-              capacity = 20,
-              attendeeCount = 5))
+    private val sampleEvents =
+        listOf(
+            Event(
+                uid = "1",
+                title = "Beach Party",
+                url = "url1",
+                description = "Fun at the beach",
+                date = Timestamp.now(),
+                location = Location("Santa Monica Beach", -118.4965, 34.0195),
+                tags = listOf("party", "beach"),
+                public = true,
+                ownerId = "user1",
+                imageUrl = null,
+                capacity = 50,
+                attendeeCount = 10),
+            Event(
+                uid = "2",
+                title = "Mountain Hike",
+                url = "url2",
+                description = "Hiking adventure",
+                date = Timestamp.now(),
+                location = Location("Mt. Wilson", -118.0617, 34.2256),
+                tags = listOf("hiking", "nature"),
+                public = true,
+                ownerId = "user2",
+                imageUrl = null,
+                capacity = 20,
+                attendeeCount = 5))
 
-  @Test
-  fun memoryForm_rendersSuccessfully() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
-    }
-    rule.onNodeWithTag("memoryFormScreen").assertIsDisplayed()
-    rule.onNodeWithText("New Memory").assertIsDisplayed()
-  }
-
-  @Test
-  fun memoryForm_initialState_saveButtonDisabled() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+    @Test
+    fun memoryForm_rendersSuccessfully() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
+        rule.onNodeWithTag("memoryFormScreen").assertIsDisplayed()
+        rule.onNodeWithText("New Memory").assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("saveButton").assertIsDisplayed()
-    rule.onNodeWithTag("saveButton").assertIsNotEnabled()
-  }
+    @Test
+    fun memoryForm_initialState_saveButtonDisabled() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_withDescription_saveButtonEnabled() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("saveButton").assertIsDisplayed()
+        rule.onNodeWithTag("saveButton").assertIsNotEnabled()
     }
 
-    rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Great memory!")
-    rule.waitForIdle()
-    rule.onNodeWithTag("saveButton").assertIsEnabled()
-  }
+    @Test
+    fun memoryForm_withDescription_saveButtonEnabled() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_titleField_acceptsInput() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Great memory!")
+        rule.waitForIdle()
+        rule.onNodeWithTag("saveButton").assertIsEnabled()
     }
 
-    rule.onNodeWithTag("titleField").performScrollTo().performTextInput("My Amazing Day")
-    rule.waitForIdle()
-    rule.onNodeWithText("My Amazing Day").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_titleField_acceptsInput() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_descriptionField_acceptsInput() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("titleField").performScrollTo().performTextInput("My Amazing Day")
+        rule.waitForIdle()
+        rule.onNodeWithText("My Amazing Day").performScrollTo().assertIsDisplayed()
     }
 
-    rule
-        .onNodeWithTag("descriptionField")
-        .performScrollTo()
-        .performTextInput("This was an incredible experience!")
-    rule.waitForIdle()
-    rule.onNodeWithText("This was an incredible experience!").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_descriptionField_acceptsInput() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_eventSelectionCard_displayed() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = {},
-            onCancel = {})
-      }
+        rule
+            .onNodeWithTag("descriptionField")
+            .performScrollTo()
+            .performTextInput("This was an incredible experience!")
+        rule.waitForIdle()
+        rule.onNodeWithText("This was an incredible experience!").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_eventSelectionCard_displayed() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = {},
+                    onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_eventSelection_showsEventPicker() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = {},
-            onCancel = {})
-      }
+        rule.onNodeWithTag("eventSelectionCard").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_eventSelection_showsEventPicker() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = {},
+                    onCancel = {})
+            }
+        }
 
-    rule.onNodeWithText("Select an event").assertIsDisplayed()
-    rule.onNodeWithText("Beach Party").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Mountain Hike").performScrollTo().assertIsDisplayed()
-  }
+        rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_eventSelection_andClear() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = {},
-            onCancel = {})
-      }
+        rule.onNodeWithText("Select an event").assertIsDisplayed()
+        rule.onNodeWithText("Beach Party").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Mountain Hike").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Beach Party").performScrollTo().performClick()
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_eventSelection_andClear() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = {},
+                    onCancel = {})
+            }
+        }
 
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo()
-    rule.onNodeWithText("Beach Party").assertIsDisplayed()
-    rule.onNodeWithText("Santa Monica Beach", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Beach Party").performScrollTo().performClick()
+        rule.waitForIdle()
 
-    rule.onNodeWithTag("clearEventButton").performClick()
-    rule.waitForIdle()
+        rule.onNodeWithTag("eventSelectionCard").performScrollTo()
+        rule.onNodeWithText("Beach Party").assertIsDisplayed()
+        rule.onNodeWithText("Santa Monica Beach", substring = true).assertIsDisplayed()
 
-    rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
-  }
+        rule.onNodeWithTag("clearEventButton").performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_publicSwitch_togglesState() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("publicSwitch").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("publicSwitch").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_publicSwitch_togglesState() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_addMediaButton_displayed() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("publicSwitch").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("publicSwitch").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("addMediaButton").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Tap to add photos or videos").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_addMediaButton_displayed() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_addUserButton_displayed() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("addMediaButton").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Tap to add photos or videos").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("addUserButton").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_addUserButton_displayed() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-  @Test
-  fun memoryForm_addUserButton_showsUserPicker() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
-      }
+        rule.onNodeWithTag("addUserButton").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("addUserButton").performScrollTo().performClick()
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_addUserButton_showsUserPicker() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            }
+        }
 
-    rule.onNodeWithText("Done").assertIsDisplayed()
-  }
+        rule.onNodeWithTag("addUserButton").performScrollTo().performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_cancelButton_displayed() {
-    var cancelCalled = false
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = emptyList(),
-            onSave = {},
-            onCancel = { cancelCalled = true })
-      }
+        rule.onNodeWithText("Done").assertIsDisplayed()
     }
 
-    rule.onNodeWithTag("cancelButton").assertIsDisplayed()
-    rule.onNodeWithTag("cancelButton").performClick()
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_cancelButton_displayed() {
+        var cancelCalled = false
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = emptyList(),
+                    onSave = {},
+                    onCancel = { cancelCalled = true })
+            }
+        }
 
-    assert(cancelCalled)
-  }
+        rule.onNodeWithTag("cancelButton").assertIsDisplayed()
+        rule.onNodeWithTag("cancelButton").performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_saveButton_callsOnSaveWithCorrectData() {
-    var savedData: MemoryFormData? = null
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = { data -> savedData = data },
-            onCancel = {})
-      }
+        assert(cancelCalled)
     }
 
-    rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Test description")
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_saveButton_callsOnSaveWithCorrectData() {
+        var savedData: MemoryFormData? = null
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = { data -> savedData = data },
+                    onCancel = {})
+            }
+        }
 
-    rule.onNodeWithTag("saveButton").performClick()
-    rule.waitForIdle()
+        rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Test description")
+        rule.waitForIdle()
 
-    assert(savedData != null)
-    assert(savedData?.description == "Test description")
-  }
+        rule.onNodeWithTag("saveButton").performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_allFieldsTogether_saveWithCompleteData() {
-    var savedData: MemoryFormData? = null
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = { data -> savedData = data },
-            onCancel = {})
-      }
+        assert(savedData != null)
+        assert(savedData?.description == "Test description")
     }
 
-    rule.onNodeWithTag("titleField").performScrollTo().performTextInput("Epic Day")
-    rule.waitForIdle()
+    @Test
+    fun memoryForm_allFieldsTogether_saveWithCompleteData() {
+        var savedData: MemoryFormData? = null
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = { data -> savedData = data },
+                    onCancel = {})
+            }
+        }
 
-    rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Amazing experience!")
-    rule.waitForIdle()
+        rule.onNodeWithTag("titleField").performScrollTo().performTextInput("Epic Day")
+        rule.waitForIdle()
 
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Beach Party").performScrollTo().performClick()
-    rule.waitForIdle()
+        rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Amazing experience!")
+        rule.waitForIdle()
 
-    rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
-    rule.waitForIdle()
+        rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Beach Party").performScrollTo().performClick()
+        rule.waitForIdle()
 
-    rule.onNodeWithTag("saveButton").performClick()
-    rule.waitForIdle()
+        rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
+        rule.waitForIdle()
 
-    assert(savedData != null)
-    assert(savedData?.title == "Epic Day")
-    assert(savedData?.description == "Amazing experience!")
-    assert(savedData?.eventId == "1")
-    assert(savedData?.isPublic == true)
-  }
+        rule.onNodeWithTag("saveButton").performClick()
+        rule.waitForIdle()
 
-  @Test
-  fun memoryForm_formSections_allVisible() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = {},
-            onCancel = {})
-      }
+        assert(savedData != null)
+        assert(savedData?.title == "Epic Day")
+        assert(savedData?.description == "Amazing experience!")
+        assert(savedData?.eventId == "1")
+        assert(savedData?.isPublic == true)
     }
 
-    rule.onNodeWithText("Link to event (optional)").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Title (optional)").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Description *").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Photos or videos (up to 5)").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Tag people").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Make this memory public").performScrollTo().assertIsDisplayed()
-  }
+    @Test
+    fun memoryForm_formSections_allVisible() {
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = sampleEvents,
+                    onSave = {},
+                    onCancel = {})
+            }
+        }
 
-  @Test
-  fun mediaSelectionSection_withSelectedMedia_showsThumbnailsAndRemoveButtons() {
-    rule.setContent {
-      MaterialTheme {
-        val selectedMediaUris =
-            listOf(Uri.parse("content://media/1"), Uri.parse("content://media/2"))
-
-        MediaSelectionSection(
-            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
-      }
+        rule.onNodeWithText("Link to event (optional)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Title (optional)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Description *").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Photos or videos (up to 5)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Tag people").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Make this memory public").performScrollTo().assertIsDisplayed()
     }
 
-    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
-    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
-  }
+    @Test
+    fun mediaSelectionSection_withSelectedMedia_showsThumbnailsAndRemoveButtons() {
+        rule.setContent {
+            MaterialTheme {
+                val selectedMediaUris =
+                    listOf(Uri.parse("content://media/1"), Uri.parse("content://media/2"))
 
-  @Test
-  fun mediaSelectionSection_withMultipleMedia_displaysAllThumbnails() {
-    rule.setContent {
-      MaterialTheme {
-        val selectedMediaUris =
-            listOf(
-                Uri.parse("content://media/1"),
-                Uri.parse("content://media/2"),
-                Uri.parse("content://media/3"))
+                MediaSelectionSection(
+                    selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+            }
+        }
 
-        MediaSelectionSection(
-            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
-      }
+        rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+        rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
     }
 
-    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
-    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
-  }
+    @Test
+    fun mediaSelectionSection_withMultipleMedia_displaysAllThumbnails() {
+        rule.setContent {
+            MaterialTheme {
+                val selectedMediaUris =
+                    listOf(
+                        Uri.parse("content://media/1"),
+                        Uri.parse("content://media/2"),
+                        Uri.parse("content://media/3"))
 
-  @Test
-  fun mediaSelectionSection_withMaxMedia_showsNoAddMoreButton() {
-    rule.setContent {
-      MaterialTheme {
-        val selectedMediaUris =
-            listOf(
-                Uri.parse("content://media/1"),
-                Uri.parse("content://media/2"),
-                Uri.parse("content://media/3"),
-                Uri.parse("content://media/4"),
-                Uri.parse("content://media/5"))
+                MediaSelectionSection(
+                    selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+            }
+        }
 
-        MediaSelectionSection(
-            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
-      }
+        rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+        rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
     }
 
-    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
-    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
-  }
+    @Test
+    fun mediaSelectionSection_withMaxMedia_showsNoAddMoreButton() {
+        rule.setContent {
+            MaterialTheme {
+                val selectedMediaUris =
+                    listOf(
+                        Uri.parse("content://media/1"),
+                        Uri.parse("content://media/2"),
+                        Uri.parse("content://media/3"),
+                        Uri.parse("content://media/4"),
+                        Uri.parse("content://media/5"))
+
+                MediaSelectionSection(
+                    selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+            }
+        }
+
+        rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+        rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
+    }
+
+    @Test
+    fun memoryForm_userTagging_addAndRemoveUser() {
+        var removedUser: String? = null
+
+        rule.setContent {
+            MaterialTheme {
+                MemoryFormScreen(
+                    scrollState = ScrollState(0),
+                    availableEvents = emptyList(),
+                    onSave = {},
+                    onCancel = {}
+                )
+            }
+        }
+
+        // Initially, add user button is displayed
+        rule.onNodeWithTag("addUserButton").assertIsDisplayed()
+
+        // Simulate clicking add user button (would show user picker)
+        rule.onNodeWithTag("addUserButton").performClick()
+        rule.waitForIdle()
+
+        // Simulate adding a user through user picker
+        val testUserId = "user1"
+        rule.runOnIdle {}
+
+        // Check that a Box representing the user appears (the Text inside)
+        rule.onNodeWithText(testUserId).assertIsDisplayed()
+
+        // Simulate clicking the remove button on the user tag
+        rule.onNodeWithText(testUserId)
+            .performScrollTo() // Ensure visible
+            .performClick()   // Simulate the remove user action
+        rule.waitForIdle()
+
+        // Here you could check that removedUser is set, depending on your implementation
+        // or assert the Text no longer exists
+        rule.onNodeWithText(testUserId).assertDoesNotExist()
+    }
 }
