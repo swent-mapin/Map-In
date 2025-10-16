@@ -18,12 +18,15 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
 import io.mockk.*
+import java.util.concurrent.locks.ReentrantLock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.After
 import org.junit.Before
+import org.junit.FixMethodOrder
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 
 /**
  * End-to-End Test: Complete User Profile Management Flow
@@ -39,9 +42,14 @@ import org.junit.runner.RunWith
  *
  * This test uses MockK to mock Firebase authentication and Firestore operations, simulating a real
  * user journey through the app.
+ *
+ * Note: Tests run sequentially using a ReentrantLock to avoid conflicts with static mocks
+ * (mockkStatic). This ensures that even if multiple test classes run in parallel, only one E2E test
+ * runs at a time.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class UserProfileEndToEndTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -66,14 +74,20 @@ class UserProfileEndToEndTest {
   private var testProfile: UserProfile = UserProfile()
 
   companion object {
-    // Lock for synchronizing static mock setup to prevent parallel test conflicts
-    private val mockLock = Any()
+    // Global lock to ensure only ONE E2E test runs at a time across all test instances
+    // This prevents mockkStatic conflicts when tests run in parallel
+    private val globalLock = ReentrantLock()
+
+    @Volatile private var isLocked = false
   }
 
   @Before
   fun setup() {
-    // Synchronize static mock setup to prevent conflicts
-    synchronized(mockLock) {
+    // Acquire the global lock - this will block if another E2E test is running
+    globalLock.lock()
+    isLocked = true
+
+    try {
       context = ApplicationProvider.getApplicationContext()
 
       // Initialize Firebase if not already initialized
@@ -140,12 +154,27 @@ class UserProfileEndToEndTest {
             println("Mock Firestore: Saved profile - name: ${profile.name}, bio: ${profile.bio}")
             Tasks.forResult(null)
           }
+    } catch (e: Exception) {
+      // If setup fails, release the lock
+      if (isLocked && globalLock.isHeldByCurrentThread) {
+        globalLock.unlock()
+        isLocked = false
+      }
+      throw e
     }
   }
 
   @After
   fun tearDown() {
-    synchronized(mockLock) { unmockkAll() }
+    try {
+      unmockkAll()
+    } finally {
+      // Always release the lock, even if teardown fails
+      if (isLocked && globalLock.isHeldByCurrentThread) {
+        globalLock.unlock()
+        isLocked = false
+      }
+    }
   }
 
   /**
