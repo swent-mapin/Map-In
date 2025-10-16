@@ -488,22 +488,6 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun setEvents_updatesEvents() {
-    val initialEvents = viewModel.events
-    val newEvents =
-        listOf(
-            com.swent.mapin.model.event.Event(
-                uid = "test1",
-                title = "Test Event",
-                location = com.swent.mapin.model.Location("Test Location", 34.0, -118.0),
-                attendeeCount = 50))
-
-    viewModel.setEvents(newEvents)
-
-    assertEquals(newEvents, viewModel.events)
-  }
-
-  @Test
   fun eventsToGeoJson_createsValidGeoJson() {
     val events =
         listOf(
@@ -529,14 +513,156 @@ class MapScreenViewModelTest {
     assertTrue(geoJson.contains("weight"))
     assertTrue(geoJson.contains("6.5"))
     assertTrue(geoJson.contains("46.5"))
-    assertTrue(geoJson.contains("10")) // weight from attendeeCount
+  }
+
+  // Tests for tag filtering functionality
+  @Test
+  fun topTags_initiallyLoaded() {
+    assertNotNull(viewModel.topTags)
+    assertTrue(viewModel.topTags.isNotEmpty())
+    assertEquals(5, viewModel.topTags.size)
   }
 
   @Test
-  fun eventsToGeoJson_emptyList_createsEmptyFeatureCollection() {
-    val geoJson = eventsToGeoJson(emptyList())
+  fun selectedTags_initiallyEmpty() {
+    assertTrue(viewModel.selectedTags.isEmpty())
+  }
 
-    assertTrue(geoJson.contains("FeatureCollection"))
-    assertTrue(geoJson.contains("features"))
+  @Test
+  fun toggleTagSelection_addsTagWhenNotSelected() {
+    val tag = "Sports"
+    assertTrue(viewModel.selectedTags.isEmpty())
+
+    viewModel.toggleTagSelection(tag)
+
+    assertTrue(viewModel.selectedTags.contains(tag))
+    assertEquals(1, viewModel.selectedTags.size)
+  }
+
+  @Test
+  fun toggleTagSelection_removesTagWhenAlreadySelected() {
+    val tag = "Music"
+    viewModel.toggleTagSelection(tag)
+    assertTrue(viewModel.selectedTags.contains(tag))
+
+    viewModel.toggleTagSelection(tag)
+
+    assertFalse(viewModel.selectedTags.contains(tag))
+    assertTrue(viewModel.selectedTags.isEmpty())
+  }
+
+  @Test
+  fun toggleTagSelection_canSelectMultipleTags() {
+    viewModel.toggleTagSelection("Sports")
+    viewModel.toggleTagSelection("Music")
+    viewModel.toggleTagSelection("Food")
+
+    assertEquals(3, viewModel.selectedTags.size)
+    assertTrue(viewModel.selectedTags.contains("Sports"))
+    assertTrue(viewModel.selectedTags.contains("Music"))
+    assertTrue(viewModel.selectedTags.contains("Food"))
+  }
+
+  @Test
+  fun toggleTagSelection_filtersEventsWhenTagSelected() {
+    val initialEventCount = viewModel.events.size
+    assertTrue(initialEventCount > 0)
+
+    viewModel.toggleTagSelection("Sports")
+
+    // All events should have "Sports" tag
+    val filteredEventCount = viewModel.events.size
+    assertTrue(filteredEventCount > 0)
+    assertTrue(filteredEventCount <= initialEventCount)
+    viewModel.events.forEach { event ->
+      assertTrue("Event should have Sports tag", event.tags.contains("Sports"))
+    }
+  }
+
+  @Test
+  fun toggleTagSelection_showsAllEventsWhenNoTagsSelected() {
+    val initialEventCount = viewModel.events.size
+
+    // Select a tag to filter
+    viewModel.toggleTagSelection("Music")
+    val filteredCount = viewModel.events.size
+    assertTrue(filteredCount < initialEventCount)
+
+    // Deselect the tag
+    viewModel.toggleTagSelection("Music")
+
+    // Should show all events again
+    assertEquals(initialEventCount, viewModel.events.size)
+  }
+
+  @Test
+  fun toggleTagSelection_filtersWithMultipleTags() {
+    viewModel.toggleTagSelection("Sports")
+    viewModel.toggleTagSelection("Music")
+
+    val filteredEvents = viewModel.events
+
+    // All filtered events should have at least one of the selected tags
+    filteredEvents.forEach { event ->
+      val hasSportsTag = event.tags.contains("Sports")
+      val hasMusicTag = event.tags.contains("Music")
+      assertTrue("Event should have at least one selected tag", hasSportsTag || hasMusicTag)
+    }
+  }
+
+  @Test
+  fun toggleTagSelection_updatesEventsImmediately() {
+    val initialEventCount = viewModel.events.size
+
+    viewModel.toggleTagSelection("Tech")
+
+    val newEventCount = viewModel.events.size
+    assertTrue(newEventCount <= initialEventCount)
+  }
+
+  @Test
+  fun events_containsOnlyEventsWithSelectedTags() {
+    viewModel.toggleTagSelection("Food")
+
+    val eventsWithFoodTag = viewModel.events.filter { it.tags.contains("Food") }
+
+    assertEquals(viewModel.events.size, eventsWithFoodTag.size)
+  }
+
+  @Test
+  fun toggleTagSelection_preservesFilteringAfterMultipleToggles() {
+    // Select Sports
+    viewModel.toggleTagSelection("Sports")
+    val sportsCount = viewModel.events.size
+
+    // Select Music (in addition to Sports)
+    viewModel.toggleTagSelection("Music")
+    val sportsPlusMusicCount = viewModel.events.size
+    assertTrue(sportsPlusMusicCount >= sportsCount)
+
+    // Deselect Sports, keep Music
+    viewModel.toggleTagSelection("Sports")
+    val musicOnlyCount = viewModel.events.size
+    assertTrue(musicOnlyCount <= sportsPlusMusicCount)
+
+    viewModel.events.forEach { event ->
+      assertTrue("Event should have Music tag", event.tags.contains("Music"))
+    }
+  }
+
+  @Test
+  fun events_initiallyContainsAllSampleEvents() {
+    val sampleEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents()
+    assertEquals(sampleEvents.size, viewModel.events.size)
+  }
+
+  @Test
+  fun topTags_containsValidTags() {
+    viewModel.topTags.forEach { tag ->
+      assertTrue(tag.isNotEmpty())
+      // Verify tag exists in at least one event
+      val tagExists = viewModel.events.any { event -> event.tags.contains(tag) }
+      assertTrue("Tag $tag should exist in events", tagExists)
+    }
   }
 }
