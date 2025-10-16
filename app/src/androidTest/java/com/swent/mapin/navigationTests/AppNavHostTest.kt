@@ -15,7 +15,7 @@ class AppNavHostTest {
   @Test
   fun startsOnAuth_whenNotLoggedIn() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = false)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = false, renderMap = false)
     }
 
     composeTestRule
@@ -26,7 +26,7 @@ class AppNavHostTest {
   @Test
   fun startsOnMap_whenLoggedIn() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
     composeTestRule.waitForIdle()
@@ -37,7 +37,7 @@ class AppNavHostTest {
   @Test
   fun navigatesToProfile_fromMap() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
     composeTestRule.waitForIdle()
@@ -57,7 +57,7 @@ class AppNavHostTest {
   @Test
   fun logout_navigatesBackToAuth() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
     composeTestRule.waitForIdle()
@@ -85,7 +85,7 @@ class AppNavHostTest {
   @Test
   fun logout_clearsBackStack() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
     composeTestRule.waitForIdle()
@@ -114,7 +114,7 @@ class AppNavHostTest {
   @Test
   fun logout_fromProfile_cannotNavigateBackToMap() {
     composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
     composeTestRule.waitForIdle()
