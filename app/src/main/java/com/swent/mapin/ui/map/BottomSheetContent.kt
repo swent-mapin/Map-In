@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,7 +97,11 @@ fun BottomSheetContent(
     availableEvents: List<Event> = emptyList(),
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
-    onMemoryCancel: () -> Unit = {}
+    onMemoryCancel: () -> Unit = {},
+    searchResults: List<Event> = emptyList(),
+    isSearchMode: Boolean = false,
+    recentActivities: List<Event> = emptyList(),
+    onEventClick: (Event) -> Unit = {}
 ) {
     val isFull = state == BottomSheetState.FULL
     val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -139,7 +144,6 @@ fun BottomSheetContent(
                 SearchBar(
                     value = searchBarState.query,
                     onValueChange = searchBarState.onQueryChange,
-                    isFull = isFull,
                     onTap = searchBarState.onTap,
                     focusRequester = focusRequester,
                     onSearchAction = { focusManager.clearFocus() },
@@ -151,7 +155,8 @@ fun BottomSheetContent(
                     SearchResultsSection(
                         results = searchResults,
                         query = searchBarState.query,
-                        modifier = Modifier.weight(1f, fill = true))
+                        modifier = Modifier.weight(1f, fill = true),
+                        onEventClick = onEventClick)
                 } else {
                     val contentModifier =
                         if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
@@ -171,10 +176,15 @@ fun BottomSheetContent(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 8.dp))
 
-                        repeat(4) { index ->
-                            ActivityItem(
-                                title = "Activity ${index + 1}",
-                                description = "Example description for activity ${index + 1}.")
+                        if (recentActivities.isNotEmpty()) {
+                            recentActivities.forEach { event ->
+                                ActivityItem(
+                                    title = event.title,
+                                    description = event.location.name,
+                                    modifier = Modifier.clickable { onEventClick(event) })
+                            }
+                        } else {
+                            NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -208,7 +218,8 @@ fun BottomSheetContent(
 private fun SearchResultsSection(
     results: List<Event>,
     query: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onEventClick: (Event) -> Unit = {}
 ) {
     if (results.isEmpty()) {
         NoResultsMessage(query = query, modifier = modifier)
@@ -227,7 +238,10 @@ private fun SearchResultsSection(
         }
 
         items(results) { event ->
-            SearchResultItem(event = event, modifier = Modifier.padding(horizontal = 16.dp))
+            SearchResultItem(
+                event = event,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = { onEventClick(event) })
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -264,11 +278,26 @@ private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SearchResultItem(event: Event, modifier: Modifier = Modifier) {
+private fun NoActivitiesMessage(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "No recent activities", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Your recent activity will appear here once you interact with events or create memories.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 2.dp,
-        modifier = modifier.fillMaxWidth()) {
+        modifier = modifier.fillMaxWidth().clickable { onClick() }) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -312,21 +341,22 @@ private fun SearchResultItem(event: Event, modifier: Modifier = Modifier) {
 private fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
-    isFull: Boolean,
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isFocused by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         placeholder = { Text("Search activities") },
-        modifier =
-            modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
                 if (focusState.isFocused) {
                     onTap()

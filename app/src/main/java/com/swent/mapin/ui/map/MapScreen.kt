@@ -152,7 +152,13 @@ fun MapScreen(
                 standardStyleState = standardStyleState,
                 heatmapSource = heatmapSource,
                 isDarkTheme = isDarkTheme,
-                onEventClick = onEventClick)
+                onEventClick = { event ->
+                    // record recent activity and show sheet medium so the user can see details
+                    viewModel.recordRecentActivity(event)
+                    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+                    // propagate to external handler (e.g., navigate to details)
+                    onEventClick(event)
+                })
         }
 
         TopGradient()
@@ -200,6 +206,13 @@ fun MapScreen(
                 isSearchMode = viewModel.isSearchMode,
                 showMemoryForm = viewModel.showMemoryForm,
                 availableEvents = viewModel.availableEvents,
+                recentActivities = viewModel.recentActivities,
+                onEventClick = { event ->
+                    // record recent activity, collapse/adjust sheet, and forward event
+                    viewModel.recordRecentActivity(event)
+                    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+                    onEventClick(event)
+                },
                 onCreateMemoryClick = viewModel::showMemoryForm,
                 onMemorySave = viewModel::onMemorySave,
                 onMemoryCancel = viewModel::onMemoryCancel)

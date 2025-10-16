@@ -129,6 +129,24 @@ class MapScreenViewModel(
   val events: List<Event>
     get() = _events
 
+  // Recent activities shown in the bottom sheet (most recent first)
+  private var _recentActivities by mutableStateOf<List<Event>>(emptyList())
+  val recentActivities: List<Event>
+    get() = _recentActivities
+
+  private val MAX_RECENT_ACTIVITIES = 8
+
+  /**
+   * Records a recent activity (event) — places it at the front of the list, removes duplicates,
+   * and keeps the list bounded to [MAX_RECENT_ACTIVITIES].
+   */
+  fun recordRecentActivity(event: Event) {
+    // Remove any existing entry with the same uid then prepend
+    val without = _recentActivities.filterNot { it.uid == event.uid }
+    val updated = listOf(event) + without
+    _recentActivities = updated.take(MAX_RECENT_ACTIVITIES)
+  }
+
   init {
     // Preload events both for searching and memory linking
     loadAllEvents()
