@@ -69,7 +69,8 @@ fun EventDetailSheet(
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
-      BottomSheetState.COLLAPSED -> CollapsedEventContent(event = event, onShare = onShare, onClose = onClose)
+      BottomSheetState.COLLAPSED ->
+          CollapsedEventContent(event = event, onShare = onShare, onClose = onClose)
       BottomSheetState.MEDIUM -> {
         // Header with close and share buttons
         Row(
@@ -130,7 +131,12 @@ fun EventDetailSheet(
 
 /** Collapsed state: Shows only title and category/tag */
 @Composable
-private fun CollapsedEventContent(event: Event, onShare: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+private fun CollapsedEventContent(
+    event: Event,
+    onShare: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
   Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
