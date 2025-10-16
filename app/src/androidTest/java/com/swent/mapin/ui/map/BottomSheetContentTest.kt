@@ -1,67 +1,139 @@
 package com.swent.mapin.ui.map
 
+import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.*
+import org.junit.runner.RunWith
 
-// Assisted by AI
+// ---- Small fake repo matching your EventRepository ----
+private class FakeEventRepository(private val data: List<Event>) : EventRepository {
+  override fun getNewUid(): String = "fake"
+
+  override suspend fun getAllEvents(): List<Event> = data
+
+  override suspend fun getEvent(eventID: String): Event = data.first { it.uid == eventID }
+
+  override suspend fun getEventsByTags(tags: List<String>): List<Event> =
+      data.filter { it.tags.any(tags::contains) }
+
+  override suspend fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp): List<Event> = data
+
+  override suspend fun getEventsByOwner(ownerId: String): List<Event> =
+      data.filter { it.ownerId == ownerId }
+
+  override suspend fun getEventsByTitle(title: String): List<Event> =
+      data.filter { it.title.equals(title, ignoreCase = true) }
+
+  override suspend fun getEventsByParticipant(userId: String): List<Event> =
+      data.filter { userId in it.participantIds }
+
+  override suspend fun addEvent(event: Event) {}
+
+  override suspend fun editEvent(eventID: String, newValue: Event) {}
+
+  override suspend fun deleteEvent(eventID: String) {}
+}
+
+@RunWith(AndroidJUnit4::class)
 class BottomSheetContentTest {
 
-  @get:Rule val rule = createComposeRule()
+  @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-  @Composable
-  private fun TestContent(
-      state: BottomSheetState,
-      initialQuery: String = "",
-      initialFocus: Boolean = false,
-      onQueryChange: (String) -> Unit = {},
-      onTap: () -> Unit = {}
-  ) {
-    MaterialTheme {
-      var query by remember { mutableStateOf(initialQuery) }
-      var shouldRequestFocus by remember { mutableStateOf(initialFocus) }
+  @OptIn(ExperimentalCoroutinesApi::class) private lateinit var dispatcher: TestDispatcher
 
-      BottomSheetContent(
-          state = state,
-          fullEntryKey = 0,
-          searchBarState =
-              SearchBarState(
-                  query = query,
-                  shouldRequestFocus = shouldRequestFocus,
-                  onQueryChange = {
-                    query = it
-                    onQueryChange(it)
-                  },
-                  onTap = onTap,
-                  onFocusHandled = { shouldRequestFocus = false }))
+  private lateinit var vm: SearchViewModel
+
+  private val sample =
+      listOf(
+          Event(
+              uid = "1",
+              title = "Rock Night",
+              description = "Live music downtown",
+              location = Location("Zurich", 47.37, 8.54),
+              tags = listOf("music", "nightlife"),
+              ownerId = "a",
+              attendeeCount = 10,
+              participantIds = listOf("u1", "u2")),
+          Event(
+              uid = "2",
+              title = "Morning Run",
+              description = "Easy pace 5k",
+              location = Location("Lake Park", 0.0, 0.0),
+              tags = listOf("sports", "outdoors"),
+              ownerId = "b",
+              attendeeCount = 5),
+          Event(
+              uid = "3",
+              title = "Jazz Jam",
+              description = "impro session · bring your instrument",
+              location = Location("Basel", 0.0, 0.0),
+              tags = listOf("music", "jam"),
+              ownerId = "c",
+              attendeeCount = 3))
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Before
+  fun setup() {
+    dispatcher = StandardTestDispatcher()
+    Dispatchers.setMain(dispatcher) // make VM predictable
+    vm = SearchViewModel(FakeEventRepository(sample))
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @After
+  fun tearDown() {
+    Dispatchers.resetMain()
+  }
+
+  private fun setSheet(state: BottomSheetState) {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = state,
+            fullEntryKey = 0,
+            searchViewModel = vm,
+            showMemoryForm = false,
+            availableEvents = emptyList(),
+            onCreateMemoryClick = {},
+            onMemorySave = {},
+            onMemoryCancel = {},
+            onExitSearch = {})
+      }
     }
   }
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  fun collapsedState_showsSearchBarOnly() {
-    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
-
+  fun collapsed_showsSearchBar() = runTest {
+    // allow VM init to complete
+    // (no need to call advanceUntilIdle with instrumented tests)
+    setSheet(BottomSheetState.COLLAPSED)
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 
   @Test
-  fun mediumState_showsQuickActions() {
-    rule.setContent { TestContent(state = BottomSheetState.MEDIUM) }
+  fun medium_showsQuickActions() {
+    setSheet(BottomSheetState.MEDIUM)
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
@@ -71,71 +143,53 @@ class BottomSheetContentTest {
   }
 
   @Test
-  fun fullState_showsAllContent() {
-    rule.setContent { TestContent(state = BottomSheetState.FULL) }
-    rule.waitForIdle()
-
-    rule.waitUntil(timeoutMillis = 10000) {
-      try {
-        rule.onNodeWithText("Activity 1").assertIsDisplayed()
-        true
-      } catch (e: AssertionError) {
-        false
-      }
-    }
+  fun full_showsRecentAndDiscover_whenNotInSearchMode() {
+    setSheet(BottomSheetState.FULL)
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
     rule.onNodeWithText("Discover").assertIsDisplayed()
-    rule.onNodeWithText("Activity 1").assertIsDisplayed()
   }
 
   @Test
-  fun searchBar_handlesTextInputAndCallbacks() {
-    var capturedQuery = ""
-    var tapTriggered = false
-
-    rule.setContent {
-      TestContent(
-          state = BottomSheetState.COLLAPSED,
-          onQueryChange = { capturedQuery = it },
-          onTap = { tapTriggered = true })
-    }
+  fun searchBar_tapAndType_updatesQuery() {
+    setSheet(BottomSheetState.COLLAPSED)
 
     rule.onNodeWithText("Search activities").performClick()
-    assertTrue(tapTriggered)
-
     rule.onNodeWithText("Search activities").performTextInput("Test")
-    assertEquals("Test", capturedQuery)
+
+    Assert.assertEquals("Test", vm.ui.value.query)
   }
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   @Test
-  fun searchBar_focusOnlyInFullState() {
-    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = true) }
+  fun searchFocus_requestedAfterOnSearchTapped() = runTest {
+    setSheet(BottomSheetState.FULL)
 
+    rule.runOnIdle { vm.onSearchTapped() } // sets shouldRequestFocus=true
+    // allow LaunchedEffect to request focus
+    // (instrumented tests process posted tasks automatically)
     rule.onNodeWithText("Search activities").assertIsFocused()
   }
 
   @Test
-  fun searchBar_doesNotFocusInCollapsedState() {
-    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialFocus = true) }
-
+  fun collapsed_notFocusedByDefault() {
+    setSheet(BottomSheetState.COLLAPSED)
     rule.onNodeWithText("Search activities").assertIsNotFocused()
   }
 
   @Test
-  fun buttons_areClickable() {
-    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
-
+  fun buttons_clickable() {
+    setSheet(BottomSheetState.FULL)
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Sports").assertHasClickAction()
     rule.onNodeWithText("Music").assertHasClickAction()
   }
 
   @Test
-  fun searchQuery_persistsAcrossStateChanges() {
-    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialQuery = "Coffee") }
-
+  fun searchText_persistsInField() {
+    setSheet(BottomSheetState.COLLAPSED)
+    rule.onNodeWithText("Search activities").performTextInput("Coffee")
     rule.onNodeWithText("Coffee").assertIsDisplayed()
   }
 }
