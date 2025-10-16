@@ -459,9 +459,3 @@ fun AddEventPopUp(
             }
       }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun AddEventPopUpPreview() {
-  MapInTheme { AddEventPopUp() }
-}
