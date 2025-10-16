@@ -197,6 +197,9 @@ fun MapScreen(
                       onFocusHandled = viewModel::onSearchFocusHandled),
               showMemoryForm = viewModel.showMemoryForm,
               availableEvents = viewModel.availableEvents,
+              topTags = viewModel.topTags,
+              selectedTags = viewModel.selectedTags,
+              onTagClick = viewModel::toggleTagSelection,
               onCreateMemoryClick = viewModel::showMemoryForm,
               onMemorySave = viewModel::onMemorySave,
               onMemoryCancel = viewModel::onMemoryCancel)

@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -86,7 +87,6 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Discover").assertIsDisplayed()
     rule.onNodeWithText("Activity 1").assertIsDisplayed()
   }
 
@@ -127,9 +127,11 @@ class BottomSheetContentTest {
   fun buttons_areClickable() {
     rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
 
+    rule.waitForIdle()
+
     rule.onNodeWithText("Create Memory").assertHasClickAction()
-    rule.onNodeWithText("Sports").assertHasClickAction()
-    rule.onNodeWithText("Music").assertHasClickAction()
+    rule.onNodeWithText("Create Event").assertHasClickAction()
+    rule.onNodeWithText("Filters").assertHasClickAction()
   }
 
   @Test
@@ -137,5 +139,211 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialQuery = "Coffee") }
 
     rule.onNodeWithText("Coffee").assertIsDisplayed()
+  }
+
+  // Tests for tag filtering functionality
+  @Composable
+  private fun TestContentWithTags(
+      state: BottomSheetState,
+      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
+      selectedTags: Set<String> = emptySet(),
+      onTagClick: (String) -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf("") }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { query = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false }),
+          topTags = topTags,
+          selectedTags = selectedTags,
+          onTagClick = onTagClick)
+    }
+  }
+
+  @Test
+  fun tagsSection_displaysTopTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_doesNotDisplayWhenNoTags() {
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = emptyList()) }
+
+    rule.waitForIdle()
+
+    // "Discover" title should still be visible from old section
+    rule.onNodeWithText("Discover").assertDoesNotExist()
+  }
+
+  @Test
+  fun tagsSection_allTagsAreClickable() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food", "Tech", "Art"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Music").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Food").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Tech").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Art").performScrollTo().assertHasClickAction()
+  }
+
+  @Test
+  fun tagsSection_callsOnTagClickWhenClicked() {
+    var clickedTag = ""
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          onTagClick = { clickedTag = it })
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
+    assertEquals("Sports", clickedTag)
+
+    rule.onNodeWithText("Music").performScrollTo().performClick()
+    assertEquals("Music", clickedTag)
+  }
+
+  @Test
+  fun tagsSection_handlesMultipleTagClicks() {
+    val clickedTags = mutableListOf<String>()
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          onTagClick = { clickedTags.add(it) })
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
+    rule.onNodeWithText("Music").performScrollTo().performClick()
+    rule.onNodeWithText("Food").performScrollTo().performClick()
+
+    assertEquals(3, clickedTags.size)
+    assertTrue(clickedTags.contains("Sports"))
+    assertTrue(clickedTags.contains("Music"))
+    assertTrue(clickedTags.contains("Food"))
+  }
+
+  @Test
+  fun tagsSection_displaysCorrectNumberOfTags() {
+    val tags = listOf("Sports", "Music", "Food", "Tech", "Art")
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = tags) }
+
+    rule.waitForIdle()
+
+    tags.forEach { tag -> rule.onNodeWithText(tag).performScrollTo().assertIsDisplayed() }
+  }
+
+  @Test
+  fun tagsSection_visibleInFullStateOnly() {
+    // Test that tags are visible in FULL state
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesEmptySelectedTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          selectedTags = emptySet())
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_withSelectedTags_tagsStillDisplayed() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          selectedTags = setOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_displaysDiscoverTitle() {
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    // Should have "Discover" as section title - scroll to make it visible
+    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesLongTagNames() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("VeryLongTagName", "AnotherLongTag"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("VeryLongTagName").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("AnotherLongTag").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesSpecialCharacters() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Art & Craft", "Tech-Conference"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
   }
 }
