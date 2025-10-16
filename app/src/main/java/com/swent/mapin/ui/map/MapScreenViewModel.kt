@@ -147,7 +147,24 @@ class MapScreenViewModel(
     _recentActivities = updated.take(MAX_RECENT_ACTIVITIES)
   }
 
+  // Tag filtering
+  private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
+  val selectedTags: Set<String>
+    get() = _selectedTags
+
+  private var _topTags by mutableStateOf<List<String>>(emptyList())
+  val topTags: List<String>
+    get() = _topTags
+
+  // Event data for display on the map
+  private var _events by mutableStateOf(SampleEventRepository.getSampleEvents())
+  val events: List<Event>
+    get() = _events
+
   init {
+    // Preload events so the form has immediate data
+    loadEvents()
+    _topTags = SampleEventRepository.getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
@@ -192,10 +209,10 @@ class MapScreenViewModel(
   }
 
   fun calculateTargetState(
-    currentHeightPx: Float,
-    collapsedPx: Float,
-    mediumPx: Float,
-    fullPx: Float
+      currentHeightPx: Float,
+      collapsedPx: Float,
+      mediumPx: Float,
+      fullPx: Float
   ): BottomSheetState {
     return when {
       currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
@@ -436,13 +453,33 @@ class MapScreenViewModel(
 
   fun setEvents(newEvents: List<Event>) {
     _events = newEvents
+  /** Toggle tag selection and filter events accordingly */
+  fun toggleTagSelection(tag: String) {
+    _selectedTags =
+        if (_selectedTags.contains(tag)) {
+          _selectedTags - tag
+        } else {
+          _selectedTags + tag
+        }
+    filterEvents()
+  }
+
+  /** Filter events based on selected tags */
+  private fun filterEvents() {
+    val allEvents = SampleEventRepository.getSampleEvents()
+    _events =
+        if (_selectedTags.isEmpty()) {
+          allEvents
+        } else {
+          allEvents.filter { event -> event.tags.any { tag -> _selectedTags.contains(tag) } }
+        }
   }
 }
 
 @Composable
 fun rememberMapScreenViewModel(
-  sheetConfig: BottomSheetConfig,
-  initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
+    sheetConfig: BottomSheetConfig,
+    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
@@ -451,20 +488,20 @@ fun rememberMapScreenViewModel(
 
   return viewModel {
     MapScreenViewModel(
-      initialSheetState = initialSheetState,
-      sheetConfig = sheetConfig,
-      onClearFocus = { focusManager.clearFocus(force = true) },
-      applicationContext = appContext)
+        initialSheetState = initialSheetState,
+        sheetConfig = sheetConfig,
+        onClearFocus = { focusManager.clearFocus(force = true) },
+        applicationContext = appContext)
   }
 }
 
 /** Converts events into a GeoJSON payload consumable by Mapbox heatmaps. */
 fun eventsToGeoJson(events: List<Event>): String {
   val features =
-    events.map { event ->
-      Feature.fromGeometry(
-        Point.fromLngLat(event.location.longitude, event.location.latitude),
-        JsonObject().apply { addProperty("weight", event.attendeeCount) })
-    }
+      events.map { event ->
+        Feature.fromGeometry(
+            Point.fromLngLat(event.location.longitude, event.location.latitude),
+            JsonObject().apply { addProperty("weight", event.attendeeCount) })
+      }
   return FeatureCollection.fromFeatures(features).toJson()
 }

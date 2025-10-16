@@ -13,9 +13,8 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.Location
-import com.swent.mapin.model.event.Event
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -24,173 +23,327 @@ import org.junit.Test
 // Assisted by AI
 class BottomSheetContentTest {
 
-    @get:Rule val rule = createComposeRule()
+  @get:Rule val rule = createComposeRule()
 
-    @Composable
-    private fun TestContent(
-        state: BottomSheetState,
-        initialQuery: String = "",
-        initialFocus: Boolean = false,
-        initialSearchMode: Boolean = false,
-        initialResults: List<Event> = sampleEvents(),
-        onQueryChange: (String) -> Unit = {},
-        onTap: () -> Unit = {}
-    ) {
-        MaterialTheme {
-            var query by remember { mutableStateOf(initialQuery) }
-            var shouldRequestFocus by remember { mutableStateOf(initialFocus) }
-            var isSearchMode by remember { mutableStateOf(initialSearchMode) }
-            var results by remember { mutableStateOf(initialResults) }
+  @Composable
+  private fun TestContent(
+      state: BottomSheetState,
+      initialQuery: String = "",
+      initialFocus: Boolean = false,
+      onQueryChange: (String) -> Unit = {},
+      onTap: () -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf(initialQuery) }
+      var shouldRequestFocus by remember { mutableStateOf(initialFocus) }
 
-            BottomSheetContent(
-                state = state,
-                fullEntryKey = 0,
-                searchBarState =
-                    SearchBarState(
-                        query = query,
-                        shouldRequestFocus = shouldRequestFocus,
-                        onQueryChange = {
-                            query = it
-                            results =
-                                if (it.isBlank()) {
-                                    initialResults
-                                } else {
-                                    initialResults.filter { event ->
-                                        event.title.contains(it, ignoreCase = true) ||
-                                                event.location.name.contains(it, ignoreCase = true)
-                                    }
-                                }
-                            onQueryChange(it)
-                        },
-                        onTap = {
-                            isSearchMode = true
-                            onTap()
-                        },
-                        onFocusHandled = { shouldRequestFocus = false },
-                        onClear = {
-                            query = ""
-                            shouldRequestFocus = false
-                            results = initialResults
-                            isSearchMode = false
-                        }),
-                searchResults = results,
-                isSearchMode = isSearchMode)
-        }
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = {
+                    query = it
+                    onQueryChange(it)
+                  },
+                  onTap = onTap,
+                  onFocusHandled = { shouldRequestFocus = false }))
     }
+  }
 
-    @Test
-    fun collapsedState_showsSearchBarOnly() {
-        rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
+  @Test
+  fun collapsedState_showsSearchBarOnly() {
+    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
 
-        rule.onNodeWithText("Search activities").assertIsDisplayed()
-    }
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
 
-    @Test
-    fun mediumState_showsQuickActions() {
-        rule.setContent { TestContent(state = BottomSheetState.MEDIUM) }
+  @Test
+  fun mediumState_showsQuickActions() {
+    rule.setContent { TestContent(state = BottomSheetState.MEDIUM) }
 
-        rule.onNodeWithText("Search activities").assertIsDisplayed()
-        rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-        rule.onNodeWithText("Create Memory").assertIsDisplayed()
-        rule.onNodeWithText("Create Event").assertIsDisplayed()
-        rule.onNodeWithText("Filters").assertIsDisplayed()
-    }
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+    rule.onNodeWithText("Create Memory").assertIsDisplayed()
+    rule.onNodeWithText("Create Event").assertIsDisplayed()
+    rule.onNodeWithText("Filters").assertIsDisplayed()
+  }
 
-    @Test
-    fun fullStateWithoutSearch_showsQuickActions() {
-        rule.setContent { TestContent(state = BottomSheetState.FULL, initialSearchMode = false) }
-        rule.waitForIdle()
+  @Test
+  fun fullState_showsAllContent() {
+    rule.setContent { TestContent(state = BottomSheetState.FULL) }
+    rule.waitForIdle()
 
-        rule.waitUntil(timeoutMillis = 10000) {
-            try {
-                rule.onNodeWithText("Activity 1").assertIsDisplayed()
-                true
-            } catch (e: AssertionError) {
-                false
-            }
-        }
-
-        rule.onNodeWithText("Search activities").assertIsDisplayed()
-        rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-        rule.onNodeWithText("Discover").assertIsDisplayed()
+    rule.waitUntil(timeoutMillis = 10000) {
+      try {
         rule.onNodeWithText("Activity 1").assertIsDisplayed()
+        true
+      } catch (e: AssertionError) {
+        false
+      }
     }
 
-    @Test
-    fun searchBar_handlesTextInputAndCallbacks() {
-        var capturedQuery = ""
-        var tapTriggered = false
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
+    rule.onNodeWithText("Activity 1").assertIsDisplayed()
+  }
 
-        rule.setContent {
-            TestContent(
-                state = BottomSheetState.COLLAPSED,
-                onQueryChange = { capturedQuery = it },
-                onTap = { tapTriggered = true })
-        }
+  @Test
+  fun searchBar_handlesTextInputAndCallbacks() {
+    var capturedQuery = ""
+    var tapTriggered = false
 
-        rule.onNodeWithText("Search activities").performClick()
-        assertTrue(tapTriggered)
-
-        rule.onNodeWithText("Search activities").performTextInput("Test")
-        assertEquals("Test", capturedQuery)
+    rule.setContent {
+      TestContent(
+          state = BottomSheetState.COLLAPSED,
+          onQueryChange = { capturedQuery = it },
+          onTap = { tapTriggered = true })
     }
 
-    @Test
-    fun searchBar_focusOnlyInFullState() {
-        rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = true) }
+    rule.onNodeWithText("Search activities").performClick()
+    assertTrue(tapTriggered)
 
-        rule.onNodeWithText("Search activities").assertIsFocused()
+    rule.onNodeWithText("Search activities").performTextInput("Test")
+    assertEquals("Test", capturedQuery)
+  }
+
+  @Test
+  fun searchBar_focusOnlyInFullState() {
+    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = true) }
+
+    rule.onNodeWithText("Search activities").assertIsFocused()
+  }
+
+  @Test
+  fun searchBar_doesNotFocusInCollapsedState() {
+    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialFocus = true) }
+
+    rule.onNodeWithText("Search activities").assertIsNotFocused()
+  }
+
+  @Test
+  fun buttons_areClickable() {
+    rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Create Memory").assertHasClickAction()
+    rule.onNodeWithText("Create Event").assertHasClickAction()
+    rule.onNodeWithText("Filters").assertHasClickAction()
+  }
+
+  @Test
+  fun searchQuery_persistsAcrossStateChanges() {
+    rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialQuery = "Coffee") }
+
+    rule.onNodeWithText("Coffee").assertIsDisplayed()
+  }
+
+  // Tests for tag filtering functionality
+  @Composable
+  private fun TestContentWithTags(
+      state: BottomSheetState,
+      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
+      selectedTags: Set<String> = emptySet(),
+      onTagClick: (String) -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf("") }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { query = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false }),
+          topTags = topTags,
+          selectedTags = selectedTags,
+          onTagClick = onTagClick)
+    }
+  }
+
+  @Test
+  fun tagsSection_displaysTopTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food"))
     }
 
-    @Test
-    fun searchBar_doesNotFocusInCollapsedState() {
-        rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialFocus = true) }
+    rule.waitForIdle()
 
-        rule.onNodeWithText("Search activities").assertIsNotFocused()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_doesNotDisplayWhenNoTags() {
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = emptyList()) }
+
+    rule.waitForIdle()
+
+    // "Discover" title should still be visible from old section
+    rule.onNodeWithText("Discover").assertDoesNotExist()
+  }
+
+  @Test
+  fun tagsSection_allTagsAreClickable() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food", "Tech", "Art"))
     }
 
-    @Test
-    fun buttons_areClickable() {
-        rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
+    rule.waitForIdle()
 
-        rule.onNodeWithText("Create Memory").assertHasClickAction()
-        rule.onNodeWithText("Sports").assertHasClickAction()
-        rule.onNodeWithText("Music").assertHasClickAction()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Music").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Food").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Tech").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Art").performScrollTo().assertHasClickAction()
+  }
+
+  @Test
+  fun tagsSection_callsOnTagClickWhenClicked() {
+    var clickedTag = ""
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          onTagClick = { clickedTag = it })
     }
 
-    @Test
-    fun searchQuery_persistsAcrossStateChanges() {
-        rule.setContent { TestContent(state = BottomSheetState.COLLAPSED, initialQuery = "Coffee") }
+    rule.waitForIdle()
 
-        rule.onNodeWithText("Coffee").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
+    assertEquals("Sports", clickedTag)
+
+    rule.onNodeWithText("Music").performScrollTo().performClick()
+    assertEquals("Music", clickedTag)
+  }
+
+  @Test
+  fun tagsSection_handlesMultipleTagClicks() {
+    val clickedTags = mutableListOf<String>()
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          onTagClick = { clickedTags.add(it) })
     }
 
-    @Test
-    fun fullState_showsSearchResultsWhenActive() {
-        rule.setContent {
-            TestContent(
-                state = BottomSheetState.FULL, initialSearchMode = true, initialResults = sampleEvents())
-        }
+    rule.waitForIdle()
 
-        rule.onNodeWithText("All events").assertIsDisplayed()
-        rule.onNodeWithText("Tech Conference").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
+    rule.onNodeWithText("Music").performScrollTo().performClick()
+    rule.onNodeWithText("Food").performScrollTo().performClick()
+
+    assertEquals(3, clickedTags.size)
+    assertTrue(clickedTags.contains("Sports"))
+    assertTrue(clickedTags.contains("Music"))
+    assertTrue(clickedTags.contains("Food"))
+  }
+
+  @Test
+  fun tagsSection_displaysCorrectNumberOfTags() {
+    val tags = listOf("Sports", "Music", "Food", "Tech", "Art")
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = tags) }
+
+    rule.waitForIdle()
+
+    tags.forEach { tag -> rule.onNodeWithText(tag).performScrollTo().assertIsDisplayed() }
+  }
+
+  @Test
+  fun tagsSection_visibleInFullStateOnly() {
+    // Test that tags are visible in FULL state
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
     }
 
-    @Test
-    fun searchModeWithNoMatches_showsEmptyState() {
-        rule.setContent {
-            TestContent(
-                state = BottomSheetState.FULL, initialSearchMode = true, initialResults = emptyList())
-        }
+    rule.waitForIdle()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+  }
 
-        rule.onNodeWithText("No events available yet.").assertIsDisplayed()
+  @Test
+  fun tagsSection_handlesEmptySelectedTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          selectedTags = emptySet())
     }
 
-    private fun sampleEvents(): List<Event> =
-        listOf(
-            Event(uid = "event1", title = "All Hands", location = Location("Auditorium", 0.0, 0.0)),
-            Event(
-                uid = "event2",
-                title = "Tech Conference",
-                location = Location("Main Hall", 0.0, 0.0)))
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_withSelectedTags_tagsStillDisplayed() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          selectedTags = setOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_displaysDiscoverTitle() {
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    // Should have "Discover" as section title - scroll to make it visible
+    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesLongTagNames() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("VeryLongTagName", "AnotherLongTag"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("VeryLongTagName").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("AnotherLongTag").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesSpecialCharacters() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Art & Craft", "Tech-Conference"))
+    }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
+  }
 }

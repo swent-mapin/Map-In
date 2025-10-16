@@ -11,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -84,10 +86,14 @@ data class SearchBarState(
  * @param searchBarState search bar state and callbacks
  * @param showMemoryForm Whether to show memory creation form
  * @param availableEvents List of events that can be linked to memories
+ * @param topTags List of top tags to display in the discover section
+ * @param selectedTags Set of currently selected tags
+ * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BottomSheetContent(
     state: BottomSheetState,
@@ -95,6 +101,9 @@ fun BottomSheetContent(
     searchBarState: SearchBarState,
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
+    topTags: List<String> = emptyList(),
+    selectedTags: Set<String> = emptySet(),
+    onTagClick: (String) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
@@ -193,18 +202,10 @@ fun BottomSheetContent(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = "Discover",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp))
-
-                        val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-                        categories.forEach { category ->
-                            OutlinedButton(
-                                onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
+              // Dynamic tag selection
+              if (topTags.isNotEmpty()) {
+                TagsSection(topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
+              }
 
                         Spacer(modifier = Modifier.height(24.dp))
                     }
@@ -438,5 +439,60 @@ private fun ActivityItem(title: String, description: String, modifier: Modifier 
     Text(text = title, style = MaterialTheme.typography.titleSmall)
     Spacer(modifier = Modifier.height(4.dp))
     Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+  }
+}
+
+/** Tag item for discover section - displays tag text and handles selection. */
+@Composable
+private fun TagItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+  val contentColor =
+      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+
+  OutlinedButton(
+      onClick = onClick,
+      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = backgroundColor, contentColor = contentColor)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis)
+      }
+}
+
+/** Section displaying dynamic tags - replaces the hardcoded discover section. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TagsSection(
+    topTags: List<String>,
+    selectedTags: Set<String>,
+    onTagClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Discover",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 8.dp))
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          topTags.forEach { tag ->
+            val isSelected = selectedTags.contains(tag)
+            TagItem(text = tag, isSelected = isSelected, onClick = { onTagClick(tag) })
+          }
+        }
   }
 }
