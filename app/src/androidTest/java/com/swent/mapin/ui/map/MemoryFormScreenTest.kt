@@ -394,8 +394,23 @@ class MemoryFormScreenTest {
             selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
       }
     }
-
     rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
     rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
+  }
+
+  @Test
+  fun memoryForm_userTagging_section_isDisplayed() {
+    rule.setContent {
+      MaterialTheme {
+        MemoryFormScreen(
+            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+      }
+    }
+
+    // Verify that the "Add user" button is visible
+    rule.onNodeWithTag("addUserButton").performScrollTo().assertIsDisplayed()
+
+    // Optionally, check that the section title "Tag people" exists
+    rule.onNodeWithText("Tag people").performScrollTo().assertIsDisplayed()
   }
 }

@@ -49,4 +49,33 @@ class TimeUtilsTest {
     assertEquals(expectedEnd.epochSecond, end.seconds)
     assertEquals(expectedEnd.nano, end.nanoseconds)
   }
+
+  @Test
+  fun `toTimestamp uses system default zone when not provided`() {
+    val date = LocalDate.of(2025, 10, 6)
+    val time = LocalTime.of(12, 0)
+    val defaultZone = ZoneId.systemDefault()
+
+    val expected = ZonedDateTime.of(date, time, defaultZone).toInstant()
+    val ts = TimeUtils.toTimestamp(date, time) // no zone passed
+
+    assertEquals(expected.epochSecond, ts.seconds)
+    assertEquals(expected.nano, ts.nanoseconds)
+  }
+
+  @Test
+  fun `dayBounds uses system default zone when not provided`() {
+    val date = LocalDate.of(2025, 10, 6)
+    val defaultZone = ZoneId.systemDefault()
+
+    val (start, end) = TimeUtils.dayBounds(date) // no zone passed
+
+    val expectedStart = date.atStartOfDay(defaultZone).toInstant()
+    val expectedEnd = date.plusDays(1).atStartOfDay(defaultZone).toInstant()
+
+    assertEquals(expectedStart.epochSecond, start.seconds)
+    assertEquals(expectedStart.nano, start.nanoseconds)
+    assertEquals(expectedEnd.epochSecond, end.seconds)
+    assertEquals(expectedEnd.nano, end.nanoseconds)
+  }
 }

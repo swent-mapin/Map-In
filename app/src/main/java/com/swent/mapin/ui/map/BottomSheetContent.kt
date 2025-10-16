@@ -10,6 +10,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -32,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -73,12 +79,16 @@ data class SearchBarState(
  * @param availableEvents List of events that can be linked to memories
  * @param joinedEvents List of events the user has joined
  * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
+ * @param topTags List of top tags to display in the discover section
+ * @param selectedTags Set of currently selected tags
+ * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
  * @param onJoinedEventClick Callback when a joined event is clicked
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BottomSheetContent(
     state: BottomSheetState,
@@ -89,6 +99,9 @@ fun BottomSheetContent(
     joinedEvents: List<Event> = emptyList(),
     selectedTab: MapScreenViewModel.BottomSheetTab =
         MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+    topTags: List<String> = emptyList(),
+    selectedTags: Set<String> = emptySet(),
+    onTagClick: (String) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
@@ -197,17 +210,9 @@ fun BottomSheetContent(
 
               Spacer(modifier = Modifier.height(16.dp))
 
-              Text(
-                  text = "Discover",
-                  style = MaterialTheme.typography.titleMedium,
-                  modifier = Modifier.padding(bottom = 8.dp))
-
-              val categories = listOf("Sports", "Music", "Food", "Art", "Outdoors", "Learning")
-              categories.forEach { category ->
-                OutlinedButton(
-                    onClick = {}, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                      Text(category, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+              // Dynamic tag selection
+              if (topTags.isNotEmpty()) {
+                TagsSection(topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
               }
 
               Spacer(modifier = Modifier.height(24.dp))
@@ -248,6 +253,7 @@ private fun SearchBar(
 @Composable
 private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
   val focusManager = LocalFocusManager.current
+  val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -260,10 +266,22 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
       QuickActionButton(
           text = "Create Event",
           modifier = Modifier.weight(1f),
-          onClick = { focusManager.clearFocus() })
+          onClick = {
+            focusManager.clearFocus()
+            showDialog.value = true
+          })
       QuickActionButton(
           text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
+  }
+  if (showDialog.value) {
+    AddEventPopUp(
+        modifier = Modifier.testTag(AddEventPopUpTestTags.POPUP),
+        onDone = { showDialog.value = false },
+        onBack = { showDialog.value = false },
+        onCancel = { showDialog.value = false },
+        onDismiss = { showDialog.value = false },
+    )
   }
 }
 
@@ -340,5 +358,57 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       }
     }
+/** Tag item for discover section - displays tag text and handles selection. */
+@Composable
+private fun TagItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+  val contentColor =
+      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+
+  OutlinedButton(
+      onClick = onClick,
+      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = backgroundColor, contentColor = contentColor)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis)
+      }
+}
+
+/** Section displaying dynamic tags - replaces the hardcoded discover section. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TagsSection(
+    topTags: List<String>,
+    selectedTags: Set<String>,
+    onTagClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Discover",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 8.dp))
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          topTags.forEach { tag ->
+            val isSelected = selectedTags.contains(tag)
+            TagItem(text = tag, isSelected = isSelected, onClick = { onTagClick(tag) })
+          }
+        }
   }
 }

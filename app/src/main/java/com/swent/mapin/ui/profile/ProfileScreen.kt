@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -87,7 +86,11 @@ import com.swent.mapin.model.UserProfile
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = viewModel()) {
+fun ProfileScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToSignIn: () -> Unit,
+    viewModel: ProfileViewModel = viewModel()
+) {
   val userProfile by viewModel.userProfile.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
 
@@ -127,62 +130,83 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary))
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-          Column(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .verticalScroll(rememberScrollState())
-                      .imePadding() // Add IME padding to handle keyboard
-              ) {
-                // Banner Section
-                Box(modifier = Modifier.fillMaxWidth()) {
-                  ProfileBanner(
-                      bannerUrl =
-                          if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
-                            viewModel.selectedBanner
-                          } else {
-                            userProfile.bannerUrl
-                          },
-                      isEditMode = viewModel.isEditMode,
-                      onBannerClick = { viewModel.toggleBannerSelector() })
-
-                  // Avatar positionné en haut, chevauchant la bannière
-                  Box(
-                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
-                      contentAlignment = Alignment.Center) {
-                        ProfilePicture(
-                            avatarUrl =
-                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                                  viewModel.selectedAvatar
-                                } else {
-                                  userProfile.avatarUrl
-                                },
-                            isEditMode = viewModel.isEditMode,
-                            onAvatarClick = { viewModel.toggleAvatarSelector() })
-                      }
-                }
-
-                Column(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 20.dp)
-                            .padding(bottom = 32.dp) // Add extra bottom padding for keyboard
-                            .animateContentSize(
-                                animationSpec =
-                                    spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow)),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                      if (viewModel.isEditMode) {
-                        EditProfileContent(viewModel = viewModel)
+          Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            // Banner Section
+            Box(modifier = Modifier.fillMaxWidth()) {
+              ProfileBanner(
+                  bannerUrl =
+                      if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
+                        viewModel.selectedBanner
                       } else {
-                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
-                      }
+                        userProfile.bannerUrl
+                      },
+                  isEditMode = viewModel.isEditMode,
+                  onBannerClick = { viewModel.toggleBannerSelector() })
 
-                      Spacer(modifier = Modifier.height(16.dp))
-                    }
-              }
+              // Avatar positionné en haut, chevauchant la bannière
+              Box(
+                  modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
+                  contentAlignment = Alignment.Center) {
+                    ProfilePicture(
+                        avatarUrl =
+                            if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                              viewModel.selectedAvatar
+                            } else {
+                              userProfile.avatarUrl
+                            },
+                        isEditMode = viewModel.isEditMode,
+                        onAvatarClick = { viewModel.toggleAvatarSelector() })
+                  }
+            }
+
+            Column(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 20.dp)
+                        .animateContentSize(
+                            animationSpec =
+                                spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow)),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  if (viewModel.isEditMode) {
+                    EditProfileContent(viewModel = viewModel)
+                  } else {
+                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+
+                    // Logout button
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                          viewModel.signOut()
+                          onNavigateToSignIn()
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp).testTag("logoutButton"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
+                          Row(
+                              verticalAlignment = Alignment.CenterVertically,
+                              horizontalArrangement = Arrangement.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Logout",
+                                    modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Logout",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyLarge)
+                              }
+                        }
+                  }
+
+                  Spacer(modifier = Modifier.height(16.dp))
+                }
+          }
 
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {
@@ -220,7 +244,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
 
 /** Displays the user's profile picture or a placeholder. */
 @Composable
-private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
+internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
   Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
     // Outer glow effect
     Box(
@@ -254,6 +278,7 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                                     Color(0xFFfa709a), // Rose
                                     Color(0xFF667eea) // Back to purple
                                     )))
+                .testTag("profilePicture")
                 .then(if (isEditMode) Modifier.clickable { onAvatarClick() } else Modifier),
         contentAlignment = Alignment.Center) {
           // Inner circle with profile picture
@@ -267,8 +292,7 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                                   colors =
                                       listOf(
                                           MaterialTheme.colorScheme.primaryContainer,
-                                          MaterialTheme.colorScheme.tertiaryContainer)))
-                      .testTag("profilePicture"),
+                                          MaterialTheme.colorScheme.tertiaryContainer))),
               contentAlignment = Alignment.Center) {
                 // Check if avatarUrl is an HTTP URL (uploaded image) or an icon ID
                 if (avatarUrl != null && avatarUrl.startsWith("http")) {
@@ -285,33 +309,34 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                       modifier = Modifier.size(46.dp),
                       tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
-
-                // Edit indicator
-                if (isEditMode) {
-                  Box(
-                      modifier =
-                          Modifier.align(Alignment.BottomEnd)
-                              .padding(4.dp)
-                              .size(28.dp)
-                              .clip(CircleShape)
-                              .background(Color(0xFF667eea))
-                              .shadow(4.dp, CircleShape),
-                      contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Change Avatar",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp))
-                      }
-                }
               }
         }
+
+    // Edit indicator - positioned outside for better visibility
+    if (isEditMode) {
+      Box(
+          modifier =
+              Modifier.align(Alignment.BottomEnd)
+                  .padding(4.dp)
+                  .size(28.dp)
+                  .shadow(4.dp, CircleShape)
+                  .clip(CircleShape)
+                  .background(Color(0xFF667eea))
+                  .testTag("editIndicator"),
+          contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Change Avatar",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp))
+          }
+    }
   }
 }
 
 /** View mode: displays profile information in cards. */
 @Composable
-private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
+internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
   // Name card with gradient and large prominence
   Card(
       modifier =
@@ -447,7 +472,7 @@ private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewM
 
 /** Reusable card component for displaying profile information. */
 @Composable
-private fun ProfileInfoCard(
+internal fun ProfileInfoCard(
     title: String,
     content: String,
     icon: ImageVector,
@@ -510,7 +535,7 @@ private fun ProfileInfoCard(
 
 /** Edit mode: displays editable text fields for profile information. */
 @Composable
-private fun EditProfileContent(viewModel: ProfileViewModel) {
+internal fun EditProfileContent(viewModel: ProfileViewModel) {
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(20.dp),
@@ -859,7 +884,7 @@ private fun getAvatarIcon(avatarUrl: String?): ImageVector {
 
 /** Avatar selector dialog with gallery import option */
 @Composable
-private fun AvatarSelectorDialog(
+internal fun AvatarSelectorDialog(
     viewModel: ProfileViewModel,
     selectedAvatar: String,
     onAvatarSelected: (String) -> Unit,
@@ -973,7 +998,7 @@ fun ProfileBanner(bannerUrl: String?, isEditMode: Boolean, onBannerClick: () -> 
 
 /** Banner selector dialog */
 @Composable
-private fun BannerSelectorDialog(
+internal fun BannerSelectorDialog(
     viewModel: ProfileViewModel,
     selectedBanner: String,
     onBannerSelected: (String) -> Unit,
@@ -1138,7 +1163,7 @@ private fun AvatarSelectionGrid(
 
 /** Reusable grid for banner selection */
 @Composable
-private fun BannerSelectionGrid(
+internal fun BannerSelectionGrid(
     availableBanners: List<BannerOption>,
     selectedBanner: String,
     onBannerSelected: (String) -> Unit

@@ -7,6 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.ui.theme.MapInTheme
+import okhttp3.OkHttpClient
+
+object HttpClientProvider {
+  var client: OkHttpClient = OkHttpClient()
+}
 
 /**
  * Main activity of the app.

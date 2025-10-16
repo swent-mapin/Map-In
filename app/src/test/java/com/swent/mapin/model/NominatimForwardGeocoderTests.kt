@@ -5,57 +5,51 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import java.io.IOException
-import kotlin.system.measureTimeMillis
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // Test writing and documentation assisted by AI tools
 
 /**
- * Unit tests for the [NominatimLocationRepository] class.
+ * Test suite for [NominatimForwardGeocoder].
  *
- * These tests validate the behavior of location search and parsing logic, including caching, error
- * handling, rate limiting, and JSON parsing.
+ * This class tests the forward geocoding functionality, ensuring correct JSON parsing, caching
+ * behavior, exception handling, and filtering of invalid location entries.
  *
- * Test coverage includes:
- * - Parsing valid JSON arrays into Location objects
- * - Enforcing rate limits between API calls
- * - Handling successful and failed HTTP responses
- * - Using cached results for repeated queries
- * - Skipping invalid location entries
- * - Throwing exceptions for null or failed responses
- *
- * Mocks are used to simulate OkHttp client behavior and isolate repository logic.
+ * The tests use MockK for mocking HTTP requests and responses, and kotlinx.coroutines for
+ * coroutine-based tests.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class NominatimLocationRepositoryTests {
+class NominatimForwardGeocoderTests {
 
   @Test
   fun `jsonArrayToLocations parses valid JSON correctly`() {
     val arr = JSONArray()
 
-    val obj1 = JSONObject()
-    obj1.put("display_name", "Lausanne, Switzerland")
-    obj1.put("lat", "46.5191")
-    obj1.put("lon", "6.6336")
+    val obj1 =
+        JSONObject().apply {
+          put("display_name", "Lausanne, Switzerland")
+          put("lat", "46.5191")
+          put("lon", "6.6336")
+        }
 
-    val obj2 = JSONObject()
-    obj2.put("display_name", "Geneva, Switzerland")
-    obj2.put("lat", "46.2044")
-    obj2.put("lon", "6.1432")
+    val obj2 =
+        JSONObject().apply {
+          put("display_name", "Geneva, Switzerland")
+          put("lat", "46.2044")
+          put("lon", "6.1432")
+        }
 
     arr.put(obj1)
     arr.put(obj2)
 
-    val repo = NominatimLocationRepository(client = OkHttpClient())
+    val repo = NominatimForwardGeocoder(client = OkHttpClient())
+
     val method = repo.javaClass.getDeclaredMethod("jsonArrayToLocations", JSONArray::class.java)
     method.isAccessible = true
     val result = method.invoke(repo, arr) as List<Location>
@@ -67,19 +61,7 @@ class NominatimLocationRepositoryTests {
   }
 
   @Test
-  fun `RateLimiter delays if called too soon`() = runBlocking {
-    val limiter = RateLimiter(1000)
-    limiter.acquire() // First call, no delay
-
-    val elapsed = measureTimeMillis {
-      limiter.acquire() // Should delay ~1000ms
-    }
-
-    assertTrue("Expected delay of ~1000ms, got $elapsed ms", elapsed >= 990)
-  }
-
-  @Test
-  fun `search returns parsed locations from mocked response`() = runTest {
+  fun `forwardGeocode returns parsed locations from mocked response`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -98,16 +80,15 @@ class NominatimLocationRepositoryTests {
             .trimIndent()
 
     val requestSlot = slot<Request>()
-
     every { mockClient.newCall(capture(requestSlot)) } returns mockCall
     every { mockCall.execute() } returns mockResponse
     every { mockResponse.isSuccessful } returns true
     every { mockResponse.body } returns mockBody
     every { mockResponse.close() } returns Unit
-    every { mockBody.string() } returnsMany listOf(json, json)
+    every { mockBody.string() } returns json
 
-    val repo = NominatimLocationRepository(mockClient)
-    val result = repo.search("Zurich")
+    val repo = NominatimForwardGeocoder(mockClient)
+    val result = repo.forwardGeocode("Zurich")
 
     assertEquals(1, result.size)
     assertEquals("Zurich, Switzerland", result[0].name)
@@ -116,7 +97,7 @@ class NominatimLocationRepositoryTests {
   }
 
   @Test
-  fun `search uses cache on repeated query`() = runTest {
+  fun `forwardGeocode uses cache on repeated query`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -134,49 +115,44 @@ class NominatimLocationRepositoryTests {
         """
             .trimIndent()
 
-    val requestSlot = slot<Request>()
-
-    every { mockClient.newCall(capture(requestSlot)) } returns mockCall
+    every { mockClient.newCall(any()) } returns mockCall
     every { mockCall.execute() } returns mockResponse
     every { mockResponse.isSuccessful } returns true
     every { mockResponse.body } returns mockBody
-    every { mockResponse.close() } returns Unit
     every { mockBody.string() } returns json
+    every { mockResponse.close() } returns Unit
 
-    val repo = NominatimLocationRepository(mockClient)
+    val repo = NominatimForwardGeocoder(mockClient)
 
-    val result1 = repo.search("Bern")
+    val result1 = repo.forwardGeocode("Bern")
+    val result2 = repo.forwardGeocode("Bern")
+
     assertEquals(1, result1.size)
     assertEquals("Bern, Switzerland", result1[0].name)
-
-    val result2 = repo.search("Bern")
     assertEquals(1, result2.size)
     assertEquals("Bern, Switzerland", result2[0].name)
 
-    // Verify that newCall was only invoked once
     verify(exactly = 1) { mockClient.newCall(any()) }
   }
 
   @Test(expected = LocationSearchException::class)
-  fun `search throws when response body is null`() =
-      runTest(timeout = 20.seconds) {
-        val mockClient = mockk<OkHttpClient>()
-        val mockCall = mockk<Call>()
-        val mockResponse = mockk<Response>()
+  fun `forwardGeocode throws when response body is null`() = runTest {
+    val mockClient = mockk<OkHttpClient>()
+    val mockCall = mockk<Call>()
+    val mockResponse = mockk<Response>()
 
-        every { mockClient.newCall(any()) } returns mockCall
-        every { mockCall.execute() } returns mockResponse
-        every { mockResponse.isSuccessful } returns true
-        every { mockResponse.body } returns null
-        every { mockResponse.body?.string() } returns null
-        every { mockResponse.close() } returns Unit
+    every { mockClient.newCall(any()) } returns mockCall
+    every { mockCall.execute() } returns mockResponse
+    every { mockResponse.isSuccessful } returns true
+    every { mockResponse.body } returns null
+    every { mockResponse.close() } returns Unit
 
-        val repo = NominatimLocationRepository(mockClient)
-        repo.search("BodyIsNull")
-      }
+    val repo = NominatimForwardGeocoder(mockClient)
+    repo.forwardGeocode("BodyIsNull")
+  }
 
   @Test(expected = LocationSearchException::class)
-  fun `search throws when response is not successful`() = runTest {
+  fun `forwardGeocode throws when response is not successful`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -187,25 +163,24 @@ class NominatimLocationRepositoryTests {
     every { mockResponse.code } returns 500
     every { mockResponse.close() } returns Unit
 
-    val repo = NominatimLocationRepository(mockClient)
-    repo.search("InvalidQuery")
+    val repo = NominatimForwardGeocoder(mockClient)
+    repo.forwardGeocode("InvalidQuery")
   }
 
   @Test(expected = LocationSearchException::class)
-  fun `search throws when exception is thrown`() = runTest {
+  fun `forwardGeocode throws when exception is thrown`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
 
     every { mockClient.newCall(any()) } returns mockCall
     every { mockCall.execute() } throws IOException("Network failure")
 
-    val repo = NominatimLocationRepository(mockClient)
-
-    repo.search("ExceptionQuery")
+    val repo = NominatimForwardGeocoder(mockClient)
+    repo.forwardGeocode("ExceptionQuery")
   }
 
   @Test
-  fun `search skips invalid location entries`() = runTest {
+  fun `forwardGeocode skips invalid location entries`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -240,13 +215,19 @@ class NominatimLocationRepositoryTests {
     every { mockCall.execute() } returns mockResponse
     every { mockResponse.isSuccessful } returns true
     every { mockResponse.body } returns mockBody
-    every { mockResponse.close() } returns Unit
     every { mockBody.string() } returns json
+    every { mockResponse.close() } returns Unit
 
-    val repo = NominatimLocationRepository(mockClient)
-    val result = repo.search("Zurich")
+    val repo = NominatimForwardGeocoder(mockClient)
+    val result = repo.forwardGeocode("Zurich")
 
     assertEquals(1, result.size)
     assertEquals("Zurich, Switzerland", result[0].name)
+  }
+
+  @Test(expected = UnsupportedOperationException::class)
+  fun `reverseGeocode throws UnsupportedOperationException`() = runTest {
+    val repo = NominatimForwardGeocoder(client = OkHttpClient())
+    repo.reverseGeocode(46.5191, 6.6336)
   }
 }

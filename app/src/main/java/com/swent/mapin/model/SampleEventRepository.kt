@@ -599,4 +599,16 @@ object SampleEventRepository {
             capacity = 180,
             attendeeCount = 135))
   }
+
+  /** Returns the top 5 most frequent tags across all events. */
+  fun getTopTags(count: Int = 5): List<String> {
+    val events = getSampleEvents()
+    val tagCounts = mutableMapOf<String, Int>()
+
+    events.forEach { event ->
+      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
+    }
+
+    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
+  }
 }

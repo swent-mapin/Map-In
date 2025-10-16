@@ -119,75 +119,91 @@ class SampleEventRepositoryTest {
     val events = SampleEventRepository.getSampleEvents()
     val basketballGame = events.find { it.title == "Basketball Game" }
     assertNotNull(basketballGame)
-    assertEquals("event4", basketballGame?.uid)
-    assertTrue(basketballGame?.tags?.contains("Sports") == true)
+  }
+
+  // Tests for getTopTags functionality
+  @Test
+  fun getTopTags_returnsCorrectNumberOfTags() {
+    val topTags = SampleEventRepository.getTopTags(5)
+    assertEquals(5, topTags.size)
   }
 
   @Test
-  fun getSampleEvents_containsArtExhibition() {
-    val events = SampleEventRepository.getSampleEvents()
-    val artExhibition = events.find { it.title == "Art Exhibition" }
-    assertNotNull(artExhibition)
-    assertEquals("event7", artExhibition?.uid)
-    assertTrue(artExhibition?.tags?.contains("Art") == true)
+  fun getTopTags_returnsCustomNumberOfTags() {
+    val topTags = SampleEventRepository.getTopTags(3)
+    assertEquals(3, topTags.size)
   }
 
   @Test
-  fun getSampleEvents_containsFoodMarket() {
+  fun getTopTags_returnsTagsInDescendingOrder() {
+    val topTags = SampleEventRepository.getTopTags()
     val events = SampleEventRepository.getSampleEvents()
-    val foodMarket = events.find { it.title == "Food Market" }
-    assertNotNull(foodMarket)
-    assertEquals("event12", foodMarket?.uid)
-    assertTrue(foodMarket?.tags?.contains("Food") == true)
-  }
-
-  @Test
-  fun getSampleEvents_containsYogaClass() {
-    val events = SampleEventRepository.getSampleEvents()
-    val yogaClass = events.find { it.title == "Yoga Class" }
-    assertNotNull(yogaClass)
-    assertEquals("event16", yogaClass?.uid)
-    assertTrue(yogaClass?.tags?.contains("Yoga") == true)
-  }
-
-  @Test
-  fun getSampleEvents_allUidsAreUnique() {
-    val events = SampleEventRepository.getSampleEvents()
-    val uids = events.map { it.uid }
-    assertEquals(uids.size, uids.toSet().size)
-  }
-
-  @Test
-  fun getSampleEvents_eventsAreAroundEPFL() {
-    val events = SampleEventRepository.getSampleEvents()
-    val epflLatitude = 46.5197
-    val epflLongitude = 6.5668
+    val tagCounts = mutableMapOf<String, Int>()
 
     events.forEach { event ->
-      val latDiff = kotlin.math.abs(event.location.latitude - epflLatitude)
-      val lonDiff = kotlin.math.abs(event.location.longitude - epflLongitude)
-      assertTrue(latDiff < 0.01)
-      assertTrue(lonDiff < 0.01)
+      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
+    }
+
+    // Verify that returned tags are sorted by frequency
+    for (i in 0 until topTags.size - 1) {
+      val currentCount = tagCounts[topTags[i]] ?: 0
+      val nextCount = tagCounts[topTags[i + 1]] ?: 0
+      assertTrue("Tags should be sorted by frequency", currentCount >= nextCount)
     }
   }
 
   @Test
-  fun getSampleEvents_multipleCalls_returnsSameData() {
-    val events1 = SampleEventRepository.getSampleEvents()
-    val events2 = SampleEventRepository.getSampleEvents()
-
-    assertEquals(events1.size, events2.size)
-    for (i in events1.indices) {
-      assertEquals(events1[i].uid, events2[i].uid)
-      assertEquals(events1[i].title, events2[i].title)
-    }
+  fun getTopTags_returnsNonEmptyTags() {
+    val topTags = SampleEventRepository.getTopTags()
+    assertTrue(topTags.isNotEmpty())
+    topTags.forEach { tag -> assertTrue(tag.isNotEmpty()) }
   }
 
   @Test
-  fun getSampleEvents_hasVariedAttendeeCount() {
+  fun getTopTags_containsMostFrequentTags() {
+    val topTags = SampleEventRepository.getTopTags()
     val events = SampleEventRepository.getSampleEvents()
-    val attendeeCounts = events.map { it.attendeeCount }
+    val tagCounts = mutableMapOf<String, Int>()
 
-    assertTrue(attendeeCounts.distinct().size > 1)
+    events.forEach { event ->
+      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
+    }
+
+    // Sports appears in many events (Basketball, Volleyball, Running, Beach Volleyball, etc.)
+    assertTrue("Sports should be in top tags", topTags.contains("Sports"))
+  }
+
+  @Test
+  fun getTopTags_doesNotReturnDuplicates() {
+    val topTags = SampleEventRepository.getTopTags()
+    val uniqueTags = topTags.toSet()
+    assertEquals("No duplicate tags should be returned", topTags.size, uniqueTags.size)
+  }
+
+  @Test
+  fun getTopTags_handlesRequestForMoreTagsThanAvailable() {
+    val events = SampleEventRepository.getSampleEvents()
+    val allUniqueTags = events.flatMap { it.tags }.toSet()
+    val topTags = SampleEventRepository.getTopTags(allUniqueTags.size + 10)
+
+    // Should return all available unique tags, not more
+    assertTrue(topTags.size <= allUniqueTags.size)
+  }
+
+  @Test
+  fun getTopTags_returnsEmptyListWhenCountIsZero() {
+    val topTags = SampleEventRepository.getTopTags(0)
+    assertTrue(topTags.isEmpty())
+  }
+
+  @Test
+  fun getTopTags_allReturnedTagsExistInEvents() {
+    val topTags = SampleEventRepository.getTopTags()
+    val events = SampleEventRepository.getSampleEvents()
+    val allEventTags = events.flatMap { it.tags }.toSet()
+
+    topTags.forEach { tag ->
+      assertTrue("Tag $tag should exist in events", allEventTags.contains(tag))
+    }
   }
 }

@@ -387,4 +387,87 @@ class EventRepositoryFirestoreTest {
       assertEquals(1, firstValue.participantIds.count { it == "owner123" })
     }
   }
+
+  @Test
+  fun getEventsByTags_returnsAllWhenEmptyTags() = runTest {
+    val e =
+        Event(
+            uid = "E1",
+            title = "Title",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("ZRH", 0.0, 0.0),
+            tags = listOf("music"),
+            public = true,
+            ownerId = "owner",
+            imageUrl = null,
+            capacity = 10,
+            attendeeCount = 1)
+    val snap = qs(doc("E1", e))
+    whenever(collection.orderBy("date")).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByTags(emptyList())
+    assertEquals(1, result.size)
+    assertEquals("E1", result[0].uid)
+  }
+
+  @Test
+  fun getEventsOnDay_returnsEventsWithinRange() = runTest {
+    val start = Timestamp.now()
+    val end = Timestamp(start.seconds + 3600, 0)
+
+    val e1 =
+        Event(
+            uid = "E1",
+            title = "Event 1",
+            url = "u",
+            description = "d",
+            date = start,
+            location = Location("ZRH", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "owner",
+            imageUrl = null,
+            capacity = 5,
+            attendeeCount = 0)
+    val snap = qs(doc("E1", e1))
+
+    whenever(collection.whereGreaterThanOrEqualTo(eq("date"), eq(start))).thenReturn(query)
+    whenever(query.whereLessThan(eq("date"), eq(end))).thenReturn(query)
+    whenever(query.orderBy(eq("date"))).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsOnDay(start, end)
+    assertEquals(1, result.size)
+    assertEquals("E1", result[0].uid)
+  }
+
+  @Test
+  fun getEventsByOwner_returnsMatchingEvents() = runTest {
+    val e1 =
+        Event(
+            uid = "E1",
+            title = "Event 1",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("ZRH", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "owner1",
+            imageUrl = null,
+            capacity = 5,
+            attendeeCount = 0)
+    val snap = qs(doc("E1", e1))
+
+    whenever(collection.whereEqualTo(eq("ownerId"), eq("owner1"))).thenReturn(query)
+    whenever(query.orderBy(eq("date"))).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByOwner("owner1")
+    assertEquals(1, result.size)
+    assertEquals("E1", result[0].uid)
+  }
 }

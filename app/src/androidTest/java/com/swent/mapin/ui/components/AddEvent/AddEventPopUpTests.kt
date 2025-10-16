@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.AddEvent
+package com.swent.mapin.ui.components.AddEvent
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -11,8 +11,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.ui.AddEventPopUp
-import com.swent.mapin.ui.AddEventPopUpTestTags
+import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.components.EventViewModel
+import com.swent.mapin.ui.components.saveEvent
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -31,7 +38,7 @@ class AddEventPopUpTests {
       AddEventPopUp(
           onBack = { backClicked = true },
           onDismiss = { dismissCalled = true },
-          onSave = { saveClicked = true },
+          onDone = { saveClicked = true },
           onCancel = { cancelClicked = true })
     }
   }
@@ -116,6 +123,37 @@ class AddEventPopUpTests {
   }
 
   @Test
+  fun publicPrivateSwitchTogglesCorrectly() {
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
+        .assertTextContains("Public", substring = true, ignoreCase = true)
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
+        .assertTextContains("Private", substring = true, ignoreCase = true)
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .performScrollTo()
+        .assertTextContains("Public", substring = true, ignoreCase = true)
+  }
+
+  @Test
   fun clickingCloseButtonInvokesBackCallback() {
     composeTestRule.onNodeWithContentDescription("Close").performClick()
     assert(backClicked)
@@ -172,5 +210,65 @@ class AddEventPopUpTests {
         .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid description")
     composeTestRule.onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE).assertIsNotEnabled()
+  }
+}
+
+class SaveEventTests {
+
+  @Test
+  fun saveEventTest() {
+    val mockViewModel = mockk<EventViewModel>(relaxed = true)
+    val testLocation = Location("Test Location", 0.0, 0.0)
+    val testTitle = "Test Event"
+    val testDescription = "Some description"
+    val testTags = listOf("tag1", "tag2")
+    val isPublic = true
+    val currentUserId = "FakeUserId"
+
+    var onDoneCalled = false
+    val onDone = { onDoneCalled = true }
+
+    saveEvent(
+        viewModel = mockViewModel,
+        title = testTitle,
+        description = testDescription,
+        date = Timestamp(10000, 200),
+        location = testLocation,
+        currentUserId = currentUserId,
+        tags = testTags,
+        isPublic = isPublic,
+        onDone = onDone)
+
+    verify { mockViewModel.addEvent(any<Event>()) }
+    assert(onDoneCalled)
+  }
+
+  @Test
+  fun saveEvent_whenUserNotLoggedIn_doesNotCallAddEventOrOnDone() {
+    val mockViewModel = mockk<EventViewModel>(relaxed = true)
+    val testLocation = Location("Test Location", 0.0, 0.0)
+    val testTitle = "Test Event"
+    val testDescription = "Some description"
+    val testTags = listOf("tag1", "tag2")
+    val isPublic = true
+
+    val currentUserId: String? = null // simulate not logged in
+
+    var onDoneCalled = false
+    val onDone = { onDoneCalled = true }
+
+    saveEvent(
+        viewModel = mockViewModel,
+        title = testTitle,
+        description = testDescription,
+        date = Timestamp(10000, 200),
+        location = testLocation,
+        currentUserId = currentUserId,
+        tags = testTags,
+        isPublic = isPublic,
+        onDone = onDone)
+
+    verify(exactly = 0) { mockViewModel.addEvent(any<Event>()) } // should NOT be called
+    assert(!onDoneCalled)
   }
 }

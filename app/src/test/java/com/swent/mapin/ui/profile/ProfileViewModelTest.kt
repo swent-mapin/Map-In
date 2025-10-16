@@ -10,6 +10,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -72,6 +73,7 @@ class ProfileViewModelTest {
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+    unmockkAll()
   }
 
   @Test
@@ -434,5 +436,72 @@ class ProfileViewModelTest {
 
     // After init, loading should be false
     assertFalse(viewModel.isLoading.first())
+  }
+
+  @Test
+  fun `signOut signs out from Firebase and resets profile state`() = runTest {
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    every { mockAuth.signOut() } returns Unit
+
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
+
+    // Verify profile is loaded
+    val loadedProfile = viewModel.userProfile.first()
+    assertEquals(testProfile, loadedProfile)
+
+    // Sign out
+    viewModel.signOut()
+
+    // Verify Firebase signOut was called
+    io.mockk.verify { mockAuth.signOut() }
+
+    // Verify profile is reset to default
+    val resetProfile = viewModel.userProfile.first()
+    assertEquals(UserProfile(), resetProfile)
+    assertFalse(viewModel.isEditMode)
+  }
+
+  @Test
+  fun `signOut clears edit mode and errors`() = runTest {
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    every { mockAuth.signOut() } returns Unit
+
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
+
+    // Enter edit mode and make some invalid changes
+    viewModel.startEditing()
+    viewModel.updateEditName("") // Invalid - will cause error
+
+    assertTrue(viewModel.isEditMode)
+    assertNotNull(viewModel.nameError)
+
+    // Sign out
+    viewModel.signOut()
+
+    // Verify edit mode is cleared
+    assertFalse(viewModel.isEditMode)
+    assertNull(viewModel.nameError)
+  }
+
+  @Test
+  fun `signOut from edit mode resets all edit fields`() = runTest {
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    every { mockAuth.signOut() } returns Unit
+
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
+
+    // Enter edit mode and modify fields
+    viewModel.startEditing()
+    viewModel.updateEditName("New Name")
+    viewModel.updateEditBio("New Bio")
+    viewModel.updateEditLocation("New Location")
+
+    // Sign out
+    viewModel.signOut()
+
+    // Verify profile is reset
+    val resetProfile = viewModel.userProfile.first()
+    assertEquals(UserProfile(), resetProfile)
+    assertFalse(viewModel.isEditMode)
   }
 }
