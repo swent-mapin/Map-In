@@ -9,33 +9,44 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -51,8 +62,6 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -62,7 +71,8 @@ data class SearchBarState(
     val shouldRequestFocus: Boolean,
     val onQueryChange: (String) -> Unit,
     val onTap: () -> Unit,
-    val onFocusHandled: () -> Unit
+    val onFocusHandled: () -> Unit,
+    val onClear: () -> Unit
 )
 
 /**
@@ -94,14 +104,22 @@ fun BottomSheetContent(
     state: BottomSheetState,
     fullEntryKey: Int,
     searchBarState: SearchBarState,
+    // Search results and mode
+    searchResults: List<Event> = emptyList(),
+    isSearchMode: Boolean = false,
+    // Memory form and events
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
+    // Joined events
     joinedEvents: List<Event> = emptyList(),
+    // Tab and tags
     selectedTab: MapScreenViewModel.BottomSheetTab =
         MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
+    // Callbacks
+    onEventClick: (Event) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
@@ -145,80 +163,218 @@ fun BottomSheetContent(
               onCancel = onMemoryCancel)
         } else {
           // Regular bottom sheet content
-          Column(modifier = Modifier.fillMaxWidth()) {
+          Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
             SearchBar(
                 value = searchBarState.query,
                 onValueChange = searchBarState.onQueryChange,
                 isFull = isFull,
-                onTap = { if (!isFull) searchBarState.onTap() },
+                onTap = searchBarState.onTap,
                 focusRequester = focusRequester,
-                onSearchAction = { focusManager.clearFocus() })
+                onSearchAction = { focusManager.clearFocus() },
+                onClear = searchBarState.onClear)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val contentModifier =
-                if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                else Modifier.fillMaxWidth()
+            if (isSearchMode) {
+              SearchResultsSection(
+                  results = searchResults,
+                  query = searchBarState.query,
+                  modifier = Modifier.weight(1f, fill = true),
+                  onEventClick = onEventClick)
+            } else {
+              val contentModifier =
+                  if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                  else Modifier.fillMaxWidth()
 
-            Column(modifier = contentModifier) {
-              QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+              Column(modifier = contentModifier) {
+                QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
-              Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-              Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-              // Tab selector
-              TabRow(
-                  selectedTabIndex =
-                      if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
-                      else 1,
-                  modifier = Modifier.fillMaxWidth()) {
-                    Tab(
-                        selected =
-                            selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
-                        onClick = {
-                          onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
-                        },
-                        text = { Text("Recent Activities") })
-                    Tab(
-                        selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                        onClick = { onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS) },
-                        text = { Text("Joined Events") })
+                // Tab selector
+                TabRow(
+                    selectedTabIndex =
+                        if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
+                        else 1,
+                    modifier = Modifier.fillMaxWidth()) {
+                      Tab(
+                          selected =
+                              selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                          onClick = {
+                            onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                          },
+                          text = { Text("Recent Activities") })
+                      Tab(
+                          selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                          onClick = {
+                            onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                          },
+                          text = { Text("Joined Events") })
+                    }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Content based on selected tab
+                when (selectedTab) {
+                  MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
+                    // We removed the previous duplicated recent-activities list and sample items.
+                    // If you want to show recent items later, pass them in and render here; for now
+                    // we display a friendly message indicating there are no recent events.
+                    NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
                   }
-
-              Spacer(modifier = Modifier.height(16.dp))
-
-              // Content based on selected tab
-              when (selectedTab) {
-                MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                  repeat(4) { index ->
-                    ActivityItem(
-                        title = "Activity ${index + 1}",
-                        description = "Example description for activity ${index + 1}.")
+                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                    JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
                   }
                 }
-                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                  JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dynamic tag selection
+                if (topTags.isNotEmpty()) {
+                  TagsSection(
+                      topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
               }
-
-              Spacer(modifier = Modifier.height(16.dp))
-
-              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-              Spacer(modifier = Modifier.height(16.dp))
-
-              // Dynamic tag selection
-              if (topTags.isNotEmpty()) {
-                TagsSection(topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
-              }
-
-              Spacer(modifier = Modifier.height(24.dp))
             }
           }
         }
+      }
+}
+
+@Composable
+private fun SearchResultsSection(
+    results: List<Event>,
+    query: String,
+    modifier: Modifier = Modifier,
+    onEventClick: (Event) -> Unit = {}
+) {
+  if (results.isEmpty()) {
+    NoResultsMessage(query = query, modifier = modifier)
+    return
+  }
+
+  val heading = if (query.isBlank()) "All events" else "Results for \"$query\""
+
+  LazyColumn(
+      modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+          Text(
+              text = heading,
+              style = MaterialTheme.typography.titleMedium,
+              modifier = Modifier.padding(horizontal = 16.dp))
+        }
+
+        items(results) { event ->
+          SearchResultItem(
+              event = event,
+              modifier = Modifier.padding(horizontal = 16.dp),
+              onClick = { onEventClick(event) })
+        }
+
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+      }
+}
+
+@Composable
+private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
+  val message =
+      if (query.isBlank()) {
+        "No events available yet."
+      } else {
+        "No results found"
+      }
+
+  val subtitle =
+      if (query.isBlank()) {
+        "Try again once events are added."
+      } else {
+        "Try a different keyword or check the spelling."
+      }
+
+  Box(modifier = modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Text(text = message, style = MaterialTheme.typography.titleMedium)
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+          text = subtitle,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center)
+    }
+  }
+}
+
+@Composable
+private fun NoActivitiesMessage(modifier: Modifier = Modifier) {
+  Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Text(text = "No recent events.", style = MaterialTheme.typography.titleMedium)
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+          text =
+              "Your recent activity will appear here once you interact with events or create memories.",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center)
+    }
+  }
+}
+
+@Composable
+private fun SearchResultItem(
+    event: Event,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+  Surface(
+      shape = RoundedCornerShape(16.dp),
+      tonalElevation = 2.dp,
+      modifier = modifier.fillMaxWidth().clickable { onClick() }) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Text(
+                  text = event.title,
+                  style = MaterialTheme.typography.titleMedium,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis)
+
+              if (event.location.name.isNotBlank()) {
+                Text(
+                    text = event.location.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+              }
+
+              val tagsSummary = event.tags.take(3).joinToString(separator = " • ")
+              if (tagsSummary.isNotBlank()) {
+                Text(
+                    text = tagsSummary,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+              }
+
+              event.attendeeCount?.let { attendees ->
+                Text(
+                    text = "$attendees attending",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+            }
       }
 }
 
@@ -231,20 +387,31 @@ private fun SearchBar(
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+  var isFocused by remember { mutableStateOf(false) }
+
   OutlinedTextField(
       value = value,
       onValueChange = onValueChange,
       placeholder = { Text("Search activities") },
       modifier =
           modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
-            if (!isFull && focusState.isFocused) {
-              onTap()
+            isFocused = focusState.isFocused
+            if (focusState.isFocused) {
+              if (!isFull) onTap()
             }
           },
       singleLine = true,
       textStyle = MaterialTheme.typography.bodyLarge,
+      trailingIcon = {
+        if (isFocused) {
+          IconButton(onClick = onClear) {
+            Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear search")
+          }
+        }
+      },
       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
       keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
 }
@@ -305,90 +472,6 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
       }
 }
 
-/** List item displaying an activity title and description. */
-@Composable
-private fun ActivityItem(title: String, description: String, modifier: Modifier = Modifier) {
-  Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-    Text(text = title, style = MaterialTheme.typography.titleSmall)
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-  }
-}
-
-/** Section displaying joined events with click handling. */
-@Composable
-private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
-  if (events.isEmpty()) {
-    // Empty state
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-          Text(
-              text = "You haven't joined any events yet",
-              style = MaterialTheme.typography.bodyMedium,
-              color = Color.Gray,
-              textAlign = TextAlign.Center)
-        }
-  } else {
-    Column(modifier = Modifier.fillMaxWidth()) {
-      events.forEach { event ->
-        val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        val formattedDate = event.date?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
-
-        Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clickable { onEventClick(event) }
-                    .padding(vertical = 12.dp)) {
-              Text(text = event.title, style = MaterialTheme.typography.titleSmall)
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                  text = formattedDate,
-                  style = MaterialTheme.typography.bodySmall,
-                  color = Color.Gray)
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(
-                  text = event.location.name,
-                  style = MaterialTheme.typography.bodySmall,
-                  color = Color.Gray,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis)
-            }
-
-        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-      }
-    }
-  }
-}
-
-/** Tag item for discover section - displays tag text and handles selection. */
-@Composable
-private fun TagItem(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-  val contentColor =
-      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-
-  OutlinedButton(
-      onClick = onClick,
-      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors =
-          ButtonDefaults.buttonColors(
-              containerColor = backgroundColor, contentColor = contentColor)) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
-      }
-}
-
 /** Section displaying dynamic tags - replaces the hardcoded discover section. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -414,4 +497,51 @@ private fun TagsSection(
           }
         }
   }
+}
+
+@Composable
+private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+  if (events.isEmpty()) {
+    NoResultsMessage(query = "", modifier = Modifier)
+    return
+  }
+
+  Column(modifier = Modifier.fillMaxWidth()) {
+    events.forEach { event ->
+      SearchResultItem(
+          event = event,
+          modifier = Modifier.padding(horizontal = 16.dp),
+          onClick = { onEventClick(event) })
+      Spacer(modifier = Modifier.height(8.dp))
+      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+      Spacer(modifier = Modifier.height(8.dp))
+    }
+  }
+}
+
+@Composable
+private fun TagItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+  val contentColor =
+      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+
+  OutlinedButton(
+      onClick = onClick,
+      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = backgroundColor, contentColor = contentColor)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis)
+      }
 }

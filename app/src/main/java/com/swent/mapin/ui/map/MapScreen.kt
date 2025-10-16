@@ -163,7 +163,9 @@ fun MapScreen(
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
 
+  // Fusion d'une seule racine UI box qui contient la carte, overlays et la feuille inférieure
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
+    // Carte Mapbox: combine les comportements précédemment séparés
     if (renderMap) {
       MapboxLayer(
           viewModel = viewModel,
@@ -172,9 +174,16 @@ fun MapScreen(
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
-          onEventClick = { event -> viewModel.onEventPinClicked(event) })
+          onEventClick = { event ->
+            // Conserver tous les effets attendus lors d'un clic sur un pin
+            viewModel.onEventPinClicked(event)
+            viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+            // Propager vers le handler externe
+            onEventClick(event)
+          })
     }
 
+    // Overlays et contrôles au-dessus de la carte
     TopGradient()
 
     ScrimOverlay(
@@ -189,14 +198,15 @@ fun MapScreen(
             Modifier.align(Alignment.BottomEnd)
                 .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
 
-    // Block map gestures when the sheet is in focus
+    // Bloque les interactions de carte quand la feuille est pleine
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-    // Profile button in top-right corner
+    // Bouton profil en haut à droite
     Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
       ProfileButton(onClick = onNavigateToProfile)
     }
 
+    // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
     BottomSheet(
         config = sheetConfig,
         currentState = viewModel.bottomSheetState,
@@ -205,7 +215,8 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-          // Show event detail if an event is selected, otherwise show regular content
+
+          // Si un event est sélectionné montrer le détail, sinon le contenu standard
           if (viewModel.selectedEvent != null) {
             EventDetailSheet(
                 event = viewModel.selectedEvent!!,
@@ -227,18 +238,26 @@ fun MapScreen(
                         shouldRequestFocus = viewModel.shouldFocusSearch,
                         onQueryChange = viewModel::onSearchQueryChange,
                         onTap = viewModel::onSearchTap,
-                        onFocusHandled = viewModel::onSearchFocusHandled),
+                        onFocusHandled = viewModel::onSearchFocusHandled,
+                        onClear = viewModel::onClearSearch),
+                searchResults = viewModel.searchResults,
+                isSearchMode = viewModel.isSearchMode,
                 showMemoryForm = viewModel.showMemoryForm,
                 availableEvents = viewModel.availableEvents,
                 topTags = viewModel.topTags,
                 selectedTags = viewModel.selectedTags,
                 onTagClick = viewModel::toggleTagSelection,
-                joinedEvents = viewModel.joinedEvents,
-                selectedTab = viewModel.selectedBottomSheetTab,
+                onEventClick = { event ->
+                  // garder le comportement attendu côté BottomSheet item click
+                  viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+                  onEventClick(event)
+                },
                 onCreateMemoryClick = viewModel::showMemoryForm,
                 onMemorySave = viewModel::onMemorySave,
                 onMemoryCancel = viewModel::onMemoryCancel,
                 onTabChange = viewModel::setBottomSheetTab,
+                joinedEvents = viewModel.joinedEvents,
+                selectedTab = viewModel.selectedBottomSheetTab,
                 onJoinedEventClick = viewModel::onJoinedEventClicked)
           }
         }
@@ -249,6 +268,7 @@ fun MapScreen(
           event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
     }
 
+    // Indicateur de sauvegarde de mémoire
     if (viewModel.isSavingMemory) {
       Box(
           modifier =
@@ -346,10 +366,9 @@ private fun MapLayers(
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
-  // Recréer les annotations quand l'événement sélectionné change
   val annotations =
-      remember(viewModel.events, viewModel.selectedEvent, annotationStyle) {
-        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
+      remember(viewModel.events, annotationStyle) {
+        createEventAnnotations(viewModel.events, annotationStyle)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -624,7 +643,7 @@ private fun createEventAnnotations(
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
         .withTextOffset(listOf(0.0, 0.5))
-        .withTextSize(if (isSelected) 16.0 else 14.0)
+        .withTextSize(14.0)
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
         .withTextHaloWidth(1.5)

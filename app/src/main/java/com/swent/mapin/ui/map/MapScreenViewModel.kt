@@ -23,7 +23,7 @@ import com.mapbox.geojson.Point
 import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.event.EventRepositoryFirestore
+import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -32,10 +32,8 @@ import kotlin.math.abs
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-// Assisted by AI
-
 /**
- * Coordinates MapScreen state: sheet transitions, search focus, zoom behavior, and memory creation.
+ * ViewModel central pour MapScreen — gère la feuille, la recherche, les événements, et la mémoire.
  */
 class MapScreenViewModel(
     initialSheetState: BottomSheetState,
@@ -44,10 +42,10 @@ class MapScreenViewModel(
     private val applicationContext: Context,
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
-    private val eventRepository: EventRepository =
-        EventRepositoryFirestore(com.google.firebase.firestore.FirebaseFirestore.getInstance()),
+    private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
+
   // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
@@ -67,6 +65,24 @@ class MapScreenViewModel(
   private var _shouldFocusSearch by mutableStateOf(false)
   val shouldFocusSearch: Boolean
     get() = _shouldFocusSearch
+
+  private var isSearchActivated by mutableStateOf(false)
+
+  // Raw dataset loaded from repository (or empty until loaded)
+  private var _allEvents by mutableStateOf<List<Event>>(emptyList())
+
+  // Visible events for map (after filtering)
+  private var _events by mutableStateOf<List<Event>>(SampleEventRepository.getSampleEvents())
+  val events: List<Event>
+    get() = _events
+
+  // Search results for bottom sheet list
+  private var _searchResults by mutableStateOf<List<Event>>(emptyList())
+  val searchResults: List<Event>
+    get() = _searchResults
+
+  val isSearchMode: Boolean
+    get() = isSearchActivated && _bottomSheetState == BottomSheetState.FULL && !showMemoryForm
 
   // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
@@ -144,7 +160,6 @@ class MapScreenViewModel(
 
   var onCenterCamera: ((Event) -> Unit)? = null
 
-  /** Event data for display on the map */
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
   val selectedTags: Set<String>
@@ -154,20 +169,41 @@ class MapScreenViewModel(
   val topTags: List<String>
     get() = _topTags
 
-  // Event data for display on the map
-  private var _events by mutableStateOf(SampleEventRepository.getSampleEvents())
-  val events: List<Event>
-    get() = _events
-
   init {
+    // Initialize with sample events quickly, then load remote data
+    loadInitialSamples()
     // Preload events so the form has immediate data
     loadEvents()
     loadJoinedEvents()
     _topTags = SampleEventRepository.getTopTags()
+    // Preload events both for searching and memory linking
+    loadAllEvents()
+    loadParticipantEvents()
+  }
+
+  /** Loads initial sample events synchronously for immediate UI responsiveness. */
+  private fun loadInitialSamples() {
+    _events = SampleEventRepository.getSampleEvents()
+    _searchResults = _events
+  }
+
+  /** Loads primary events list for immediate UI usage with fallback to local samples. */
+  private fun loadEvents() {
+    viewModelScope.launch {
+      try {
+        val events = eventRepository.getAllEvents()
+        _events = events
+        _searchResults = events
+      } catch (e: Exception) {
+        android.util.Log.w(
+            "MapScreenViewModel", "Failed to load events from repository, using samples", e)
+        _events = SampleEventRepository.getSampleEvents()
+        _searchResults = _events
+      }
+    }
   }
 
   fun onZoomChange(newZoom: Float) {
-    // Ignore micro-changes to avoid flickering the scale bar
     if (abs(newZoom - _lastZoom) > 0.01f) {
       _isZooming = true
       _lastZoom = newZoom
@@ -197,7 +233,6 @@ class MapScreenViewModel(
   fun checkTouchProximityToSheet(touchY: Float, sheetTopY: Float, densityDpi: Int): Boolean {
     if (!isInMediumMode) return false
 
-    // Convert dp threshold to pixels before comparing the gesture location
     val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
     val distance = abs(touchY - sheetTopY)
 
@@ -231,9 +266,10 @@ class MapScreenViewModel(
     }
 
     isInMediumMode = target == BottomSheetState.MEDIUM
-
-    if (target != BottomSheetState.FULL && _bottomSheetState == BottomSheetState.FULL) {
-      clearSearch()
+    if (target != BottomSheetState.FULL &&
+        _bottomSheetState == BottomSheetState.FULL &&
+        !_showMemoryForm) {
+      resetSearchState()
     }
 
     _bottomSheetState = target
@@ -244,7 +280,9 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
+    isSearchActivated = true
     _searchQuery = query
+    applyFilters()
   }
 
   fun onSearchTap() {
@@ -252,18 +290,24 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
+    isSearchActivated = true
   }
 
   fun onSearchFocusHandled() {
     _shouldFocusSearch = false
   }
 
-  private fun clearSearch() {
+  private fun resetSearchState() {
+    isSearchActivated = false
     _shouldFocusSearch = false
     onClearFocus()
-    if (_searchQuery.isNotEmpty()) {
-      _searchQuery = ""
-    }
+    if (_searchQuery.isNotEmpty()) _searchQuery = ""
+    applyFilters()
+  }
+
+  fun onClearSearch() {
+    resetSearchState()
+    setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
   fun setMapStyle(style: MapStyle) {
@@ -274,17 +318,77 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
-  /** Loads events the signed-in user can attach to memories. */
-  private fun loadEvents() {
+  /** Loads all events for search and map display, falling back to local data on error. */
+  private fun loadAllEvents() {
+    viewModelScope.launch {
+      try {
+        val events = eventRepository.getAllEvents()
+        applyEventsDataset(events)
+      } catch (primary: Exception) {
+        android.util.Log.e("MapScreenViewModel", "Error loading events from repository", primary)
+        try {
+          val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
+          applyEventsDataset(localEvents)
+        } catch (fallback: Exception) {
+          android.util.Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
+          _allEvents = emptyList()
+          applyFilters()
+        }
+      }
+    }
+  }
+
+  private fun applyEventsDataset(events: List<Event>) {
+    _allEvents = events
+    applyFilters()
+  }
+
+  private fun applyFilters() {
+    val base = if (_allEvents.isNotEmpty()) _allEvents else SampleEventRepository.getSampleEvents()
+
+    val tagFiltered =
+        if (_selectedTags.isEmpty()) {
+          base
+        } else {
+          base.filter { event ->
+            event.tags.any { tag ->
+              _selectedTags.any { sel -> tag.equals(sel, ignoreCase = true) }
+            }
+          }
+        }
+
+    val finalList =
+        if (_searchQuery.isBlank()) {
+          tagFiltered
+        } else {
+          filterEvents(_searchQuery, tagFiltered)
+        }
+
+    _searchResults = if (_searchQuery.isBlank()) tagFiltered else finalList
+    _events = finalList
+  }
+
+  private fun filterEvents(query: String, source: List<Event>): List<Event> {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return source
+
+    val normalized = trimmed.lowercase()
+    return source.filter { event ->
+      val titleMatch = event.title.lowercase().contains(normalized)
+      val descriptionMatch = event.description.lowercase().contains(normalized)
+      val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
+      val locationMatch = event.location.name.lowercase().contains(normalized)
+      titleMatch || descriptionMatch || tagsMatch || locationMatch
+    }
+  }
+
+  private fun loadParticipantEvents() {
     viewModelScope.launch {
       try {
         val currentUserId = auth.currentUser?.uid
         _availableEvents =
-            if (currentUserId != null) {
-              eventRepository.getEventsByParticipant(currentUserId)
-            } else {
-              emptyList()
-            }
+            if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
+            else emptyList()
       } catch (e: Exception) {
         android.util.Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
@@ -292,19 +396,15 @@ class MapScreenViewModel(
     }
   }
 
-  /** Loads events the user has joined from the sample events. */
   private fun loadJoinedEvents() {
     val currentUserId = auth.currentUser?.uid
     if (currentUserId == null) {
       _joinedEvents = emptyList()
       return
     }
-
-    // Filter sample events where the current user is a participant
     _joinedEvents = _events.filter { event -> event.participantIds.contains(currentUserId) }
   }
 
-  /** Opens the creation form while preserving the previous sheet state. */
   fun showMemoryForm() {
     _previousSheetState = _bottomSheetState
     _showMemoryForm = true
@@ -315,12 +415,10 @@ class MapScreenViewModel(
     _showMemoryForm = false
   }
 
-  /** Saves a memory from the form and restores the sheet on success. */
   fun onMemorySave(formData: MemoryFormData) {
     viewModelScope.launch {
       _isSavingMemory = true
       _errorMessage = null
-
       try {
         val currentUserId = auth.currentUser?.uid
         if (currentUserId == null) {
@@ -330,7 +428,6 @@ class MapScreenViewModel(
         }
 
         val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
-
         val memory =
             Memory(
                 uid = memoryRepository.getNewUid(),
@@ -342,10 +439,8 @@ class MapScreenViewModel(
                 createdAt = Timestamp.now(),
                 mediaUrls = mediaUrls,
                 taggedUserIds = formData.taggedUserIds)
-
         memoryRepository.addMemory(memory)
         android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
-
         hideMemoryForm()
         restorePreviousSheetState()
       } catch (e: Exception) {
@@ -357,32 +452,25 @@ class MapScreenViewModel(
     }
   }
 
-  /** Uploads media to Firebase Storage and returns download URLs. */
   private suspend fun uploadMediaFiles(uris: List<Uri>, userId: String): List<String> {
     if (uris.isEmpty()) return emptyList()
-
     val downloadUrls = mutableListOf<String>()
-
     for (uri in uris) {
       try {
         val extension =
             applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
         val filename =
             "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
-
         val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
         val fileRef = storageRef.child(filename)
         fileRef.putFile(uri).await()
-
         val downloadUrl = fileRef.downloadUrl.await().toString()
         downloadUrls.add(downloadUrl)
-
         android.util.Log.d("MapScreenViewModel", "Uploaded media: $downloadUrl")
       } catch (e: Exception) {
         android.util.Log.e("MapScreenViewModel", "Failed to upload media file: $uri", e)
       }
     }
-
     return downloadUrls
   }
 
@@ -402,100 +490,76 @@ class MapScreenViewModel(
   }
 
   fun setEvents(newEvents: List<Event>) {
-    _events = newEvents
+    _allEvents = newEvents
+    applyFilters()
   }
 
-  /** Toggle tag selection and filter events accordingly */
   fun toggleTagSelection(tag: String) {
-    _selectedTags =
-        if (_selectedTags.contains(tag)) {
-          _selectedTags - tag
-        } else {
-          _selectedTags + tag
-        }
-    filterEvents()
+    _selectedTags = if (_selectedTags.contains(tag)) _selectedTags - tag else _selectedTags + tag
+    applyFilters()
   }
 
-  /** Filter events based on selected tags */
-  private fun filterEvents() {
-    val allEvents = SampleEventRepository.getSampleEvents()
-    _events =
-        if (_selectedTags.isEmpty()) {
-          allEvents
-        } else {
-          allEvents.filter { event -> event.tags.any { tag -> _selectedTags.contains(tag) } }
-        }
+  fun setBottomSheetTab(tab: BottomSheetTab) {
+    _selectedBottomSheetTab = tab
   }
 
-  /** Displays event details when a pin is clicked */
   fun onEventPinClicked(event: Event) {
     viewModelScope.launch {
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
-
       onCenterCamera?.invoke(event)
     }
   }
 
-  /** Closes event detail and returns to menu */
   fun closeEventDetail() {
     _selectedEvent = null
     _organizerName = ""
     setBottomSheetState(BottomSheetState.COLLAPSED)
   }
 
-  /** Shows share dialog */
   fun showShareDialog() {
     _showShareDialog = true
   }
 
-  /** Dismisses share dialog */
   fun dismissShareDialog() {
     _showShareDialog = false
   }
 
-  /** Checks if current user is participating */
+  // NOTE: recentActivities and recordRecentActivity removed — UI no longer tracks recent
+  // activities.
+
   fun isUserParticipating(): Boolean {
     val currentUserId = auth.currentUser?.uid ?: return false
     return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
   }
 
-  /** Joins the selected event */
   fun joinEvent() {
     viewModelScope.launch {
       val event = _selectedEvent ?: return@launch
       val currentUserId = auth.currentUser?.uid
-
       if (currentUserId == null) {
         _errorMessage = "You must be signed in to join events"
         return@launch
       }
-
       _errorMessage = null
       try {
         val capacity = event.capacity
         val currentAttendees = event.attendeeCount ?: 0
-
         if (capacity != null && currentAttendees >= capacity) {
           _errorMessage = "Event is at full capacity"
           return@launch
         }
-
         val updatedParticipantIds =
             event.participantIds.toMutableList().apply {
               if (!contains(currentUserId)) add(currentUserId)
             }
-
         val newAttendeeCount = currentAttendees + 1
-
         val updatedEvent =
             event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
-
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
-
         loadJoinedEvents()
       } catch (e: Exception) {
         _errorMessage = "Failed to join event: ${e.message}"
@@ -503,27 +567,21 @@ class MapScreenViewModel(
     }
   }
 
-  /** Unregisters from the selected event */
   fun unregisterFromEvent() {
     val event = _selectedEvent ?: return
     val currentUserId = auth.currentUser?.uid ?: return
-
     viewModelScope.launch {
       _errorMessage = null
       try {
         val updatedParticipantIds =
             event.participantIds.toMutableList().apply { remove(currentUserId) }
-
         val currentAttendees = event.attendeeCount ?: 0
         val newAttendeeCount = (currentAttendees - 1).coerceAtLeast(0)
-
         val updatedEvent =
             event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
-
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
-
         loadJoinedEvents()
       } catch (e: Exception) {
         _errorMessage = "Failed to unregister: ${e.message}"
@@ -531,17 +589,15 @@ class MapScreenViewModel(
     }
   }
 
-  /** Save event for later (placeholder) */
+  /** Placeholder action for "save for later" used by the UI/tests. */
   fun saveEventForLater() {
     _errorMessage = "Save for later - Coming soon!"
   }
 
-  /** Changes the selected tab in the bottom sheet */
-  fun setBottomSheetTab(tab: BottomSheetTab) {
-    _selectedBottomSheetTab = tab
-  }
-
-  /** Called when a joined event is clicked to show its details */
+  /**
+   * Called when the user taps an event from the "Joined events" list. Reuses the existing
+   * onEventPinClicked behavior to select the event and center the camera.
+   */
   fun onJoinedEventClicked(event: Event) {
     onEventPinClicked(event)
   }
@@ -554,7 +610,6 @@ fun rememberMapScreenViewModel(
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
-  // Avoid leaking the composition by promoting to application context
   val appContext = context.applicationContext
 
   return viewModel {
@@ -566,7 +621,6 @@ fun rememberMapScreenViewModel(
   }
 }
 
-/** Converts events into a GeoJSON payload consumable by Mapbox heatmaps. */
 fun eventsToGeoJson(events: List<Event>): String {
   val features =
       events.map { event ->
