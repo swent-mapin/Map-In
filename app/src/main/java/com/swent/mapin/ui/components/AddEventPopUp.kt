@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -58,7 +57,6 @@ import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.theme.MapInTheme
 import java.util.Calendar
 import java.util.Locale
 
