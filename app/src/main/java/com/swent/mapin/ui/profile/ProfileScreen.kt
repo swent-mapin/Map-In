@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -76,6 +77,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.swent.mapin.model.UserProfile
 
+// Assisted by AI
+
 /**
  * Profile screen displaying user information with edit capabilities.
  *
@@ -130,83 +133,87 @@ fun ProfileScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary))
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-          Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            // Banner Section
-            Box(modifier = Modifier.fillMaxWidth()) {
-              ProfileBanner(
-                  bannerUrl =
-                      if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
-                        viewModel.selectedBanner
-                      } else {
-                        userProfile.bannerUrl
-                      },
-                  isEditMode = viewModel.isEditMode,
-                  onBannerClick = { viewModel.toggleBannerSelector() })
+          Column(
+              modifier =
+                  Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+                // Banner Section
+                Box(modifier = Modifier.fillMaxWidth()) {
+                  ProfileBanner(
+                      bannerUrl =
+                          if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
+                            viewModel.selectedBanner
+                          } else {
+                            userProfile.bannerUrl
+                          },
+                      isEditMode = viewModel.isEditMode,
+                      onBannerClick = { viewModel.toggleBannerSelector() })
 
-              // Avatar positionné en haut, chevauchant la bannière
-              Box(
-                  modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
-                  contentAlignment = Alignment.Center) {
-                    ProfilePicture(
-                        avatarUrl =
-                            if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                              viewModel.selectedAvatar
-                            } else {
-                              userProfile.avatarUrl
-                            },
-                        isEditMode = viewModel.isEditMode,
-                        onAvatarClick = { viewModel.toggleAvatarSelector() })
-                  }
-            }
-
-            Column(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 20.dp)
-                        .animateContentSize(
-                            animationSpec =
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow)),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                  if (viewModel.isEditMode) {
-                    EditProfileContent(viewModel = viewModel)
-                  } else {
-                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
-
-                    // Logout button
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    OutlinedButton(
-                        onClick = {
-                          viewModel.signOut()
-                          onNavigateToSignIn()
-                        },
-                        modifier = Modifier.fillMaxWidth().height(50.dp).testTag("logoutButton"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
-                          Row(
-                              verticalAlignment = Alignment.CenterVertically,
-                              horizontalArrangement = Arrangement.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = "Logout",
-                                    modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Logout",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyLarge)
-                              }
-                        }
-                  }
-
-                  Spacer(modifier = Modifier.height(16.dp))
+                  // Avatar positionné en haut, chevauchant la bannière
+                  Box(
+                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
+                      contentAlignment = Alignment.Center) {
+                        ProfilePicture(
+                            avatarUrl =
+                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                                  viewModel.selectedAvatar
+                                } else {
+                                  userProfile.avatarUrl
+                                },
+                            isEditMode = viewModel.isEditMode,
+                            onAvatarClick = { viewModel.toggleAvatarSelector() })
+                      }
                 }
-          }
+
+                Column(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 20.dp)
+                            .animateContentSize(
+                                animationSpec =
+                                    spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow)),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                      if (viewModel.isEditMode) {
+                        EditProfileContent(viewModel = viewModel)
+                      } else {
+                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+
+                        // Logout button
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                              viewModel.signOut()
+                              onNavigateToSignIn()
+                            },
+                            modifier =
+                                Modifier.fillMaxWidth().height(50.dp).testTag("logoutButton"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFef5350))) {
+                              Row(
+                                  verticalAlignment = Alignment.CenterVertically,
+                                  horizontalArrangement = Arrangement.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Logout",
+                                        modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Logout",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyLarge)
+                                  }
+                            }
+                      }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+                    }
+              }
 
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {
@@ -939,40 +946,56 @@ internal fun AvatarSelectorDialog(
 /** Banner section at the top of the profile screen. */
 @Composable
 fun ProfileBanner(bannerUrl: String?, isEditMode: Boolean, onBannerClick: () -> Unit) {
-  // Find the selected banner gradient
-  val selectedBannerGradient = availableBanners.find { it.id == bannerUrl }
+  // Check if bannerUrl is an HTTP URL (uploaded image) or a preset ID
+  val isUploadedImage = bannerUrl != null && bannerUrl.startsWith("http")
 
-  val backgroundBrush =
-      if (selectedBannerGradient != null) {
-        Brush.horizontalGradient(colors = selectedBannerGradient.colors)
-      } else {
-        Brush.verticalGradient(
-            colors =
-                listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)))
-      }
+  // Find the selected banner gradient for presets
+  val selectedBannerGradient =
+      if (!isUploadedImage) availableBanners.find { it.id == bannerUrl } else null
 
   Box(
       modifier =
           Modifier.fillMaxWidth()
               .height(180.dp)
-              .background(brush = backgroundBrush)
               .clickable(enabled = isEditMode, onClick = onBannerClick)
               .testTag("profileBanner")) {
-        // Optional overlay for better text visibility
-        if (bannerUrl.isNullOrEmpty()) {
-          Box(
-              modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)),
-              contentAlignment = Alignment.Center) {
-                if (isEditMode) {
-                  Text(
-                      text = "Tap to choose a banner",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = Color.White.copy(alpha = 0.7f),
-                      fontWeight = FontWeight.SemiBold)
-                }
+
+        // Display uploaded image or gradient
+        if (isUploadedImage) {
+          // Display uploaded image from Firebase Storage
+          AsyncImage(
+              model = bannerUrl,
+              contentDescription = "Profile Banner",
+              modifier = Modifier.fillMaxSize())
+        } else {
+          // Display gradient for preset banners
+          val backgroundBrush =
+              if (selectedBannerGradient != null) {
+                Brush.horizontalGradient(colors = selectedBannerGradient.colors)
+              } else {
+                Brush.verticalGradient(
+                    colors =
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)))
               }
+
+          Box(modifier = Modifier.fillMaxSize().background(brush = backgroundBrush)) {
+            // Optional overlay for better text visibility
+            if (bannerUrl.isNullOrEmpty()) {
+              Box(
+                  modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)),
+                  contentAlignment = Alignment.Center) {
+                    if (isEditMode) {
+                      Text(
+                          text = "Tap to choose a banner",
+                          style = MaterialTheme.typography.bodyMedium,
+                          color = Color.White.copy(alpha = 0.7f),
+                          fontWeight = FontWeight.SemiBold)
+                    }
+                  }
+            }
+          }
         }
 
         // Edit icon overlay
