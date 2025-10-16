@@ -1,11 +1,9 @@
-package com.github.se.bootcamp.ui.map
+package com.swent.mapin.model
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.swent.mapin.HttpClientProvider
-import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationRepository
-import com.swent.mapin.model.NominatimForwardGeocoder
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +35,7 @@ class LocationViewModel(
                 _locations.value = emptyList<Location>()
               }
             } else {
+              Log.w(null, "Query is blank")
               _locations.value = emptyList()
             }
           }

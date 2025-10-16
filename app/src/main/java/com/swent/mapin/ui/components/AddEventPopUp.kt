@@ -28,6 +28,7 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -51,9 +52,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.se.bootcamp.ui.map.LocationViewModel
+import com.google.firebase.Timestamp
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
@@ -215,7 +218,7 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
       modifier = Modifier.width(180.dp).testTag(AddEventPopUpTestTags.PICK_EVENT_TIME),
       colors =
           ButtonColors(
-              containerColor = colorResource(R.color.turquoise),
+              containerColor = MaterialTheme.colorScheme.primary,
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
               disabledContainerColor = Color.Unspecified)) {
@@ -242,7 +245,6 @@ fun AddEventPopUp(
     onDismiss: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {
-
   val title = remember { mutableStateOf("") }
   val description = remember { mutableStateOf("") }
   val location = remember { mutableStateOf("") }
@@ -407,14 +409,19 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                            saveEvent(
-                                eventViewModel,
-                                title.value,
-                                description.value,
-                                gotLocation.value,
-                                extractTags(tag.value),
-                                isPublic.value,
-                                onDone)
+                              val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+                              val dateTime = sdf.parse(date.value + time.value.replace("h", ""))
+                              val timestamp = if (dateTime != null) Timestamp(dateTime) else Timestamp.now()
+                              saveEvent(
+                                  eventViewModel,
+                                  title.value,
+                                  description.value,
+                                  gotLocation.value,
+                                  timestamp,
+                                  extractTags(tag.value),
+                                  isPublic.value,
+                                  onDone
+                              )
                           },
                           enabled = !error,
                           colors =

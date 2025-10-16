@@ -1,6 +1,5 @@
 package com.swent.mapin.model
 
-import com.github.se.bootcamp.ui.map.LocationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first

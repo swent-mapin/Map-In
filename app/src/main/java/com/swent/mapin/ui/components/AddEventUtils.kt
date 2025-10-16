@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.components
 
 import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
@@ -76,6 +77,7 @@ fun saveEvent(
     title: String,
     description: String,
     location: Location,
+    date: Timestamp,
     tags: List<String>,
     isPublic: Boolean,
     onDone: () -> Unit
