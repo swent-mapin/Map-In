@@ -87,9 +87,6 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-
-    // Scroll to make "Discover" section visible on smaller screens
-    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Activity 1").assertIsDisplayed()
   }
 
@@ -132,12 +129,9 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Discover").performScrollTo()
-
     rule.onNodeWithText("Create Memory").assertHasClickAction()
-    rule.onNodeWithText("Sports").assertHasClickAction()
-    rule.onNodeWithText("Music").assertHasClickAction()
+    rule.onNodeWithText("Create Event").assertHasClickAction()
+    rule.onNodeWithText("Filters").assertHasClickAction()
   }
 
   @Test
@@ -184,9 +178,9 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").assertIsDisplayed()
-    rule.onNodeWithText("Music").assertIsDisplayed()
-    rule.onNodeWithText("Food").assertIsDisplayed()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -208,11 +202,12 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").assertHasClickAction()
-    rule.onNodeWithText("Music").assertHasClickAction()
-    rule.onNodeWithText("Food").assertHasClickAction()
-    rule.onNodeWithText("Tech").assertHasClickAction()
-    rule.onNodeWithText("Art").assertHasClickAction()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Music").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Food").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Tech").performScrollTo().assertHasClickAction()
+    rule.onNodeWithText("Art").performScrollTo().assertHasClickAction()
   }
 
   @Test
@@ -227,10 +222,11 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").performClick()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
     assertEquals("Sports", clickedTag)
 
-    rule.onNodeWithText("Music").performClick()
+    rule.onNodeWithText("Music").performScrollTo().performClick()
     assertEquals("Music", clickedTag)
   }
 
@@ -246,9 +242,10 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").performClick()
-    rule.onNodeWithText("Music").performClick()
-    rule.onNodeWithText("Food").performClick()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().performClick()
+    rule.onNodeWithText("Music").performScrollTo().performClick()
+    rule.onNodeWithText("Food").performScrollTo().performClick()
 
     assertEquals(3, clickedTags.size)
     assertTrue(clickedTags.contains("Sports"))
@@ -263,7 +260,7 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    tags.forEach { tag -> rule.onNodeWithText(tag).assertIsDisplayed() }
+    tags.forEach { tag -> rule.onNodeWithText(tag).performScrollTo().assertIsDisplayed() }
   }
 
   @Test
@@ -274,7 +271,7 @@ class BottomSheetContentTest {
     }
 
     rule.waitForIdle()
-    rule.onNodeWithText("Sports").assertIsDisplayed()
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -288,8 +285,9 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").assertIsDisplayed()
-    rule.onNodeWithText("Music").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -303,9 +301,10 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Sports").assertIsDisplayed()
-    rule.onNodeWithText("Music").assertIsDisplayed()
-    rule.onNodeWithText("Food").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -316,8 +315,8 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    // Should have "Discover" as section title
-    rule.onNodeWithText("Discover").assertIsDisplayed()
+    // Should have "Discover" as section title - scroll to make it visible
+    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -329,8 +328,9 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("VeryLongTagName").assertIsDisplayed()
-    rule.onNodeWithText("AnotherLongTag").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("VeryLongTagName").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("AnotherLongTag").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -342,7 +342,8 @@ class BottomSheetContentTest {
 
     rule.waitForIdle()
 
-    rule.onNodeWithText("Art & Craft").assertIsDisplayed()
-    rule.onNodeWithText("Tech-Conference").assertIsDisplayed()
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
   }
 }
