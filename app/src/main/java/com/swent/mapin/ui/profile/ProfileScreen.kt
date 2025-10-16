@@ -220,7 +220,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
 
 /** Displays the user's profile picture or a placeholder. */
 @Composable
-private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
+internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
   Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
     // Outer glow effect
     Box(
@@ -254,6 +254,7 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                                     Color(0xFFfa709a), // Rose
                                     Color(0xFF667eea) // Back to purple
                                     )))
+                .testTag("profilePicture")
                 .then(if (isEditMode) Modifier.clickable { onAvatarClick() } else Modifier),
         contentAlignment = Alignment.Center) {
           // Inner circle with profile picture
@@ -267,8 +268,7 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                                   colors =
                                       listOf(
                                           MaterialTheme.colorScheme.primaryContainer,
-                                          MaterialTheme.colorScheme.tertiaryContainer)))
-                      .testTag("profilePicture"),
+                                          MaterialTheme.colorScheme.tertiaryContainer))),
               contentAlignment = Alignment.Center) {
                 // Check if avatarUrl is an HTTP URL (uploaded image) or an icon ID
                 if (avatarUrl != null && avatarUrl.startsWith("http")) {
@@ -285,33 +285,34 @@ private fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClic
                       modifier = Modifier.size(46.dp),
                       tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
-
-                // Edit indicator
-                if (isEditMode) {
-                  Box(
-                      modifier =
-                          Modifier.align(Alignment.BottomEnd)
-                              .padding(4.dp)
-                              .size(28.dp)
-                              .clip(CircleShape)
-                              .background(Color(0xFF667eea))
-                              .shadow(4.dp, CircleShape),
-                      contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Change Avatar",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp))
-                      }
-                }
               }
         }
+
+    // Edit indicator - positioned outside for better visibility
+    if (isEditMode) {
+      Box(
+          modifier =
+              Modifier.align(Alignment.BottomEnd)
+                  .padding(4.dp)
+                  .size(28.dp)
+                  .shadow(4.dp, CircleShape)
+                  .clip(CircleShape)
+                  .background(Color(0xFF667eea))
+                  .testTag("editIndicator"),
+          contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Change Avatar",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp))
+          }
+    }
   }
 }
 
 /** View mode: displays profile information in cards. */
 @Composable
-private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
+internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
   // Name card with gradient and large prominence
   Card(
       modifier =
@@ -447,7 +448,7 @@ private fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewM
 
 /** Reusable card component for displaying profile information. */
 @Composable
-private fun ProfileInfoCard(
+internal fun ProfileInfoCard(
     title: String,
     content: String,
     icon: ImageVector,
@@ -510,7 +511,7 @@ private fun ProfileInfoCard(
 
 /** Edit mode: displays editable text fields for profile information. */
 @Composable
-private fun EditProfileContent(viewModel: ProfileViewModel) {
+internal fun EditProfileContent(viewModel: ProfileViewModel) {
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(20.dp),
@@ -859,7 +860,7 @@ private fun getAvatarIcon(avatarUrl: String?): ImageVector {
 
 /** Avatar selector dialog with gallery import option */
 @Composable
-private fun AvatarSelectorDialog(
+internal fun AvatarSelectorDialog(
     viewModel: ProfileViewModel,
     selectedAvatar: String,
     onAvatarSelected: (String) -> Unit,
@@ -973,7 +974,7 @@ fun ProfileBanner(bannerUrl: String?, isEditMode: Boolean, onBannerClick: () -> 
 
 /** Banner selector dialog */
 @Composable
-private fun BannerSelectorDialog(
+internal fun BannerSelectorDialog(
     viewModel: ProfileViewModel,
     selectedBanner: String,
     onBannerSelected: (String) -> Unit,
@@ -1138,7 +1139,7 @@ private fun AvatarSelectionGrid(
 
 /** Reusable grid for banner selection */
 @Composable
-private fun BannerSelectionGrid(
+internal fun BannerSelectionGrid(
     availableBanners: List<BannerOption>,
     selectedBanner: String,
     onBannerSelected: (String) -> Unit
