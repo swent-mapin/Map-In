@@ -48,7 +48,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -63,8 +62,6 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -107,66 +104,69 @@ fun BottomSheetContent(
     state: BottomSheetState,
     fullEntryKey: Int,
     searchBarState: SearchBarState,
+    // Search results and mode
+    searchResults: List<Event> = emptyList(),
+    isSearchMode: Boolean = false,
+    // Memory form and events
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
+    // Joined events
     joinedEvents: List<Event> = emptyList(),
-    selectedTab: MapScreenViewModel.BottomSheetTab =
-        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+    // Tab and tags
+    selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
+    // Callbacks
+    onEventClick: (Event) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
-    onMemoryCancel: () -> Unit = {},
-    searchResults: List<Event> = emptyList(),
-    isSearchMode: Boolean = false,
-    recentActivities: List<Event> = emptyList(),
-    onEventClick: (Event) -> Unit = {}
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onJoinedEventClick: (Event) -> Unit = {}
 ) {
-  val isFull = state == BottomSheetState.FULL
-  val scrollState = remember(fullEntryKey) { ScrollState(0) }
-  val focusRequester = remember { FocusRequester() }
-  val focusManager = LocalFocusManager.current
+    val isFull = state == BottomSheetState.FULL
+    val scrollState = remember(fullEntryKey) { ScrollState(0) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
-  LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
-    if (isFull && searchBarState.shouldRequestFocus) {
-      focusRequester.requestFocus()
-      searchBarState.onFocusHandled()
+    LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
+        if (isFull && searchBarState.shouldRequestFocus) {
+            focusRequester.requestFocus()
+            searchBarState.onFocusHandled()
+        }
     }
-  }
 
-  // Animated transition between regular content and memory form
-  AnimatedContent(
-      targetState = showMemoryForm,
-      transitionSpec = {
-        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
-                slideInVertically(
-                    animationSpec = androidx.compose.animation.core.tween(300),
-                    initialOffsetY = { it / 4 }))
-            .togetherWith(
-                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
-                    slideOutVertically(
-                        animationSpec = androidx.compose.animation.core.tween(200),
-                        targetOffsetY = { -it / 4 }))
-      },
-      label = "memoryFormTransition") { showForm ->
+    // Animated transition between regular content and memory form
+    AnimatedContent(
+        targetState = showMemoryForm,
+        transitionSpec = {
+            (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+                    slideInVertically(
+                        animationSpec = androidx.compose.animation.core.tween(300),
+                        initialOffsetY = { it / 4 }))
+                .togetherWith(
+                    fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                        slideOutVertically(
+                            animationSpec = androidx.compose.animation.core.tween(200),
+                            targetOffsetY = { -it / 4 }))
+        },
+        label = "memoryFormTransition") { showForm ->
         if (showForm) {
-          // Memory form content
-          val memoryFormScrollState = remember { ScrollState(0) }
-          MemoryFormScreen(
-              scrollState = memoryFormScrollState,
-              availableEvents = availableEvents,
-              onSave = onMemorySave,
-              onCancel = onMemoryCancel)
+            // Memory form content
+            val memoryFormScrollState = remember { ScrollState(0) }
+            MemoryFormScreen(
+                scrollState = memoryFormScrollState,
+                availableEvents = availableEvents,
+                onSave = onMemorySave,
+                onCancel = onMemoryCancel)
         } else {
             // Regular bottom sheet content
             Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                 SearchBar(
                     value = searchBarState.query,
                     onValueChange = searchBarState.onQueryChange,
+                    isFull = isFull,
                     onTap = searchBarState.onTap,
                     focusRequester = focusRequester,
                     onSearchAction = { focusManager.clearFocus() },
@@ -194,66 +194,50 @@ fun BottomSheetContent(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = "Recent Activities",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp))
-
-                        if (recentActivities.isNotEmpty()) {
-                            recentActivities.forEach { event ->
-                                ActivityItem(
-                                    title = event.title,
-                                    description = event.location.name,
-                                    modifier = Modifier.clickable { onEventClick(event) })
-                            }
-                        } else {
-                            NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
+                        // Tab selector
+                        TabRow(
+                            selectedTabIndex =
+                                if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
+                                else 1,
+                            modifier = Modifier.fillMaxWidth()) {
+                            Tab(
+                                selected =
+                                    selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                                onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                                },
+                                text = { Text("Recent Activities") })
+                            Tab(
+                                selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                onClick = { onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS) },
+                                text = { Text("Joined Events") })
                         }
-              // Tab selector
-              TabRow(
-                  selectedTabIndex =
-                      if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
-                      else 1,
-                  modifier = Modifier.fillMaxWidth()) {
-                    Tab(
-                        selected =
-                            selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
-                        onClick = {
-                          onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
-                        },
-                        text = { Text("Recent Activities") })
-                    Tab(
-                        selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                        onClick = { onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS) },
-                        text = { Text("Joined Events") })
-                  }
 
-              Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-              // Content based on selected tab
-              when (selectedTab) {
-                MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                  repeat(4) { index ->
-                    ActivityItem(
-                        title = "Activity ${index + 1}",
-                        description = "Example description for activity ${index + 1}.")
-                  }
-                }
-                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                  JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
-                }
-              }
+                        // Content based on selected tab
+                        when (selectedTab) {
+                            MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
+                                // We removed the previous duplicated recent-activities list and sample items.
+                                // If you want to show recent items later, pass them in and render here; for now
+                                // we display a friendly message indicating there are no recent events.
+                                NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
+                            }
+                            MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                                JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
+                            }
+                        }
 
-              Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-              Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-              // Dynamic tag selection
-              if (topTags.isNotEmpty()) {
-                TagsSection(topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
-              }
+                        // Dynamic tag selection
+                        if (topTags.isNotEmpty()) {
+                            TagsSection(topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
+                        }
 
                         Spacer(modifier = Modifier.height(24.dp))
                     }
@@ -330,7 +314,7 @@ private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
 private fun NoActivitiesMessage(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "No recent activities", style = MaterialTheme.typography.titleMedium)
+            Text(text = "No recent events.", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Your recent activity will appear here once you interact with events or create memories.",
@@ -390,6 +374,7 @@ private fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClic
 private fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
+    isFull: Boolean,
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
@@ -408,7 +393,7 @@ private fun SearchBar(
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
                 if (focusState.isFocused) {
-                    onTap()
+                    if (!isFull) onTap()
                 }
             },
         singleLine = true,
@@ -480,44 +465,6 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
       }
 }
 
-/** List item displaying an activity title and description. */
-@Composable
-private fun ActivityItem(title: String, description: String, modifier: Modifier = Modifier) {
-  Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-    Text(text = title, style = MaterialTheme.typography.titleSmall)
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-  }
-}
-
-/** Tag item for discover section - displays tag text and handles selection. */
-@Composable
-private fun TagItem(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-  val contentColor =
-      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-
-  OutlinedButton(
-      onClick = onClick,
-      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors =
-          ButtonDefaults.buttonColors(
-              containerColor = backgroundColor, contentColor = contentColor)) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
-      }
-}
-
 /** Section displaying dynamic tags - replaces the hardcoded discover section. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -544,3 +491,48 @@ private fun TagsSection(
         }
   }
 }
+
+@Composable
+private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+  if (events.isEmpty()) {
+    NoResultsMessage(query = "", modifier = Modifier)
+    return
+  }
+
+  Column(modifier = Modifier.fillMaxWidth()) {
+    events.forEach { event ->
+      SearchResultItem(event = event, modifier = Modifier.padding(horizontal = 16.dp), onClick = { onEventClick(event) })
+      Spacer(modifier = Modifier.height(8.dp))
+      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+      Spacer(modifier = Modifier.height(8.dp))
+    }
+  }
+}
+
+@Composable
+private fun TagItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+  val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+
+  OutlinedButton(
+      onClick = onClick,
+      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = backgroundColor, contentColor = contentColor)) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis)
+  }
+}
+
+

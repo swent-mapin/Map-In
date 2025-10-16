@@ -87,33 +87,33 @@ fun MapScreen(
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {}
 ) {
-  val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
-  // Bottom sheet heights scale with the current device size
-  val sheetConfig =
-      BottomSheetConfig(
-          collapsedHeight = MapConstants.COLLAPSED_HEIGHT,
-          mediumHeight = MapConstants.MEDIUM_HEIGHT,
-          fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
+    // Bottom sheet heights scale with the current device size
+    val sheetConfig =
+        BottomSheetConfig(
+            collapsedHeight = MapConstants.COLLAPSED_HEIGHT,
+            mediumHeight = MapConstants.MEDIUM_HEIGHT,
+            fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
-  val viewModel = rememberMapScreenViewModel(sheetConfig)
-  val snackbarHostState = remember { SnackbarHostState() }
+    val viewModel = rememberMapScreenViewModel(sheetConfig)
+    val snackbarHostState = remember { SnackbarHostState() }
 
-  LaunchedEffect(viewModel.errorMessage) {
-    viewModel.errorMessage?.let { message ->
-      snackbarHostState.showSnackbar(message)
-      viewModel.clearError()
+    LaunchedEffect(viewModel.errorMessage) {
+        viewModel.errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearError()
+        }
     }
-  }
 
-  // Start the camera centered on the default campus view
-  val mapViewportState = rememberMapViewportState {
-    setCameraOptions {
-      zoom(MapConstants.DEFAULT_ZOOM.toDouble())
-      center(Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE))
-      pitch(0.0)
-      bearing(0.0)
+    // Start the camera centered on the default campus view
+    val mapViewportState = rememberMapViewportState {
+        setCameraOptions {
+            zoom(MapConstants.DEFAULT_ZOOM.toDouble())
+            center(Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE))
+            pitch(0.0)
+            bearing(0.0)
+        }
     }
-  }
 
   // Setup camera centering callback
   val screenHeightDpValue = screenHeightDp.value
@@ -138,32 +138,34 @@ fun MapScreen(
   ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
   ObserveZoomForSheetCollapse(viewModel, mapViewportState)
 
-  val sheetMetrics =
-      rememberSheetInteractionMetrics(
-          screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
+    val sheetMetrics =
+        rememberSheetInteractionMetrics(
+            screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
-  val isDarkTheme = isSystemInDarkTheme()
-  val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
+    val isDarkTheme = isSystemInDarkTheme()
+    val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
-  // Adjust POI labels alongside our custom annotations
-  val standardStyleState = rememberStandardStyleState {
-    configurationsState.apply {
-      this.lightPreset = lightPreset
-      showPointOfInterestLabels = BooleanValue(true) // turn off if needed
+    // Adjust POI labels alongside our custom annotations
+    val standardStyleState = rememberStandardStyleState {
+        configurationsState.apply {
+            this.lightPreset = lightPreset
+            showPointOfInterestLabels = BooleanValue(true) // turn off if needed
+        }
     }
-  }
 
-  // Heatmap source mirrors the ViewModel events list
-  val heatmapSource =
-      rememberGeoJsonSourceState(key = "events-heatmap-source") {
-        data = GeoJSONData(eventsToGeoJson(viewModel.events))
-      }
+    // Heatmap source mirrors the ViewModel events list
+    val heatmapSource =
+        rememberGeoJsonSourceState(key = "events-heatmap-source") {
+            data = GeoJSONData(eventsToGeoJson(viewModel.events))
+        }
 
-  LaunchedEffect(viewModel.events) {
-    heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
-  }
+    LaunchedEffect(viewModel.events) {
+        heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
+    }
 
+    // Fusion d'une seule racine UI box qui contient la carte, overlays et la feuille inférieure
     Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
+        // Carte Mapbox: combine les comportements précédemment séparés
         if (renderMap) {
             MapboxLayer(
                 viewModel = viewModel,
@@ -173,47 +175,38 @@ fun MapScreen(
                 heatmapSource = heatmapSource,
                 isDarkTheme = isDarkTheme,
                 onEventClick = { event ->
-                    // record recent activity and show sheet medium so the user can see details
-                    viewModel.recordRecentActivity(event)
+                    // Conserver tous les effets attendus lors d'un clic sur un pin
+                    viewModel.onEventPinClicked(event)
                     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-                    // propagate to external handler (e.g., navigate to details)
+                    // Propager vers le handler externe
                     onEventClick(event)
                 })
         }
-  Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
-    if (renderMap) {
-      MapboxLayer(
-          viewModel = viewModel,
-          mapViewportState = mapViewportState,
-          sheetMetrics = sheetMetrics,
-          standardStyleState = standardStyleState,
-          heatmapSource = heatmapSource,
-          isDarkTheme = isDarkTheme,
-          onEventClick = { event -> viewModel.onEventPinClicked(event) })
-    }
 
-    TopGradient()
+        // Overlays et contrôles au-dessus de la carte
+        TopGradient()
 
-    ScrimOverlay(
-        currentHeightDp = viewModel.currentSheetHeight,
-        mediumHeightDp = sheetConfig.mediumHeight,
-        fullHeightDp = sheetConfig.fullHeight)
+        ScrimOverlay(
+            currentHeightDp = viewModel.currentSheetHeight,
+            mediumHeightDp = sheetConfig.mediumHeight,
+            fullHeightDp = sheetConfig.fullHeight)
 
-    MapStyleSelector(
-        selectedStyle = viewModel.mapStyle,
-        onStyleSelected = { style -> viewModel.setMapStyle(style) },
-        modifier =
-            Modifier.align(Alignment.BottomEnd)
-                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
+        MapStyleSelector(
+            selectedStyle = viewModel.mapStyle,
+            onStyleSelected = { style -> viewModel.setMapStyle(style) },
+            modifier =
+                Modifier.align(Alignment.BottomEnd)
+                    .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
 
-    // Block map gestures when the sheet is in focus
-    ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
+        // Bloque les interactions de carte quand la feuille est pleine
+        ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-    // Profile button in top-right corner
-    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
-      ProfileButton(onClick = onNavigateToProfile)
-    }
+        // Bouton profil en haut à droite
+        Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
+            ProfileButton(onClick = onNavigateToProfile)
+        }
 
+        // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
         BottomSheet(
             config = sheetConfig,
             currentState = viewModel.bottomSheetState,
@@ -222,98 +215,74 @@ fun MapScreen(
             stateToHeight = viewModel::getHeightForState,
             onHeightChange = { height -> viewModel.currentSheetHeight = height },
             modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-            BottomSheetContent(
-                state = viewModel.bottomSheetState,
-                fullEntryKey = viewModel.fullEntryKey,
-                searchBarState =
-                    SearchBarState(
-                        query = viewModel.searchQuery,
-                        shouldRequestFocus = viewModel.shouldFocusSearch,
-                        onQueryChange = viewModel::onSearchQueryChange,
-                        onTap = viewModel::onSearchTap,
-                        onFocusHandled = viewModel::onSearchFocusHandled,
-                        onClear = viewModel::onClearSearch),
-                searchResults = viewModel.searchResults,
-                isSearchMode = viewModel.isSearchMode,
-                showMemoryForm = viewModel.showMemoryForm,
-                availableEvents = viewModel.availableEvents,
-                recentActivities = viewModel.recentActivities,
-                onEventClick = { event ->
-                    // record recent activity, collapse/adjust sheet, and forward event
-                    viewModel.recordRecentActivity(event)
-                    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-                    onEventClick(event)
-                },
-                onCreateMemoryClick = viewModel::showMemoryForm,
-                onMemorySave = viewModel::onMemorySave,
-                onMemoryCancel = viewModel::onMemoryCancel)
-    BottomSheet(
-        config = sheetConfig,
-        currentState = viewModel.bottomSheetState,
-        onStateChange = { newState -> viewModel.setBottomSheetState(newState) },
-        calculateTargetState = viewModel::calculateTargetState,
-        stateToHeight = viewModel::getHeightForState,
-        onHeightChange = { height -> viewModel.currentSheetHeight = height },
-        modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-          // Show event detail if an event is selected, otherwise show regular content
-          if (viewModel.selectedEvent != null) {
-            EventDetailSheet(
-                event = viewModel.selectedEvent!!,
-                sheetState = viewModel.bottomSheetState,
-                isParticipating = viewModel.isUserParticipating(),
-                organizerName = viewModel.organizerName,
-                onJoinEvent = { viewModel.joinEvent() },
-                onUnregisterEvent = { viewModel.unregisterFromEvent() },
-                onSaveForLater = { viewModel.saveEventForLater() },
-                onClose = { viewModel.closeEventDetail() },
-                onShare = { viewModel.showShareDialog() })
-          } else {
-            BottomSheetContent(
-                state = viewModel.bottomSheetState,
-                fullEntryKey = viewModel.fullEntryKey,
-                searchBarState =
-                    SearchBarState(
-                        query = viewModel.searchQuery,
-                        shouldRequestFocus = viewModel.shouldFocusSearch,
-                        onQueryChange = viewModel::onSearchQueryChange,
-                        onTap = viewModel::onSearchTap,
-                        onFocusHandled = viewModel::onSearchFocusHandled),
-                showMemoryForm = viewModel.showMemoryForm,
-                availableEvents = viewModel.availableEvents,
-                topTags = viewModel.topTags,
-                selectedTags = viewModel.selectedTags,
-                onTagClick = viewModel::toggleTagSelection,
-                joinedEvents = viewModel.joinedEvents,
-                selectedTab = viewModel.selectedBottomSheetTab,
-                onCreateMemoryClick = viewModel::showMemoryForm,
-                onMemorySave = viewModel::onMemorySave,
-                onMemoryCancel = viewModel::onMemoryCancel,
-                onTabChange = viewModel::setBottomSheetTab,
-                onJoinedEventClick = viewModel::onJoinedEventClicked)
-          }
+
+            // Si un event est sélectionné montrer le détail, sinon le contenu standard
+            if (viewModel.selectedEvent != null) {
+                EventDetailSheet(
+                    event = viewModel.selectedEvent!!,
+                    sheetState = viewModel.bottomSheetState,
+                    isParticipating = viewModel.isUserParticipating(),
+                    organizerName = viewModel.organizerName,
+                    onJoinEvent = { viewModel.joinEvent() },
+                    onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                    onSaveForLater = { viewModel.saveEventForLater() },
+                    onClose = { viewModel.closeEventDetail() },
+                    onShare = { viewModel.showShareDialog() })
+            } else {
+                BottomSheetContent(
+                    state = viewModel.bottomSheetState,
+                    fullEntryKey = viewModel.fullEntryKey,
+                    searchBarState =
+                        SearchBarState(
+                            query = viewModel.searchQuery,
+                            shouldRequestFocus = viewModel.shouldFocusSearch,
+                            onQueryChange = viewModel::onSearchQueryChange,
+                            onTap = viewModel::onSearchTap,
+                            onFocusHandled = viewModel::onSearchFocusHandled,
+                            onClear = viewModel::onClearSearch),
+                    searchResults = viewModel.searchResults,
+                    isSearchMode = viewModel.isSearchMode,
+                    showMemoryForm = viewModel.showMemoryForm,
+                    availableEvents = viewModel.availableEvents,
+                    topTags = viewModel.topTags,
+                    selectedTags = viewModel.selectedTags,
+                    onTagClick = viewModel::toggleTagSelection,
+                    onEventClick = { event ->
+                      // garder le comportement attendu côté BottomSheet item click
+                      viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+                      onEventClick(event)
+                    },
+                    onCreateMemoryClick = viewModel::showMemoryForm,
+                    onMemorySave = viewModel::onMemorySave,
+                    onMemoryCancel = viewModel::onMemoryCancel,
+                    onTabChange = viewModel::setBottomSheetTab,
+                    joinedEvents = viewModel.joinedEvents,
+                    selectedTab = viewModel.selectedBottomSheetTab,
+                    onJoinedEventClick = viewModel::onJoinedEventClicked)
+            }
         }
 
-    // Share dialog
-    if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
-      ShareEventDialog(
-          event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
-    }
+        // Share dialog
+        if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
+            ShareEventDialog(event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
+        }
 
-    if (viewModel.isSavingMemory) {
-      Box(
-          modifier =
-              Modifier.fillMaxSize()
-                  .background(Color.Black.copy(alpha = 0.5f))
-                  .testTag("memoryLoadingIndicator"),
-          contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-          }
-    }
+        // Indicateur de sauvegarde de mémoire
+        if (viewModel.isSavingMemory) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .testTag("memoryLoadingIndicator"),
+                contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
 
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
-  }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
+    }
 }
 
 /**
@@ -332,48 +301,48 @@ private fun MapboxLayer(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
-  MapboxMap(
-      Modifier.fillMaxSize()
-          .then(
-              Modifier.mapPointerInput(
-                  bottomSheetState = viewModel.bottomSheetState,
-                  sheetMetrics = sheetMetrics,
-                  onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
-                  checkTouchProximity = viewModel::checkTouchProximityToSheet)),
-      mapViewportState = mapViewportState,
-      style = {
-        if (viewModel.useSatelliteStyle) {
-          MapboxStandardSatelliteStyle(styleInteractionsState = null)
-        } else {
-          MapboxStandardStyle(standardStyleState = standardStyleState)
-        }
-      },
-      compass = {
-        Box(modifier = Modifier.fillMaxSize()) {
-          Compass(
-              modifier =
-                  Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
-        }
-      },
-      scaleBar = {
-        Box(modifier = Modifier.fillMaxSize()) {
-          AnimatedVisibility(
-              visible = viewModel.isZooming,
-              enter = fadeIn(),
-              exit = fadeOut(),
-              modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
-                ScaleBar()
-              }
-        }
-      }) {
+    MapboxMap(
+        Modifier.fillMaxSize()
+            .then(
+                Modifier.mapPointerInput(
+                    bottomSheetState = viewModel.bottomSheetState,
+                    sheetMetrics = sheetMetrics,
+                    onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
+                    checkTouchProximity = viewModel::checkTouchProximityToSheet)),
+        mapViewportState = mapViewportState,
+        style = {
+            if (viewModel.useSatelliteStyle) {
+                MapboxStandardSatelliteStyle(styleInteractionsState = null)
+            } else {
+                MapboxStandardStyle(standardStyleState = standardStyleState)
+            }
+        },
+        compass = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Compass(
+                    modifier =
+                        Modifier.align(Alignment.BottomEnd)
+                            .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
+            }
+        },
+        scaleBar = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = viewModel.isZooming,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
+                    ScaleBar()
+                }
+            }
+        }) {
         MapLayers(
             viewModel = viewModel,
             mapViewportState = mapViewportState,
             heatmapSource = heatmapSource,
             isDarkTheme = isDarkTheme,
             onEventClick = onEventClick)
-      }
+    }
 }
 
 /**
@@ -390,17 +359,16 @@ private fun MapLayers(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
-  val context = LocalContext.current
-  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+    val context = LocalContext.current
+    val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
 
-  val annotationStyle =
-      remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
+    val annotationStyle =
+        remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
-  // Recréer les annotations quand l'événement sélectionné change
-  val annotations =
-      remember(viewModel.events, viewModel.selectedEvent, annotationStyle) {
-        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
-      }
+    val annotations =
+        remember(viewModel.events, annotationStyle) {
+            createEventAnnotations(viewModel.events, annotationStyle)
+        }
 
   val clusterConfig = remember { createClusterConfig() }
 
@@ -811,5 +779,5 @@ private fun ProfileButton(onClick: () -> Unit) {
             painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
             contentDescription = "Profile",
             tint = MaterialTheme.colorScheme.onPrimaryContainer)
-      }
+    }
 }
