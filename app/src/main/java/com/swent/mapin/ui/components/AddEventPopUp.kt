@@ -52,7 +52,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
@@ -143,7 +145,11 @@ fun AddEventTextField(
  *   `dd/MM/yyyy`.
  */
 @Composable
-fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() -> Unit)? = null) {
+fun FutureDatePickerButton(
+    selectedDate: MutableState<String>,
+    onDateClick: (() -> Unit)? = null,
+    onDateChanged: (() -> Unit)? = null
+) {
   val context = LocalContext.current
 
   Button(
@@ -168,6 +174,7 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
                             pickedDay,
                             pickedMonth + 1,
                             pickedYear)
+                    onDateChanged?.invoke()
                   },
                   year,
                   month,
@@ -192,7 +199,11 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
  *   as HHmm).
  */
 @Composable
-fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Unit)? = null) {
+fun TimePickerButton(
+    selectedTime: MutableState<String>,
+    onTimeClick: (() -> Unit)? = null,
+    onTimeChanged: (() -> Unit)? = null
+) {
   val context = LocalContext.current
 
   Button(
@@ -210,6 +221,7 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
                     selectedTime.value =
                         "${pickedHour.toString().padStart(2, '0')}h" +
                             pickedMinute.toString().padStart(2, '0')
+                    onTimeChanged?.invoke()
                   },
                   hour,
                   minute,
@@ -220,7 +232,7 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
       modifier = Modifier.width(180.dp).testTag(AddEventPopUpTestTags.PICK_EVENT_TIME),
       colors =
           ButtonColors(
-              containerColor = MaterialTheme.colorScheme.primary,
+              containerColor = colorResource(R.color.turquoise),
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
               disabledContainerColor = Color.Unspecified)) {
@@ -255,10 +267,13 @@ fun AddEventPopUp(
   val time = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
 
+  val dateError = remember { mutableStateOf(true) }
+  val timeError = remember { mutableStateOf(true) }
   val titleError = remember { mutableStateOf(true) }
   val descriptionError = remember { mutableStateOf(true) }
   val locationError = remember { mutableStateOf(true) }
   val tagError = remember { mutableStateOf(false) }
+  val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
   val locationExpanded = remember { mutableStateOf(false) }
   val gotLocation = remember {
@@ -270,18 +285,17 @@ fun AddEventPopUp(
       titleError.value ||
           descriptionError.value ||
           locationError.value ||
-          time.value.isBlank() ||
-          date.value.isBlank()
+          timeError.value ||
+          dateError.value
 
-  val errorFields =
-      listOfNotNull(
-          if (titleError.value) stringResource(R.string.title_field) else null,
-          if (date.value.isBlank()) stringResource(R.string.date_field) else null,
-          if (locationError.value) stringResource(R.string.location_field) else null,
-          if (descriptionError.value) stringResource(R.string.description_field) else null,
-          if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (time.value.isBlank()) stringResource(R.string.time) else null)
-
+    val errorFields = listOfNotNull(
+        if (titleError.value) stringResource(R.string.title_field) else null,
+        if (dateError.value) stringResource(R.string.date_field) else null,
+        if (locationError.value) stringResource(R.string.location_field) else null,
+        if (descriptionError.value) stringResource(R.string.description_field) else null,
+        if (tagError.value) stringResource(R.string.tag_field) else null,
+        if (timeError.value) stringResource(R.string.time) else null
+    )
   Dialog(
       onDismissRequest = onDismiss,
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
@@ -322,9 +336,9 @@ fun AddEventPopUp(
                         stringResource(R.string.date_field),
                         modifier = Modifier.padding(end = 180.dp).padding(bottom = 2.dp),
                         fontSize = 16.sp)
-                    FutureDatePickerButton(date)
+                    FutureDatePickerButton(date, onDateChanged = {dateError.value = (date.value.isBlank())})
                     Spacer(modifier = Modifier.padding(10.dp))
-                    TimePickerButton(time)
+                    TimePickerButton(time, onTimeChanged = {timeError.value = (time.value.isBlank())})
                     Spacer(modifier = Modifier.padding(5.dp))
                     Text(
                         stringResource(R.string.location_field),
@@ -421,11 +435,12 @@ fun AddEventPopUp(
                                 description.value,
                                 gotLocation.value,
                                 timestamp,
+                                Firebase.auth.currentUser?.uid,
                                 extractTags(tag.value),
                                 isPublic.value,
                                 onDone)
                           },
-                          enabled = !error,
+                          enabled = !error && isLoggedIn.value,
                           colors =
                               ButtonColors(
                                   containerColor = colorResource(R.color.sage_green),

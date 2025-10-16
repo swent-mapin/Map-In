@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.components
 
+import android.widget.Toast
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -78,10 +79,12 @@ fun saveEvent(
     description: String,
     location: Location,
     date: Timestamp,
+    currentUserId: String?,
     tags: List<String>,
     isPublic: Boolean,
     onDone: () -> Unit
 ) {
+  val uid = currentUserId ?: return
   val newEvent =
       Event(
           uid = viewModel.getNewUid(),
@@ -91,7 +94,7 @@ fun saveEvent(
           location = location,
           tags = tags,
           public = isPublic,
-          ownerId = Firebase.auth.currentUser?.uid ?: "",
+          ownerId = uid,
           imageUrl = null,
           capacity = null,
           attendeeCount = ATTENDEES_DEFAULT)

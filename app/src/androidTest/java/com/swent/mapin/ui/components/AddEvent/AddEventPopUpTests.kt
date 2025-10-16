@@ -11,14 +11,20 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
 import com.swent.mapin.ui.components.EventViewModel
 import com.swent.mapin.ui.components.saveEvent
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.verify
 import org.junit.Before
 import org.junit.Rule
@@ -223,6 +229,7 @@ class SaveEventTests {
     val testDescription = "Some description"
     val testTags = listOf("tag1", "tag2")
     val isPublic = true
+    val currentUserId = "FakeUserId"
 
     var onDoneCalled = false
     val onDone = { onDoneCalled = true }
@@ -233,11 +240,41 @@ class SaveEventTests {
         description = testDescription,
         date = Timestamp(10000, 200),
         location = testLocation,
+        currentUserId = currentUserId,
         tags = testTags,
         isPublic = isPublic,
         onDone = onDone)
 
     verify { mockViewModel.addEvent(any<Event>()) }
     assert(onDoneCalled)
+  }
+  @Test
+  fun saveEvent_whenUserNotLoggedIn_doesNotCallAddEventOrOnDone() {
+    val mockViewModel = mockk<EventViewModel>(relaxed = true)
+    val testLocation = Location("Test Location", 0.0, 0.0)
+    val testTitle = "Test Event"
+    val testDescription = "Some description"
+    val testTags = listOf("tag1", "tag2")
+    val isPublic = true
+
+    val currentUserId: String? = null // simulate not logged in
+
+    var onDoneCalled = false
+    val onDone = { onDoneCalled = true }
+
+    saveEvent(
+        viewModel = mockViewModel,
+        title = testTitle,
+        description = testDescription,
+        date = Timestamp(10000, 200),
+        location = testLocation,
+        currentUserId = currentUserId,
+        tags = testTags,
+        isPublic = isPublic,
+        onDone = onDone
+    )
+
+    verify(exactly = 0) { mockViewModel.addEvent(any<Event>()) } // should NOT be called
+    assert(!onDoneCalled)
   }
 }

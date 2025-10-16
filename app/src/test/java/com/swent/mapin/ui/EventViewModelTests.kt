@@ -138,4 +138,59 @@ class EventViewModelTests {
 
     Mockito.verify(repository).deleteEvent("1")
   }
+
+  // 10. getAllEvents handles exception and updates error StateFlow
+  @Test
+  fun `getAllEvents sets error when repository throws`() = runTest {
+    Mockito.`when`(repository.getAllEvents()).thenThrow(RuntimeException("Network error"))
+
+    viewModel.getAllEvents()
+    advanceUntilIdle()
+
+    assertEquals("Network error", viewModel.error.value)
+  }
+
+  // 11. addEvent handles exception and updates error StateFlow
+  @Test
+  fun `addEvent sets error when repository throws`() = runTest {
+    val event = Event("1")
+    Mockito.doThrow(RuntimeException("Write failed")).`when`(repository).addEvent(event)
+
+    viewModel.addEvent(event)
+    advanceUntilIdle()
+
+    assertEquals("Write failed", viewModel.error.value)
+  }
+
+  // 12. editEvent handles exception and updates error StateFlow
+  @Test
+  fun `editEvent sets error when repository throws`() = runTest {
+    val event = Event("1")
+    Mockito.doThrow(RuntimeException("Edit failed")).`when`(repository).editEvent("1", event)
+
+    viewModel.editEvent("1", event)
+    advanceUntilIdle()
+
+    assertEquals("Edit failed", viewModel.error.value)
+  }
+
+  // 13. deleteEvent handles exception and updates error StateFlow
+  @Test
+  fun `deleteEvent sets error when repository throws`() = runTest {
+    Mockito.doThrow(RuntimeException("Delete failed")).`when`(repository).deleteEvent("1")
+
+    viewModel.deleteEvent("1")
+    advanceUntilIdle()
+
+    assertEquals("Delete failed", viewModel.error.value)
+  }
+
+  // 14. clearError resets error StateFlow
+  @Test
+  fun `clearError resets error StateFlow`() = runTest {
+    viewModel.getAllEvents() // no error yet
+    advanceUntilIdle()
+    viewModel.clearError()
+    assertEquals(null, viewModel.error.value)
+  }
 }
