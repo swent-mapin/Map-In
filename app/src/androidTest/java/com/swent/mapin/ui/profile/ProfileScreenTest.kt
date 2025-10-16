@@ -56,9 +56,6 @@ class ProfileScreenTest {
       FirebaseApp.initializeApp(context)
     }
 
-    // Clear any existing mocks first
-    clearAllMocks()
-
     // Mock FirebaseAuth
     mockAuth = mockk(relaxed = true)
     mockUser = mockk(relaxed = true)
@@ -79,7 +76,6 @@ class ProfileScreenTest {
   @After
   fun tearDown() {
     unmockkAll()
-    clearAllMocks()
   }
 
   @Test
