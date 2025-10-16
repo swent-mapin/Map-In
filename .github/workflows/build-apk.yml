@@ -1,0 +1,91 @@
+name: Build APK
+
+# Build APK on every push and for pull requests
+on:
+  push:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build-apk:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore shared debug keystore
+        env:
+          TEAM_DEBUG_KEYSTORE_B64: ${{ secrets.TEAM_DEBUG_KEYSTORE_B64 }}
+          TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
+          TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TEAM_DEBUG_KEYSTORE_B64" ] || [ -z "$TEAM_DEBUG_STORE_PASSWORD" ] || [ -z "$TEAM_DEBUG_KEY_PASSWORD" ]; then
+            echo "Shared debug keystore secrets are not configured" >&2
+            exit 1
+          fi
+          mkdir -p android/keystores
+          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug.keystore
+          cat <<EOF > android/gradle.properties
+          TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
+          TEAM_DEBUG_STORE_PASSWORD=$TEAM_DEBUG_STORE_PASSWORD
+          TEAM_DEBUG_KEY_ALIAS=teamDebug
+          TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
+          EOF
+
+      - name: Restore google-services.json (from base64 secret)
+        env:
+          FIREBASE_SERVICE_JSON_B64: ${{ secrets.FIREBASE_SERVICE_JSON_B64 }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_JSON_B64" ]; then
+            echo "FIREBASE_SERVICE_JSON_B64 secret is not set" >&2
+            exit 1
+          fi
+          mkdir -p app
+          echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
+          ls -l app/google-services.json
+
+      - name: Restore Mapbox access token resource
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
+            echo "MAPBOX_ACCESS_TOKEN secret is not set" >&2
+            exit 1
+          fi
+          mkdir -p app/src/main/res/values
+          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
+          </resources>
+          EOF
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapin-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
