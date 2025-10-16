@@ -41,12 +41,11 @@ class LocationDropDownMenuTests {
 
     composeTestRule
         .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION)
-        .performScrollTo()
         .performTextInput("Par")
 
     verify { fakeViewModel.onQueryChanged("Par") }
 
-    composeTestRule.onNodeWithText("Paris").performScrollTo().performClick()
+    composeTestRule.onNodeWithText("Paris").performClick()
 
     assertEquals("Paris", location.value)
     assertEquals(false, expanded.value)
