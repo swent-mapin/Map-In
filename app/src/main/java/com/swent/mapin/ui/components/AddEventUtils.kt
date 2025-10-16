@@ -68,32 +68,31 @@ fun isValidLocation(input: String, locations: List<Location>): Boolean {
  * @param tags A list of tags associated with the event.
  * @param isPublic Whether the event is public (`true`) or private (`false`).
  * @param onDone A callback invoked after the event has been added successfully.
- *
  * @see EventViewModel.addEvent
  * @see Event
  */
 fun saveEvent(
-  viewModel: EventViewModel,
-  title: String,
-  description: String,
-  location: Location,
-  tags: List<String>,
-  isPublic: Boolean,
-  onDone: () -> Unit
+    viewModel: EventViewModel,
+    title: String,
+    description: String,
+    location: Location,
+    tags: List<String>,
+    isPublic: Boolean,
+    onDone: () -> Unit
 ) {
-  val newEvent = Event(
-    uid = viewModel.getNewUid(),
-    title = title,
-    url = null,
-    description = description,
-    location = location,
-    tags = tags,
-    public = isPublic,
-    ownerId = Firebase.auth.currentUser?.uid ?: "",
-    imageUrl = null,
-    capacity = null,
-    attendeeCount = ATTENDEES_DEFAULT
-  )
+  val newEvent =
+      Event(
+          uid = viewModel.getNewUid(),
+          title = title,
+          url = null,
+          description = description,
+          location = location,
+          tags = tags,
+          public = isPublic,
+          ownerId = Firebase.auth.currentUser?.uid ?: "",
+          imageUrl = null,
+          capacity = null,
+          attendeeCount = ATTENDEES_DEFAULT)
   viewModel.addEvent(newEvent)
   onDone()
 }

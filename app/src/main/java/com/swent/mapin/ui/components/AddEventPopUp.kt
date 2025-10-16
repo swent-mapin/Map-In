@@ -407,7 +407,14 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                              saveEvent(eventViewModel, title.value, description.value, gotLocation.value, extractTags(tag.value), isPublic.value, onDone)
+                            saveEvent(
+                                eventViewModel,
+                                title.value,
+                                description.value,
+                                gotLocation.value,
+                                extractTags(tag.value),
+                                isPublic.value,
+                                onDone)
                           },
                           enabled = !error,
                           colors =
