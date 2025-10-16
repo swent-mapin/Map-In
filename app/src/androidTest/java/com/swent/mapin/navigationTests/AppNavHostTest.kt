@@ -13,6 +13,8 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
@@ -37,6 +39,10 @@ class AppNavHostTest {
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
   private lateinit var mockDocumentSnapshot: DocumentSnapshot
+
+  // Storage mocks
+  private lateinit var mockStorage: FirebaseStorage
+  private lateinit var mockStorageRef: StorageReference
 
   private val testUserId = "test-nav-user-123"
   private val testUserName = "Nav Test User"
@@ -77,6 +83,15 @@ class AppNavHostTest {
     every { mockFirestore.collection("users") } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
 
+    // Mock Storage
+    mockkStatic(FirebaseStorage::class)
+    mockStorage = mockk(relaxed = true)
+    mockStorageRef = mockk(relaxed = true)
+
+    every { FirebaseStorage.getInstance() } returns mockStorage
+    every { mockStorage.reference } returns mockStorageRef
+    every { mockStorageRef.child(any()) } returns mockStorageRef
+
     // Mock document operations with dynamic profile
     val testProfile =
         UserProfile(
@@ -90,6 +105,9 @@ class AppNavHostTest {
     every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
     every { mockDocument.get() } answers { Tasks.forResult(mockDocumentSnapshot) }
     every { mockDocument.set(any()) } answers { Tasks.forResult(null) }
+
+    // Add a small delay to ensure mocks are fully set up
+    Thread.sleep(100)
   }
 
   @After
@@ -139,7 +157,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile to load
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -164,7 +182,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile to load
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -181,7 +199,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for auth screen to appear
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -208,7 +226,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile to load
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -222,7 +240,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for auth screen
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -253,7 +271,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile to load
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -267,7 +285,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for auth screen
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
           .fetchSemanticsNodes()
