@@ -27,8 +27,12 @@ class AppNavHostTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   private lateinit var context: Context
+
+  // Firebase Auth mocks
   private lateinit var mockAuth: FirebaseAuth
   private lateinit var mockUser: FirebaseUser
+
+  // Firestore mocks
   private lateinit var mockFirestore: FirebaseFirestore
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
