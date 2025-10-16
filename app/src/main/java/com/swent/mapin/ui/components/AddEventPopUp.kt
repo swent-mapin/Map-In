@@ -52,11 +52,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.se.bootcamp.ui.map.LocationViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.event.Event
 import java.util.Calendar
 import java.util.Locale
 
@@ -410,21 +407,7 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                            val newEvent =
-                                Event(
-                                    uid = eventViewModel.getNewUid(),
-                                    title = title.value,
-                                    url = null, // Add logic for URLS later
-                                    description = description.value,
-                                    location = gotLocation.value,
-                                    tags = extractTags(tag.value),
-                                    public = isPublic.value,
-                                    ownerId = Firebase.auth.currentUser?.uid ?: "",
-                                    imageUrl = null, // Add logic for URLS later
-                                    capacity = null, // Add logic for capacity later
-                                    attendeeCount = ATTENDEES_DEFAULT)
-                            eventViewModel.addEvent(newEvent)
-                            onDone()
+                              saveEvent(eventViewModel, title.value, description.value, gotLocation.value, extractTags(tag.value), isPublic.value, onDone)
                           },
                           enabled = !error,
                           colors =

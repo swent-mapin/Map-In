@@ -83,4 +83,6 @@ class AddEventUtilsTest {
     val locations = emptyList<Location>()
     assertFalse(isValidLocation("Anything", locations))
   }
+
+
 }

@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.components
 
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.event.Event
 
 /**
  * With help of GPT: Helper function which checks if the user's input string for tags are of valid
@@ -49,4 +52,48 @@ fun extractTags(input: String): List<String> {
  */
 fun isValidLocation(input: String, locations: List<Location>): Boolean {
   return locations.any { it.name.equals(input, ignoreCase = true) }
+}
+
+/**
+ * Creates a new [Event] object with the provided data and adds it to the given [EventViewModel].
+ *
+ * This function centralizes the logic of constructing an [Event] from user input and submitting it
+ * to the view model. After successfully adding the event, it invokes the [onDone] callback to
+ * signal completion.
+ *
+ * @param viewModel The [EventViewModel] responsible for managing and storing events.
+ * @param title The title of the event.
+ * @param description A textual description of the event.
+ * @param location The [Location] object representing the event’s location.
+ * @param tags A list of tags associated with the event.
+ * @param isPublic Whether the event is public (`true`) or private (`false`).
+ * @param onDone A callback invoked after the event has been added successfully.
+ *
+ * @see EventViewModel.addEvent
+ * @see Event
+ */
+fun saveEvent(
+  viewModel: EventViewModel,
+  title: String,
+  description: String,
+  location: Location,
+  tags: List<String>,
+  isPublic: Boolean,
+  onDone: () -> Unit
+) {
+  val newEvent = Event(
+    uid = viewModel.getNewUid(),
+    title = title,
+    url = null,
+    description = description,
+    location = location,
+    tags = tags,
+    public = isPublic,
+    ownerId = Firebase.auth.currentUser?.uid ?: "",
+    imageUrl = null,
+    capacity = null,
+    attendeeCount = ATTENDEES_DEFAULT
+  )
+  viewModel.addEvent(newEvent)
+  onDone()
 }

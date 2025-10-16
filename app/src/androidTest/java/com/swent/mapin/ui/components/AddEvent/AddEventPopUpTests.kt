@@ -11,8 +11,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.swent.mapin.model.Location
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.components.EventViewModel
+import com.swent.mapin.ui.components.saveEvent
+import com.swent.mapin.model.event.Event
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -204,4 +210,36 @@ class AddEventPopUpTests {
         .performTextInput("This is a valid description")
     composeTestRule.onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE).assertIsNotEnabled()
   }
+}
+
+class SaveEventTests {
+
+    @Test
+    fun saveEventTest() {
+        // Arrange
+        val mockViewModel = mockk<EventViewModel>(relaxed = true)
+        val testLocation = Location("Test Location", 0.0, 0.0)
+        val testTitle = "Test Event"
+        val testDescription = "Some description"
+        val testTags = listOf("tag1", "tag2")
+        val isPublic = true
+
+        var onDoneCalled = false
+        val onDone = { onDoneCalled = true }
+
+        // Act
+        saveEvent(
+            viewModel = mockViewModel,
+            title = testTitle,
+            description = testDescription,
+            location = testLocation,
+            tags = testTags,
+            isPublic = isPublic,
+            onDone = onDone
+        )
+
+        // Assert
+        verify { mockViewModel.addEvent(any<Event>()) }
+        assert(onDoneCalled)
+    }
 }
