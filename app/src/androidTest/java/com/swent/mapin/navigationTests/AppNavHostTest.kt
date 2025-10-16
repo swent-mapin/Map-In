@@ -71,13 +71,13 @@ class AppNavHostTest {
     every { mockCollection.document(any()) } returns mockDocument
 
     // Mock document operations
-    val testProfile = UserProfile(
-        userId = testUserId,
-        name = testUserName,
-        bio = "Test bio",
-        hobbies = listOf("Testing"),
-        location = "Test City"
-    )
+    val testProfile =
+        UserProfile(
+            userId = testUserId,
+            name = testUserName,
+            bio = "Test bio",
+            hobbies = listOf("Testing"),
+            location = "Test City")
 
     every { mockDocumentSnapshot.exists() } returns true
     every { mockDocumentSnapshot.toObject(UserProfile::class.java) } returns testProfile
