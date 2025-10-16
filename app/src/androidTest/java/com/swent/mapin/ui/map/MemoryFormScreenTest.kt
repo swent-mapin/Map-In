@@ -411,7 +411,7 @@ class MemoryFormScreenTest {
     }
 
     // Initially, add user button is displayed
-    rule.onNodeWithTag("addUserButton").assertIsDisplayed()
+    rule.onNodeWithTag("addUserButton").performScrollTo().assertIsDisplayed()
 
     // Simulate clicking add user button (would show user picker)
     rule.onNodeWithTag("addUserButton").performClick()
@@ -422,7 +422,7 @@ class MemoryFormScreenTest {
     rule.runOnIdle {}
 
     // Check that a Box representing the user appears (the Text inside)
-    rule.onNodeWithText(testUserId).assertIsDisplayed()
+    rule.onNodeWithText(testUserId).performScrollTo().assertIsDisplayed()
 
     // Simulate clicking the remove button on the user tag
     rule
