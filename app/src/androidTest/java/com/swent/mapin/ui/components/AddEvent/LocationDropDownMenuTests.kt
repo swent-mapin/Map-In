@@ -6,8 +6,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
 import com.swent.mapin.ui.components.LocationDropDownMenu
 import io.mockk.mockk

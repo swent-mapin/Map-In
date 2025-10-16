@@ -53,9 +53,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -409,19 +409,19 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                              val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                              val dateTime = sdf.parse(date.value + time.value.replace("h", ""))
-                              val timestamp = if (dateTime != null) Timestamp(dateTime) else Timestamp.now()
-                              saveEvent(
-                                  eventViewModel,
-                                  title.value,
-                                  description.value,
-                                  gotLocation.value,
-                                  timestamp,
-                                  extractTags(tag.value),
-                                  isPublic.value,
-                                  onDone
-                              )
+                            val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+                            val dateTime = sdf.parse(date.value + time.value.replace("h", ""))
+                            val timestamp =
+                                if (dateTime != null) Timestamp(dateTime) else Timestamp.now()
+                            saveEvent(
+                                eventViewModel,
+                                title.value,
+                                description.value,
+                                gotLocation.value,
+                                timestamp,
+                                extractTags(tag.value),
+                                isPublic.value,
+                                onDone)
                           },
                           enabled = !error,
                           colors =
