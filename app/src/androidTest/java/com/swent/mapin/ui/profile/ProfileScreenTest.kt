@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 
+
 /**
  * Instrumentation tests for ProfileScreen composables.
  *
