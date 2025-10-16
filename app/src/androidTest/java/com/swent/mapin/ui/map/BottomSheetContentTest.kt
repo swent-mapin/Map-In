@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -86,7 +87,9 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Discover").assertIsDisplayed()
+
+    // Scroll to make "Discover" section visible on smaller screens
+    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Activity 1").assertIsDisplayed()
   }
 
@@ -126,6 +129,11 @@ class BottomSheetContentTest {
   @Test
   fun buttons_areClickable() {
     rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
+
+    rule.waitForIdle()
+
+    // Scroll to make tags visible on smaller screens
+    rule.onNodeWithText("Discover").performScrollTo()
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Sports").assertHasClickAction()
