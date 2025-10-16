@@ -138,4 +138,203 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Coffee").assertIsDisplayed()
   }
+
+  // Tests for tag filtering functionality
+  @Composable
+  private fun TestContentWithTags(
+      state: BottomSheetState,
+      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
+      selectedTags: Set<String> = emptySet(),
+      onTagClick: (String) -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf("") }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { query = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false }),
+          topTags = topTags,
+          selectedTags = selectedTags,
+          onTagClick = onTagClick)
+    }
+  }
+
+  @Test
+  fun tagsSection_displaysTopTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").assertIsDisplayed()
+    rule.onNodeWithText("Music").assertIsDisplayed()
+    rule.onNodeWithText("Food").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_doesNotDisplayWhenNoTags() {
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = emptyList()) }
+
+    rule.waitForIdle()
+
+    // "Discover" title should still be visible from old section
+    rule.onNodeWithText("Discover").assertDoesNotExist()
+  }
+
+  @Test
+  fun tagsSection_allTagsAreClickable() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food", "Tech", "Art"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").assertHasClickAction()
+    rule.onNodeWithText("Music").assertHasClickAction()
+    rule.onNodeWithText("Food").assertHasClickAction()
+    rule.onNodeWithText("Tech").assertHasClickAction()
+    rule.onNodeWithText("Art").assertHasClickAction()
+  }
+
+  @Test
+  fun tagsSection_callsOnTagClickWhenClicked() {
+    var clickedTag = ""
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          onTagClick = { clickedTag = it })
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").performClick()
+    assertEquals("Sports", clickedTag)
+
+    rule.onNodeWithText("Music").performClick()
+    assertEquals("Music", clickedTag)
+  }
+
+  @Test
+  fun tagsSection_handlesMultipleTagClicks() {
+    val clickedTags = mutableListOf<String>()
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          onTagClick = { clickedTags.add(it) })
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").performClick()
+    rule.onNodeWithText("Music").performClick()
+    rule.onNodeWithText("Food").performClick()
+
+    assertEquals(3, clickedTags.size)
+    assertTrue(clickedTags.contains("Sports"))
+    assertTrue(clickedTags.contains("Music"))
+    assertTrue(clickedTags.contains("Food"))
+  }
+
+  @Test
+  fun tagsSection_displaysCorrectNumberOfTags() {
+    val tags = listOf("Sports", "Music", "Food", "Tech", "Art")
+    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = tags) }
+
+    rule.waitForIdle()
+
+    tags.forEach { tag -> rule.onNodeWithText(tag).assertIsDisplayed() }
+  }
+
+  @Test
+  fun tagsSection_visibleInFullStateOnly() {
+    // Test that tags are visible in FULL state
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+    rule.onNodeWithText("Sports").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesEmptySelectedTags() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music"),
+          selectedTags = emptySet())
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").assertIsDisplayed()
+    rule.onNodeWithText("Music").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_withSelectedTags_tagsStillDisplayed() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL,
+          topTags = listOf("Sports", "Music", "Food"),
+          selectedTags = setOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Sports").assertIsDisplayed()
+    rule.onNodeWithText("Music").assertIsDisplayed()
+    rule.onNodeWithText("Food").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_displaysDiscoverTitle() {
+    rule.setContent {
+      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
+    }
+
+    rule.waitForIdle()
+
+    // Should have "Discover" as section title
+    rule.onNodeWithText("Discover").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesLongTagNames() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("VeryLongTagName", "AnotherLongTag"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("VeryLongTagName").assertIsDisplayed()
+    rule.onNodeWithText("AnotherLongTag").assertIsDisplayed()
+  }
+
+  @Test
+  fun tagsSection_handlesSpecialCharacters() {
+    rule.setContent {
+      TestContentWithTags(
+          state = BottomSheetState.FULL, topTags = listOf("Art & Craft", "Tech-Conference"))
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Art & Craft").assertIsDisplayed()
+    rule.onNodeWithText("Tech-Conference").assertIsDisplayed()
+  }
 }
