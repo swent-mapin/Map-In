@@ -26,7 +26,8 @@ import org.junit.Test
  */
 class ProfileScreenTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  @get:Rule
+  val composeTestRule = createComposeRule()
 
   // ==================== ProfileScreen Tests ====================
 
