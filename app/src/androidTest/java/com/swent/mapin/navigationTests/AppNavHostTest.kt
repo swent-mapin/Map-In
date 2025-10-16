@@ -75,12 +75,12 @@ class AppNavHostTest {
 
     // Mock document operations with dynamic profile
     val testProfile =
-      UserProfile(
-        userId = testUserId,
-        name = testUserName,
-        bio = "Test bio",
-        hobbies = listOf("Testing"),
-        location = "Test City")
+        UserProfile(
+            userId = testUserId,
+            name = testUserName,
+            bio = "Test bio",
+            hobbies = listOf("Testing"),
+            location = "Test City")
 
     every { mockDocumentSnapshot.exists() } returns true
     every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
@@ -103,8 +103,8 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -117,7 +117,6 @@ class AppNavHostTest {
 
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
-
 
   @Test
   fun navigatesToProfile_fromMap() {
@@ -138,9 +137,9 @@ class AppNavHostTest {
     // Wait for profile to load
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Verify we're on the profile screen
@@ -163,9 +162,9 @@ class AppNavHostTest {
     // Wait for profile to load
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Verify we're on profile screen
@@ -180,15 +179,15 @@ class AppNavHostTest {
     // Wait for auth screen to appear
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Verify we're back on auth screen
     composeTestRule
-      .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -207,9 +206,9 @@ class AppNavHostTest {
     // Wait for profile to load
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Scroll to and click logout
@@ -221,15 +220,15 @@ class AppNavHostTest {
     // Wait for auth screen
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Verify we're on auth screen
     composeTestRule
-      .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     // Back button should not navigate away from auth screen (back stack is cleared)
     // Note: In a real scenario, you'd test that the back stack is empty by attempting
@@ -244,7 +243,6 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-
     // Go to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
@@ -253,9 +251,9 @@ class AppNavHostTest {
     // Wait for profile to load
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Scroll to and click logout
@@ -267,19 +265,19 @@ class AppNavHostTest {
     // Wait for auth screen
     composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
-        .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Verify we're on auth screen and map screen doesn't exist in the tree
     composeTestRule
-      .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
 
     // Map screen should not be in the composition tree after logout
     composeTestRule
-      .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-      .assertDoesNotExist()
+        .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+        .assertDoesNotExist()
   }
 }
