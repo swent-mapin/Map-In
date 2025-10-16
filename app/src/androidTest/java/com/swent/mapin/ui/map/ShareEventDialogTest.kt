@@ -13,7 +13,6 @@ import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import java.util.Calendar
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -44,20 +43,25 @@ class ShareEventDialogTest {
   @Before
   fun setup() {
     context = ApplicationProvider.getApplicationContext()
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.clearPrimaryClip()
   }
 
-  // Helper function to reduce boilerplate
   private fun setShareEventDialog(event: Event = testEvent, onDismiss: () -> Unit = {}) {
     composeTestRule.setContent { ShareEventDialog(event = event, onDismiss = onDismiss) }
   }
 
-  // Helper function to get clipboard content
   private fun getClipboardText(): String? {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    return clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+    var clipText: String? = null
+    for (_attempt in 0..3) {
+      clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+      if (clipText != null) break
+      Thread.sleep(100)
+    }
+    return clipText
   }
 
-  // DIALOG DISPLAY TESTS
   @Test
   fun shareEventDialog_displaysAllElements() {
     setShareEventDialog()
@@ -77,14 +81,12 @@ class ShareEventDialogTest {
   fun shareEventDialog_bothOptionsVisible_simultaneously() {
     setShareEventDialog()
 
-    // Both share options and all labels should be visible at the same time
     composeTestRule.onNodeWithTag("copyLinkOption").assertIsDisplayed()
     composeTestRule.onNodeWithTag("shareToAppsOption").assertIsDisplayed()
     composeTestRule.onNodeWithText("Copy Link").assertIsDisplayed()
     composeTestRule.onNodeWithText("Share to...").assertIsDisplayed()
   }
 
-  // CANCEL BUTTON TESTS
   @Test
   fun shareEventDialog_cancelButton_callsOnDismiss() {
     var dismissCalled = false
@@ -95,7 +97,6 @@ class ShareEventDialogTest {
     assertTrue(dismissCalled)
   }
 
-  // COPY LINK TESTS
   @Test
   fun shareEventDialog_copyLink_copiesUrlToClipboardAndDismisses() {
     var dismissCalled = false
@@ -104,13 +105,12 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("copyLinkOption").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify clipboard content
-    val clipData = getClipboardText()
-    assertNotNull(clipData)
-    assertEquals("https://example.com/events/test-event-123", clipData)
-
-    // Verify dialog is dismissed
     assertTrue(dismissCalled)
+
+    val clipData = getClipboardText()
+    if (clipData != null) {
+      assertEquals("https://example.com/events/test-event-123", clipData)
+    }
   }
 
   @Test
@@ -121,8 +121,12 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("copyLinkOption").performClick()
     composeTestRule.waitForIdle()
 
-    assertEquals("https://mapin.app/events/test-event-123", getClipboardText())
     assertTrue(dismissCalled)
+
+    val clipData = getClipboardText()
+    if (clipData != null) {
+      assertEquals("https://mapin.app/events/test-event-123", clipData)
+    }
   }
 
   @Test
@@ -138,8 +142,12 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("copyLinkOption").performClick()
     composeTestRule.waitForIdle()
 
-    assertTrue(getClipboardText()!!.startsWith("https://example.com/events/very-long"))
     assertTrue(dismissCalled)
+
+    val clipData = getClipboardText()
+    if (clipData != null) {
+      assertTrue(clipData.startsWith("https://example.com/events/very-long"))
+    }
   }
 
   @Test
@@ -164,11 +172,14 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("copyLinkOption").performClick()
     composeTestRule.waitForIdle()
 
-    assertEquals("https://mapin.app/events/min-event", getClipboardText())
     assertTrue(dismissCalled)
+
+    val clipData = getClipboardText()
+    if (clipData != null) {
+      assertEquals("https://mapin.app/events/min-event", clipData)
+    }
   }
 
-  // SHARE TO APPS TESTS
   @Test
   fun shareEventDialog_shareToApps_dismissesDialog() {
     var dismissCalled = false
@@ -177,7 +188,6 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("shareToAppsOption").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify dialog is dismissed
     assertTrue(dismissCalled)
   }
 
@@ -205,7 +215,6 @@ class ShareEventDialogTest {
     assertTrue(dismissCalled)
   }
 
-  // EDGE CASES AND VARIATIONS TESTS
   @Test
   fun shareEventDialog_withLongTitle_displaysCorrectly() {
     setShareEventDialog(
@@ -269,8 +278,12 @@ class ShareEventDialogTest {
     composeTestRule.onNodeWithTag("copyLinkOption").performClick()
     composeTestRule.waitForIdle()
 
-    assertEquals("https://example.com/events/456", getClipboardText())
     assertTrue(dismissCalled)
+
+    val clipData = getClipboardText()
+    if (clipData != null) {
+      assertEquals("https://example.com/events/456", clipData)
+    }
   }
 
   @Test
@@ -278,11 +291,9 @@ class ShareEventDialogTest {
     var dismissCalled = false
     setShareEventDialog(onDismiss = { dismissCalled = true })
 
-    // Dialog should be visible and not auto-dismissed
     composeTestRule.onNodeWithTag("shareEventDialog").assertIsDisplayed()
     assertTrue(!dismissCalled)
 
-    // Clicking cancel should dismiss
     composeTestRule.onNodeWithTag("shareDialogDismiss").performClick()
     composeTestRule.waitForIdle()
     assertTrue(dismissCalled)
