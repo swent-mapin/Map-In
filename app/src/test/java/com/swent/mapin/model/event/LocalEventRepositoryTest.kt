@@ -1,28 +1,28 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.event
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SampleEventRepositoryTest {
+class LocalEventRepositoryTest {
 
   @Test
-  fun getSampleEvents_returnsNonEmptyList() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_returnsNonEmptyList() {
+    val events = LocalEventRepository.defaultSampleEvents()
     assertNotNull(events)
     assertTrue(events.isNotEmpty())
   }
 
   @Test
-  fun getSampleEvents_returnsExactly5Events() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_returnsExactly50Events() {
+    val events = LocalEventRepository.defaultSampleEvents()
     assertEquals(50, events.size)
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidIds() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidIds() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.uid)
       assertTrue(event.uid.isNotEmpty())
@@ -30,8 +30,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidTitles() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidTitles() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.title)
       assertTrue(event.title.isNotEmpty())
@@ -39,8 +39,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidDescriptions() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidDescriptions() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.description)
       assertTrue(event.description.isNotEmpty())
@@ -48,14 +48,14 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidDates() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidDates() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event -> assertNotNull(event.date) }
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidLocations() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidLocations() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.location.name)
       assertTrue(event.location.name.isNotEmpty())
@@ -64,8 +64,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidCoordinates() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidCoordinates() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertTrue(event.location.latitude >= -90.0 && event.location.latitude <= 90.0)
       assertTrue(event.location.longitude >= -180.0 && event.location.longitude <= 180.0)
@@ -73,14 +73,14 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsArePublic() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsArePublic() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event -> assertTrue(event.public) }
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveOwners() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveOwners() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.ownerId)
       assertTrue(event.ownerId.isNotEmpty())
@@ -88,8 +88,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveTags() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveTags() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.tags)
       assertTrue(event.tags.isNotEmpty())
@@ -97,8 +97,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveAttendeeCount() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveAttendeeCount() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.attendeeCount)
       assertTrue(event.attendeeCount!! > 0)
@@ -106,8 +106,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsMusicFestival() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsMusicFestival() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val musicFestival = events.find { it.title == "Music Festival" }
     assertNotNull(musicFestival)
     assertEquals("event1", musicFestival?.uid)
@@ -115,8 +115,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsBasketballGame() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsBasketballGame() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val basketballGame = events.find { it.title == "Basketball Game" }
     assertNotNull(basketballGame)
     assertEquals("event4", basketballGame?.uid)
@@ -124,8 +124,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsArtExhibition() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsArtExhibition() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val artExhibition = events.find { it.title == "Art Exhibition" }
     assertNotNull(artExhibition)
     assertEquals("event7", artExhibition?.uid)
@@ -133,8 +133,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsFoodMarket() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsFoodMarket() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val foodMarket = events.find { it.title == "Food Market" }
     assertNotNull(foodMarket)
     assertEquals("event12", foodMarket?.uid)
@@ -142,8 +142,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsYogaClass() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsYogaClass() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val yogaClass = events.find { it.title == "Yoga Class" }
     assertNotNull(yogaClass)
     assertEquals("event16", yogaClass?.uid)
@@ -151,15 +151,15 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allUidsAreUnique() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allUidsAreUnique() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val uids = events.map { it.uid }
     assertEquals(uids.size, uids.toSet().size)
   }
 
   @Test
-  fun getSampleEvents_eventsAreAroundEPFL() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_eventsAreAroundEPFL() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val epflLatitude = 46.5197
     val epflLongitude = 6.5668
 
@@ -172,9 +172,9 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_multipleCalls_returnsSameData() {
-    val events1 = SampleEventRepository.getSampleEvents()
-    val events2 = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_multipleCalls_returnsSameGeneralData() {
+    val events1 = LocalEventRepository.defaultSampleEvents()
+    val events2 = LocalEventRepository.defaultSampleEvents()
 
     assertEquals(events1.size, events2.size)
     for (i in events1.indices) {
@@ -184,8 +184,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_hasVariedAttendeeCount() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_hasVariedAttendeeCount() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val attendeeCounts = events.map { it.attendeeCount }
 
     assertTrue(attendeeCounts.distinct().size > 1)

@@ -20,10 +20,9 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
-import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.event.EventRepositoryFirestore
+import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -38,15 +37,14 @@ import kotlinx.coroutines.tasks.await
  * Coordinates MapScreen state: sheet transitions, search focus, zoom behavior, and memory creation.
  */
 class MapScreenViewModel(
-    initialSheetState: BottomSheetState,
-    private val sheetConfig: BottomSheetConfig,
-    private val onClearFocus: () -> Unit,
-    private val applicationContext: Context,
-    private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
-        MemoryRepositoryProvider.getRepository(),
-    private val eventRepository: EventRepository =
-        EventRepositoryFirestore(com.google.firebase.firestore.FirebaseFirestore.getInstance()),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+  initialSheetState: BottomSheetState,
+  private val sheetConfig: BottomSheetConfig,
+  private val onClearFocus: () -> Unit,
+  private val applicationContext: Context,
+  private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
+    MemoryRepositoryProvider.getRepository(),
+  private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
+  private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
   // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
@@ -67,6 +65,16 @@ class MapScreenViewModel(
   private var _shouldFocusSearch by mutableStateOf(false)
   val shouldFocusSearch: Boolean
     get() = _shouldFocusSearch
+
+  private var isSearchActivated by mutableStateOf(false)
+
+  private var _allEvents by mutableStateOf<List<Event>>(emptyList())
+  private var _searchResults by mutableStateOf<List<Event>>(emptyList())
+  val searchResults: List<Event>
+    get() = _searchResults
+
+  val isSearchMode: Boolean
+    get() = isSearchActivated && _bottomSheetState == BottomSheetState.FULL && !showMemoryForm
 
   // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
@@ -116,9 +124,15 @@ class MapScreenViewModel(
   val availableEvents: List<Event>
     get() = _availableEvents
 
+  // Event data for display on the map
+  private var _events by mutableStateOf<List<Event>>(emptyList())
+  val events: List<Event>
+    get() = _events
+
   init {
-    // Preload events so the form has immediate data
-    loadEvents()
+    // Preload events both for searching and memory linking
+    loadAllEvents()
+    loadParticipantEvents()
   }
 
   fun onZoomChange(newZoom: Float) {
@@ -129,10 +143,10 @@ class MapScreenViewModel(
 
       hideScaleBarJob?.cancel()
       hideScaleBarJob =
-          viewModelScope.launch {
-            kotlinx.coroutines.delay(300)
-            _isZooming = false
-          }
+        viewModelScope.launch {
+          kotlinx.coroutines.delay(300)
+          _isZooming = false
+        }
     }
   }
 
@@ -160,10 +174,10 @@ class MapScreenViewModel(
   }
 
   fun calculateTargetState(
-      currentHeightPx: Float,
-      collapsedPx: Float,
-      mediumPx: Float,
-      fullPx: Float
+    currentHeightPx: Float,
+    collapsedPx: Float,
+    mediumPx: Float,
+    fullPx: Float
   ): BottomSheetState {
     return when {
       currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
@@ -187,8 +201,10 @@ class MapScreenViewModel(
 
     isInMediumMode = target == BottomSheetState.MEDIUM
 
-    if (target != BottomSheetState.FULL && _bottomSheetState == BottomSheetState.FULL) {
-      clearSearch()
+    if (target != BottomSheetState.FULL &&
+      _bottomSheetState == BottomSheetState.FULL &&
+      !_showMemoryForm) {
+      resetSearchState()
     }
 
     _bottomSheetState = target
@@ -199,7 +215,9 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
+    isSearchActivated = true
     _searchQuery = query
+    updateSearchResults(query)
   }
 
   fun onSearchTap() {
@@ -207,18 +225,26 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
+    isSearchActivated = true
   }
 
   fun onSearchFocusHandled() {
     _shouldFocusSearch = false
   }
 
-  private fun clearSearch() {
+  private fun resetSearchState() {
+    isSearchActivated = false
     _shouldFocusSearch = false
     onClearFocus()
     if (_searchQuery.isNotEmpty()) {
       _searchQuery = ""
     }
+    updateSearchResults("")
+  }
+
+  fun onClearSearch() {
+    resetSearchState()
+    setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
   fun setMapStyle(style: MapStyle) {
@@ -229,17 +255,63 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
+  /** Loads all events for search and map display, falling back to local data on error. */
+  private fun loadAllEvents() {
+    viewModelScope.launch {
+      try {
+        val events = eventRepository.getAllEvents()
+        applyEventsDataset(events)
+      } catch (primary: Exception) {
+        android.util.Log.e("MapScreenViewModel", "Error loading events from repository", primary)
+
+        try {
+          val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
+          applyEventsDataset(localEvents)
+        } catch (fallback: Exception) {
+          android.util.Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
+          _allEvents = emptyList()
+          updateSearchResults("")
+        }
+      }
+    }
+  }
+
+  private fun applyEventsDataset(events: List<Event>) {
+    _allEvents = events
+    updateSearchResults(_searchQuery)
+  }
+
+  private fun updateSearchResults(query: String) {
+    val filtered = filterEvents(query, _allEvents)
+    _searchResults = filtered
+    _events = if (query.isBlank()) _allEvents else filtered
+  }
+
+  private fun filterEvents(query: String, source: List<Event>): List<Event> {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return source
+
+    val normalized = trimmed.lowercase()
+    return source.filter { event ->
+      val titleMatch = event.title.lowercase().contains(normalized)
+      val descriptionMatch = event.description.lowercase().contains(normalized)
+      val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
+      val locationMatch = event.location.name.lowercase().contains(normalized)
+      titleMatch || descriptionMatch || tagsMatch || locationMatch
+    }
+  }
+
   /** Loads events the signed-in user can attach to memories. */
-  private fun loadEvents() {
+  private fun loadParticipantEvents() {
     viewModelScope.launch {
       try {
         val currentUserId = auth.currentUser?.uid
         _availableEvents =
-            if (currentUserId != null) {
-              eventRepository.getEventsByParticipant(currentUserId)
-            } else {
-              emptyList()
-            }
+          if (currentUserId != null) {
+            eventRepository.getEventsByParticipant(currentUserId)
+          } else {
+            emptyList()
+          }
       } catch (e: Exception) {
         android.util.Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
@@ -275,16 +347,16 @@ class MapScreenViewModel(
         val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
 
         val memory =
-            Memory(
-                uid = memoryRepository.getNewUid(),
-                title = formData.title,
-                description = formData.description,
-                eventId = formData.eventId,
-                ownerId = currentUserId,
-                isPublic = formData.isPublic,
-                createdAt = Timestamp.now(),
-                mediaUrls = mediaUrls,
-                taggedUserIds = formData.taggedUserIds)
+          Memory(
+            uid = memoryRepository.getNewUid(),
+            title = formData.title,
+            description = formData.description,
+            eventId = formData.eventId,
+            ownerId = currentUserId,
+            isPublic = formData.isPublic,
+            createdAt = Timestamp.now(),
+            mediaUrls = mediaUrls,
+            taggedUserIds = formData.taggedUserIds)
 
         memoryRepository.addMemory(memory)
         android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
@@ -309,9 +381,9 @@ class MapScreenViewModel(
     for (uri in uris) {
       try {
         val extension =
-            applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
+          applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
         val filename =
-            "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
+          "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
 
         val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
         val fileRef = storageRef.child(filename)
@@ -344,13 +416,6 @@ class MapScreenViewModel(
     _previousSheetState = null
   }
 
-  // EVENTS
-
-  /** Event data for display on the map */
-  private var _events by mutableStateOf(SampleEventRepository.getSampleEvents())
-  val events: List<Event>
-    get() = _events
-
   fun setEvents(newEvents: List<Event>) {
     _events = newEvents
   }
@@ -358,8 +423,8 @@ class MapScreenViewModel(
 
 @Composable
 fun rememberMapScreenViewModel(
-    sheetConfig: BottomSheetConfig,
-    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
+  sheetConfig: BottomSheetConfig,
+  initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
@@ -368,20 +433,20 @@ fun rememberMapScreenViewModel(
 
   return viewModel {
     MapScreenViewModel(
-        initialSheetState = initialSheetState,
-        sheetConfig = sheetConfig,
-        onClearFocus = { focusManager.clearFocus(force = true) },
-        applicationContext = appContext)
+      initialSheetState = initialSheetState,
+      sheetConfig = sheetConfig,
+      onClearFocus = { focusManager.clearFocus(force = true) },
+      applicationContext = appContext)
   }
 }
 
 /** Converts events into a GeoJSON payload consumable by Mapbox heatmaps. */
 fun eventsToGeoJson(events: List<Event>): String {
   val features =
-      events.map { event ->
-        Feature.fromGeometry(
-            Point.fromLngLat(event.location.longitude, event.location.latitude),
-            JsonObject().apply { addProperty("weight", event.attendeeCount) })
-      }
+    events.map { event ->
+      Feature.fromGeometry(
+        Point.fromLngLat(event.location.longitude, event.location.latitude),
+        JsonObject().apply { addProperty("weight", event.attendeeCount) })
+    }
   return FeatureCollection.fromFeatures(features).toJson()
 }
