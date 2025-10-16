@@ -46,6 +46,9 @@ class AppNavHostTest {
       FirebaseApp.initializeApp(context)
     }
 
+    // Clear any existing mocks first
+    clearAllMocks()
+
     // Mock FirebaseAuth
     mockkStatic(FirebaseAuth::class)
     mockAuth = mockk(relaxed = true)
@@ -70,7 +73,7 @@ class AppNavHostTest {
     every { mockFirestore.collection("users") } returns mockCollection
     every { mockCollection.document(any()) } returns mockDocument
 
-    // Mock document operations
+    // Mock document operations with dynamic profile
     val testProfile =
         UserProfile(
             userId = testUserId,
@@ -80,14 +83,15 @@ class AppNavHostTest {
             location = "Test City")
 
     every { mockDocumentSnapshot.exists() } returns true
-    every { mockDocumentSnapshot.toObject(UserProfile::class.java) } returns testProfile
-    every { mockDocument.get() } returns Tasks.forResult(mockDocumentSnapshot)
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
+    every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
+    every { mockDocument.get() } answers { Tasks.forResult(mockDocumentSnapshot) }
+    every { mockDocument.set(any()) } answers { Tasks.forResult(null) }
   }
 
   @After
   fun tearDown() {
     unmockkAll()
+    clearAllMocks()
   }
 
   @Test
@@ -95,6 +99,8 @@ class AppNavHostTest {
     composeTestRule.setContent {
       AppNavHost(navController = rememberNavController(), isLoggedIn = false)
     }
+
+    composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
@@ -128,6 +134,14 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Wait for profile to load
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify we're on the profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
   }
@@ -145,6 +159,14 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Wait for profile to load
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify we're on profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
 
@@ -153,6 +175,14 @@ class AppNavHostTest {
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for auth screen to appear
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're back on auth screen
     composeTestRule
@@ -173,11 +203,27 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Wait for profile to load
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Scroll to and click logout
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for auth screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're on auth screen
     composeTestRule
@@ -202,11 +248,27 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Wait for profile to load
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Scroll to and click logout
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for auth screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're on auth screen and map screen doesn't exist in the tree
     composeTestRule
