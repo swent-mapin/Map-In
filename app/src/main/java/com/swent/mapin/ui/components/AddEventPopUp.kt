@@ -257,7 +257,6 @@ fun AddEventPopUp(
   val titleError = remember { mutableStateOf(true) }
   val descriptionError = remember { mutableStateOf(true) }
   val locationError = remember { mutableStateOf(true) }
-  val dateError = remember { mutableStateOf(true) }
   val tagError = remember { mutableStateOf(false) }
 
   val locationExpanded = remember { mutableStateOf(false) }
@@ -276,7 +275,7 @@ fun AddEventPopUp(
   val errorFields =
       listOfNotNull(
           if (titleError.value) stringResource(R.string.title_field) else null,
-          if (dateError.value) stringResource(R.string.date_field) else null,
+          if (date.value.isBlank()) stringResource(R.string.date_field) else null,
           if (locationError.value) stringResource(R.string.location_field) else null,
           if (descriptionError.value) stringResource(R.string.description_field) else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,

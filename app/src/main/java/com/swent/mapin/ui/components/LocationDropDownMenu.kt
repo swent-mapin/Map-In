@@ -50,8 +50,9 @@ fun LocationDropDownMenu(
         expanded = expanded.value && locations.isNotEmpty(),
         onDismissRequest = { expanded.value = false },
         modifier = Modifier.fillMaxWidth()) {
-          locations.forEach { loc ->
+          locations.forEachIndexed { index, loc ->
             DropdownMenuItem(
+                modifier = Modifier.testTag("locationItem$index"),
                 text = { Text(loc.name) },
                 onClick = {
                   location.value = loc.name
