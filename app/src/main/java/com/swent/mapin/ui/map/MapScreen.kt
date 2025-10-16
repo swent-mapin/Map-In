@@ -115,6 +115,26 @@ fun MapScreen(
     }
   }
 
+  // Setup camera centering callback
+  val screenHeightDpValue = screenHeightDp.value
+  LaunchedEffect(Unit) {
+    viewModel.onCenterCamera = { event ->
+      val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
+      val currentZoom = mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+      val targetZoom = if (currentZoom < 14.0) 15.0 else currentZoom
+
+      val offsetPixels = (screenHeightDpValue * 0.25) / 2
+
+      mapViewportState.easeTo(
+          cameraOptions {
+            center(Point.fromLngLat(event.location.longitude, event.location.latitude))
+            zoom(targetZoom)
+            padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
+          },
+          animationOptions = animationOptions)
+    }
+  }
+
   ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
   ObserveZoomForSheetCollapse(viewModel, mapViewportState)
 
@@ -152,7 +172,7 @@ fun MapScreen(
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
-          onEventClick = onEventClick)
+          onEventClick = { event -> viewModel.onEventPinClicked(event) })
     }
 
     TopGradient()
@@ -185,22 +205,46 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-          BottomSheetContent(
-              state = viewModel.bottomSheetState,
-              fullEntryKey = viewModel.fullEntryKey,
-              searchBarState =
-                  SearchBarState(
-                      query = viewModel.searchQuery,
-                      shouldRequestFocus = viewModel.shouldFocusSearch,
-                      onQueryChange = viewModel::onSearchQueryChange,
-                      onTap = viewModel::onSearchTap,
-                      onFocusHandled = viewModel::onSearchFocusHandled),
-              showMemoryForm = viewModel.showMemoryForm,
-              availableEvents = viewModel.availableEvents,
-              onCreateMemoryClick = viewModel::showMemoryForm,
-              onMemorySave = viewModel::onMemorySave,
-              onMemoryCancel = viewModel::onMemoryCancel)
+          // Show event detail if an event is selected, otherwise show regular content
+          if (viewModel.selectedEvent != null) {
+            EventDetailSheet(
+                event = viewModel.selectedEvent!!,
+                sheetState = viewModel.bottomSheetState,
+                isParticipating = viewModel.isUserParticipating(),
+                organizerName = viewModel.organizerName,
+                onJoinEvent = { viewModel.joinEvent() },
+                onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                onSaveForLater = { viewModel.saveEventForLater() },
+                onClose = { viewModel.closeEventDetail() },
+                onShare = { viewModel.showShareDialog() })
+          } else {
+            BottomSheetContent(
+                state = viewModel.bottomSheetState,
+                fullEntryKey = viewModel.fullEntryKey,
+                searchBarState =
+                    SearchBarState(
+                        query = viewModel.searchQuery,
+                        shouldRequestFocus = viewModel.shouldFocusSearch,
+                        onQueryChange = viewModel::onSearchQueryChange,
+                        onTap = viewModel::onSearchTap,
+                        onFocusHandled = viewModel::onSearchFocusHandled),
+                showMemoryForm = viewModel.showMemoryForm,
+                availableEvents = viewModel.availableEvents,
+                joinedEvents = viewModel.joinedEvents,
+                selectedTab = viewModel.selectedBottomSheetTab,
+                onCreateMemoryClick = viewModel::showMemoryForm,
+                onMemorySave = viewModel::onMemorySave,
+                onMemoryCancel = viewModel::onMemoryCancel,
+                onTabChange = viewModel::setBottomSheetTab,
+                onJoinedEventClick = viewModel::onJoinedEventClicked)
+          }
         }
+
+    // Share dialog
+    if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
+      ShareEventDialog(
+          event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
+    }
 
     if (viewModel.isSavingMemory) {
       Box(
@@ -299,9 +343,10 @@ private fun MapLayers(
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
+  // Recréer les annotations quand l'événement sélectionné change
   val annotations =
-      remember(viewModel.events, annotationStyle) {
-        createEventAnnotations(viewModel.events, annotationStyle)
+      remember(viewModel.events, viewModel.selectedEvent, annotationStyle) {
+        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -553,24 +598,30 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
  * Converts a list of events to Mapbox point annotation options.
  *
  * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval.
+ * for later retrieval. Selected event pins are enlarged.
  *
  * @param events List of events to convert
  * @param style Styling to apply to annotations
+ * @param selectedEventId UID of the currently selected event (if any)
  * @return List of configured PointAnnotationOptions
  */
 private fun createEventAnnotations(
     events: List<Event>,
-    style: AnnotationStyle
+    style: AnnotationStyle,
+    selectedEventId: String? = null
 ): List<PointAnnotationOptions> {
   return events.mapIndexed { index, event ->
+    val isSelected = event.uid == selectedEventId
+    val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
+
     PointAnnotationOptions()
         .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
         .apply { style.markerBitmap?.let { withIconImage(it) } }
+        .withIconSize(iconSize)
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
         .withTextOffset(listOf(0.0, 0.5))
-        .withTextSize(14.0)
+        .withTextSize(if (isSelected) 16.0 else 14.0)
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
         .withTextHaloWidth(1.5)
