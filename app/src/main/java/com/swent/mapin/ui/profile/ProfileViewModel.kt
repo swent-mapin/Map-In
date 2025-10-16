@@ -78,6 +78,10 @@ class ProfileViewModel(
   var selectedBanner by mutableStateOf("")
     private set
 
+  // Add a counter to force recomposition
+  private var _avatarUpdateCounter by mutableStateOf(0)
+  private var _bannerUpdateCounter by mutableStateOf(0)
+
   // Visibility toggles
   var hobbiesVisible by mutableStateOf(true)
     private set
@@ -290,11 +294,13 @@ class ProfileViewModel(
   /** Update avatar selection */
   fun updateAvatarSelection(avatarUrl: String) {
     selectedAvatar = avatarUrl
+    _avatarUpdateCounter++
   }
 
   /** Update banner selection */
   fun updateBannerSelection(bannerUrl: String) {
     selectedBanner = bannerUrl
+    _bannerUpdateCounter++
   }
 
   /** Toggle avatar selector dialog */
@@ -404,7 +410,12 @@ class ProfileViewModel(
       if (currentUser != null) {
         val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "avatar")
         if (downloadUrl != null) {
+          // Force recomposition by reassigning the entire value
+          selectedAvatar = ""
           selectedAvatar = downloadUrl
+          println("ProfileViewModel - Avatar uploaded: $downloadUrl")
+        } else {
+          println("ProfileViewModel - Failed to upload avatar")
         }
       }
 
@@ -421,7 +432,12 @@ class ProfileViewModel(
       if (currentUser != null) {
         val downloadUrl = imageUploadHelper.uploadImage(uri, currentUser.uid, "banner")
         if (downloadUrl != null) {
+          // Force recomposition by reassigning the entire value
+          selectedBanner = ""
           selectedBanner = downloadUrl
+          println("ProfileViewModel - Banner uploaded: $downloadUrl")
+        } else {
+          println("ProfileViewModel - Failed to upload banner")
         }
       }
 
