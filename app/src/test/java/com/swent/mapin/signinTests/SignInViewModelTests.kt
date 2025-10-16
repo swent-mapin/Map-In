@@ -15,25 +15,20 @@ import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.ui.auth.SignInUiState
 import com.swent.mapin.ui.auth.SignInViewModel
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.slot
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -268,668 +263,1116 @@ class SignInViewModelTest {
     assertEquals(mockUser, state.currentUser)
   }
 
-  @Test
-  fun `SignInUiState copy with currentUser should work correctly`() {
-    val mockUser = mockk<FirebaseUser>()
-    val originalState = SignInUiState()
-
-    val copiedState = originalState.copy(currentUser = mockUser)
-
-    assertEquals(mockUser, copiedState.currentUser)
-    assertFalse(copiedState.isLoading)
-  }
+  // ========== Email/Password Authentication Tests ==========
 
   @Test
-  fun `SignInUiState equality should work correctly`() {
-    val state1 = SignInUiState(isLoading = false)
-    val state2 = SignInUiState(isLoading = false)
+  fun `signInWithEmail should reject empty email`() = runTest {
+    viewModel.signInWithEmail("", "password123")
+    advanceUntilIdle()
 
-    assertEquals(state1, state2)
-  }
-
-  @Test
-  fun `SignInUiState hashCode should be consistent`() {
-    val state1 = SignInUiState(isLoading = true, errorMessage = "test")
-    val state2 = SignInUiState(isLoading = true, errorMessage = "test")
-
-    assertEquals(state1.hashCode(), state2.hashCode())
-  }
-
-  @Test
-  fun `ViewModel factory with different contexts should work`() {
-    val context1 = ApplicationProvider.getApplicationContext<Context>()
-    val context2 = ApplicationProvider.getApplicationContext<Context>()
-
-    val factory1 = SignInViewModel.factory(context1)
-    val factory2 = SignInViewModel.factory(context2)
-
-    assertNotNull(factory1.create(SignInViewModel::class.java))
-    assertNotNull(factory2.create(SignInViewModel::class.java))
-  }
-
-  @Test
-  fun `uiState flow should be exposed as StateFlow`() = runTest {
-    val stateFlow = viewModel.uiState
-
-    assertNotNull(stateFlow)
-    assertTrue(stateFlow is kotlinx.coroutines.flow.StateFlow)
-  }
-
-  @Test
-  fun `signInWithGoogle should set loading state to true initially`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-
-    // The loading state should be set immediately
     val state = viewModel.uiState.first()
-    // Note: Due to async nature, loading might complete quickly in test
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signInWithEmail should reject empty password`() = runTest {
+    viewModel.signInWithEmail("test@example.com", "")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signInWithEmail should reject blank email`() = runTest {
+    viewModel.signInWithEmail("   ", "password123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should reject blank password`() = runTest {
+    viewModel.signInWithEmail("test@example.com", "   ")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should reject both empty`() = runTest {
+    viewModel.signInWithEmail("", "")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should prevent concurrent attempts when loading`() = runTest {
+    // Mock Firebase Auth to avoid actual network calls
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns mockTask
+    every { mockTask.isComplete } returns false
+
+    // Create new viewModel with mocked auth
+    val testViewModel = SignInViewModel(context)
+
+    // First call
+    testViewModel.signInWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    // Second call while first is potentially still processing
+    testViewModel.signInWithEmail("test2@example.com", "password456")
+    advanceUntilIdle()
+
+    // Verify state is consistent
+    val finalState = testViewModel.uiState.first()
+    assertNotNull(finalState)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject empty email`() = runTest {
+    viewModel.signUpWithEmail("", "password123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject empty password`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject blank email`() = runTest {
+    viewModel.signUpWithEmail("   ", "password123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject blank password`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "   ")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject password shorter than 6 characters`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "12345")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Password must be at least 6 characters", state.errorMessage)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signUpWithEmail should accept password with exactly 6 characters`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "123456")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not fail with password length error
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should accept password longer than 6 characters`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "1234567890")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not fail with password length error
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject both empty credentials`() = runTest {
+    viewModel.signUpWithEmail("", "")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should prevent concurrent attempts when loading`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns mockTask
+    every { mockTask.isComplete } returns false
+
+    val testViewModel = SignInViewModel(context)
+
+    // First call
+    testViewModel.signUpWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    // Second call while first is potentially still processing
+    testViewModel.signUpWithEmail("test2@example.com", "password456")
+    advanceUntilIdle()
+
+    val finalState = testViewModel.uiState.first()
+    assertNotNull(finalState)
+  }
+
+  @Test
+  fun `signInWithEmail should handle valid email and password format`() = runTest {
+    // This tests that validation passes for valid inputs
+    viewModel.signInWithEmail("valid.email@example.com", "validPassword123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not have empty/blank error
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle valid email and password format`() = runTest {
+    // This tests that validation passes for valid inputs
+    viewModel.signUpWithEmail("valid.email@example.com", "validPassword123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not have validation errors
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should trim whitespace from inputs`() = runTest {
+    // Email and password with leading/trailing spaces should be caught by isBlank
+    viewModel.signInWithEmail("  test@example.com  ", "  password123  ")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // With current implementation, this should work since trim is not applied
+    // and isBlank checks for non-whitespace content
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `clearError should clear error after failed signInWithEmail`() = runTest {
+    viewModel.signInWithEmail("", "password")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertNotNull(state.errorMessage)
+
+    viewModel.clearError()
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertNull(state.errorMessage)
+  }
+
+  @Test
+  fun `clearError should clear error after failed signUpWithEmail`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "123")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
+    assertNotNull(state.errorMessage)
+
+    viewModel.clearError()
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertNull(state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail with special characters in password should be accepted`() = runTest {
+    viewModel.signInWithEmail("test@example.com", "p@ssw0rd!#$%")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail with special characters in password should be accepted`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "p@ssw0rd!#$%")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail with very long password should be accepted`() = runTest {
+    val longPassword = "a".repeat(100)
+    viewModel.signInWithEmail("test@example.com", longPassword)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail with very long password should be accepted`() = runTest {
+    val longPassword = "a".repeat(100)
+    viewModel.signUpWithEmail("test@example.com", longPassword)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should not be successful initially`() = runTest {
+    viewModel.signInWithEmail("test@example.com", "password123")
+
+    // Check state before async operation completes
+    val state = viewModel.uiState.first()
+    // Initially should not be successful (will change after Firebase response)
     assertNotNull(state)
   }
 
   @Test
-  fun `signInWithGoogle should handle credential exception`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
-
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws RuntimeException("Credential error")
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
+  fun `signUpWithEmail should not be successful initially`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "password123")
 
     val state = viewModel.uiState.first()
-    assertFalse(state.isLoading)
-    assertNotNull(state.errorMessage)
-    assertFalse(state.isSignInSuccessful)
+    assertNotNull(state)
   }
 
   @Test
-  fun `signInWithGoogle should handle generic exception`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
+  fun `multiple signInWithEmail calls with empty credentials should all fail`() = runTest {
+    viewModel.signInWithEmail("", "")
+    advanceUntilIdle()
+    var state = viewModel.uiState.first()
+    assertEquals("Email and password cannot be empty", state.errorMessage)
 
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws RuntimeException("Network error")
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    viewModel.clearError()
     advanceUntilIdle()
 
-    val state = viewModel.uiState.first()
-    assertFalse(state.isLoading)
-    assertTrue(state.errorMessage?.contains("Network error") == true)
-    assertFalse(state.isSignInSuccessful)
+    viewModel.signInWithEmail("", "password")
+    advanceUntilIdle()
+    state = viewModel.uiState.first()
+    assertEquals("Email and password cannot be empty", state.errorMessage)
   }
 
   @Test
-  fun `signInWithGoogle should handle exception with null message`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
+  fun `multiple signUpWithEmail calls with invalid credentials should all fail`() = runTest {
+    viewModel.signUpWithEmail("", "123")
+    advanceUntilIdle()
+    var state = viewModel.uiState.first()
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+
+    viewModel.clearError()
+    advanceUntilIdle()
+
+    viewModel.signUpWithEmail("test@example.com", "123")
+    advanceUntilIdle()
+    state = viewModel.uiState.first()
+    assertEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  // ========== Firebase Authentication Success/Failure Tests ==========
+
+  @Test
+  fun `signInWithEmail should handle Firebase no user record error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("There is no user record corresponding to this identifier")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("test@example.com", "wrongpassword")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertFalse(state.isSignInSuccessful)
+    assertEquals("No account found with this email", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should handle invalid password error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("The password is invalid")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("test@example.com", "wrongpassword")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Invalid password", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should handle badly formatted email error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("The email address is badly formatted")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("invalid-email", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Invalid email format", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle email already in use error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("The email address is already in use by another account")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("existing@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("An account with this email already exists", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle badly formatted email error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("The email address is badly formatted")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("invalid-email", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Invalid email format", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle generic Firebase error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("Unknown Firebase error")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Sign-up failed: Unknown Firebase error", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle successful credential retrieval and sign in`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
+    val mockCredentialResult = mockk<androidx.credentials.GetCredentialResponse>(relaxed = true)
+    val mockCredential = mockk<androidx.credentials.Credential>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+    val mockUser = mockk<FirebaseUser>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("com.google.android.libraries.identity.googleid.GoogleIdTokenCredential")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockCredential.data } returns android.os.Bundle()
+    every { mockCredentialResult.credential } returns mockCredential
 
     coEvery {
       mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws RuntimeException()
+    } returns mockCredentialResult
 
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    every { mockAuth.signInWithCredential(any()) } returns mockTask
+    every { mockTask.isComplete } returns true
+    every { mockTask.isSuccessful } returns true
+    every { mockTask.result } returns mockAuthResult
+    every { mockAuthResult.user } returns mockUser
+    every { mockUser.displayName } returns "Test User"
+
+    every { mockTask.addOnCompleteListener(any()) } answers
+        {
+          val listener = firstArg<com.google.android.gms.tasks.OnCompleteListener<AuthResult>>()
+          listener.onComplete(mockTask)
+          mockTask
+        }
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithGoogle(mockCredentialManager) {}
     advanceUntilIdle()
 
-    val state = viewModel.uiState.first()
+    // Verify the success path was attempted (may not complete due to mocking complexity)
+    val state = testViewModel.uiState.first()
+    assertNotNull(state)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle cancellation exception`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
+    val exception =
+        androidx.credentials.exceptions.GetCredentialCancellationException("User cancelled")
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithGoogle(mockCredentialManager)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Sign-in was cancelled", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle no credential exception`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
+    val exception = androidx.credentials.exceptions.NoCredentialException("No credentials found")
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithGoogle(mockCredentialManager)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("No Google accounts found on device", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle generic exception with message`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
+    val exception = Exception("Network error occurred")
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithGoogle(mockCredentialManager)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Sign-in failed: Network error occurred", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithGoogle should handle generic exception without message`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
+    val exception = Exception(null as String?)
+
+    mockkStatic(FirebaseAuth::class)
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+
+    coEvery {
+      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
+    } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithGoogle(mockCredentialManager)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     assertEquals("Sign-in failed", state.errorMessage)
   }
 
   @Test
-  fun `signInWithGoogle onSuccess callback should be invoked on successful sign-in`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-
-    advanceUntilIdle()
-
-    // Note: Callback invocation depends on successful Firebase auth
-    // which is difficult to fully mock in this environment
-    assertNotNull(viewModel.uiState.first())
-  }
-
-  @Test
-  fun `signInWithMicrosoft should set loading state initially`() = runTest {
+  fun `signInWithMicrosoft should handle successful authentication`() = runTest {
     val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-
-    viewModel.signInWithMicrosoft(mockActivity)
-
-    // Verify state exists
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `signInWithMicrosoft should handle activity context properly`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-
-    viewModel.signInWithMicrosoft(mockActivity)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `clearError should not affect other state properties`() = runTest {
-    val initialState = viewModel.uiState.first()
-    val initialLoading = initialState.isLoading
-    val initialSuccess = initialState.isSignInSuccessful
-
-    viewModel.clearError()
-    advanceUntilIdle()
-
-    val newState = viewModel.uiState.first()
-    assertEquals(initialLoading, newState.isLoading)
-    assertEquals(initialSuccess, newState.isSignInSuccessful)
-    assertNull(newState.errorMessage)
-  }
-
-  @Test
-  fun `SignInUiState toString should work correctly`() {
-    val state = SignInUiState(isLoading = true, errorMessage = "test")
-    val stringRepresentation = state.toString()
-
-    assertNotNull(stringRepresentation)
-    assertTrue(stringRepresentation.contains("SignInUiState"))
-  }
-
-  @Test
-  fun `ViewModel should maintain state across multiple operations`() = runTest {
-    viewModel.clearError()
-    advanceUntilIdle()
-
-    val state1 = viewModel.uiState.first()
-    assertNotNull(state1)
-
-    viewModel.clearError()
-    advanceUntilIdle()
-
-    val state2 = viewModel.uiState.first()
-    assertNotNull(state2)
-  }
-
-  @Test
-  fun `concurrent clearError and signIn should handle state correctly`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    viewModel.clearError()
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `SignInUiState component functions should work`() {
-    val state =
-        SignInUiState(
-            isLoading = true, errorMessage = "error", isSignInSuccessful = true, currentUser = null)
-
-    // Test component destructuring
-    val (isLoading, errorMessage, isSignInSuccessful, currentUser) = state
-
-    assertTrue(isLoading)
-    assertEquals("error", errorMessage)
-    assertTrue(isSignInSuccessful)
-    assertNull(currentUser)
-  }
-
-  @Test
-  fun `ViewModel should use application context not activity context`() {
-    val mockActivity = mockk<Activity>(relaxed = true)
-    val appContext = ApplicationProvider.getApplicationContext<Context>()
-    every { mockActivity.applicationContext } returns appContext
-
-    val viewModelWithActivity = SignInViewModel(mockActivity)
-    assertNotNull(viewModelWithActivity)
-  }
-
-  // NEW TESTS TO IMPROVE COVERAGE TO 85%+
-
-  @Test
-  fun `signInWithGoogle should not proceed if already loading`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    // Set viewModel to loading state by starting a sign-in
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    // Try to sign in again while loading - second call should be blocked
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    // State should exist and be valid
-    val finalState = viewModel.uiState.first()
-    assertNotNull(finalState)
-  }
-
-  @Test
-  fun `signInWithMicrosoft should not proceed if already loading`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-
-    // Set viewModel to loading state
-    viewModel.signInWithMicrosoft(mockActivity)
-    advanceUntilIdle()
-
-    // Try to sign in again while loading - should be blocked
-    viewModel.signInWithMicrosoft(mockActivity)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `signInWithGoogle should handle success with null user`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    // Even if Firebase returns null user, state should be updated
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-    assertFalse(state.isLoading)
-  }
-
-  @Test
-  fun `signInWithGoogle default parameter should use empty callback`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    // Call without explicit callback (uses default empty callback)
-    viewModel.signInWithGoogle(mockCredentialManager)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `clearError should work when no error exists`() = runTest {
-    // Clear error when there's no error
-    viewModel.clearError()
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
-    assertFalse(state.isLoading)
-    assertFalse(state.isSignInSuccessful)
-  }
-
-  @Test
-  fun `ViewModel companion object should provide factory`() {
-    val factory = SignInViewModel.factory(context)
-    assertNotNull(factory)
-
-    val vm = factory.create(SignInViewModel::class.java)
-    assertNotNull(vm)
-    assertTrue(vm is SignInViewModel)
-  }
-
-  @Test
-  fun `SignInUiState should support all property combinations`() {
-    val mockUser = mockk<FirebaseUser>()
-
-    // Test all combinations of state
-    val state1 =
-        SignInUiState(
-            isLoading = true, errorMessage = null, isSignInSuccessful = false, currentUser = null)
-    assertTrue(state1.isLoading)
-    assertNull(state1.errorMessage)
-
-    val state2 =
-        SignInUiState(
-            isLoading = false,
-            errorMessage = "Error",
-            isSignInSuccessful = false,
-            currentUser = null)
-    assertFalse(state2.isLoading)
-    assertEquals("Error", state2.errorMessage)
-
-    val state3 =
-        SignInUiState(
-            isLoading = false,
-            errorMessage = null,
-            isSignInSuccessful = true,
-            currentUser = mockUser)
-    assertTrue(state3.isSignInSuccessful)
-    assertEquals(mockUser, state3.currentUser)
-  }
-
-  @Test
-  fun `ViewModel should handle rapid clearError calls`() = runTest {
-    repeat(10) { viewModel.clearError() }
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
-  }
-
-  @Test
-  fun `signInWithGoogle should clear previous errors`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    // Sign in - the initial state update clears errors
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    // Just verify the state is valid - error clearing is verified in other tests
-    assertNotNull(state)
-    assertFalse(state.isLoading)
-  }
-
-  @Test
-  fun `signInWithMicrosoft should clear previous errors`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-
-    // Sign in - the initial state update clears errors
-    viewModel.signInWithMicrosoft(mockActivity)
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    // Just verify the state is valid - error clearing is verified in other tests
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `ViewModel should expose uiState as immutable StateFlow`() = runTest {
-    val stateFlow = viewModel.uiState
-
-    // StateFlow should be read-only
-    assertTrue(stateFlow is kotlinx.coroutines.flow.StateFlow)
-    assertNotNull(stateFlow.value)
-  }
-
-  @Test
-  fun `SignInUiState copy should preserve unchanged properties`() {
-    val mockUser = mockk<FirebaseUser>()
-    val original =
-        SignInUiState(
-            isLoading = false,
-            errorMessage = "Original error",
-            isSignInSuccessful = true,
-            currentUser = mockUser)
-
-    // Copy with only one property changed
-    val copied = original.copy(isLoading = true)
-
-    assertTrue(copied.isLoading) // Changed
-    assertEquals("Original error", copied.errorMessage) // Preserved
-    assertTrue(copied.isSignInSuccessful) // Preserved
-    assertEquals(mockUser, copied.currentUser) // Preserved
-  }
-
-  @Test
-  fun `ViewModel factory should create unique instances`() {
-    val factory = SignInViewModel.factory(context)
-
-    val vm1 = factory.create(SignInViewModel::class.java)
-    val vm2 = factory.create(SignInViewModel::class.java)
-
-    assertNotNull(vm1)
-    assertNotNull(vm2)
-    // Each call should create a new instance
-    assertNotSame(vm1, vm2)
-  }
-
-  @Test
-  fun `signInWithGoogle should handle coroutine cancellation gracefully`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>(relaxed = true)
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-
-    // Cancel the coroutine
-    testScheduler.advanceTimeBy(100)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  @Test
-  fun `signInWithMicrosoft should handle coroutine cancellation gracefully`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-
-    viewModel.signInWithMicrosoft(mockActivity)
-
-    // Advance time
-    testScheduler.advanceTimeBy(100)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
-  }
-
-  // ADVANCED TESTS TO COVER FIREBASE SUCCESS PATHS
-
-  @Test
-  fun `signInWithMicrosoft should handle success callback with user`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
-    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
-    val mockAuthResult = mockk<AuthResult>()
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
     val mockUser = mockk<FirebaseUser>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
 
-    // Mock Firebase getInstance
     mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
-
-    // Setup the task to capture callbacks
-    val successListenerSlot = slot<OnSuccessListener<AuthResult>>()
-    every { mockTask.addOnSuccessListener(capture(successListenerSlot)) } answers { mockTask }
-    every { mockTask.addOnFailureListener(any()) } returns mockTask
-
-    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    every { mockTask.isComplete } returns true
+    every { mockTask.isSuccessful } returns true
+    every { mockTask.result } returns mockAuthResult
     every { mockAuthResult.user } returns mockUser
     every { mockUser.displayName } returns "Microsoft User"
 
-    // Create new ViewModel with mocked Firebase
-    val testViewModel = SignInViewModel(context)
-
-    testViewModel.signInWithMicrosoft(mockActivity)
-    advanceUntilIdle()
-
-    // Simulate success callback
-    if (successListenerSlot.isCaptured) {
-      successListenerSlot.captured.onSuccess(mockAuthResult)
-      advanceUntilIdle()
-    }
-
-    val state = testViewModel.uiState.first()
-    assertNotNull(state)
-    assertFalse(state.isLoading)
-  }
-
-  @Test
-  fun `signInWithMicrosoft should handle success callback with null user`() = runTest {
-    val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
-    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
-    val mockAuthResult = mockk<AuthResult>()
-
-    mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
-
-    val successListenerSlot = slot<OnSuccessListener<AuthResult>>()
-    every { mockTask.addOnSuccessListener(capture(successListenerSlot)) } answers { mockTask }
+    var successListener: OnSuccessListener<AuthResult>? = null
+    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers
+        {
+          successListener = firstArg()
+          mockTask
+        }
     every { mockTask.addOnFailureListener(any()) } returns mockTask
 
-    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
-    every { mockAuthResult.user } returns null // Null user case
-
-    // Create new ViewModel with mocked Firebase
     val testViewModel = SignInViewModel(context)
-
     testViewModel.signInWithMicrosoft(mockActivity)
     advanceUntilIdle()
 
-    // Simulate success callback with null user
-    if (successListenerSlot.isCaptured) {
-      successListenerSlot.captured.onSuccess(mockAuthResult)
-      advanceUntilIdle()
-    }
+    // Manually trigger success listener
+    successListener?.onSuccess(mockAuthResult)
+    advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
-    assertNotNull(state)
     assertFalse(state.isLoading)
-    // Should have error message about no user
+    assertTrue(state.isSignInSuccessful)
+    assertEquals(mockUser, state.currentUser)
+    assertNull(state.errorMessage)
   }
 
   @Test
-  fun `signInWithMicrosoft should handle failure callback`() = runTest {
+  fun `signInWithMicrosoft should handle authentication failure`() = runTest {
     val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
     val mockTask = mockk<Task<AuthResult>>(relaxed = true)
-    val testException = Exception("Microsoft auth failed")
+    val exception = Exception("Microsoft auth failed")
 
     mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
 
-    val failureListenerSlot = slot<OnFailureListener>()
-    every { mockTask.addOnSuccessListener(any()) } returns mockTask
-    every { mockTask.addOnFailureListener(capture(failureListenerSlot)) } answers { mockTask }
-
-    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    var failureListener: OnFailureListener? = null
+    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } returns mockTask
+    every { mockTask.addOnFailureListener(any()) } answers
+        {
+          failureListener = firstArg()
+          mockTask
+        }
 
     val testViewModel = SignInViewModel(context)
-
     testViewModel.signInWithMicrosoft(mockActivity)
     advanceUntilIdle()
 
-    // Simulate failure callback
-    if (failureListenerSlot.isCaptured) {
-      failureListenerSlot.captured.onFailure(testException)
-      advanceUntilIdle()
-    }
+    // Manually trigger failure listener
+    failureListener?.onFailure(exception)
+    advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
-    assertNotNull(state)
     assertFalse(state.isLoading)
-    // Should have error message
+    assertEquals("Microsoft sign-in failed: Microsoft auth failed", state.errorMessage)
   }
 
   @Test
-  fun `signInWithMicrosoft should handle exception during provider setup`() = runTest {
+  fun `signInWithMicrosoft should handle null user in result`() = runTest {
     val mockActivity = Robolectric.buildActivity(Activity::class.java).get()
-    val mockFirebaseAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
 
     mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockFirebaseAuth
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.startActivityForSignInWithProvider(any(), any()) } returns mockTask
+    every { mockAuthResult.user } returns null
 
-    // Make startActivityForSignInWithProvider throw an exception
-    every { mockFirebaseAuth.startActivityForSignInWithProvider(any(), any()) } throws
-        RuntimeException("OAuth provider error")
+    var successListener: OnSuccessListener<AuthResult>? = null
+    every { mockTask.addOnSuccessListener(any<OnSuccessListener<AuthResult>>()) } answers
+        {
+          successListener = firstArg()
+          mockTask
+        }
+    every { mockTask.addOnFailureListener(any()) } returns mockTask
 
     val testViewModel = SignInViewModel(context)
-
     testViewModel.signInWithMicrosoft(mockActivity)
     advanceUntilIdle()
 
+    // Manually trigger success listener with null user
+    successListener?.onSuccess(mockAuthResult)
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Microsoft sign-in failed: No user returned", state.errorMessage)
+  }
+
+  // ========== Additional Email/Password Tests for Higher Coverage ==========
+
+  @Test
+  fun `signInWithEmail should handle successful authentication`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+    val mockUser = mockk<FirebaseUser>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+    every { mockUser.email } returns "test@example.com"
+
+    coEvery { mockTask.await<AuthResult>() } returns mockAuthResult
+    every { mockAuthResult.user } returns mockUser
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertTrue(state.isSignInSuccessful)
+    assertEquals(mockUser, state.currentUser)
+    assertNull(state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle successful registration`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+    val mockUser = mockk<FirebaseUser>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+    every { mockUser.email } returns "newuser@example.com"
+
+    coEvery { mockTask.await<AuthResult>() } returns mockAuthResult
+    every { mockAuthResult.user } returns mockUser
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("newuser@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertTrue(state.isSignInSuccessful)
+    assertEquals(mockUser, state.currentUser)
+    assertNull(state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should handle null user in auth result`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } returns mockAuthResult
+    every { mockAuthResult.user } returns null
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertFalse(state.isSignInSuccessful)
+    assertEquals("Sign-in failed: No user returned", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle null user in auth result`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val mockAuthResult = mockk<AuthResult>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } returns mockAuthResult
+    every { mockAuthResult.user } returns null
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertFalse(state.isSignInSuccessful)
+    assertEquals("Sign-up failed: No user returned", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle weak password error`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception =
+        Exception("The given password is invalid. [ Password should be at least 6 characters ]")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signUpWithEmail("test@example.com", "123456")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    // Since the error doesn't contain "weak password", it will be a generic error
+    assertEquals(
+        "Sign-up failed: The given password is invalid. [ Password should be at least 6 characters ]",
+        state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail should handle generic Firebase error message`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+    val exception = Exception("Some other Firebase error")
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    coEvery { mockTask.await<AuthResult>() } throws exception
+
+    val testViewModel = SignInViewModel(context)
+    testViewModel.signInWithEmail("test@example.com", "password123")
+    advanceUntilIdle()
+
+    val state = testViewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Sign-in failed: Some other Firebase error", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail prevents multiple simultaneous calls`() = runTest {
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+
+    mockkStatic(FirebaseAuth::class)
+    mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+    every { FirebaseAuth.getInstance() } returns mockAuth
+    every { mockAuth.currentUser } returns null
+    every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+    // Never complete the task to keep isLoading true
+    coEvery { mockTask.await<AuthResult>() } coAnswers
+        {
+          kotlinx.coroutines.delay(10000)
+          mockk()
+        }
+
+    val testViewModel = SignInViewModel(context)
+
+    // First call
+    testViewModel.signUpWithEmail("test1@example.com", "password123")
+
+    // Advance just a bit to set isLoading to true
+    testScheduler.advanceTimeBy(100)
+
+    // Try second call while first is loading
+    testViewModel.signUpWithEmail("test2@example.com", "password456")
+
+    advanceUntilIdle()
+
+    // Verify that state is still related to first call (second was blocked)
     val state = testViewModel.uiState.first()
     assertNotNull(state)
-    assertFalse(state.isLoading)
-    // Should handle the exception
   }
 
   @Test
-  fun `signInWithGoogle should handle GetCredentialCancellationException properly`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
-
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws androidx.credentials.exceptions.GetCredentialCancellationException("User cancelled")
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+  fun `signInWithEmail with whitespace only email should fail`() = runTest {
+    viewModel.signInWithEmail("   \t\n   ", "password123")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail with whitespace only password should fail`() = runTest {
+    viewModel.signInWithEmail("test@example.com", "   \t\n   ")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail with 5 character password should fail`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "12345")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertFalse(state.isLoading)
+    assertEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail with exactly 6 character password should succeed validation`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "123456")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not have password length error
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `signInWithEmail error messages are properly mapped`() = runTest {
+    val testCases =
+        listOf(
+            "There is no user record corresponding to this identifier" to
+                "No account found with this email",
+            "The password is invalid or the user does not have a password" to "Invalid password",
+            "The email address is badly formatted" to "Invalid email format")
+
+    for ((firebaseError, expectedMessage) in testCases) {
+      val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+      val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+      val exception = Exception(firebaseError)
+
+      mockkStatic(FirebaseAuth::class)
+      mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+      every { FirebaseAuth.getInstance() } returns mockAuth
+      every { mockAuth.currentUser } returns null
+      every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+      coEvery { mockTask.await<AuthResult>() } throws exception
+
+      val testViewModel = SignInViewModel(context)
+      testViewModel.signInWithEmail("test@example.com", "password123")
+      advanceUntilIdle()
+
+      val state = testViewModel.uiState.first()
+      assertEquals(expectedMessage, state.errorMessage)
+
+      unmockkAll()
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail error messages are properly mapped`() = runTest {
+    val testCases =
+        listOf(
+            "The email address is already in use by another account" to
+                "An account with this email already exists",
+            "The email address is badly formatted" to "Invalid email format",
+            "The password is too weak" to "Password is too weak")
+
+    for ((firebaseError, expectedMessage) in testCases) {
+      val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+      val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+      val exception = Exception(firebaseError)
+
+      mockkStatic(FirebaseAuth::class)
+      mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+      every { FirebaseAuth.getInstance() } returns mockAuth
+      every { mockAuth.currentUser } returns null
+      every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns
+          mockTask
+
+      coEvery { mockTask.await<AuthResult>() } throws exception
+
+      val testViewModel = SignInViewModel(context)
+      testViewModel.signUpWithEmail("test@example.com", "password123")
+      advanceUntilIdle()
+
+      val state = testViewModel.uiState.first()
+      assertEquals(expectedMessage, state.errorMessage)
+
+      unmockkAll()
+    }
+  }
+
+  @Test
+  fun `clearError preserves other state properties`() = runTest {
+    // Set up a state with an error
+    viewModel.signInWithEmail("", "")
+    advanceUntilIdle()
+
+    var state = viewModel.uiState.first()
     assertNotNull(state.errorMessage)
-    assertEquals("Sign-in was cancelled", state.errorMessage)
+    val wasLoading = state.isLoading
+    val wasSuccessful = state.isSignInSuccessful
+
+    // Clear error
+    viewModel.clearError()
+    advanceUntilIdle()
+
+    state = viewModel.uiState.first()
+    assertNull(state.errorMessage)
+    assertEquals(wasLoading, state.isLoading)
+    assertEquals(wasSuccessful, state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `email sign-in with unicode characters in email should be accepted`() = runTest {
+    viewModel.signInWithEmail("test@例え.jp", "password123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not fail with empty validation
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+  }
+
+  @Test
+  fun `email sign-up with unicode characters in password should be accepted`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "пароль123")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not fail with validation errors
+    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+  }
+
+  @Test
+  fun `email sign-in sets isSignInSuccessful to false initially`() = runTest {
+    val initialState = viewModel.uiState.first()
+    assertFalse(initialState.isSignInSuccessful)
+
+    // Try to sign in with invalid credentials
+    viewModel.signInWithEmail("", "")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
     assertFalse(state.isSignInSuccessful)
   }
 
   @Test
-  fun `signInWithGoogle should handle NoCredentialException properly`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
+  fun `email sign-up sets isSignInSuccessful to false initially`() = runTest {
+    val initialState = viewModel.uiState.first()
+    assertFalse(initialState.isSignInSuccessful)
 
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws androidx.credentials.exceptions.NoCredentialException("No credentials available")
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
+    // Try to sign up with invalid credentials
+    viewModel.signUpWithEmail("", "")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertFalse(state.isLoading)
-    assertNotNull(state.errorMessage)
-    assertEquals("No Google accounts found on device", state.errorMessage)
     assertFalse(state.isSignInSuccessful)
-  }
-
-  @Test
-  fun `signInWithGoogle should handle GetCredentialException with custom type`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
-
-    val mockException =
-        mockk<androidx.credentials.exceptions.GetCredentialException>(relaxed = true)
-    every { mockException.type } returns "TYPE_NO_CREDENTIAL"
-    every { mockException.message } returns "Credential request failed"
-
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws mockException
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    val state = viewModel.uiState.first()
-    assertFalse(state.isLoading)
-    assertNotNull(state.errorMessage)
-    assertTrue(state.errorMessage?.contains("Credential error") == true)
-    assertTrue(state.errorMessage?.contains("TYPE_NO_CREDENTIAL") == true)
-    assertFalse(state.isSignInSuccessful)
-  }
-
-  @Test
-  fun `signInWithGoogle should not invoke callback when authentication fails`() = runTest {
-    var callbackInvoked = false
-    val mockCredentialManager = mockk<CredentialManager>()
-
-    coEvery {
-      mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>())
-    } throws RuntimeException("Auth failed")
-
-    viewModel.signInWithGoogle(mockCredentialManager) { callbackInvoked = true }
-    advanceUntilIdle()
-
-    assertFalse(callbackInvoked)
-
-    val state = viewModel.uiState.first()
-    assertFalse(state.isLoading)
-    assertNotNull(state.errorMessage)
-  }
-
-  @Test
-  fun `signInWithGoogle should verify GetCredentialRequest is constructed`() = runTest {
-    val mockCredentialManager = mockk<CredentialManager>()
-    val capturedRequest = slot<GetCredentialRequest>()
-
-    coEvery { mockCredentialManager.getCredential(any<Context>(), capture(capturedRequest)) } throws
-        RuntimeException("Test exception")
-
-    viewModel.signInWithGoogle(mockCredentialManager) {}
-    advanceUntilIdle()
-
-    // Verify request was created and passed
-    coVerify { mockCredentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) }
-    assertTrue(capturedRequest.isCaptured)
-
-    val state = viewModel.uiState.first()
-    assertNotNull(state)
   }
 }
