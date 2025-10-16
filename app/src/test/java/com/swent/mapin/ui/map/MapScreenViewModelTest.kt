@@ -65,8 +65,6 @@ class MapScreenViewModelTest {
 
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
-
-    // Mock applicationContext to return itself (or another mock)
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
     runBlocking {
@@ -308,16 +306,13 @@ class MapScreenViewModelTest {
 
   @Test
   fun onSearchTap_multipleCalls_setsFocusWhenNotInFullState() {
-    // Premier appel : passe en FULL et met focus à true
     viewModel.onSearchTap()
     assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertTrue(viewModel.shouldFocusSearch)
 
-    // Gérer le focus
     viewModel.onSearchFocusHandled()
     assertFalse(viewModel.shouldFocusSearch)
 
-    // Deuxième appel : déjà en FULL, ne fait rien
     viewModel.onSearchTap()
     assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertFalse(viewModel.shouldFocusSearch)
@@ -464,11 +459,41 @@ class MapScreenViewModelTest {
             taggedUserIds = emptyList())
 
     viewModel.onMemorySave(formData)
-    // Note: In real scenario, isSavingMemory would be true during the operation
-    // but due to how coroutines work in tests, it's hard to catch the intermediate state
     advanceUntilIdle()
 
     assertFalse(viewModel.isSavingMemory)
+  }
+
+  @Test
+  fun availableEvents_initiallyLoaded() {
+    assertNotNull(viewModel.availableEvents)
+  }
+
+  @Test
+  fun setMapStyle_togglesHeatmapState() {
+    assertFalse(viewModel.showHeatmap)
+
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.HEATMAP)
+    assertTrue(viewModel.showHeatmap)
+
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.STANDARD)
+    assertFalse(viewModel.showHeatmap)
+  }
+
+  @Test
+  fun setEvents_updatesEvents() {
+    val initialEvents = viewModel.events
+    val newEvents =
+        listOf(
+            com.swent.mapin.model.event.Event(
+                uid = "test1",
+                title = "Test Event",
+                location = com.swent.mapin.model.Location("Test Location", 34.0, -118.0),
+                attendeeCount = 50))
+
+    viewModel.setEvents(newEvents)
+
+    assertEquals(newEvents, viewModel.events)
   }
 
   @Test
@@ -497,7 +522,7 @@ class MapScreenViewModelTest {
     assertTrue(geoJson.contains("weight"))
     assertTrue(geoJson.contains("6.5"))
     assertTrue(geoJson.contains("46.5"))
-    assertTrue(geoJson.contains("10")) // weight from attendeeCount
+    assertTrue(geoJson.contains("10"))
   }
 
   @Test
