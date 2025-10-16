@@ -28,7 +28,6 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -288,14 +287,14 @@ fun AddEventPopUp(
           timeError.value ||
           dateError.value
 
-    val errorFields = listOfNotNull(
-        if (titleError.value) stringResource(R.string.title_field) else null,
-        if (dateError.value) stringResource(R.string.date_field) else null,
-        if (locationError.value) stringResource(R.string.location_field) else null,
-        if (descriptionError.value) stringResource(R.string.description_field) else null,
-        if (tagError.value) stringResource(R.string.tag_field) else null,
-        if (timeError.value) stringResource(R.string.time) else null
-    )
+  val errorFields =
+      listOfNotNull(
+          if (titleError.value) stringResource(R.string.title_field) else null,
+          if (dateError.value) stringResource(R.string.date_field) else null,
+          if (locationError.value) stringResource(R.string.location_field) else null,
+          if (descriptionError.value) stringResource(R.string.description_field) else null,
+          if (tagError.value) stringResource(R.string.tag_field) else null,
+          if (timeError.value) stringResource(R.string.time) else null)
   Dialog(
       onDismissRequest = onDismiss,
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
@@ -336,9 +335,11 @@ fun AddEventPopUp(
                         stringResource(R.string.date_field),
                         modifier = Modifier.padding(end = 180.dp).padding(bottom = 2.dp),
                         fontSize = 16.sp)
-                    FutureDatePickerButton(date, onDateChanged = {dateError.value = (date.value.isBlank())})
+                    FutureDatePickerButton(
+                        date, onDateChanged = { dateError.value = (date.value.isBlank()) })
                     Spacer(modifier = Modifier.padding(10.dp))
-                    TimePickerButton(time, onTimeChanged = {timeError.value = (time.value.isBlank())})
+                    TimePickerButton(
+                        time, onTimeChanged = { timeError.value = (time.value.isBlank()) })
                     Spacer(modifier = Modifier.padding(5.dp))
                     Text(
                         stringResource(R.string.location_field),

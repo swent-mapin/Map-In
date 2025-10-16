@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class EventViewModel(
-  private val eventRepository: EventRepository = EventRepositoryFirestore(db = Firebase.firestore)
+    private val eventRepository: EventRepository = EventRepositoryFirestore(db = Firebase.firestore)
 ) : ViewModel() {
 
   private val _events = MutableStateFlow<List<Event>>(emptyList())

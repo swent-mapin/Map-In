@@ -1,9 +1,6 @@
 package com.swent.mapin.ui.components
 
-import android.widget.Toast
-import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.auth
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 
@@ -92,6 +89,7 @@ fun saveEvent(
           url = null,
           description = description,
           location = location,
+          date = date,
           tags = tags,
           public = isPublic,
           ownerId = uid,
