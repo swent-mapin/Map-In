@@ -68,9 +68,72 @@ fun EventDetailSheet(
     modifier: Modifier = Modifier
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
-    // Header with close and share buttons
+    when (sheetState) {
+      BottomSheetState.COLLAPSED -> CollapsedEventContent(event = event, onShare = onShare, onClose = onClose)
+      BottomSheetState.MEDIUM -> {
+        // Header with close and share buttons
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share event",
+                    tint = MaterialTheme.colorScheme.primary)
+              }
+
+              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface)
+              }
+            }
+        MediumEventContent(
+            event = event,
+            isParticipating = isParticipating,
+            onJoinEvent = onJoinEvent,
+            onUnregisterEvent = onUnregisterEvent)
+      }
+      BottomSheetState.FULL -> {
+        // Header with close and share buttons
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share event",
+                    tint = MaterialTheme.colorScheme.primary)
+              }
+
+              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface)
+              }
+            }
+        FullEventContent(
+            event = event,
+            isParticipating = isParticipating,
+            organizerName = organizerName,
+            onJoinEvent = onJoinEvent,
+            onUnregisterEvent = onUnregisterEvent,
+            onSaveForLater = onSaveForLater)
+      }
+    }
+  }
+}
+
+/** Collapsed state: Shows only title and category/tag */
+@Composable
+private fun CollapsedEventContent(event: Event, onShare: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+  Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
@@ -80,6 +143,27 @@ fun EventDetailSheet(
                 tint = MaterialTheme.colorScheme.primary)
           }
 
+          Column(
+              modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+              horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("eventTitleCollapsed"))
+
+                if (event.tags.isNotEmpty()) {
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text(
+                      text = event.tags.first(),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.testTag("eventTagCollapsed"))
+                }
+              }
+
           IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
             Icon(
                 imageVector = Icons.Default.Close,
@@ -87,47 +171,6 @@ fun EventDetailSheet(
                 tint = MaterialTheme.colorScheme.onSurface)
           }
         }
-
-    when (sheetState) {
-      BottomSheetState.COLLAPSED -> CollapsedEventContent(event = event)
-      BottomSheetState.MEDIUM ->
-          MediumEventContent(
-              event = event,
-              isParticipating = isParticipating,
-              onJoinEvent = onJoinEvent,
-              onUnregisterEvent = onUnregisterEvent)
-      BottomSheetState.FULL ->
-          FullEventContent(
-              event = event,
-              isParticipating = isParticipating,
-              organizerName = organizerName,
-              onJoinEvent = onJoinEvent,
-              onUnregisterEvent = onUnregisterEvent,
-              onSaveForLater = onSaveForLater)
-    }
-  }
-}
-
-/** Collapsed state: Shows only title and category/tag */
-@Composable
-private fun CollapsedEventContent(event: Event, modifier: Modifier = Modifier) {
-  Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-    Text(
-        text = event.title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.testTag("eventTitleCollapsed"))
-
-    if (event.tags.isNotEmpty()) {
-      Spacer(modifier = Modifier.height(4.dp))
-      Text(
-          text = event.tags.first(),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.testTag("eventTagCollapsed"))
-    }
   }
 }
 
