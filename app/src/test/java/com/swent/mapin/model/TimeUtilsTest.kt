@@ -78,5 +78,4 @@ class TimeUtilsTest {
     assertEquals(expectedEnd.epochSecond, end.seconds)
     assertEquals(expectedEnd.nano, end.nanoseconds)
   }
-
 }
