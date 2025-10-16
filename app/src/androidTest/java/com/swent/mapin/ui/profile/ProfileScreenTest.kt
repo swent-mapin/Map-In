@@ -189,9 +189,9 @@ class ProfileScreenTest {
       MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
-    composeTestRule.onNodeWithTag("editNameField").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("saveButton").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("cancelButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("editNameField").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveButton").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("cancelButton").performScrollTo().assertIsDisplayed()
   }
 
   // ==================== EditProfileContent Tests ====================
