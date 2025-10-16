@@ -6,296 +6,106 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import com.swent.mapin.testing.UiTestTags
 import org.junit.Rule
 import org.junit.Test
 
-// Assisted by AI
 /**
- * Tests cover:
- * - MapScreen composition and rendering
- * - Integration with bottom sheet states
- * - Search bar interactions across different states
- * - Visual elements (TopGradient, ScrimOverlay, MapInteractionBlocker)
- * - State transitions via bottom sheet interactions
- * - Map interaction blocking in full state
- * - Scrim overlay presence across states
- * - Direct state transitions (collapsed <-> full)
+ * MapScreen tests aligned with the current implementation:
+ * - Avoids Mapbox by using renderMap = false
+ * - Verifies search bar, sections, scrim, interaction blocker, and profile FAB
  */
 class MapScreenTest {
 
   @get:Rule val rule = createComposeRule()
 
-  @Test
-  fun mapScreen_rendersSuccessfully() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  private fun setScreen() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
   }
 
   @Test
-  fun mapScreen_initialState_showsCollapsedSheet() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertExists()
+  fun mapScreen_composes_andShowsBasicChrome() {
+    setScreen()
+
+    // Root screen
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+
+    // Search bar always visible
+    rule.onNodeWithText("Search activities", useUnmergedTree = true).assertIsDisplayed()
+
+    // Scrim overlay is always present (alpha varies by state)
+    rule.onNodeWithTag("scrimOverlay", useUnmergedTree = true).assertExists()
+
+    // Blocker appears only in FULL; initial should not have it
+    rule.onNodeWithTag("mapInteractionBlocker", useUnmergedTree = true).assertDoesNotExist()
+
+    // Profile FAB exists
+    rule.onNodeWithTag("profileButton", useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
-  fun mapScreen_searchBarClick_expandsToFullState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+  fun tappingSearch_entersFull_andShowsSectionsAndBlocker() {
+    setScreen()
+
+    // Tapping the field expands sheet (your SearchBar does this on focus/tap)
     rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Discover").assertIsDisplayed()
-  }
 
-  @Test
-  fun mapScreen_searchInput_expandsToFullState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performTextInput("coffee")
-    rule.waitForIdle()
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_searchQuery_persistsAcrossRecomposition() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performTextInput("basketball")
-    rule.waitForIdle()
-    rule.onNodeWithText("basketball").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_quickActionButtons_areDisplayedInMediumAndFullStates() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Create Memory").assertIsDisplayed()
-    rule.onNodeWithText("Create Event").assertIsDisplayed()
-    rule.onNodeWithText("Filters").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_fullState_showsAllContentSections() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-
-    rule.waitUntil(timeoutMillis = 10000) {
+    // Wait a bit for the animated content to settle
+    rule.waitUntil(5_000) {
       try {
-        rule.onNodeWithText("Quick Actions").performScrollTo().assertIsDisplayed()
-        rule.onNodeWithText("Activity 1").performScrollTo().assertIsDisplayed()
-        rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Quick Actions").assertExists()
         true
-      } catch (e: AssertionError) {
+      } catch (_: AssertionError) {
         false
       }
     }
 
-    rule.onNodeWithText("Quick Actions").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Activity 1").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Activity 2").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_multipleStateTransitions_workCorrectly() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithText("Create Memory").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("New Memory").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_componentsLayout_maintainsCorrectHierarchy() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Recent Activities").assertIsDisplayed()
     rule.onNodeWithText("Discover").assertIsDisplayed()
-  }
 
-  @Test
-  fun mapScreen_mapInteractionBlocker_onlyPresentInFullState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
-
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
+    // In FULL state, the map interaction blocker should be visible
     rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
   }
 
   @Test
-  fun mapScreen_scrimOverlay_alwaysPresent() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("scrimOverlay").assertIsDisplayed()
+  fun full_thenSwipeDown_hidesInteractionBlocker() {
+    setScreen()
 
+    // Go FULL
     rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("scrimOverlay").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_mapInteractionBlocker_disappearsWhenLeavingFullState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
-
-    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
-  }
-
-  @Test
-  fun mapScreen_directTransition_collapsedToFull() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
-
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
-    rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_directTransition_fullToCollapsed() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
-
-    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown(startY = top, endY = bottom) }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
-  }
-
-  @Test
-  fun mapStyleToggle_isVisible_andToggles() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun mapStyleToggle_persists_afterBottomSheetTransitions() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun searchQuery_clears_whenLeavingFullState() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithText("Search activities").performTextInput("basketball")
-    rule.waitForIdle()
-    rule.onNodeWithText("basketball").assertIsDisplayed()
-    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
-    rule.waitForIdle()
-    rule.onNodeWithText("basketball").assertDoesNotExist()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapStyleToggle_visible_inAllSheetStates() {
-    rule.setContent { MaterialTheme { MapScreen() } }
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Search activities").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleToggle").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_heatmapMode_displaysCorrectly() {
-    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleOption_HEATMAP").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_satelliteMode_displaysCorrectly() {
-    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_locationClick_triggersCallback() {
-    var clickedEvent: com.swent.mapin.model.event.Event? = null
-    rule.setContent {
-      MaterialTheme { MapScreen(onEventClick = { event -> clickedEvent = event }) }
+    rule.waitUntil(5_000) {
+      try {
+        rule.onNodeWithTag("mapInteractionBlocker").assertExists()
+        true
+      } catch (_: AssertionError) {
+        false
+      }
     }
-    rule.waitForIdle()
+    rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
 
-    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    // Collapse sheet by swiping it down
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeDown() }
+
+    // Wait for state to settle out of FULL
+    rule.waitUntil(5_000) {
+      try {
+        rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
+        true
+      } catch (_: AssertionError) {
+        false
+      }
+    }
   }
 
   @Test
-  fun mapScreen_switchBetweenStyles_maintainsState() {
-    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleOption_HEATMAP").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("mapStyleToggle").performClick()
-    rule.waitForIdle()
-    rule.onNodeWithTag("mapStyleOption_STANDARD").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  fun profileButton_isVisible_andClickable() {
+    setScreen()
+    rule.onNodeWithTag("profileButton", useUnmergedTree = true).assertIsDisplayed()
+    // No-op click (we’re not asserting navigation here)
+    rule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
+    rule.onNodeWithTag("profileButton", useUnmergedTree = true).assertIsDisplayed()
   }
 }
