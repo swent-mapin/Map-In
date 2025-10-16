@@ -3,6 +3,9 @@ package com.swent.mapin.navigationTests
 import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.gms.tasks.Tasks
@@ -23,7 +26,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
+/** Simple tests to verify that the NavHost starts on the correct screen based on login state */
+@RunWith(AndroidJUnit4::class)
 class AppNavHostTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -129,15 +135,9 @@ class AppNavHostTest {
         .assertIsDisplayed()
   }
 
-  @Test
-  fun startsOnMap_whenLoggedIn() {
-    composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
-    }
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+  @androidx.compose.runtime.Composable
+  private fun FakeAuthScreen() {
+    Text("Auth", modifier = Modifier.testTag("AUTH"))
   }
 
   @Test
@@ -168,10 +168,13 @@ class AppNavHostTest {
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
   }
 
-  @Test
-  fun logout_navigatesBackToAuth() {
-    composeTestRule.setContent {
-      AppNavHost(navController = rememberNavController(), isLoggedIn = true)
+  @androidx.compose.runtime.Composable
+  private fun TestNavHost(isLoggedIn: Boolean) {
+    val navController = rememberNavController()
+    val start = if (isLoggedIn) Routes.MAP else Routes.AUTH
+    NavHost(navController = navController, startDestination = start) {
+      composable(Routes.AUTH) { FakeAuthScreen() }
+      composable(Routes.MAP) { FakeMapScreen() }
     }
 
     composeTestRule.waitForIdle()

@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
@@ -73,6 +74,7 @@ import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -142,6 +144,8 @@ fun MapScreen(
   LaunchedEffect(viewModel.events) {
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
+  val eventRepo = EventRepositoryFirestore(FirebaseFirestore.getInstance())
+  val searchViewModel = SearchViewModel(eventRepo)
 
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     if (renderMap) {
@@ -188,18 +192,8 @@ fun MapScreen(
           BottomSheetContent(
               state = viewModel.bottomSheetState,
               fullEntryKey = viewModel.fullEntryKey,
-              searchBarState =
-                  SearchBarState(
-                      query = viewModel.searchQuery,
-                      shouldRequestFocus = viewModel.shouldFocusSearch,
-                      onQueryChange = viewModel::onSearchQueryChange,
-                      onTap = viewModel::onSearchTap,
-                      onFocusHandled = viewModel::onSearchFocusHandled),
-              showMemoryForm = viewModel.showMemoryForm,
-              availableEvents = viewModel.availableEvents,
-              onCreateMemoryClick = viewModel::showMemoryForm,
-              onMemorySave = viewModel::onMemorySave,
-              onMemoryCancel = viewModel::onMemoryCancel)
+              searchViewModel = searchViewModel,
+              onExitSearch = { viewModel.setBottomSheetState(BottomSheetState.MEDIUM) })
         }
 
     if (viewModel.isSavingMemory) {
