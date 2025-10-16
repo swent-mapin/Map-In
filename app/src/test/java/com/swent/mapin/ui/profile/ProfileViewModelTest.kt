@@ -443,7 +443,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     every { mockAuth.signOut() } returns Unit
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     // Verify profile is loaded
     val loadedProfile = viewModel.userProfile.first()
@@ -466,7 +466,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     every { mockAuth.signOut() } returns Unit
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     // Enter edit mode and make some invalid changes
     viewModel.startEditing()
@@ -488,7 +488,7 @@ class ProfileViewModelTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     every { mockAuth.signOut() } returns Unit
 
-    viewModel = ProfileViewModel(mockRepository)
+    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
 
     // Enter edit mode and modify fields
     viewModel.startEditing()
