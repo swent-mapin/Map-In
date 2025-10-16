@@ -235,8 +235,7 @@ class BottomSheetContentTest {
                     onQueryChange = {},
                     onTap = {},
                     onFocusHandled = {},
-                    onClear = {}
-                ),
+                    onClear = {}),
             joinedEvents = testEvents,
             selectedTab = selectedTab,
             onTabChange = { tab ->

@@ -200,9 +200,7 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_locationClick_triggersCallback() {
-    rule.setContent {
-      MaterialTheme { MapScreen() }
-    }
+    rule.setContent { MaterialTheme { MapScreen() } }
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
@@ -399,5 +397,4 @@ class MapScreenTest {
 
     rule.onNodeWithText("Basketball Game").assertIsDisplayed()
   }
-
 }

@@ -16,10 +16,9 @@ object HttpClientProvider {
 }
 
 /**
-
-Main activity of the app.*
-Role: - Android entry point that hosts the Jetpack Compose UI. - Applies the Material 3 theme
-and shows the map screen.*/
+ * Main activity of the app.* Role: - Android entry point that hosts the Jetpack Compose UI. -
+ * Applies the Material 3 theme and shows the map screen.
+ */
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
