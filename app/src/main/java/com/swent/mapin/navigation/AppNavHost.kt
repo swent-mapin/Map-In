@@ -13,6 +13,7 @@ import com.swent.mapin.ui.profile.ProfileScreen
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
+    renderMap: Boolean = true
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
@@ -28,7 +29,9 @@ fun AppNavHost(
     }
 
     composable(Route.Map.route) {
-      MapScreen(onNavigateToProfile = { navController.navigate(Route.Profile.route) })
+      MapScreen(
+          onNavigateToProfile = { navController.navigate(Route.Profile.route) },
+          renderMap = renderMap)
     }
 
     composable(Route.Profile.route) {
