@@ -544,4 +544,3 @@ class ProfileScreenTest {
     assert(dismissed)
   }
 }
-
