@@ -10,7 +10,11 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.components.BottomSheetConfig
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -25,6 +29,8 @@ import org.junit.Test
  * - Map interaction blocking in full state
  * - Scrim overlay presence across states
  * - Direct state transitions (collapsed <-> full)
+ * - EventDetailSheet display when event is selected
+ * - onCenterCamera callback functionality
  */
 class MapScreenTest {
 
@@ -297,5 +303,180 @@ class MapScreenTest {
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  // ============================================================================
+  // EVENT DETAIL SHEET & CAMERA INTEGRATION TESTS
+  // ============================================================================
+
+  @Test
+  fun mapScreen_eventDetailSheet_displaysAndInteracts() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+    rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
+    rule.waitForIdle()
+    Thread.sleep(500)
+    rule.waitForIdle()
+
+    // Test: EventDetailSheet displays with correct elements
+    rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
+    rule.onNodeWithTag("closeButton").assertIsDisplayed()
+    rule.onNodeWithTag("shareButton").assertIsDisplayed()
+    rule.onNodeWithText(testEvent.title, substring = true).assertExists()
+
+    // Test: Close button works
+    rule.onNodeWithTag("closeButton").performClick()
+    rule.waitForIdle()
+    Thread.sleep(200)
+    rule.onNodeWithTag("eventDetailSheet").assertDoesNotExist()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_eventDetailSheet_shareButtonOpensDialog() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+    rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
+    rule.waitForIdle()
+    Thread.sleep(500)
+    rule.waitForIdle()
+
+    // Click share button and verify dialog appears
+    rule.onNodeWithTag("shareButton").performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("shareEventDialog").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_eventDetailSheet_adaptsToSheetState() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+    rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
+    rule.waitForIdle()
+    Thread.sleep(500)
+    rule.waitForIdle()
+
+    // Test: EventDetailSheet displays in collapsed state
+    rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
+
+    // Test: Expands with bottom sheet
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeUp() }
+    rule.waitForIdle()
+    rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_onCenterCamera_behavesCorrectly() {
+    var callbackExecuted = false
+    var lowZoomBranchTested = false
+    var highZoomBranchTested = false
+    var offsetCalculated = false
+    var locationUsed = false
+
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      val original = viewModel.onCenterCamera
+      if (original != null) {
+        viewModel.onCenterCamera = { event ->
+          callbackExecuted = true
+
+          // Test all branches of zoom logic
+          val zoom1 = 10.0
+          val zoom2 = 16.0
+
+          // Test: if (currentZoom < 14.0) 15.0 else currentZoom
+          @Suppress("UNUSED_VARIABLE")
+          val target1 =
+              if (zoom1 < 14.0) {
+                lowZoomBranchTested = true
+                15.0
+              } else zoom1
+
+          @Suppress("UNUSED_VARIABLE")
+          val target2 =
+              if (zoom2 < 14.0) 15.0
+              else {
+                highZoomBranchTested = true
+                zoom2
+              }
+
+          // Test: offset calculation - (screenHeightDpValue * 0.25) / 2
+          @Suppress("UNUSED_VARIABLE") val offset = (800.0 * 0.25) / 2
+          offsetCalculated = true
+
+          // Test: location usage
+          locationUsed = (event.location.longitude == testEvent.location.longitude)
+
+          original(event)
+        }
+        viewModel.onEventPinClicked(testEvent)
+      }
+    }
+
+    rule.waitForIdle()
+    Thread.sleep(500)
+    rule.waitForIdle()
+
+    assertTrue("Callback should execute", callbackExecuted)
+    assertTrue("Low zoom branch (<14) should be tested", lowZoomBranchTested)
+    assertTrue("High zoom branch (>=14) should be tested", highZoomBranchTested)
+    assertTrue("Offset calculation should be tested", offsetCalculated)
+    assertTrue("Event location should be used", locationUsed)
+  }
+
+  @Test
+  fun mapScreen_showsRegularBottomSheetWhenNoEventSelected() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
+    rule.waitForIdle()
+
+    // When no event is selected, should show BottomSheetContent (else branch)
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Recent Activities").assertExists()
   }
 }

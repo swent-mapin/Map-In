@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -27,12 +28,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -47,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -63,8 +69,7 @@ data class SearchBarState(
  * Content for the bottom sheet
  * - Search bar (always visible)
  * - Quick actions
- * - (Temporary) Recent activities
- * - (Temporary) Discover section
+ * - Toggle between Recent Activities and Joined Events
  * - Memory creation form (when showMemoryForm is true)
  *
  * @param state Current bottom sheet state
@@ -72,12 +77,16 @@ data class SearchBarState(
  * @param searchBarState search bar state and callbacks
  * @param showMemoryForm Whether to show memory creation form
  * @param availableEvents List of events that can be linked to memories
+ * @param joinedEvents List of events the user has joined
+ * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
  * @param topTags List of top tags to display in the discover section
  * @param selectedTags Set of currently selected tags
  * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
+ * @param onTabChange Callback when tab is changed
+ * @param onJoinedEventClick Callback when a joined event is clicked
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -87,12 +96,17 @@ fun BottomSheetContent(
     searchBarState: SearchBarState,
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
+    joinedEvents: List<Event> = emptyList(),
+    selectedTab: MapScreenViewModel.BottomSheetTab =
+        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
-    onMemoryCancel: () -> Unit = {}
+    onMemoryCancel: () -> Unit = {},
+    onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
+    onJoinedEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -155,15 +169,39 @@ fun BottomSheetContent(
 
               Spacer(modifier = Modifier.height(16.dp))
 
-              Text(
-                  text = "Recent Activities",
-                  style = MaterialTheme.typography.titleMedium,
-                  modifier = Modifier.padding(bottom = 8.dp))
+              // Tab selector
+              TabRow(
+                  selectedTabIndex =
+                      if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
+                      else 1,
+                  modifier = Modifier.fillMaxWidth()) {
+                    Tab(
+                        selected =
+                            selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                        onClick = {
+                          onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                        },
+                        text = { Text("Recent Activities") })
+                    Tab(
+                        selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                        onClick = { onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS) },
+                        text = { Text("Joined Events") })
+                  }
 
-              repeat(4) { index ->
-                ActivityItem(
-                    title = "Activity ${index + 1}",
-                    description = "Example description for activity ${index + 1}.")
+              Spacer(modifier = Modifier.height(16.dp))
+
+              // Content based on selected tab
+              when (selectedTab) {
+                MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
+                  repeat(4) { index ->
+                    ActivityItem(
+                        title = "Activity ${index + 1}",
+                        description = "Example description for activity ${index + 1}.")
+                  }
+                }
+                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                  JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
+                }
               }
 
               Spacer(modifier = Modifier.height(16.dp))
@@ -277,6 +315,52 @@ private fun ActivityItem(title: String, description: String, modifier: Modifier 
   }
 }
 
+/** Section displaying joined events with click handling. */
+@Composable
+private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+  if (events.isEmpty()) {
+    // Empty state
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+              text = "You haven't joined any events yet",
+              style = MaterialTheme.typography.bodyMedium,
+              color = Color.Gray,
+              textAlign = TextAlign.Center)
+        }
+  } else {
+    Column(modifier = Modifier.fillMaxWidth()) {
+      events.forEach { event ->
+        val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val formattedDate = event.date?.toDate()?.let { dateFormatter.format(it) } ?: "No date"
+
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { onEventClick(event) }
+                    .padding(vertical = 12.dp)) {
+              Text(text = event.title, style = MaterialTheme.typography.titleSmall)
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(
+                  text = formattedDate,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = Color.Gray)
+              Spacer(modifier = Modifier.height(2.dp))
+              Text(
+                  text = event.location.name,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = Color.Gray,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis)
+            }
+
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+      }
+    }
+  }
+}
+
 /** Tag item for discover section - displays tag text and handles selection. */
 @Composable
 private fun TagItem(
@@ -308,7 +392,7 @@ private fun TagItem(
 /** Section displaying dynamic tags - replaces the hardcoded discover section. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TagsSection(
+private fun TagsSection(
     topTags: List<String>,
     selectedTags: Set<String>,
     onTagClick: (String) -> Unit,
