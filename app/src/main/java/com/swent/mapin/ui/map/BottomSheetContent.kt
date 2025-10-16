@@ -37,12 +37,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -235,7 +237,7 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
   }
   if (showDialog.value) {
     AddEventPopUp(
-        modifier = Modifier,
+        modifier = Modifier.testTag(AddEventPopUpTestTags.POPUP),
         onDone = { showDialog.value = false },
         onBack = { showDialog.value = false },
         onCancel = { showDialog.value = false },

@@ -78,6 +78,8 @@ object AddEventPopUpTestTags {
   const val PUBLIC_SWITCH = "publicSwitch"
 
   const val PUBLIC_TEXT = "publicText"
+
+  const val POPUP = "AddEventPopUp"
 }
 
 /**

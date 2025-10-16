@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
@@ -230,6 +231,7 @@ class SaveEventTests {
         viewModel = mockViewModel,
         title = testTitle,
         description = testDescription,
+        date = Timestamp(10000, 200),
         location = testLocation,
         tags = testTags,
         isPublic = isPublic,
