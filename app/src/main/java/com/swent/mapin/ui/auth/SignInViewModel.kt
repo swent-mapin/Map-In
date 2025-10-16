@@ -8,7 +8,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -69,12 +69,16 @@ class SignInViewModel(context: Context) : ViewModel() {
 
     viewModelScope.launch {
       try {
-        Log.d(TAG, "Starting Google Sign-In process with GetSignInWithGoogleOption...")
+        Log.d(TAG, "Starting Google Sign-In process with GetGoogleIdOption...")
 
-        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build()
+        val googleIdOption =
+            GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(WEB_CLIENT_ID)
+                .setAutoSelectEnabled(false)
+                .build()
 
-        val request =
-            GetCredentialRequest.Builder().addCredentialOption(signInWithGoogleOption).build()
+        val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
         val credentialResult = credentialManager.getCredential(applicationContext, request)
         val credential = credentialResult.credential
@@ -185,6 +189,116 @@ class SignInViewModel(context: Context) : ViewModel() {
         _uiState.value =
             _uiState.value.copy(
                 isLoading = false, errorMessage = "Microsoft sign-in failed: ${e.message}")
+      }
+    }
+  }
+
+  /**
+   * Signs in a user with email and password.
+   *
+   * @param email The user's email address.
+   * @param password The user's password.
+   */
+  fun signInWithEmail(email: String, password: String) {
+    if (_uiState.value.isLoading) return
+
+    if (email.isBlank() || password.isBlank()) {
+      _uiState.value = _uiState.value.copy(errorMessage = "Email and password cannot be empty")
+      return
+    }
+
+    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+    viewModelScope.launch {
+      try {
+        val authResult = auth.signInWithEmailAndPassword(email, password).await()
+        authResult.user?.let { user ->
+          Log.d(TAG, "Email sign-in successful for: ${user.email}")
+          _uiState.value =
+              _uiState.value.copy(
+                  isLoading = false,
+                  isSignInSuccessful = true,
+                  currentUser = user,
+                  errorMessage = null)
+        }
+            ?: run {
+              _uiState.value =
+                  _uiState.value.copy(
+                      isLoading = false, errorMessage = "Sign-in failed: No user returned")
+            }
+      } catch (e: Exception) {
+        Log.e(TAG, "Email sign-in failed", e)
+        val errorMessage =
+            when {
+              e.message?.contains("no user record") == true -> "No account found with this email"
+              e.message?.contains("password is invalid") == true -> "Invalid password"
+              e.message?.contains("badly formatted") == true -> "Invalid email format"
+              else -> "Sign-in failed: ${e.message}"
+            }
+        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+      }
+    }
+  }
+
+  /**
+   * Creates a new user account with email and password.
+   *
+   * @param email The user's email address.
+   * @param password The user's password.
+   *
+   * Validation rules:
+   * - Both email and password must be non-empty.
+   * - Password must be at least 6 characters long.
+   *
+   * Error handling:
+   * - If validation fails, sets an appropriate error message in the UI state.
+   * - If Firebase sign-up fails, sets an error message in the UI state based on the exception.
+   * - On success, updates the UI state with the new user and clears any error messages.
+   */
+  fun signUpWithEmail(email: String, password: String) {
+    if (_uiState.value.isLoading) return
+
+    if (email.isBlank() || password.isBlank()) {
+      _uiState.value = _uiState.value.copy(errorMessage = "Email and password cannot be empty")
+      return
+    }
+
+    if (password.length < 6) {
+      _uiState.value = _uiState.value.copy(errorMessage = "Password must be at least 6 characters")
+      return
+    }
+
+    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+    viewModelScope.launch {
+      try {
+        val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+        authResult.user?.let { user ->
+          Log.d(TAG, "Email sign-up successful for: ${user.email}")
+          _uiState.value =
+              _uiState.value.copy(
+                  isLoading = false,
+                  isSignInSuccessful = true,
+                  currentUser = user,
+                  errorMessage = null)
+        }
+            ?: run {
+              _uiState.value =
+                  _uiState.value.copy(
+                      isLoading = false, errorMessage = "Sign-up failed: No user returned")
+            }
+      } catch (e: Exception) {
+        Log.e(TAG, "Email sign-up failed", e)
+        val errorMessage =
+            when {
+              e.message?.contains("email address is already in use", ignoreCase = true) == true ->
+                  "An account with this email already exists"
+              e.message?.contains("badly formatted", ignoreCase = true) == true ->
+                  "Invalid email format"
+              e.message?.contains("weak", ignoreCase = true) == true -> "Password is too weak"
+              else -> "Sign-up failed: ${e.message}"
+            }
+        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
       }
     }
   }
