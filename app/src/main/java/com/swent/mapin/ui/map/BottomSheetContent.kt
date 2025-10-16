@@ -37,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -60,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -77,8 +82,7 @@ data class SearchBarState(
  * Content for the bottom sheet
  * - Search bar (always visible)
  * - Quick actions
- * - (Temporary) Recent activities
- * - (Temporary) Discover section
+ * - Toggle between Recent Activities and Joined Events
  * - Memory creation form (when showMemoryForm is true)
  *
  * @param state Current bottom sheet state
@@ -86,12 +90,16 @@ data class SearchBarState(
  * @param searchBarState search bar state and callbacks
  * @param showMemoryForm Whether to show memory creation form
  * @param availableEvents List of events that can be linked to memories
+ * @param joinedEvents List of events the user has joined
+ * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
  * @param topTags List of top tags to display in the discover section
  * @param selectedTags Set of currently selected tags
  * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
+ * @param onTabChange Callback when tab is changed
+ * @param onJoinedEventClick Callback when a joined event is clicked
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -101,6 +109,9 @@ fun BottomSheetContent(
     searchBarState: SearchBarState,
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
+    joinedEvents: List<Event> = emptyList(),
+    selectedTab: MapScreenViewModel.BottomSheetTab =
+        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
@@ -111,42 +122,45 @@ fun BottomSheetContent(
     isSearchMode: Boolean = false,
     recentActivities: List<Event> = emptyList(),
     onEventClick: (Event) -> Unit = {}
+    onMemoryCancel: () -> Unit = {},
+    onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
+    onJoinedEventClick: (Event) -> Unit = {}
 ) {
-    val isFull = state == BottomSheetState.FULL
-    val scrollState = remember(fullEntryKey) { ScrollState(0) }
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
+  val isFull = state == BottomSheetState.FULL
+  val scrollState = remember(fullEntryKey) { ScrollState(0) }
+  val focusRequester = remember { FocusRequester() }
+  val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
-        if (isFull && searchBarState.shouldRequestFocus) {
-            focusRequester.requestFocus()
-            searchBarState.onFocusHandled()
-        }
+  LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
+    if (isFull && searchBarState.shouldRequestFocus) {
+      focusRequester.requestFocus()
+      searchBarState.onFocusHandled()
     }
+  }
 
-    // Animated transition between regular content and memory form
-    AnimatedContent(
-        targetState = showMemoryForm,
-        transitionSpec = {
-            (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
-                    slideInVertically(
-                        animationSpec = androidx.compose.animation.core.tween(300),
-                        initialOffsetY = { it / 4 }))
-                .togetherWith(
-                    fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
-                            slideOutVertically(
-                                animationSpec = androidx.compose.animation.core.tween(200),
-                                targetOffsetY = { -it / 4 }))
-        },
-        label = "memoryFormTransition") { showForm ->
+  // Animated transition between regular content and memory form
+  AnimatedContent(
+      targetState = showMemoryForm,
+      transitionSpec = {
+        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+                slideInVertically(
+                    animationSpec = androidx.compose.animation.core.tween(300),
+                    initialOffsetY = { it / 4 }))
+            .togetherWith(
+                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                    slideOutVertically(
+                        animationSpec = androidx.compose.animation.core.tween(200),
+                        targetOffsetY = { -it / 4 }))
+      },
+      label = "memoryFormTransition") { showForm ->
         if (showForm) {
-            // Memory form content
-            val memoryFormScrollState = remember { ScrollState(0) }
-            MemoryFormScreen(
-                scrollState = memoryFormScrollState,
-                availableEvents = availableEvents,
-                onSave = onMemorySave,
-                onCancel = onMemoryCancel)
+          // Memory form content
+          val memoryFormScrollState = remember { ScrollState(0) }
+          MemoryFormScreen(
+              scrollState = memoryFormScrollState,
+              availableEvents = availableEvents,
+              onSave = onMemorySave,
+              onCancel = onMemoryCancel)
         } else {
             // Regular bottom sheet content
             Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
@@ -195,12 +209,46 @@ fun BottomSheetContent(
                         } else {
                             NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
                         }
+              // Tab selector
+              TabRow(
+                  selectedTabIndex =
+                      if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
+                      else 1,
+                  modifier = Modifier.fillMaxWidth()) {
+                    Tab(
+                        selected =
+                            selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                        onClick = {
+                          onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                        },
+                        text = { Text("Recent Activities") })
+                    Tab(
+                        selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                        onClick = { onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS) },
+                        text = { Text("Joined Events") })
+                  }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
 
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+              // Content based on selected tab
+              when (selectedTab) {
+                MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
+                  repeat(4) { index ->
+                    ActivityItem(
+                        title = "Activity ${index + 1}",
+                        description = "Example description for activity ${index + 1}.")
+                  }
+                }
+                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                  JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
+                }
+              }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+              Spacer(modifier = Modifier.height(16.dp))
+
+              HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+              Spacer(modifier = Modifier.height(16.dp))
 
               // Dynamic tag selection
               if (topTags.isNotEmpty()) {
@@ -473,7 +521,7 @@ private fun TagItem(
 /** Section displaying dynamic tags - replaces the hardcoded discover section. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TagsSection(
+private fun TagsSection(
     topTags: List<String>,
     selectedTags: Set<String>,
     onTagClick: (String) -> Unit,

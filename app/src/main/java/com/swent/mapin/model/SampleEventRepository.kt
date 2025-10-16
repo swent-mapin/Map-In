@@ -25,6 +25,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Festival"),
             public = true,
             ownerId = "user1",
+            capacity = 250,
             attendeeCount = 200),
         Event(
             uid = "event2",
@@ -35,6 +36,7 @@ object SampleEventRepository {
             tags = listOf("Technology", "Conference"),
             public = true,
             ownerId = "user2",
+            capacity = 200,
             attendeeCount = 180),
         Event(
             uid = "event3",
@@ -45,6 +47,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Festival"),
             public = true,
             ownerId = "user3",
+            capacity = 200,
             attendeeCount = 150),
 
         // Moderate attendance around Sports Center
@@ -57,6 +60,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Basketball"),
             public = true,
             ownerId = "user4",
+            capacity = 100,
             attendeeCount = 80),
         Event(
             uid = "event5",
@@ -67,6 +71,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Volleyball"),
             public = true,
             ownerId = "user5",
+            capacity = 80,
             attendeeCount = 65),
         Event(
             uid = "event6",
@@ -77,6 +82,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Running"),
             public = true,
             ownerId = "user6",
+            capacity = 50,
             attendeeCount = 45),
 
         // Low attendance cultural events near ArtLab
@@ -89,6 +95,7 @@ object SampleEventRepository {
             tags = listOf("Art", "Culture"),
             public = true,
             ownerId = "user7",
+            capacity = 50,
             attendeeCount = 30),
         Event(
             uid = "event8",
@@ -99,6 +106,7 @@ object SampleEventRepository {
             tags = listOf("Art", "Workshop"),
             public = true,
             ownerId = "user8",
+            capacity = 30,
             attendeeCount = 20),
 
         // Very small attendance study groups scattered around
@@ -111,6 +119,7 @@ object SampleEventRepository {
             tags = listOf("Study", "Math"),
             public = true,
             ownerId = "user9",
+            capacity = 15,
             attendeeCount = 8),
         Event(
             uid = "event10",
@@ -121,6 +130,7 @@ object SampleEventRepository {
             tags = listOf("Coding", "Tech"),
             public = true,
             ownerId = "user10",
+            capacity = 20,
             attendeeCount = 12),
         Event(
             uid = "event11",
@@ -131,6 +141,7 @@ object SampleEventRepository {
             tags = listOf("Languages", "Social"),
             public = true,
             ownerId = "user11",
+            capacity = 25,
             attendeeCount = 15),
 
         // Medium attendance around Esplanade
@@ -143,6 +154,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Market"),
             public = true,
             ownerId = "user12",
+            capacity = 120,
             attendeeCount = 95),
         Event(
             uid = "event13",
@@ -153,6 +165,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Market"),
             public = true,
             ownerId = "user13",
+            capacity = 150,
             attendeeCount = 110),
 
         // Very high attendance hotspot - special events
@@ -165,6 +178,7 @@ object SampleEventRepository {
             tags = listOf("University", "Event"),
             public = true,
             ownerId = "user14",
+            capacity = 500,
             attendeeCount = 300),
         Event(
             uid = "event15",
@@ -175,6 +189,7 @@ object SampleEventRepository {
             tags = listOf("Career", "Fair"),
             public = true,
             ownerId = "user15",
+            capacity = 300,
             attendeeCount = 250),
 
         // Wellness activities - low to moderate
@@ -187,6 +202,7 @@ object SampleEventRepository {
             tags = listOf("Yoga", "Wellness"),
             public = true,
             ownerId = "user16",
+            capacity = 40,
             attendeeCount = 35),
         Event(
             uid = "event17",
@@ -197,6 +213,7 @@ object SampleEventRepository {
             tags = listOf("Meditation", "Wellness"),
             public = true,
             ownerId = "user17",
+            capacity = 25,
             attendeeCount = 18),
         Event(
             uid = "event18",
@@ -207,6 +224,7 @@ object SampleEventRepository {
             tags = listOf("Fitness", "Sports"),
             public = true,
             ownerId = "user18",
+            capacity = 50,
             attendeeCount = 42),
 
         // Gaming and entertainment - moderate attendance
@@ -219,6 +237,7 @@ object SampleEventRepository {
             tags = listOf("Games", "Social"),
             public = true,
             ownerId = "user19",
+            capacity = 60,
             attendeeCount = 55),
         Event(
             uid = "event20",
@@ -229,6 +248,7 @@ object SampleEventRepository {
             tags = listOf("eSports", "Gaming"),
             public = true,
             ownerId = "user20",
+            capacity = 80,
             attendeeCount = 70),
 
         // Science talks - low to moderate
@@ -241,6 +261,7 @@ object SampleEventRepository {
             tags = listOf("Science", "Physics"),
             public = true,
             ownerId = "user21",
+            capacity = 60,
             attendeeCount = 40),
         Event(
             uid = "event22",
@@ -251,6 +272,7 @@ object SampleEventRepository {
             tags = listOf("Science", "Biology"),
             public = true,
             ownerId = "user22",
+            capacity = 70,
             attendeeCount = 50),
 
         // Music performances - varying attendance
@@ -263,6 +285,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Jazz"),
             public = true,
             ownerId = "user23",
+            capacity = 150,
             attendeeCount = 120),
         Event(
             uid = "event24",
@@ -273,6 +296,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Performance"),
             public = true,
             ownerId = "user24",
+            capacity = 80,
             attendeeCount = 60),
         Event(
             uid = "event25",
@@ -283,6 +307,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Classical"),
             public = true,
             ownerId = "user25",
+            capacity = 100,
             attendeeCount = 85),
 
         // Extended area - North of EPFL
@@ -295,6 +320,7 @@ object SampleEventRepository {
             tags = listOf("Business", "Startup"),
             public = true,
             ownerId = "user26",
+            capacity = 100,
             attendeeCount = 90),
         Event(
             uid = "event27",
@@ -305,6 +331,7 @@ object SampleEventRepository {
             tags = listOf("Tech", "Coding"),
             public = true,
             ownerId = "user27",
+            capacity = 200,
             attendeeCount = 140),
         Event(
             uid = "event28",
@@ -315,6 +342,7 @@ object SampleEventRepository {
             tags = listOf("Robotics", "Tech"),
             public = true,
             ownerId = "user28",
+            capacity = 100,
             attendeeCount = 75),
 
         // Extended area - South of EPFL
@@ -327,6 +355,7 @@ object SampleEventRepository {
             tags = listOf("Social", "Outdoor"),
             public = true,
             ownerId = "user29",
+            capacity = 120,
             attendeeCount = 100),
         Event(
             uid = "event30",
@@ -337,6 +366,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Beach"),
             public = true,
             ownerId = "user30",
+            capacity = 60,
             attendeeCount = 55),
         Event(
             uid = "event31",
@@ -347,6 +377,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Sailing"),
             public = true,
             ownerId = "user31",
+            capacity = 30,
             attendeeCount = 28),
 
         // Extended area - East of EPFL
@@ -359,6 +390,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Running"),
             public = true,
             ownerId = "user32",
+            capacity = 50,
             attendeeCount = 38),
         Event(
             uid = "event33",
@@ -369,6 +401,7 @@ object SampleEventRepository {
             tags = listOf("Entertainment", "Film"),
             public = true,
             ownerId = "user33",
+            capacity = 200,
             attendeeCount = 165),
         Event(
             uid = "event34",
@@ -379,6 +412,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Cycling"),
             public = true,
             ownerId = "user34",
+            capacity = 50,
             attendeeCount = 42),
 
         // Extended area - West of EPFL
@@ -391,6 +425,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Social"),
             public = true,
             ownerId = "user35",
+            capacity = 40,
             attendeeCount = 32),
         Event(
             uid = "event36",
@@ -401,6 +436,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Workshop"),
             public = true,
             ownerId = "user36",
+            capacity = 30,
             attendeeCount = 24),
         Event(
             uid = "event37",
@@ -411,6 +447,7 @@ object SampleEventRepository {
             tags = listOf("Entertainment", "Comedy"),
             public = true,
             ownerId = "user37",
+            capacity = 100,
             attendeeCount = 88),
 
         // Scattered small events across wider area
@@ -423,6 +460,7 @@ object SampleEventRepository {
             tags = listOf("Art", "Photography"),
             public = true,
             ownerId = "user38",
+            capacity = 20,
             attendeeCount = 16),
         Event(
             uid = "event39",
@@ -433,6 +471,7 @@ object SampleEventRepository {
             tags = listOf("Reading", "Social"),
             public = true,
             ownerId = "user39",
+            capacity = 20,
             attendeeCount = 14),
         Event(
             uid = "event40",
@@ -443,6 +482,7 @@ object SampleEventRepository {
             tags = listOf("Games", "Competition"),
             public = true,
             ownerId = "user40",
+            capacity = 30,
             attendeeCount = 22),
 
         // More scattered medium events
@@ -455,6 +495,7 @@ object SampleEventRepository {
             tags = listOf("Environment", "Fair"),
             public = true,
             ownerId = "user41",
+            capacity = 150,
             attendeeCount = 105),
         Event(
             uid = "event42",
@@ -465,6 +506,7 @@ object SampleEventRepository {
             tags = listOf("Tech", "Workshop"),
             public = true,
             ownerId = "user42",
+            capacity = 40,
             attendeeCount = 34),
         Event(
             uid = "event43",
@@ -475,6 +517,7 @@ object SampleEventRepository {
             tags = listOf("Dance", "Social"),
             public = true,
             ownerId = "user43",
+            capacity = 60,
             attendeeCount = 48),
         Event(
             uid = "event44",
@@ -485,6 +528,7 @@ object SampleEventRepository {
             tags = listOf("Debate", "Education"),
             public = true,
             ownerId = "user44",
+            capacity = 35,
             attendeeCount = 26),
         Event(
             uid = "event45",
@@ -495,6 +539,7 @@ object SampleEventRepository {
             tags = listOf("Science", "Astronomy"),
             public = true,
             ownerId = "user45",
+            capacity = 60,
             attendeeCount = 52),
 
         // Additional high-attendance events for better distribution
@@ -507,6 +552,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Festival"),
             public = true,
             ownerId = "user46",
+            capacity = 300,
             attendeeCount = 220),
         Event(
             uid = "event47",
@@ -517,6 +563,7 @@ object SampleEventRepository {
             tags = listOf("Party", "Social"),
             public = true,
             ownerId = "user47",
+            capacity = 350,
             attendeeCount = 280),
         Event(
             uid = "event48",
@@ -527,6 +574,7 @@ object SampleEventRepository {
             tags = listOf("Music", "Rock"),
             public = true,
             ownerId = "user48",
+            capacity = 250,
             attendeeCount = 190),
         Event(
             uid = "event49",
@@ -537,6 +585,7 @@ object SampleEventRepository {
             tags = listOf("Sports", "Running"),
             public = true,
             ownerId = "user49",
+            capacity = 80,
             attendeeCount = 67),
         Event(
             uid = "event50",
@@ -547,6 +596,7 @@ object SampleEventRepository {
             tags = listOf("Food", "Festival"),
             public = true,
             ownerId = "user50",
+            capacity = 180,
             attendeeCount = 135))
   }
 

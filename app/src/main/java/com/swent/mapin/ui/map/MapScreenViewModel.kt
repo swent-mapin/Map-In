@@ -147,6 +147,35 @@ class MapScreenViewModel(
     _recentActivities = updated.take(MAX_RECENT_ACTIVITIES)
   }
 
+  // Joined events for bottom sheet display
+  private var _joinedEvents by mutableStateOf<List<Event>>(emptyList())
+  val joinedEvents: List<Event>
+    get() = _joinedEvents
+
+  enum class BottomSheetTab {
+    RECENT_ACTIVITIES,
+    JOINED_EVENTS
+  }
+
+  private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.RECENT_ACTIVITIES)
+  val selectedBottomSheetTab: BottomSheetTab
+    get() = _selectedBottomSheetTab
+
+  private var _selectedEvent by mutableStateOf<Event?>(null)
+  val selectedEvent: Event?
+    get() = _selectedEvent
+
+  private var _organizerName by mutableStateOf("")
+  val organizerName: String
+    get() = _organizerName
+
+  private var _showShareDialog by mutableStateOf(false)
+  val showShareDialog: Boolean
+    get() = _showShareDialog
+
+  var onCenterCamera: ((Event) -> Unit)? = null
+
+  /** Event data for display on the map */
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
   val selectedTags: Set<String>
@@ -164,6 +193,7 @@ class MapScreenViewModel(
   init {
     // Preload events so the form has immediate data
     loadEvents()
+    loadJoinedEvents()
     _topTags = SampleEventRepository.getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
@@ -178,10 +208,10 @@ class MapScreenViewModel(
 
       hideScaleBarJob?.cancel()
       hideScaleBarJob =
-        viewModelScope.launch {
-          kotlinx.coroutines.delay(300)
-          _isZooming = false
-        }
+          viewModelScope.launch {
+            kotlinx.coroutines.delay(300)
+            _isZooming = false
+          }
     }
   }
 
@@ -342,16 +372,28 @@ class MapScreenViewModel(
       try {
         val currentUserId = auth.currentUser?.uid
         _availableEvents =
-          if (currentUserId != null) {
-            eventRepository.getEventsByParticipant(currentUserId)
-          } else {
-            emptyList()
-          }
+            if (currentUserId != null) {
+              eventRepository.getEventsByParticipant(currentUserId)
+            } else {
+              emptyList()
+            }
       } catch (e: Exception) {
         android.util.Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
       }
     }
+  }
+
+  /** Loads events the user has joined from the sample events. */
+  private fun loadJoinedEvents() {
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _joinedEvents = emptyList()
+      return
+    }
+
+    // Filter sample events where the current user is a participant
+    _joinedEvents = _events.filter { event -> event.participantIds.contains(currentUserId) }
   }
 
   /** Opens the creation form while preserving the previous sheet state. */
@@ -382,16 +424,16 @@ class MapScreenViewModel(
         val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
 
         val memory =
-          Memory(
-            uid = memoryRepository.getNewUid(),
-            title = formData.title,
-            description = formData.description,
-            eventId = formData.eventId,
-            ownerId = currentUserId,
-            isPublic = formData.isPublic,
-            createdAt = Timestamp.now(),
-            mediaUrls = mediaUrls,
-            taggedUserIds = formData.taggedUserIds)
+            Memory(
+                uid = memoryRepository.getNewUid(),
+                title = formData.title,
+                description = formData.description,
+                eventId = formData.eventId,
+                ownerId = currentUserId,
+                isPublic = formData.isPublic,
+                createdAt = Timestamp.now(),
+                mediaUrls = mediaUrls,
+                taggedUserIds = formData.taggedUserIds)
 
         memoryRepository.addMemory(memory)
         android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
@@ -416,9 +458,9 @@ class MapScreenViewModel(
     for (uri in uris) {
       try {
         val extension =
-          applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
+            applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
         val filename =
-          "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
+            "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
 
         val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
         val fileRef = storageRef.child(filename)
@@ -453,6 +495,10 @@ class MapScreenViewModel(
 
   fun setEvents(newEvents: List<Event>) {
     _events = newEvents
+  fun setEvents(newEvents: List<Event>) {
+    _events = newEvents
+  }
+
   /** Toggle tag selection and filter events accordingly */
   fun toggleTagSelection(tag: String) {
     _selectedTags =
@@ -473,6 +519,125 @@ class MapScreenViewModel(
         } else {
           allEvents.filter { event -> event.tags.any { tag -> _selectedTags.contains(tag) } }
         }
+  }
+
+  /** Displays event details when a pin is clicked */
+  fun onEventPinClicked(event: Event) {
+    viewModelScope.launch {
+      _selectedEvent = event
+      _organizerName = "User ${event.ownerId.take(6)}"
+      setBottomSheetState(BottomSheetState.MEDIUM)
+
+      onCenterCamera?.invoke(event)
+    }
+  }
+
+  /** Closes event detail and returns to menu */
+  fun closeEventDetail() {
+    _selectedEvent = null
+    _organizerName = ""
+    setBottomSheetState(BottomSheetState.COLLAPSED)
+  }
+
+  /** Shows share dialog */
+  fun showShareDialog() {
+    _showShareDialog = true
+  }
+
+  /** Dismisses share dialog */
+  fun dismissShareDialog() {
+    _showShareDialog = false
+  }
+
+  /** Checks if current user is participating */
+  fun isUserParticipating(): Boolean {
+    val currentUserId = auth.currentUser?.uid ?: return false
+    return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
+  }
+
+  /** Joins the selected event */
+  fun joinEvent() {
+    viewModelScope.launch {
+      val event = _selectedEvent ?: return@launch
+      val currentUserId = auth.currentUser?.uid
+
+      if (currentUserId == null) {
+        _errorMessage = "You must be signed in to join events"
+        return@launch
+      }
+
+      _errorMessage = null
+      try {
+        val capacity = event.capacity
+        val currentAttendees = event.attendeeCount ?: 0
+
+        if (capacity != null && currentAttendees >= capacity) {
+          _errorMessage = "Event is at full capacity"
+          return@launch
+        }
+
+        val updatedParticipantIds =
+            event.participantIds.toMutableList().apply {
+              if (!contains(currentUserId)) add(currentUserId)
+            }
+
+        val newAttendeeCount = currentAttendees + 1
+
+        val updatedEvent =
+            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+
+        eventRepository.editEvent(event.uid, updatedEvent)
+        _selectedEvent = updatedEvent
+        _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
+
+        loadJoinedEvents()
+      } catch (e: Exception) {
+        _errorMessage = "Failed to join event: ${e.message}"
+      }
+    }
+  }
+
+  /** Unregisters from the selected event */
+  fun unregisterFromEvent() {
+    val event = _selectedEvent ?: return
+    val currentUserId = auth.currentUser?.uid ?: return
+
+    viewModelScope.launch {
+      _errorMessage = null
+      try {
+        val updatedParticipantIds =
+            event.participantIds.toMutableList().apply { remove(currentUserId) }
+
+        val currentAttendees = event.attendeeCount ?: 0
+        val newAttendeeCount = (currentAttendees - 1).coerceAtLeast(0)
+
+        val updatedEvent =
+            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+
+        eventRepository.editEvent(event.uid, updatedEvent)
+        _selectedEvent = updatedEvent
+        _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
+
+        loadJoinedEvents()
+      } catch (e: Exception) {
+        _errorMessage = "Failed to unregister: ${e.message}"
+      }
+    }
+  }
+
+  /** Save event for later (placeholder) */
+  fun saveEventForLater() {
+    _errorMessage = "Save for later - Coming soon!"
+  }
+
+  /** Changes the selected tab in the bottom sheet */
+  fun setBottomSheetTab(tab: BottomSheetTab) {
+    _selectedBottomSheetTab = tab
+  }
+
+  /** Called when a joined event is clicked to show its details */
+  fun onJoinedEventClicked(event: Event) {
+    onEventPinClicked(event)
   }
 }
 

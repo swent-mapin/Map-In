@@ -65,8 +65,6 @@ class MapScreenViewModelTest {
 
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
-
-    // Mock applicationContext to return itself (or another mock)
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
     runBlocking {
@@ -308,16 +306,13 @@ class MapScreenViewModelTest {
 
   @Test
   fun onSearchTap_multipleCalls_setsFocusWhenNotInFullState() {
-    // Premier appel : passe en FULL et met focus à true
     viewModel.onSearchTap()
     assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertTrue(viewModel.shouldFocusSearch)
 
-    // Gérer le focus
     viewModel.onSearchFocusHandled()
     assertFalse(viewModel.shouldFocusSearch)
 
-    // Deuxième appel : déjà en FULL, ne fait rien
     viewModel.onSearchTap()
     assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
     assertFalse(viewModel.shouldFocusSearch)
@@ -464,8 +459,6 @@ class MapScreenViewModelTest {
             taggedUserIds = emptyList())
 
     viewModel.onMemorySave(formData)
-    // Note: In real scenario, isSavingMemory would be true during the operation
-    // but due to how coroutines work in tests, it's hard to catch the intermediate state
     advanceUntilIdle()
 
     assertFalse(viewModel.isSavingMemory)
@@ -513,6 +506,7 @@ class MapScreenViewModelTest {
     assertTrue(geoJson.contains("weight"))
     assertTrue(geoJson.contains("6.5"))
     assertTrue(geoJson.contains("46.5"))
+    assertTrue(geoJson.contains("10"))
   }
 
   // Tests for tag filtering functionality
@@ -664,5 +658,209 @@ class MapScreenViewModelTest {
       val tagExists = viewModel.events.any { event -> event.tags.contains(tag) }
       assertTrue("Tag $tag should exist in events", tagExists)
     }
+  }
+
+  @Test
+  fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    var cameraCentered = false
+    viewModel.onCenterCamera = { cameraCentered = true }
+
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+    assertNotNull(viewModel.organizerName)
+    assertTrue(viewModel.organizerName.isNotEmpty())
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(cameraCentered)
+  }
+
+  @Test
+  fun closeEventDetail_clearsSelectedEventAndReturnsToCollapsed() = runTest {
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    viewModel.closeEventDetail()
+
+    assertNull(viewModel.selectedEvent)
+    assertEquals("", viewModel.organizerName)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun shareDialog_showAndDismiss() {
+    assertFalse(viewModel.showShareDialog)
+    viewModel.showShareDialog()
+    assertTrue(viewModel.showShareDialog)
+    viewModel.dismissShareDialog()
+    assertFalse(viewModel.showShareDialog)
+  }
+
+  @Test
+  fun isUserParticipating_variousScenarios() = runTest {
+    assertFalse(viewModel.isUserParticipating())
+
+    val notParticipatingEvent =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+            participantIds = listOf("otherUser"))
+    viewModel.onEventPinClicked(notParticipatingEvent)
+    advanceUntilIdle()
+    assertFalse(viewModel.isUserParticipating())
+
+    val participatingEvent =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+            participantIds = listOf("testUserId", "otherUser"))
+    viewModel.onEventPinClicked(participatingEvent)
+    advanceUntilIdle()
+    assertTrue(viewModel.isUserParticipating())
+  }
+
+  @Test
+  fun joinEvent_errorScenarios() = runTest {
+    viewModel.joinEvent()
+    advanceUntilIdle()
+    assertNull(viewModel.errorMessage)
+
+    whenever(mockAuth.currentUser).thenReturn(null)
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+    viewModel.joinEvent()
+    advanceUntilIdle()
+    assertEquals("You must be signed in to join events", viewModel.errorMessage)
+
+    viewModel.clearError()
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+
+    val fullEvent = testEvent.copy(attendeeCount = 10, capacity = 10)
+    viewModel.onEventPinClicked(fullEvent)
+    advanceUntilIdle()
+    viewModel.joinEvent()
+    advanceUntilIdle()
+    assertEquals("Event is at full capacity", viewModel.errorMessage)
+  }
+
+  @Test
+  fun joinEvent_success_updatesEventAndList() = runTest {
+    val testEvent =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+
+    viewModel.setEvents(listOf(testEvent))
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    runBlocking { whenever(mockEventRepository.editEvent(any(), any())).thenReturn(Unit) }
+
+    viewModel.joinEvent()
+    advanceUntilIdle()
+
+    assertNull(viewModel.errorMessage)
+    assertNotNull(viewModel.selectedEvent)
+    assertTrue(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
+    assertEquals(1, viewModel.selectedEvent!!.attendeeCount)
+    assertTrue(
+        viewModel.events.find { it.uid == testEvent.uid }!!.participantIds.contains("testUserId"))
+  }
+
+  @Test
+  fun unregisterFromEvent_success_updatesEventAndList() = runTest {
+    val testEvent =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+            participantIds = listOf("testUserId"), attendeeCount = 1, capacity = 10)
+
+    viewModel.setEvents(listOf(testEvent))
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    runBlocking { whenever(mockEventRepository.editEvent(any(), any())).thenReturn(Unit) }
+
+    viewModel.unregisterFromEvent()
+    advanceUntilIdle()
+
+    assertNull(viewModel.errorMessage)
+    assertNotNull(viewModel.selectedEvent)
+    assertFalse(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
+    assertEquals(0, viewModel.selectedEvent!!.attendeeCount)
+  }
+
+  @Test
+  fun joinAndUnregisterEvent_withRepositoryError_setsErrorMessage() = runTest {
+    val testEvent =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    runBlocking {
+      whenever(mockEventRepository.editEvent(any(), any()))
+          .thenThrow(RuntimeException("Network error"))
+    }
+
+    viewModel.joinEvent()
+    advanceUntilIdle()
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("Failed to join event"))
+
+    viewModel.clearError()
+    viewModel.unregisterFromEvent()
+    advanceUntilIdle()
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("Failed to unregister"))
+  }
+
+  @Test
+  fun saveEventForLater_setsPlaceholderMessage() {
+    viewModel.saveEventForLater()
+    assertEquals("Save for later - Coming soon!", viewModel.errorMessage)
+    viewModel.clearError()
+    assertNull(viewModel.errorMessage)
+  }
+
+  @Test
+  fun setBottomSheetTab_updatesSelectedTab() {
+    assertEquals(
+        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES, viewModel.selectedBottomSheetTab)
+    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
+  }
+
+  @Test
+  fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
+    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    var cameraCentered = false
+    viewModel.onCenterCamera = { cameraCentered = true }
+
+    viewModel.onJoinedEventClicked(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(cameraCentered)
+  }
+
+  @Test
+  fun setEvents_updatesEventsList() {
+    val newEvents =
+        listOf(
+            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0],
+            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[1])
+
+    viewModel.setEvents(newEvents)
+
+    assertEquals(newEvents, viewModel.events)
+    assertEquals(2, viewModel.events.size)
+  }
+
+  @Test
+  fun joinedEvents_initiallyEmpty() {
+    assertEquals(0, viewModel.joinedEvents.size)
+  }
+
+  @Test
+  fun availableEvents_initiallyEmpty() {
+    assertEquals(0, viewModel.availableEvents.size)
   }
 }

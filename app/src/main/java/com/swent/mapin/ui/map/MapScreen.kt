@@ -87,61 +87,81 @@ fun MapScreen(
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {}
 ) {
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
-    // Bottom sheet heights scale with the current device size
-    val sheetConfig =
-        BottomSheetConfig(
-            collapsedHeight = MapConstants.COLLAPSED_HEIGHT,
-            mediumHeight = MapConstants.MEDIUM_HEIGHT,
-            fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
+  val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
+  // Bottom sheet heights scale with the current device size
+  val sheetConfig =
+      BottomSheetConfig(
+          collapsedHeight = MapConstants.COLLAPSED_HEIGHT,
+          mediumHeight = MapConstants.MEDIUM_HEIGHT,
+          fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
-    val viewModel = rememberMapScreenViewModel(sheetConfig)
-    val snackbarHostState = remember { SnackbarHostState() }
+  val viewModel = rememberMapScreenViewModel(sheetConfig)
+  val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(viewModel.errorMessage) {
-        viewModel.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearError()
-        }
+  LaunchedEffect(viewModel.errorMessage) {
+    viewModel.errorMessage?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearError()
     }
+  }
 
-    // Start the camera centered on the default campus view
-    val mapViewportState = rememberMapViewportState {
-        setCameraOptions {
-            zoom(MapConstants.DEFAULT_ZOOM.toDouble())
-            center(Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE))
-            pitch(0.0)
-            bearing(0.0)
-        }
+  // Start the camera centered on the default campus view
+  val mapViewportState = rememberMapViewportState {
+    setCameraOptions {
+      zoom(MapConstants.DEFAULT_ZOOM.toDouble())
+      center(Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE))
+      pitch(0.0)
+      bearing(0.0)
     }
+  }
 
-    ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
-    ObserveZoomForSheetCollapse(viewModel, mapViewportState)
+  // Setup camera centering callback
+  val screenHeightDpValue = screenHeightDp.value
+  LaunchedEffect(Unit) {
+    viewModel.onCenterCamera = { event ->
+      val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
+      val currentZoom = mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+      val targetZoom = if (currentZoom < 14.0) 15.0 else currentZoom
 
-    val sheetMetrics =
-        rememberSheetInteractionMetrics(
-            screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
+      val offsetPixels = (screenHeightDpValue * 0.25) / 2
 
-    val isDarkTheme = isSystemInDarkTheme()
-    val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
-
-    // Adjust POI labels alongside our custom annotations
-    val standardStyleState = rememberStandardStyleState {
-        configurationsState.apply {
-            this.lightPreset = lightPreset
-            showPointOfInterestLabels = BooleanValue(true) // turn off if needed
-        }
+      mapViewportState.easeTo(
+          cameraOptions {
+            center(Point.fromLngLat(event.location.longitude, event.location.latitude))
+            zoom(targetZoom)
+            padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
+          },
+          animationOptions = animationOptions)
     }
+  }
 
-    // Heatmap source mirrors the ViewModel events list
-    val heatmapSource =
-        rememberGeoJsonSourceState(key = "events-heatmap-source") {
-            data = GeoJSONData(eventsToGeoJson(viewModel.events))
-        }
+  ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
+  ObserveZoomForSheetCollapse(viewModel, mapViewportState)
 
-    LaunchedEffect(viewModel.events) {
-        heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
+  val sheetMetrics =
+      rememberSheetInteractionMetrics(
+          screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
+
+  val isDarkTheme = isSystemInDarkTheme()
+  val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
+
+  // Adjust POI labels alongside our custom annotations
+  val standardStyleState = rememberStandardStyleState {
+    configurationsState.apply {
+      this.lightPreset = lightPreset
+      showPointOfInterestLabels = BooleanValue(true) // turn off if needed
     }
+  }
+
+  // Heatmap source mirrors the ViewModel events list
+  val heatmapSource =
+      rememberGeoJsonSourceState(key = "events-heatmap-source") {
+        data = GeoJSONData(eventsToGeoJson(viewModel.events))
+      }
+
+  LaunchedEffect(viewModel.events) {
+    heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
+  }
 
     Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
         if (renderMap) {
@@ -160,28 +180,39 @@ fun MapScreen(
                     onEventClick(event)
                 })
         }
+  Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
+    if (renderMap) {
+      MapboxLayer(
+          viewModel = viewModel,
+          mapViewportState = mapViewportState,
+          sheetMetrics = sheetMetrics,
+          standardStyleState = standardStyleState,
+          heatmapSource = heatmapSource,
+          isDarkTheme = isDarkTheme,
+          onEventClick = { event -> viewModel.onEventPinClicked(event) })
+    }
 
-        TopGradient()
+    TopGradient()
 
-        ScrimOverlay(
-            currentHeightDp = viewModel.currentSheetHeight,
-            mediumHeightDp = sheetConfig.mediumHeight,
-            fullHeightDp = sheetConfig.fullHeight)
+    ScrimOverlay(
+        currentHeightDp = viewModel.currentSheetHeight,
+        mediumHeightDp = sheetConfig.mediumHeight,
+        fullHeightDp = sheetConfig.fullHeight)
 
-        MapStyleSelector(
-            selectedStyle = viewModel.mapStyle,
-            onStyleSelected = { style -> viewModel.setMapStyle(style) },
-            modifier =
-                Modifier.align(Alignment.BottomEnd)
-                    .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
+    MapStyleSelector(
+        selectedStyle = viewModel.mapStyle,
+        onStyleSelected = { style -> viewModel.setMapStyle(style) },
+        modifier =
+            Modifier.align(Alignment.BottomEnd)
+                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
 
-        // Block map gestures when the sheet is in focus
-        ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
+    // Block map gestures when the sheet is in focus
+    ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-        // Profile button in top-right corner
-        Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
-            ProfileButton(onClick = onNavigateToProfile)
-        }
+    // Profile button in top-right corner
+    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
+      ProfileButton(onClick = onNavigateToProfile)
+    }
 
         BottomSheet(
             config = sheetConfig,
@@ -224,41 +255,65 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-          BottomSheetContent(
-              state = viewModel.bottomSheetState,
-              fullEntryKey = viewModel.fullEntryKey,
-              searchBarState =
-                  SearchBarState(
-                      query = viewModel.searchQuery,
-                      shouldRequestFocus = viewModel.shouldFocusSearch,
-                      onQueryChange = viewModel::onSearchQueryChange,
-                      onTap = viewModel::onSearchTap,
-                      onFocusHandled = viewModel::onSearchFocusHandled),
-              showMemoryForm = viewModel.showMemoryForm,
-              availableEvents = viewModel.availableEvents,
-              topTags = viewModel.topTags,
-              selectedTags = viewModel.selectedTags,
-              onTagClick = viewModel::toggleTagSelection,
-              onCreateMemoryClick = viewModel::showMemoryForm,
-              onMemorySave = viewModel::onMemorySave,
-              onMemoryCancel = viewModel::onMemoryCancel)
+          // Show event detail if an event is selected, otherwise show regular content
+          if (viewModel.selectedEvent != null) {
+            EventDetailSheet(
+                event = viewModel.selectedEvent!!,
+                sheetState = viewModel.bottomSheetState,
+                isParticipating = viewModel.isUserParticipating(),
+                organizerName = viewModel.organizerName,
+                onJoinEvent = { viewModel.joinEvent() },
+                onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                onSaveForLater = { viewModel.saveEventForLater() },
+                onClose = { viewModel.closeEventDetail() },
+                onShare = { viewModel.showShareDialog() })
+          } else {
+            BottomSheetContent(
+                state = viewModel.bottomSheetState,
+                fullEntryKey = viewModel.fullEntryKey,
+                searchBarState =
+                    SearchBarState(
+                        query = viewModel.searchQuery,
+                        shouldRequestFocus = viewModel.shouldFocusSearch,
+                        onQueryChange = viewModel::onSearchQueryChange,
+                        onTap = viewModel::onSearchTap,
+                        onFocusHandled = viewModel::onSearchFocusHandled),
+                showMemoryForm = viewModel.showMemoryForm,
+                availableEvents = viewModel.availableEvents,
+                topTags = viewModel.topTags,
+                selectedTags = viewModel.selectedTags,
+                onTagClick = viewModel::toggleTagSelection,
+                joinedEvents = viewModel.joinedEvents,
+                selectedTab = viewModel.selectedBottomSheetTab,
+                onCreateMemoryClick = viewModel::showMemoryForm,
+                onMemorySave = viewModel::onMemorySave,
+                onMemoryCancel = viewModel::onMemoryCancel,
+                onTabChange = viewModel::setBottomSheetTab,
+                onJoinedEventClick = viewModel::onJoinedEventClicked)
+          }
         }
 
-        if (viewModel.isSavingMemory) {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .testTag("memoryLoadingIndicator"),
-                contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
+    // Share dialog
+    if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
+      ShareEventDialog(
+          event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
     }
+
+    if (viewModel.isSavingMemory) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize()
+                  .background(Color.Black.copy(alpha = 0.5f))
+                  .testTag("memoryLoadingIndicator"),
+          contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+          }
+    }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
+  }
 }
 
 /**
@@ -277,48 +332,48 @@ private fun MapboxLayer(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
-    MapboxMap(
-        Modifier.fillMaxSize()
-            .then(
-                Modifier.mapPointerInput(
-                    bottomSheetState = viewModel.bottomSheetState,
-                    sheetMetrics = sheetMetrics,
-                    onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
-                    checkTouchProximity = viewModel::checkTouchProximityToSheet)),
-        mapViewportState = mapViewportState,
-        style = {
-            if (viewModel.useSatelliteStyle) {
-                MapboxStandardSatelliteStyle(styleInteractionsState = null)
-            } else {
-                MapboxStandardStyle(standardStyleState = standardStyleState)
-            }
-        },
-        compass = {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Compass(
-                    modifier =
-                        Modifier.align(Alignment.BottomEnd)
-                            .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
-            }
-        },
-        scaleBar = {
-            Box(modifier = Modifier.fillMaxSize()) {
-                AnimatedVisibility(
-                    visible = viewModel.isZooming,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
-                    ScaleBar()
-                }
-            }
-        }) {
+  MapboxMap(
+      Modifier.fillMaxSize()
+          .then(
+              Modifier.mapPointerInput(
+                  bottomSheetState = viewModel.bottomSheetState,
+                  sheetMetrics = sheetMetrics,
+                  onCollapseSheet = { viewModel.setBottomSheetState(BottomSheetState.COLLAPSED) },
+                  checkTouchProximity = viewModel::checkTouchProximityToSheet)),
+      mapViewportState = mapViewportState,
+      style = {
+        if (viewModel.useSatelliteStyle) {
+          MapboxStandardSatelliteStyle(styleInteractionsState = null)
+        } else {
+          MapboxStandardStyle(standardStyleState = standardStyleState)
+        }
+      },
+      compass = {
+        Box(modifier = Modifier.fillMaxSize()) {
+          Compass(
+              modifier =
+                  Modifier.align(Alignment.BottomEnd)
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
+        }
+      },
+      scaleBar = {
+        Box(modifier = Modifier.fillMaxSize()) {
+          AnimatedVisibility(
+              visible = viewModel.isZooming,
+              enter = fadeIn(),
+              exit = fadeOut(),
+              modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp)) {
+                ScaleBar()
+              }
+        }
+      }) {
         MapLayers(
             viewModel = viewModel,
             mapViewportState = mapViewportState,
             heatmapSource = heatmapSource,
             isDarkTheme = isDarkTheme,
             onEventClick = onEventClick)
-    }
+      }
 }
 
 /**
@@ -335,16 +390,17 @@ private fun MapLayers(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
-    val context = LocalContext.current
-    val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+  val context = LocalContext.current
+  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
 
-    val annotationStyle =
-        remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
+  val annotationStyle =
+      remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
-    val annotations =
-        remember(viewModel.events, annotationStyle) {
-            createEventAnnotations(viewModel.events, annotationStyle)
-        }
+  // Recréer les annotations quand l'événement sélectionné change
+  val annotations =
+      remember(viewModel.events, viewModel.selectedEvent, annotationStyle) {
+        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
+      }
 
   val clusterConfig = remember { createClusterConfig() }
 
@@ -595,20 +651,26 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
  * Converts a list of events to Mapbox point annotation options.
  *
  * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval.
+ * for later retrieval. Selected event pins are enlarged.
  *
  * @param events List of events to convert
  * @param style Styling to apply to annotations
+ * @param selectedEventId UID of the currently selected event (if any)
  * @return List of configured PointAnnotationOptions
  */
 private fun createEventAnnotations(
     events: List<Event>,
-    style: AnnotationStyle
+    style: AnnotationStyle,
+    selectedEventId: String? = null
 ): List<PointAnnotationOptions> {
   return events.mapIndexed { index, event ->
+    val isSelected = event.uid == selectedEventId
+    val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
+
     PointAnnotationOptions()
         .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
         .apply { style.markerBitmap?.let { withIconImage(it) } }
+        .withIconSize(iconSize)
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
         .withTextOffset(listOf(0.0, 0.5))
@@ -749,5 +811,5 @@ private fun ProfileButton(onClick: () -> Unit) {
             painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
             contentDescription = "Profile",
             tint = MaterialTheme.colorScheme.onPrimaryContainer)
-    }
+      }
 }
