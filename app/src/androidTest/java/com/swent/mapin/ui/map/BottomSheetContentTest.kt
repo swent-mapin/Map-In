@@ -262,6 +262,8 @@ class BottomSheetContentTest {
     // Should now show joined events
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, currentTab)
+  }
+
   // Tests for tag filtering functionality
   @Composable
   private fun TestContentWithTags(

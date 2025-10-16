@@ -49,10 +49,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
-import java.text.SimpleDateFormat
-import java.util.Locale
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -358,6 +358,9 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       }
     }
+  }
+}
+
 /** Tag item for discover section - displays tag text and handles selection. */
 @Composable
 private fun TagItem(
@@ -389,7 +392,7 @@ private fun TagItem(
 /** Section displaying dynamic tags - replaces the hardcoded discover section. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TagsSection(
+private fun TagsSection(
     topTags: List<String>,
     selectedTags: Set<String>,
     onTagClick: (String) -> Unit,

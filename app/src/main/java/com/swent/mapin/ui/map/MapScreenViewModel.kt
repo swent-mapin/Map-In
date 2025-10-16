@@ -403,6 +403,8 @@ class MapScreenViewModel(
 
   fun setEvents(newEvents: List<Event>) {
     _events = newEvents
+  }
+
   /** Toggle tag selection and filter events accordingly */
   fun toggleTagSelection(tag: String) {
     _selectedTags =
