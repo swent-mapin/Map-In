@@ -10,10 +10,10 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.CollectionReference
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
@@ -37,8 +37,8 @@ import org.junit.runner.RunWith
  * 6. Logout from the profile screen
  * 7. Confirm redirection to the login screen
  *
- * This test uses MockK to mock Firebase authentication and Firestore operations,
- * simulating a real user journey through the app.
+ * This test uses MockK to mock Firebase authentication and Firestore operations, simulating a real
+ * user journey through the app.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -113,18 +113,21 @@ class UserProfileEndToEndTest {
     // This ensures that when the profile is loaded again, it gets the updated data
     every { mockDocumentSnapshot.exists() } returns true
     every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
-    every { mockDocument.get() } answers {
-      println("Mock Firestore: Loading profile - name: ${testProfile.name}, bio: ${testProfile.bio}")
-      Tasks.forResult(mockDocumentSnapshot)
-    }
+    every { mockDocument.get() } answers
+        {
+          println(
+              "Mock Firestore: Loading profile - name: ${testProfile.name}, bio: ${testProfile.bio}")
+          Tasks.forResult(mockDocumentSnapshot)
+        }
 
     // Mock document.set() for saving
-    every { mockDocument.set(any()) } answers {
-      val profile = firstArg<UserProfile>()
-      testProfile = profile
-      println("Mock Firestore: Saved profile - name: ${profile.name}, bio: ${profile.bio}")
-      Tasks.forResult(null)
-    }
+    every { mockDocument.set(any()) } answers
+        {
+          val profile = firstArg<UserProfile>()
+          testProfile = profile
+          println("Mock Firestore: Saved profile - name: ${profile.name}, bio: ${profile.bio}")
+          Tasks.forResult(null)
+        }
   }
 
   @After
@@ -135,8 +138,8 @@ class UserProfileEndToEndTest {
   /**
    * Main End-to-End Test
    *
-   * Verifies the complete user journey from login to logout with profile editing in between.
-   * Note: This test starts from the map screen (already logged in) to avoid setContent limitations.
+   * Verifies the complete user journey from login to logout with profile editing in between. Note:
+   * This test starts from the map screen (already logged in) to avoid setContent limitations.
    */
   @Test
   fun completeUserFlow_loginEditProfileAndLogout_shouldWorkCorrectly() {
@@ -150,9 +153,7 @@ class UserProfileEndToEndTest {
     // ============================================
     // STEP 1: Verify we're on the map screen (logged in)
     // ============================================
-    composeTestRule
-        .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
 
     // ============================================
     // STEP 2: Navigate to profile screen
@@ -193,12 +194,16 @@ class UserProfileEndToEndTest {
     // Clear and update name
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
-    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextInput(updatedName)
+    composeTestRule
+        .onNodeWithTag("editNameField", useUnmergedTree = true)
+        .performTextInput(updatedName)
 
     // Clear and update bio
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
-    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextInput(updatedBio)
+    composeTestRule
+        .onNodeWithTag("editBioField", useUnmergedTree = true)
+        .performTextInput(updatedBio)
 
     // ============================================
     // STEP 5: Save the changes
@@ -257,9 +262,7 @@ class UserProfileEndToEndTest {
     composeTestRule
         .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
         .assertDoesNotExist()
-    composeTestRule
-        .onNodeWithTag("profileScreen", useUnmergedTree = true)
-        .assertDoesNotExist()
+    composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertDoesNotExist()
   }
 
   /**
@@ -298,12 +301,16 @@ class UserProfileEndToEndTest {
     // Edit name
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
-    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextInput("Temporary Name")
+    composeTestRule
+        .onNodeWithTag("editNameField", useUnmergedTree = true)
+        .performTextInput("Temporary Name")
 
     // Edit bio
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
-    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextInput("Temporary bio")
+    composeTestRule
+        .onNodeWithTag("editBioField", useUnmergedTree = true)
+        .performTextInput("Temporary bio")
 
     // Cancel editing
     composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performScrollTo()
@@ -358,7 +365,9 @@ class UserProfileEndToEndTest {
 
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
-    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextInput(updatedName)
+    composeTestRule
+        .onNodeWithTag("editNameField", useUnmergedTree = true)
+        .performTextInput(updatedName)
 
     // Save changes
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performScrollTo()
@@ -378,9 +387,7 @@ class UserProfileEndToEndTest {
     composeTestRule.waitForIdle()
 
     // Verify we're on map screen
-    composeTestRule
-        .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
 
     // Navigate back to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
