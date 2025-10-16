@@ -379,6 +379,26 @@ class MemoryFormScreenTest {
   }
 
   @Test
+  fun mediaSelectionSection_withMaxMedia_showsNoAddMoreButton() {
+    rule.setContent {
+      MaterialTheme {
+        val selectedMediaUris =
+            listOf(
+                Uri.parse("content://media/1"),
+                Uri.parse("content://media/2"),
+                Uri.parse("content://media/3"),
+                Uri.parse("content://media/4"),
+                Uri.parse("content://media/5"))
+
+        MediaSelectionSection(
+            selectedMediaUris = selectedMediaUris, onLaunchMediaPicker = {}, onRemoveMedia = {})
+      }
+    }
+    rule.onNodeWithText("Tap to add photos or videos").assertDoesNotExist()
+    rule.onNodeWithText("Photos or videos (up to 5)").assertIsDisplayed()
+  }
+
+  @Test
   fun memoryForm_userTagging_section_isDisplayed() {
     rule.setContent {
       MaterialTheme {
