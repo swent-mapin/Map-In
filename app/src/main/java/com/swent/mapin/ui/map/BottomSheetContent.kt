@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,11 +49,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -88,8 +92,6 @@ fun BottomSheetContent(
     state: BottomSheetState,
     fullEntryKey: Int,
     searchBarState: SearchBarState,
-    searchResults: List<Event> = emptyList(),
-    isSearchMode: Boolean = false,
     showMemoryForm: Boolean = false,
     availableEvents: List<Event> = emptyList(),
     onCreateMemoryClick: () -> Unit = {},
@@ -346,52 +348,65 @@ private fun SearchBar(
 /** Row of quick action buttons (Create Memory, Create Event, Filters). */
 @Composable
 private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
-    val focusManager = LocalFocusManager.current
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Quick Actions",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 16.dp))
+  val focusManager = LocalFocusManager.current
+  val showDialog = remember { mutableStateOf(false) }
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickActionButton(
-                text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
-            QuickActionButton(
-                text = "Create Event",
-                modifier = Modifier.weight(1f),
-                onClick = { focusManager.clearFocus() })
-            QuickActionButton(
-                text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
-        }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      QuickActionButton(
+          text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
+      QuickActionButton(
+          text = "Create Event",
+          modifier = Modifier.weight(1f),
+          onClick = {
+            focusManager.clearFocus()
+            showDialog.value = true
+          })
+      QuickActionButton(
+          text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
+  }
+  if (showDialog.value) {
+    AddEventPopUp(
+        modifier = Modifier.testTag(AddEventPopUpTestTags.POPUP),
+        onDone = { showDialog.value = false },
+        onBack = { showDialog.value = false },
+        onCancel = { showDialog.value = false },
+        onDismiss = { showDialog.value = false },
+    )
+  }
 }
 
 /** button for quick actions */
 @Composable
 private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.defaultMinSize(minHeight = 44.dp).padding(horizontal = 4.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary)) {
+  Button(
+      onClick = onClick,
+      modifier = modifier.defaultMinSize(minHeight = 44.dp).padding(horizontal = 4.dp),
+      shape = RoundedCornerShape(20.dp),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary)) {
         Text(
             text = text,
             textAlign = TextAlign.Center,
             maxLines = 2,
             softWrap = true,
             style = MaterialTheme.typography.labelLarge)
-    }
+      }
 }
 
 /** List item displaying an activity title and description. */
 @Composable
 private fun ActivityItem(title: String, description: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-    }
+  Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Text(text = title, style = MaterialTheme.typography.titleSmall)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(text = description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+  }
 }
