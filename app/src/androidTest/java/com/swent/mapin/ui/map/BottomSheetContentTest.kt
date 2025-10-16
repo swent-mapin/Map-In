@@ -79,7 +79,7 @@ class BottomSheetContentTest {
       try {
         rule.onNodeWithText("Activity 1").assertIsDisplayed()
         true
-      } catch (e: AssertionError) {
+      } catch (_: AssertionError) {
         false
       }
     }
@@ -139,138 +139,91 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Coffee").assertIsDisplayed()
   }
 
-  @Test
-  fun joinedEventsTab_showsEmptyStateWhenNoEvents() {
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = emptyList(),
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-      }
+  // Helper function to reduce boilerplate for Joined Events tests
+  @Composable
+  private fun JoinedEventsContent(
+      events: List<com.swent.mapin.model.event.Event>,
+      onEventClick: (com.swent.mapin.model.event.Event) -> Unit = {},
+      onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {}),
+          joinedEvents = events,
+          selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+          onJoinedEventClick = onEventClick,
+          onTabChange = onTabChange)
     }
-    rule.waitForIdle()
+  }
 
-    // Click on Joined Events tab
+  // JOINED EVENTS TAB TESTS
+  @Test
+  fun joinedEventsTab_showsEmptyState() {
+    rule.setContent { JoinedEventsContent(events = emptyList()) }
+    rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
     rule.waitForIdle()
 
-    // Should show empty state message
     rule.onNodeWithText("You haven't joined any events yet").assertIsDisplayed()
   }
 
   @Test
-  fun joinedEventsTab_displaysEventsWhenAvailable() {
-    val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(2)
-
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = testEvents,
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-      }
-    }
+  fun joinedEventsTab_displaysMultipleEventsWithAllData() {
+    val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(3)
+    rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
-
-    // Click on Joined Events tab
     rule.onNodeWithText("Joined Events").performClick()
     rule.waitForIdle()
 
-    // Should display event titles
-    testEvents.forEach { event -> rule.onNodeWithText(event.title).assertIsDisplayed() }
-
-    // Should display location names
     testEvents.forEach { event ->
+      rule.onNodeWithText(event.title).assertIsDisplayed()
       rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
     }
   }
 
   @Test
-  fun joinedEventsTab_eventItemsAreClickable() {
+  fun joinedEventsTab_handlesEventInteractions() {
     val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(1)
     var clickedEvent: com.swent.mapin.model.event.Event? = null
 
     rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = testEvents,
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-            onJoinedEventClick = { event -> clickedEvent = event })
-      }
+      JoinedEventsContent(events = testEvents, onEventClick = { clickedEvent = it })
     }
     rule.waitForIdle()
-
-    // Click on Joined Events tab
     rule.onNodeWithText("Joined Events").performClick()
     rule.waitForIdle()
 
-    // Click on event
+    // Verify event is clickable and callback works
     rule.onNodeWithText(testEvents[0].title).performClick()
     rule.waitForIdle()
-
-    // Verify callback was triggered
     assertEquals(testEvents[0], clickedEvent)
   }
 
   @Test
-  fun joinedEventsTab_displaysFormattedDate() {
-    val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(1)
+  fun joinedEventsTab_handlesEdgeCases() {
+    // Test event with null date
+    val eventWithNullDate =
+        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(date = null)
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = testEvents,
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-      }
-    }
+    rule.setContent { JoinedEventsContent(events = listOf(eventWithNullDate)) }
     rule.waitForIdle()
-
-    // Click on Joined Events tab
     rule.onNodeWithText("Joined Events").performClick()
     rule.waitForIdle()
 
-    // Should display formatted date or "No date" text
-    // The date format is "MMM dd, yyyy"
-    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+    rule.onNodeWithText(eventWithNullDate.title).assertIsDisplayed()
+    rule.onNodeWithText("No date").assertIsDisplayed()
   }
 
   @Test
-  fun tabSwitch_recentActivitiesToJoinedEvents() {
+  fun tabSwitch_betweenRecentActivitiesAndJoinedEvents() {
     val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(1)
     var currentTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES
 
@@ -300,79 +253,12 @@ class BottomSheetContentTest {
     // Initially shows Recent Activities
     rule.onNodeWithText("Activity 1").assertIsDisplayed()
 
-    // Click on Joined Events tab
+    // Switch to Joined Events tab
     rule.onNodeWithText("Joined Events").performClick()
     rule.waitForIdle()
 
     // Should now show joined events
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, currentTab)
-  }
-
-  @Test
-  fun joinedEventsSection_handlesEventWithNullDate() {
-    val eventWithNullDate =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(date = null)
-
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = listOf(eventWithNullDate),
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-      }
-    }
-    rule.waitForIdle()
-
-    // Click on Joined Events tab
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    // Should display event title
-    rule.onNodeWithText(eventWithNullDate.title).assertIsDisplayed()
-
-    // Should display "No date" text
-    rule.onNodeWithText("No date").assertIsDisplayed()
-  }
-
-  @Test
-  fun joinedEventsSection_displaysMultipleEvents() {
-    val testEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents().take(3)
-
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {}),
-            joinedEvents = testEvents,
-            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-      }
-    }
-    rule.waitForIdle()
-
-    // Click on Joined Events tab
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    // All events should be displayed
-    testEvents.forEach { event ->
-      rule.onNodeWithText(event.title).assertIsDisplayed()
-      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
-    }
   }
 }
