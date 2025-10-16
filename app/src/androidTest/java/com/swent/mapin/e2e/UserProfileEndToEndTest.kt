@@ -54,8 +54,9 @@ class UserProfileEndToEndTest {
   private lateinit var mockDocument: DocumentReference
   private lateinit var mockDocumentSnapshot: DocumentSnapshot
 
-  // Test user data
-  private val testUserId = "test-user-e2e-123"
+  // Test user data - unique identifier to prevent conflicts
+  private val testId = System.currentTimeMillis().toString() + "-" + Thread.currentThread().id
+  private val testUserId = "test-user-e2e-$testId"
   private val testEmail = "testuser@example.com"
   private val testUserName = "Test User"
   private val initialBio = "I love testing and coding!"
@@ -64,75 +65,87 @@ class UserProfileEndToEndTest {
 
   private var testProfile: UserProfile = UserProfile()
 
+  companion object {
+    // Lock for synchronizing static mock setup to prevent parallel test conflicts
+    private val mockLock = Any()
+  }
+
   @Before
   fun setup() {
-    context = ApplicationProvider.getApplicationContext()
+    // Synchronize static mock setup to prevent conflicts
+    synchronized(mockLock) {
+      context = ApplicationProvider.getApplicationContext()
 
-    // Initialize Firebase if not already initialized
-    if (FirebaseApp.getApps(context).isEmpty()) {
-      FirebaseApp.initializeApp(context)
+      // Initialize Firebase if not already initialized
+      if (FirebaseApp.getApps(context).isEmpty()) {
+        FirebaseApp.initializeApp(context)
+      }
+
+      // Setup initial test profile
+      testProfile =
+          UserProfile(
+              userId = testUserId,
+              name = testUserName,
+              bio = initialBio,
+              hobbies = listOf("Testing", "Coding"),
+              location = "Test City",
+              avatarUrl = null,
+              bannerUrl = null,
+              hobbiesVisible = true)
+
+      // Clear any existing mocks before setting up new ones
+      // This prevents conflicts when tests run in parallel in CI
+      clearAllMocks()
+
+      // Mock FirebaseAuth and FirebaseUser
+      mockkStatic(FirebaseAuth::class)
+      mockAuth = mockk(relaxed = true)
+      mockUser = mockk(relaxed = true)
+
+      every { FirebaseAuth.getInstance() } returns mockAuth
+      every { mockAuth.currentUser } returns mockUser
+      every { mockUser.uid } returns testUserId
+      every { mockUser.displayName } returns testUserName
+      every { mockUser.email } returns testEmail
+      every { mockUser.photoUrl } returns null
+      every { mockAuth.signOut() } just Runs
+
+      // Mock Firestore - this is the key to making the repository work correctly
+      mockkStatic(FirebaseFirestore::class)
+      mockFirestore = mockk(relaxed = true)
+      mockCollection = mockk(relaxed = true)
+      mockDocument = mockk(relaxed = true)
+      mockDocumentSnapshot = mockk(relaxed = true)
+
+      every { FirebaseFirestore.getInstance() } returns mockFirestore
+      every { mockFirestore.collection("users") } returns mockCollection
+      every { mockCollection.document(any()) } returns mockDocument
+
+      // Mock document.get() to return our test profile DYNAMICALLY
+      // This ensures that when the profile is loaded again, it gets the updated data
+      every { mockDocumentSnapshot.exists() } returns true
+      every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
+      every { mockDocument.get() } answers
+          {
+            println(
+                "Mock Firestore: Loading profile - name: ${testProfile.name}, bio: ${testProfile.bio}")
+            Tasks.forResult(mockDocumentSnapshot)
+          }
+
+      // Mock document.set() for saving
+      every { mockDocument.set(any()) } answers
+          {
+            val profile = firstArg<UserProfile>()
+            testProfile = profile
+            println("Mock Firestore: Saved profile - name: ${profile.name}, bio: ${profile.bio}")
+            Tasks.forResult(null)
+          }
     }
-
-    // Setup initial test profile
-    testProfile =
-        UserProfile(
-            userId = testUserId,
-            name = testUserName,
-            bio = initialBio,
-            hobbies = listOf("Testing", "Coding"),
-            location = "Test City",
-            avatarUrl = null,
-            bannerUrl = null,
-            hobbiesVisible = true)
-
-    // Mock FirebaseAuth and FirebaseUser
-    mockkStatic(FirebaseAuth::class)
-    mockAuth = mockk(relaxed = true)
-    mockUser = mockk(relaxed = true)
-
-    every { FirebaseAuth.getInstance() } returns mockAuth
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns testUserId
-    every { mockUser.displayName } returns testUserName
-    every { mockUser.email } returns testEmail
-    every { mockUser.photoUrl } returns null
-    every { mockAuth.signOut() } just Runs
-
-    // Mock Firestore - this is the key to making the repository work correctly
-    mockkStatic(FirebaseFirestore::class)
-    mockFirestore = mockk(relaxed = true)
-    mockCollection = mockk(relaxed = true)
-    mockDocument = mockk(relaxed = true)
-    mockDocumentSnapshot = mockk(relaxed = true)
-
-    every { FirebaseFirestore.getInstance() } returns mockFirestore
-    every { mockFirestore.collection("users") } returns mockCollection
-    every { mockCollection.document(any()) } returns mockDocument
-
-    // Mock document.get() to return our test profile DYNAMICALLY
-    // This ensures that when the profile is loaded again, it gets the updated data
-    every { mockDocumentSnapshot.exists() } returns true
-    every { mockDocumentSnapshot.toObject(UserProfile::class.java) } answers { testProfile }
-    every { mockDocument.get() } answers
-        {
-          println(
-              "Mock Firestore: Loading profile - name: ${testProfile.name}, bio: ${testProfile.bio}")
-          Tasks.forResult(mockDocumentSnapshot)
-        }
-
-    // Mock document.set() for saving
-    every { mockDocument.set(any()) } answers
-        {
-          val profile = firstArg<UserProfile>()
-          testProfile = profile
-          println("Mock Firestore: Saved profile - name: ${profile.name}, bio: ${profile.bio}")
-          Tasks.forResult(null)
-        }
   }
 
   @After
   fun tearDown() {
-    unmockkAll()
+    synchronized(mockLock) { unmockkAll() }
   }
 
   /**

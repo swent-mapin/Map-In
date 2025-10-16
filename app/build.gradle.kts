@@ -125,6 +125,7 @@ android {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
+        animationsDisabled = true
     }
 
     // Robolectric: déplace src/test vers testDebug
