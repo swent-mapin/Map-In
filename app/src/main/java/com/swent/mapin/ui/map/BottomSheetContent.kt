@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -36,11 +37,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.components.AddEventPopUp
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -210,6 +214,7 @@ private fun SearchBar(
 @Composable
 private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
   val focusManager = LocalFocusManager.current
+  val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -222,10 +227,22 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
       QuickActionButton(
           text = "Create Event",
           modifier = Modifier.weight(1f),
-          onClick = { focusManager.clearFocus() })
+          onClick = {
+            focusManager.clearFocus()
+            showDialog.value = true
+          })
       QuickActionButton(
           text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
     }
+  }
+  if (showDialog.value) {
+    AddEventPopUp(
+        modifier = Modifier.testTag(AddEventPopUpTestTags.POPUP),
+        onDone = { showDialog.value = false },
+        onBack = { showDialog.value = false },
+        onCancel = { showDialog.value = false },
+        onDismiss = { showDialog.value = false },
+    )
   }
 }
 

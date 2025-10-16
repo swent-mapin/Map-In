@@ -1,4 +1,4 @@
-package com.swent.mapin.ui
+package com.swent.mapin.ui.components
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -28,29 +28,42 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
 import com.swent.mapin.R
-import com.swent.mapin.ui.theme.MapInTheme
+import com.swent.mapin.model.Location
+import com.swent.mapin.model.LocationViewModel
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+
+const val ATTENDEES_DEFAULT = 1
+const val LONGITUDE_DEFAULT = 0.0
+const val LATITUDE_DEFAULT = 0.0
 
 object AddEventPopUpTestTags {
   const val INPUT_EVENT_TITLE = "inputEventTitle"
@@ -62,6 +75,12 @@ object AddEventPopUpTestTags {
   const val EVENT_CANCEL = "eventCancel"
   const val EVENT_SAVE = "eventSave"
   const val ERROR_MESSAGE = "errorMessage"
+
+  const val PUBLIC_SWITCH = "publicSwitch"
+
+  const val PUBLIC_TEXT = "publicText"
+
+  const val POPUP = "AddEventPopUp"
 }
 
 /**
@@ -84,15 +103,17 @@ fun AddEventTextField(
     placeholderString: String,
     modifier: Modifier = Modifier,
     isLocation: Boolean = false,
-    isTag: Boolean = false
+    isTag: Boolean = false,
+    locationQuery: () -> Unit = {}
 ) {
+
   TextField(
       modifier = modifier.border(1.dp, Color.Gray, RoundedCornerShape(12.dp)),
       value = textField.value,
       onValueChange = {
         textField.value = it
         if (isLocation) {
-          // TODO add Nominatim location logic
+          locationQuery()
         } else if (isTag) {
           error.value = !isValidTagInput(it)
         } else {
@@ -123,7 +144,11 @@ fun AddEventTextField(
  *   `dd/MM/yyyy`.
  */
 @Composable
-fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() -> Unit)? = null) {
+fun FutureDatePickerButton(
+    selectedDate: MutableState<String>,
+    onDateClick: (() -> Unit)? = null,
+    onDateChanged: (() -> Unit)? = null
+) {
   val context = LocalContext.current
 
   Button(
@@ -148,6 +173,7 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
                             pickedDay,
                             pickedMonth + 1,
                             pickedYear)
+                    onDateChanged?.invoke()
                   },
                   year,
                   month,
@@ -172,7 +198,11 @@ fun FutureDatePickerButton(selectedDate: MutableState<String>, onDateClick: (() 
  *   as HHmm).
  */
 @Composable
-fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Unit)? = null) {
+fun TimePickerButton(
+    selectedTime: MutableState<String>,
+    onTimeClick: (() -> Unit)? = null,
+    onTimeChanged: (() -> Unit)? = null
+) {
   val context = LocalContext.current
 
   Button(
@@ -190,6 +220,7 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
                     selectedTime.value =
                         "${pickedHour.toString().padStart(2, '0')}h" +
                             pickedMinute.toString().padStart(2, '0')
+                    onTimeChanged?.invoke()
                   },
                   hour,
                   minute,
@@ -214,42 +245,47 @@ fun TimePickerButton(selectedTime: MutableState<String>, onTimeClick: (() -> Uni
  * required fields are missing or invalid.
  *
  * @param modifier [Modifier] to customize the pop-up layout.
- * @param onBack Callback triggered when the user clicks the back/close button.
- * @param onSave Callback triggered when the user clicks the Save button. Only called if no errors
- *   are present.
- * @param onCancel Callback triggered when the user clicks the Cancel button.
- * @param onDismiss Callback triggered when the dialog is dismissed by clicking outside or pressing
- *   back.
+ * @param onDone callback triggered when the user is done with the event creation popup
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventPopUp(
     modifier: Modifier = Modifier,
+    eventViewModel: EventViewModel = viewModel(),
+    locationViewModel: LocationViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onSave: () -> Unit = {},
     onCancel: () -> Unit = {},
-    onDismiss: () -> Unit = {}
+    onDismiss: () -> Unit = {},
+    onDone: () -> Unit = {},
 ) {
-
   val title = remember { mutableStateOf("") }
   val description = remember { mutableStateOf("") }
   val location = remember { mutableStateOf("") }
   val date = remember { mutableStateOf("") }
   val tag = remember { mutableStateOf("") }
   val time = remember { mutableStateOf("") }
+  val isPublic = remember { mutableStateOf(true) }
 
+  val dateError = remember { mutableStateOf(true) }
+  val timeError = remember { mutableStateOf(true) }
   val titleError = remember { mutableStateOf(true) }
   val descriptionError = remember { mutableStateOf(true) }
   val locationError = remember { mutableStateOf(true) }
-  val dateError = remember { mutableStateOf(true) }
   val tagError = remember { mutableStateOf(false) }
+  val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
+
+  val locationExpanded = remember { mutableStateOf(false) }
+  val gotLocation = remember {
+    mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
+  }
+  val locations by locationViewModel.locations.collectAsState()
 
   val error =
       titleError.value ||
           descriptionError.value ||
           locationError.value ||
-          time.value.isBlank() ||
-          date.value.isBlank()
+          timeError.value ||
+          dateError.value
 
   val errorFields =
       listOfNotNull(
@@ -258,8 +294,7 @@ fun AddEventPopUp(
           if (locationError.value) stringResource(R.string.location_field) else null,
           if (descriptionError.value) stringResource(R.string.description_field) else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (time.value.isBlank()) stringResource(R.string.time) else null)
-
+          if (timeError.value) stringResource(R.string.time) else null)
   Dialog(
       onDismissRequest = onDismiss,
       properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)) {
@@ -300,22 +335,24 @@ fun AddEventPopUp(
                         stringResource(R.string.date_field),
                         modifier = Modifier.padding(end = 180.dp).padding(bottom = 2.dp),
                         fontSize = 16.sp)
-                    FutureDatePickerButton(date)
+                    FutureDatePickerButton(
+                        date, onDateChanged = { dateError.value = (date.value.isBlank()) })
                     Spacer(modifier = Modifier.padding(10.dp))
-                    TimePickerButton(time)
+                    TimePickerButton(
+                        time, onTimeChanged = { timeError.value = (time.value.isBlank()) })
                     Spacer(modifier = Modifier.padding(5.dp))
                     Text(
                         stringResource(R.string.location_field),
                         modifier = Modifier.padding(end = 150.dp).padding(bottom = 2.dp),
                         fontSize = 16.sp)
-                    AddEventTextField(
+                    LocationDropDownMenu(
                         location,
                         locationError,
-                        stringResource(R.string.location_place_holder),
-                        isLocation = true,
-                        modifier =
-                            Modifier.padding(horizontal = 32.dp)
-                                .testTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION))
+                        locationViewModel,
+                        locationExpanded,
+                        locations,
+                        gotLocation,
+                    )
                     Spacer(modifier = Modifier.padding(10.dp))
                     Text(
                         stringResource(R.string.description_field),
@@ -339,6 +376,33 @@ fun AddEventPopUp(
                                 .padding(horizontal = 32.dp)
                                 .testTag(AddEventPopUpTestTags.INPUT_EVENT_TAG),
                         isTag = true)
+                    Spacer(modifier = Modifier.padding(bottom = 5.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                      if (isPublic.value) {
+                        Text(
+                            stringResource(R.string.public_event),
+                            fontSize = 12.sp,
+                            modifier =
+                                Modifier.padding(end = 15.dp)
+                                    .testTag(AddEventPopUpTestTags.PUBLIC_TEXT))
+                      } else {
+                        Text(
+                            stringResource(R.string.private_event),
+                            fontSize = 12.sp,
+                            modifier =
+                                Modifier.padding(end = 15.dp)
+                                    .testTag(AddEventPopUpTestTags.PUBLIC_TEXT))
+                      }
+                      Switch(
+                          isPublic.value,
+                          onCheckedChange = { isPublic.value = it },
+                          modifier =
+                              Modifier.scale(0.7f)
+                                  .size(30.dp)
+                                  .testTag(AddEventPopUpTestTags.PUBLIC_SWITCH))
+                    }
                     if (error) {
                       Row(
                           verticalAlignment = Alignment.CenterVertically,
@@ -362,10 +426,22 @@ fun AddEventPopUp(
                     Row {
                       ElevatedButton(
                           onClick = {
-                            // TODO add backend store operation
-                            onSave()
+                            val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+                            val dateTime = sdf.parse(date.value + time.value.replace("h", ""))
+                            val timestamp =
+                                if (dateTime != null) Timestamp(dateTime) else Timestamp.now()
+                            saveEvent(
+                                eventViewModel,
+                                title.value,
+                                description.value,
+                                gotLocation.value,
+                                timestamp,
+                                Firebase.auth.currentUser?.uid,
+                                extractTags(tag.value),
+                                isPublic.value,
+                                onDone)
                           },
-                          enabled = !error,
+                          enabled = !error && isLoggedIn.value,
                           colors =
                               ButtonColors(
                                   containerColor = colorResource(R.color.sage_green),
@@ -394,10 +470,4 @@ fun AddEventPopUp(
                   }
             }
       }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AddEventPopUpPreview() {
-  MapInTheme { AddEventPopUp() }
 }

@@ -1,12 +1,12 @@
-package com.swent.mapin.ui.AddEvent
+package com.swent.mapin.ui.components.AddEvent
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import com.swent.mapin.ui.AddEventPopUpTestTags
-import com.swent.mapin.ui.TimePickerButton
+import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.components.TimePickerButton
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
