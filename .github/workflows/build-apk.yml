@@ -1,13 +1,8 @@
 name: Build APK
 
-# Build APK on every push and for pull requests
+# Build APK manually for Sprint releases
 on:
-  push:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+  workflow_dispatch:
 
 jobs:
   build-apk:
