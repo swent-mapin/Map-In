@@ -118,10 +118,18 @@ fun MapScreen(
   // Setup camera centering callback
   val screenHeightDpValue = screenHeightDp.value
   LaunchedEffect(Unit) {
-    viewModel.onCenterCamera = { event ->
+    viewModel.onCenterCamera = { event, forceZoom ->
       val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
       val currentZoom = mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-      val targetZoom = if (currentZoom < 14.0) 15.0 else currentZoom
+
+      // When forceZoom is true (from search), always zoom to 17 to ensure pins are visible
+      // Otherwise, use the existing logic
+      val targetZoom =
+          if (forceZoom) {
+            17.0
+          } else {
+            if (currentZoom < 14.0) 15.0 else currentZoom
+          }
 
       val offsetPixels = (screenHeightDpValue * 0.25) / 2
 
@@ -248,8 +256,8 @@ fun MapScreen(
                 selectedTags = viewModel.selectedTags,
                 onTagClick = viewModel::toggleTagSelection,
                 onEventClick = { event ->
-                  // garder le comportement attendu côté BottomSheet item click
-                  viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+                  // Handle event click from search - focus pin, show details, remember search mode
+                  viewModel.onEventClickedFromSearch(event)
                   onEventClick(event)
                 },
                 onCreateMemoryClick = viewModel::showMemoryForm,
@@ -367,8 +375,8 @@ private fun MapLayers(
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
   val annotations =
-      remember(viewModel.events, annotationStyle) {
-        createEventAnnotations(viewModel.events, annotationStyle)
+      remember(viewModel.events, annotationStyle, viewModel.selectedEvent) {
+        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
       }
 
   val clusterConfig = remember { createClusterConfig() }
