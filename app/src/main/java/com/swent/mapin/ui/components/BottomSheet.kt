@@ -20,10 +20,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.ui.map.MapConstants
 import kotlinx.coroutines.launch
@@ -81,38 +86,134 @@ fun <T> BottomSheet(
   // Report every height change to parent (here, for gradual map scrim )
   LaunchedEffect(currentHeight.value) { onHeightChange(currentHeight.value.dp) }
 
+  // Nested scroll connection to handle scrolling in content
+  val nestedScrollConnection =
+      remember(density, config, currentHeight) {
+        object : NestedScrollConnection {
+          override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            // Only handle drag gestures (not flings)
+            if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+            val delta = available.y
+            val currentHeightValue = currentHeight.value
+
+            // If sheet is not at full height, prioritize expanding the sheet
+            // over allowing content to scroll
+            if (currentHeightValue < config.fullHeight.value) {
+              // Always consume scroll to expand sheet when not full
+              scope.launch {
+                val newHeight = (currentHeightValue - delta / density.density)
+                val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
+                val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+                currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
+              }
+              // Consume the scroll so content doesn't scroll
+              return Offset(0f, delta)
+            }
+
+            return Offset.Zero
+          }
+
+          override fun onPostScroll(
+              consumed: Offset,
+              available: Offset,
+              source: NestedScrollSource
+          ): Offset {
+            // Only handle drag gestures (not flings)
+            if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+            val delta = available.y
+            if (delta == 0f) return Offset.Zero
+
+            // If there's unconsumed scroll, apply it to the sheet
+            scope.launch {
+              val newHeight = (currentHeight.value - delta / density.density)
+              val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
+              val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+              currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
+            }
+
+            return Offset(0f, delta)
+          }
+
+          override suspend fun onPreFling(available: Velocity): Velocity {
+            // Handle fling gestures
+            val velocityY = available.y
+
+            // If flinging down (negative velocity) with significant speed, collapse
+            if (velocityY < -500f) {
+              val currentHeightPx = currentHeight.value * density.density
+              val collapsedPx = config.collapsedHeight.value * density.density
+              val mediumPx = config.mediumHeight.value * density.density
+              val fullPx = config.fullHeight.value * density.density
+
+              val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
+              onStateChange(targetState)
+
+              return Velocity(0f, velocityY) // Consume the fling
+            }
+
+            return Velocity.Zero
+          }
+
+          override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+            // After content finishes flinging, snap sheet to nearest state
+            val currentHeightPx = currentHeight.value * density.density
+            val collapsedPx = config.collapsedHeight.value * density.density
+            val mediumPx = config.mediumHeight.value * density.density
+            val fullPx = config.fullHeight.value * density.density
+
+            val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
+            val targetHeightValue = stateToHeight(targetState).value
+
+            onStateChange(targetState)
+
+            currentHeight.animateTo(
+                targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
+                animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
+
+            return available
+          }
+        }
+      }
+
   Surface(
       modifier =
-          modifier.fillMaxWidth().height(currentHeight.value.dp).pointerInput(Unit) {
-            detectVerticalDragGestures(
-                onDragEnd = {
-                  scope.launch {
-                    val currentHeightPx = currentHeight.value * density.density
-                    val collapsedPx = config.collapsedHeight.toPx()
-                    val mediumPx = config.mediumHeight.toPx()
-                    val fullPx = config.fullHeight.toPx()
+          modifier
+              .fillMaxWidth()
+              .height(currentHeight.value.dp)
+              .nestedScroll(nestedScrollConnection)
+              .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                      scope.launch {
+                        val currentHeightPx = currentHeight.value * density.density
+                        val collapsedPx = config.collapsedHeight.toPx()
+                        val mediumPx = config.mediumHeight.toPx()
+                        val fullPx = config.fullHeight.toPx()
 
-                    val targetState =
-                        calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
-                    val targetHeightValue = stateToHeight(targetState).value
+                        val targetState =
+                            calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
+                        val targetHeightValue = stateToHeight(targetState).value
 
-                    onStateChange(targetState)
+                        onStateChange(targetState)
 
-                    currentHeight.animateTo(
-                        targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
-                        animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
-                  }
-                },
-                onVerticalDrag = { _, dragAmount ->
-                  scope.launch {
-                    val newHeight = (currentHeight.value - dragAmount / density.density)
-                    val minHeight =
-                        config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-                    val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
-                    currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
-                  }
-                })
-          },
+                        currentHeight.animateTo(
+                            targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
+                            animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
+                      }
+                    },
+                    onVerticalDrag = { _, dragAmount ->
+                      scope.launch {
+                        val newHeight = (currentHeight.value - dragAmount / density.density)
+                        val minHeight =
+                            config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
+                        val maxHeight =
+                            config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+                        currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
+                      }
+                    })
+              },
       shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
       shadowElevation = 8.dp,
       color = MaterialTheme.colorScheme.surface) {
