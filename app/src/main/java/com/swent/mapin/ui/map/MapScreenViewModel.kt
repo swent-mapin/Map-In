@@ -158,7 +158,10 @@ class MapScreenViewModel(
   val showShareDialog: Boolean
     get() = _showShareDialog
 
-  var onCenterCamera: ((Event) -> Unit)? = null
+  var onCenterCamera: ((Event, Boolean) -> Unit)? = null
+
+  // Track if we came from search mode to return to it after closing event detail
+  private var _cameFromSearch by mutableStateOf(false)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -503,19 +506,39 @@ class MapScreenViewModel(
     _selectedBottomSheetTab = tab
   }
 
-  fun onEventPinClicked(event: Event) {
+  fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     viewModelScope.launch {
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
-      onCenterCamera?.invoke(event)
+      onCenterCamera?.invoke(event, forceZoom)
     }
+  }
+
+  /**
+   * Handles event clicks from search results. Focuses the pin, shows event details, and remembers
+   * we came from search mode. Forces zoom to ensure the pin is visible.
+   */
+  fun onEventClickedFromSearch(event: Event) {
+    _cameFromSearch = true
+    onEventPinClicked(event, forceZoom = true)
   }
 
   fun closeEventDetail() {
     _selectedEvent = null
     _organizerName = ""
-    setBottomSheetState(BottomSheetState.COLLAPSED)
+
+    if (_cameFromSearch) {
+      // Return to search mode: full sheet with cleared search, no keyboard
+      _cameFromSearch = false
+      _searchQuery = ""
+      isSearchActivated = true
+      _shouldFocusSearch = false
+      setBottomSheetState(BottomSheetState.FULL)
+      applyFilters()
+    } else {
+      setBottomSheetState(BottomSheetState.COLLAPSED)
+    }
   }
 
   fun showShareDialog() {
