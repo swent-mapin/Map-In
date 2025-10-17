@@ -20,10 +20,10 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
-import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -72,7 +72,7 @@ class MapScreenViewModel(
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
 
   // Visible events for map (after filtering)
-  private var _events by mutableStateOf<List<Event>>(SampleEventRepository.getSampleEvents())
+  private var _events by mutableStateOf<List<Event>>(LocalEventRepository.defaultSampleEvents())
   val events: List<Event>
     get() = _events
 
@@ -178,7 +178,7 @@ class MapScreenViewModel(
     // Preload events so the form has immediate data
     loadEvents()
     loadJoinedEvents()
-    _topTags = SampleEventRepository.getTopTags()
+    _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
@@ -186,8 +186,20 @@ class MapScreenViewModel(
 
   /** Loads initial sample events synchronously for immediate UI responsiveness. */
   private fun loadInitialSamples() {
-    _events = SampleEventRepository.getSampleEvents()
+    _events = LocalEventRepository.defaultSampleEvents()
     _searchResults = _events
+  }
+
+  /** Returns the top 5 most frequent tags across all events. */
+  private fun getTopTags(count: Int = 5): List<String> {
+    val events = LocalEventRepository.defaultSampleEvents()
+    val tagCounts = mutableMapOf<String, Int>()
+
+    events.forEach { event ->
+      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
+    }
+
+    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
   }
 
   /** Loads primary events list for immediate UI usage with fallback to local samples. */
@@ -200,7 +212,7 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         android.util.Log.w(
             "MapScreenViewModel", "Failed to load events from repository, using samples", e)
-        _events = SampleEventRepository.getSampleEvents()
+        _events = LocalEventRepository.defaultSampleEvents()
         _searchResults = _events
       }
     }
@@ -347,7 +359,8 @@ class MapScreenViewModel(
   }
 
   private fun applyFilters() {
-    val base = if (_allEvents.isNotEmpty()) _allEvents else SampleEventRepository.getSampleEvents()
+    val base =
+        if (_allEvents.isNotEmpty()) _allEvents else LocalEventRepository.defaultSampleEvents()
 
     val tagFiltered =
         if (_selectedTags.isEmpty()) {
@@ -568,7 +581,7 @@ class MapScreenViewModel(
       _errorMessage = null
       try {
         val capacity = event.capacity
-        val currentAttendees = event.attendeeCount ?: 0
+        val currentAttendees = event.participantIds.size
         if (capacity != null && currentAttendees >= capacity) {
           _errorMessage = "Event is at full capacity"
           return@launch
@@ -577,9 +590,7 @@ class MapScreenViewModel(
             event.participantIds.toMutableList().apply {
               if (!contains(currentUserId)) add(currentUserId)
             }
-        val newAttendeeCount = currentAttendees + 1
-        val updatedEvent =
-            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
@@ -598,10 +609,7 @@ class MapScreenViewModel(
       try {
         val updatedParticipantIds =
             event.participantIds.toMutableList().apply { remove(currentUserId) }
-        val currentAttendees = event.attendeeCount ?: 0
-        val newAttendeeCount = (currentAttendees - 1).coerceAtLeast(0)
-        val updatedEvent =
-            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
@@ -649,7 +657,7 @@ fun eventsToGeoJson(events: List<Event>): String {
       events.map { event ->
         Feature.fromGeometry(
             Point.fromLngLat(event.location.longitude, event.location.latitude),
-            JsonObject().apply { addProperty("weight", event.attendeeCount) })
+            JsonObject().apply { addProperty("weight", event.participantIds.size) })
       }
   return FeatureCollection.fromFeatures(features).toJson()
 }

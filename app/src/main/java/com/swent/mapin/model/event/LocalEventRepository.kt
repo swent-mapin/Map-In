@@ -121,8 +121,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("EPFL Campus", 46.5197, 6.5668),
               tags = listOf("Music", "Festival"),
               public = true,
-              ownerId = "user1",
-              attendeeCount = 200),
+              ownerId = "user1"),
           Event(
               uid = "event2",
               title = "Tech Conference",
@@ -131,8 +130,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Rolex Learning Center", 46.5187, 6.5659),
               tags = listOf("Technology", "Conference"),
               public = true,
-              ownerId = "user2",
-              attendeeCount = 180),
+              ownerId = "user2"),
           Event(
               uid = "event3",
               title = "Food Festival",
@@ -141,8 +139,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("EPFL Plaza", 46.5192, 6.5662),
               tags = listOf("Food", "Festival"),
               public = true,
-              ownerId = "user3",
-              attendeeCount = 150),
+              ownerId = "user3"),
 
           // Moderate attendance around Sports Center
           Event(
@@ -153,8 +150,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("EPFL Sports Center", 46.5217, 6.5688),
               tags = listOf("Sports", "Basketball"),
               public = true,
-              ownerId = "user4",
-              attendeeCount = 80),
+              ownerId = "user4"),
           Event(
               uid = "event5",
               title = "Volleyball Tournament",
@@ -163,8 +159,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Sports Field 1", 46.5220, 6.5685),
               tags = listOf("Sports", "Volleyball"),
               public = true,
-              ownerId = "user5",
-              attendeeCount = 65),
+              ownerId = "user5"),
           Event(
               uid = "event6",
               title = "Running Club",
@@ -173,8 +168,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Sports Field 2", 46.5215, 6.5692),
               tags = listOf("Sports", "Running"),
               public = true,
-              ownerId = "user6",
-              attendeeCount = 45),
+              ownerId = "user6"),
 
           // Low attendance cultural events near ArtLab
           Event(
@@ -185,8 +179,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("EPFL ArtLab", 46.5177, 6.5653),
               tags = listOf("Art", "Culture"),
               public = true,
-              ownerId = "user7",
-              attendeeCount = 30),
+              ownerId = "user7"),
           Event(
               uid = "event8",
               title = "Photography Workshop",
@@ -195,8 +188,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("ArtLab Studio", 46.5175, 6.5655),
               tags = listOf("Art", "Workshop"),
               public = true,
-              ownerId = "user8",
-              attendeeCount = 20),
+              ownerId = "user8"),
 
           // Very small attendance study groups scattered around
           Event(
@@ -207,8 +199,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("BC Building", 46.5202, 6.5645),
               tags = listOf("Study", "Math"),
               public = true,
-              ownerId = "user9",
-              attendeeCount = 8),
+              ownerId = "user9"),
           Event(
               uid = "event10",
               title = "Coding Meetup",
@@ -217,8 +208,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("CM Building", 46.5210, 6.5642),
               tags = listOf("Coding", "Tech"),
               public = true,
-              ownerId = "user10",
-              attendeeCount = 12),
+              ownerId = "user10"),
           Event(
               uid = "event11",
               title = "Language Exchange",
@@ -227,8 +217,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Library", 46.5195, 6.5670),
               tags = listOf("Languages", "Social"),
               public = true,
-              ownerId = "user11",
-              attendeeCount = 15),
+              ownerId = "user11"),
 
           // Medium attendance around Esplanade
           Event(
@@ -239,8 +228,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("EPFL Esplanade", 46.5212, 6.5658),
               tags = listOf("Food", "Market"),
               public = true,
-              ownerId = "user12",
-              attendeeCount = 95),
+              ownerId = "user12"),
           Event(
               uid = "event13",
               title = "Farmers Market",
@@ -249,8 +237,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Central Square", 46.5208, 6.5655),
               tags = listOf("Food", "Market"),
               public = true,
-              ownerId = "user13",
-              attendeeCount = 110),
+              ownerId = "user13"),
 
           // Very high attendance hotspot - special events
           Event(
@@ -261,8 +248,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Convention Center", 46.5180, 6.5665),
               tags = listOf("Science", "Exhibition"),
               public = true,
-              ownerId = "user14",
-              attendeeCount = 250),
+              ownerId = "user14"),
           Event(
               uid = "event15",
               title = "Startup Fair",
@@ -271,8 +257,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Innovation Square", 46.5190, 6.5675),
               tags = listOf("Business", "Networking"),
               public = true,
-              ownerId = "user15",
-              attendeeCount = 300),
+              ownerId = "user15"),
 
           // Workshops and classes
           Event(
@@ -283,8 +268,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Sports Hall", 46.5205, 6.5648),
               tags = listOf("Wellness", "Yoga"),
               public = true,
-              ownerId = "user16",
-              attendeeCount = 25),
+              ownerId = "user16"),
           Event(
               uid = "event17",
               title = "Cooking Workshop",
@@ -293,8 +277,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Kitchen Lab", 46.5172, 6.5669),
               tags = listOf("Food", "Workshop"),
               public = true,
-              ownerId = "user17",
-              attendeeCount = 18),
+              ownerId = "user17"),
           Event(
               uid = "event18",
               title = "Photography Class",
@@ -303,8 +286,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Photo Studio", 46.5182, 6.5672),
               tags = listOf("Art", "Photography"),
               public = true,
-              ownerId = "user18",
-              attendeeCount = 22),
+              ownerId = "user18"),
 
           // Student clubs
           Event(
@@ -315,8 +297,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Student Center", 46.5191, 6.5680),
               tags = listOf("Games", "Club"),
               public = true,
-              ownerId = "user19",
-              attendeeCount = 14),
+              ownerId = "user19"),
           Event(
               uid = "event20",
               title = "Board Game Night",
@@ -325,8 +306,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Community Hall", 46.5200, 6.5660),
               tags = listOf("Games", "Social"),
               public = true,
-              ownerId = "user20",
-              attendeeCount = 35),
+              ownerId = "user20"),
           Event(
               uid = "event21",
               title = "Robotics Workshop",
@@ -335,8 +315,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Robotics Lab", 46.5223, 6.5665),
               tags = listOf("Science", "Physics"),
               public = true,
-              ownerId = "user21",
-              attendeeCount = 40),
+              ownerId = "user21"),
           Event(
               uid = "event22",
               title = "Biology Lecture",
@@ -345,8 +324,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("SV Building", 46.5225, 6.5670),
               tags = listOf("Science", "Biology"),
               public = true,
-              ownerId = "user22",
-              attendeeCount = 50),
+              ownerId = "user22"),
 
           // Music performances - varying attendance
           Event(
@@ -357,8 +335,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Amphitheater", 46.5198, 6.5656),
               tags = listOf("Music", "Jazz"),
               public = true,
-              ownerId = "user23",
-              attendeeCount = 120),
+              ownerId = "user23"),
           Event(
               uid = "event24",
               title = "Open Mic Night",
@@ -367,8 +344,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Satellite Bar", 46.5204, 6.5665),
               tags = listOf("Music", "Performance"),
               public = true,
-              ownerId = "user24",
-              attendeeCount = 60),
+              ownerId = "user24"),
           Event(
               uid = "event25",
               title = "Classical Concert",
@@ -377,8 +353,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Concert Hall", 46.5196, 6.5660),
               tags = listOf("Music", "Classical"),
               public = true,
-              ownerId = "user25",
-              attendeeCount = 85),
+              ownerId = "user25"),
 
           // Extended area - North of EPFL
           Event(
@@ -389,8 +364,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Innovation Park", 46.5240, 6.5700),
               tags = listOf("Business", "Startup"),
               public = true,
-              ownerId = "user26",
-              attendeeCount = 90),
+              ownerId = "user26"),
           Event(
               uid = "event27",
               title = "Hackathon",
@@ -399,8 +373,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("SwissTech Convention", 46.5235, 6.5660),
               tags = listOf("Tech", "Coding"),
               public = true,
-              ownerId = "user27",
-              attendeeCount = 140),
+              ownerId = "user27"),
           Event(
               uid = "event28",
               title = "Robotics Demo",
@@ -409,8 +382,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Robotics Lab", 46.5228, 6.5675),
               tags = listOf("Robotics", "Tech"),
               public = true,
-              ownerId = "user28",
-              attendeeCount = 75),
+              ownerId = "user28"),
 
           // Extended area - South of EPFL
           Event(
@@ -421,8 +393,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Lake Geneva Shore", 46.5155, 6.5650),
               tags = listOf("Social", "Outdoor"),
               public = true,
-              ownerId = "user29",
-              attendeeCount = 100),
+              ownerId = "user29"),
           Event(
               uid = "event30",
               title = "Beach Volleyball",
@@ -431,8 +402,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Beach Court", 46.5148, 6.5665),
               tags = listOf("Sports", "Beach"),
               public = true,
-              ownerId = "user30",
-              attendeeCount = 55),
+              ownerId = "user30"),
           Event(
               uid = "event31",
               title = "Sailing Club",
@@ -441,8 +411,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Yacht Club", 46.5160, 6.5680),
               tags = listOf("Sports", "Sailing"),
               public = true,
-              ownerId = "user31",
-              attendeeCount = 28),
+              ownerId = "user31"),
 
           // Extended area - East of EPFL
           Event(
@@ -453,8 +422,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Forest Trail", 46.5205, 6.5720),
               tags = listOf("Sports", "Running"),
               public = true,
-              ownerId = "user32",
-              attendeeCount = 38),
+              ownerId = "user32"),
           Event(
               uid = "event33",
               title = "Outdoor Cinema",
@@ -463,8 +431,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Park Amphitheater", 46.5190, 6.5710),
               tags = listOf("Entertainment", "Film"),
               public = true,
-              ownerId = "user33",
-              attendeeCount = 165),
+              ownerId = "user33"),
           Event(
               uid = "event34",
               title = "Cycling Club",
@@ -473,8 +440,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Bike Path Start", 46.5215, 6.5705),
               tags = listOf("Sports", "Cycling"),
               public = true,
-              ownerId = "user34",
-              attendeeCount = 42),
+              ownerId = "user34"),
 
           // Extended area - West of EPFL
           Event(
@@ -485,8 +451,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Wine Bar", 46.5185, 6.5620),
               tags = listOf("Food", "Social"),
               public = true,
-              ownerId = "user35",
-              attendeeCount = 32),
+              ownerId = "user35"),
           Event(
               uid = "event36",
               title = "Cooking Class",
@@ -495,8 +460,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Culinary School", 46.5170, 6.5625),
               tags = listOf("Food", "Workshop"),
               public = true,
-              ownerId = "user36",
-              attendeeCount = 24),
+              ownerId = "user36"),
           Event(
               uid = "event37",
               title = "Comedy Night",
@@ -505,8 +469,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Comedy Club", 46.5195, 6.5630),
               tags = listOf("Entertainment", "Comedy"),
               public = true,
-              ownerId = "user37",
-              attendeeCount = 88),
+              ownerId = "user37"),
 
           // Scattered small events across wider area
           Event(
@@ -517,8 +480,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("East Campus", 46.5230, 6.5690),
               tags = listOf("Art", "Photography"),
               public = true,
-              ownerId = "user38",
-              attendeeCount = 16),
+              ownerId = "user38"),
           Event(
               uid = "event39",
               title = "Book Club",
@@ -527,8 +489,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Coffee Shop", 46.5165, 6.5640),
               tags = listOf("Reading", "Social"),
               public = true,
-              ownerId = "user39",
-              attendeeCount = 14),
+              ownerId = "user39"),
           Event(
               uid = "event40",
               title = "Chess Tournament",
@@ -537,8 +498,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Student Center", 46.5178, 6.5695),
               tags = listOf("Games", "Competition"),
               public = true,
-              ownerId = "user40",
-              attendeeCount = 22),
+              ownerId = "user40"),
 
           // More scattered medium events
           Event(
@@ -549,8 +509,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Green Building", 46.5250, 6.5655),
               tags = listOf("Environment", "Fair"),
               public = true,
-              ownerId = "user41",
-              attendeeCount = 105),
+              ownerId = "user41"),
           Event(
               uid = "event42",
               title = "3D Printing Workshop",
@@ -559,8 +518,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Maker Space", 46.5165, 6.5710),
               tags = listOf("Tech", "Workshop"),
               public = true,
-              ownerId = "user42",
-              attendeeCount = 34),
+              ownerId = "user42"),
           Event(
               uid = "event43",
               title = "Dance Class",
@@ -569,8 +527,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Dance Studio", 46.5142, 6.5655),
               tags = listOf("Dance", "Social"),
               public = true,
-              ownerId = "user43",
-              attendeeCount = 48),
+              ownerId = "user43"),
           Event(
               uid = "event44",
               title = "Debate Club",
@@ -579,8 +536,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Debate Hall", 46.5238, 6.5645),
               tags = listOf("Debate", "Education"),
               public = true,
-              ownerId = "user44",
-              attendeeCount = 26),
+              ownerId = "user44"),
           Event(
               uid = "event45",
               title = "Astronomy Night",
@@ -589,8 +545,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Observatory", 46.5260, 6.5680),
               tags = listOf("Science", "Astronomy"),
               public = true,
-              ownerId = "user45",
-              attendeeCount = 52),
+              ownerId = "user45"),
 
           // Additional high-attendance events for better distribution
           Event(
@@ -601,8 +556,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Central Plaza", 46.5168, 6.5670),
               tags = listOf("Food", "Festival"),
               public = true,
-              ownerId = "user46",
-              attendeeCount = 220),
+              ownerId = "user46"),
           Event(
               uid = "event47",
               title = "Student Party",
@@ -611,8 +565,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Party Venue", 46.5152, 6.5690),
               tags = listOf("Party", "Social"),
               public = true,
-              ownerId = "user47",
-              attendeeCount = 280),
+              ownerId = "user47"),
           Event(
               uid = "event48",
               title = "Rock Concert",
@@ -621,8 +574,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Outdoor Stage", 46.5245, 6.5715),
               tags = listOf("Music", "Rock"),
               public = true,
-              ownerId = "user48",
-              attendeeCount = 190),
+              ownerId = "user48"),
           Event(
               uid = "event49",
               title = "Marathon Training",
@@ -631,8 +583,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Running Track", 46.5135, 6.5645),
               tags = listOf("Sports", "Running"),
               public = true,
-              ownerId = "user49",
-              attendeeCount = 67),
+              ownerId = "user49"),
           Event(
               uid = "event50",
               title = "Craft Beer Festival",
@@ -641,8 +592,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               location = Location("Beer Garden", 46.5175, 6.5615),
               tags = listOf("Food", "Festival"),
               public = true,
-              ownerId = "user50",
-              attendeeCount = 135))
+              ownerId = "user50"))
     }
   }
 }

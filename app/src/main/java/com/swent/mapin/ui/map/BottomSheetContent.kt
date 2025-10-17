@@ -368,9 +368,9 @@ private fun SearchResultItem(
                     overflow = TextOverflow.Ellipsis)
               }
 
-              event.attendeeCount?.let { attendees ->
+              if (event.participantIds.isNotEmpty()) {
                 Text(
-                    text = "$attendees attending",
+                    text = "${event.participantIds.size} attending",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
               }

@@ -243,7 +243,7 @@ private fun MediumEventContent(
 
     // Attendee count and capacity
     Row(verticalAlignment = Alignment.CenterVertically) {
-      val attendees = event.attendeeCount ?: 0 // Utiliser attendeeCount
+      val attendees = event.participantIds.size
       val capacity = event.capacity ?: 0
       Text(
           text = "$attendees / $capacity attendees",
@@ -266,7 +266,7 @@ private fun MediumEventContent(
       Button(
           onClick = onJoinEvent,
           modifier = Modifier.fillMaxWidth().testTag("joinEventButton"),
-          enabled = event.capacity?.let { (event.attendeeCount ?: 0) < it } ?: true) {
+          enabled = event.capacity?.let { event.participantIds.size < it } ?: true) {
             Text("Join Event")
           }
     }
@@ -380,7 +380,7 @@ private fun FullEventContent(
 
         // Attendee count and capacity
         Row(verticalAlignment = Alignment.CenterVertically) {
-          val attendees = event.attendeeCount ?: 0 // Utiliser attendeeCount
+          val attendees = event.participantIds.size
           val capacity = event.capacity ?: 0
           Text(
               text = "$attendees / $capacity attendees",
@@ -418,7 +418,7 @@ private fun FullEventContent(
           Button(
               onClick = onJoinEvent,
               modifier = Modifier.fillMaxWidth().testTag("joinEventButtonFull"),
-              enabled = event.capacity?.let { (event.attendeeCount ?: 0) < it } ?: true) {
+              enabled = event.capacity?.let { event.participantIds.size < it } ?: true) {
                 Text("Join Event")
               }
         }
