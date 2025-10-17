@@ -35,11 +35,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -97,6 +98,7 @@ data class SearchBarState(
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
  * @param onJoinedEventClick Callback when a joined event is clicked
+ * @param onProfileClick Callback when "Profile" button is clicked
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -124,7 +126,8 @@ fun BottomSheetContent(
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
-    onJoinedEventClick: (Event) -> Unit = {}
+    onJoinedEventClick: (Event) -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -187,7 +190,8 @@ fun BottomSheetContent(
                   else Modifier.fillMaxWidth()
 
               Column(modifier = contentModifier) {
-                QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+                QuickActionsSection(
+                    onCreateMemoryClick = onCreateMemoryClick, onProfileClick = onProfileClick)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -378,7 +382,7 @@ private fun SearchResultItem(
       }
 }
 
-/** Search bar that triggers full mode when tapped. */
+/** Search bar that triggers full mode when tapped. Modern, minimalist design. */
 @Composable
 private fun SearchBar(
     value: String,
@@ -392,10 +396,10 @@ private fun SearchBar(
 ) {
   var isFocused by remember { mutableStateOf(false) }
 
-  OutlinedTextField(
+  TextField(
       value = value,
       onValueChange = onValueChange,
-      placeholder = { Text("Search activities") },
+      placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
       modifier =
           modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
             isFocused = focusState.isFocused
@@ -412,13 +416,25 @@ private fun SearchBar(
           }
         }
       },
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          TextFieldDefaults.colors(
+              focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+              unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent),
       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
       keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
 }
 
-/** Row of quick action buttons (Create Memory, Create Event, Filters). */
+/** Row of quick action buttons (Create Memory, Create Event, Profile). */
 @Composable
-private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
+private fun QuickActionsSection(
+    modifier: Modifier = Modifier,
+    onCreateMemoryClick: () -> Unit,
+    onProfileClick: () -> Unit = {}
+) {
   val focusManager = LocalFocusManager.current
   val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
@@ -437,8 +453,7 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
             focusManager.clearFocus()
             showDialog.value = true
           })
-      QuickActionButton(
-          text = "Filters", modifier = Modifier.weight(1f), onClick = { focusManager.clearFocus() })
+      QuickActionButton(text = "Profile", modifier = Modifier.weight(1f), onClick = onProfileClick)
     }
   }
   if (showDialog.value) {
@@ -452,13 +467,13 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
   }
 }
 
-/** button for quick actions */
+/** button for quick actions - modern, minimalist with consistent height */
 @Composable
 private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
   Button(
       onClick = onClick,
-      modifier = modifier.defaultMinSize(minHeight = 44.dp).padding(horizontal = 4.dp),
-      shape = RoundedCornerShape(20.dp),
+      modifier = modifier.height(56.dp),
+      shape = RoundedCornerShape(16.dp),
       colors =
           ButtonDefaults.buttonColors(
               containerColor = MaterialTheme.colorScheme.primary,

@@ -71,7 +71,7 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").assertIsDisplayed()
     rule.onNodeWithText("Create Event").assertIsDisplayed()
-    rule.onNodeWithText("Filters").assertIsDisplayed()
+    rule.onNodeWithText("Profile").assertIsDisplayed()
   }
 
   @Test
@@ -123,7 +123,7 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Create Event").assertHasClickAction()
-    rule.onNodeWithText("Filters").assertHasClickAction()
+    rule.onNodeWithText("Profile").assertHasClickAction()
   }
 
   @Test

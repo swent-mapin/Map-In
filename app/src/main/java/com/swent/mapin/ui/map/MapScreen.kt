@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -37,7 +35,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
@@ -209,11 +206,6 @@ fun MapScreen(
     // Bloque les interactions de carte quand la feuille est pleine
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-    // Bouton profil en haut à droite
-    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
-      ProfileButton(onClick = onNavigateToProfile)
-    }
-
     // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
     BottomSheet(
         config = sheetConfig,
@@ -266,7 +258,8 @@ fun MapScreen(
                 onTabChange = viewModel::setBottomSheetTab,
                 joinedEvents = viewModel.joinedEvents,
                 selectedTab = viewModel.selectedBottomSheetTab,
-                onJoinedEventClick = viewModel::onJoinedEventClicked)
+                onJoinedEventClick = viewModel::onJoinedEventClicked,
+                onProfileClick = onNavigateToProfile)
           }
         }
 
@@ -780,18 +773,4 @@ private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
               }
             })
   }
-}
-
-/** Profile button for navigating to user profile screen. */
-@Composable
-private fun ProfileButton(onClick: () -> Unit) {
-  FloatingActionButton(
-      onClick = onClick,
-      modifier = Modifier.testTag("profileButton"),
-      containerColor = MaterialTheme.colorScheme.primaryContainer) {
-        Icon(
-            painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
-            contentDescription = "Profile",
-            tint = MaterialTheme.colorScheme.onPrimaryContainer)
-      }
 }
