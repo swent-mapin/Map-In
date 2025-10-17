@@ -386,8 +386,12 @@ private fun MapLayers(
     CreateHeatmapLayer(heatmapSource)
   }
 
+  // Disable clustering when a pin is selected to prevent it from being absorbed
+  val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
+
   // Render annotations (with or without clustering)
-  if (viewModel.showHeatmap) {
+  if (viewModel.showHeatmap || !shouldCluster) {
+    // No clustering: used for heatmap mode or when a pin is selected
     PointAnnotationGroup(annotations = annotations) {
       markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState.onClicked { annotation ->
@@ -398,6 +402,7 @@ private fun MapLayers(
       }
     }
   } else {
+    // With clustering: default behavior when no pin is selected
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
       markerBitmap?.let { iconImage = IconImage(it) }
       interactionsState
