@@ -668,6 +668,10 @@ private fun createEventAnnotations(
   return events.mapIndexed { index, event ->
     val isSelected = event.uid == selectedEventId
     val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
+    val textSize = if (isSelected) 15.0 else 12.0 // Larger text for selected
+    val textOffset =
+        if (isSelected) listOf(0.0, 0.5) else listOf(0.0, 0.2) // Closer to icon when not selected
+    val textHaloWidth = if (isSelected) 2.0 else 1.5 // Stronger halo for selected
     val sortKey =
         if (isSelected) 0.0
         else 100.0 // Selected pin gets LOWEST value for priority when allowOverlap=false
@@ -678,11 +682,11 @@ private fun createEventAnnotations(
         .withIconSize(iconSize)
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(listOf(0.0, 0.5))
-        .withTextSize(14.0)
+        .withTextOffset(textOffset)
+        .withTextSize(textSize)
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(1.5)
+        .withTextHaloWidth(textHaloWidth)
         .withTextField(event.title)
         .withData(JsonPrimitive(index))
         .withSymbolSortKey(sortKey) // Ensures selected pin is prioritized for visibility
