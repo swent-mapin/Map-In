@@ -453,7 +453,10 @@ private fun QuickActionsSection(
             focusManager.clearFocus()
             showDialog.value = true
           })
-      QuickActionButton(text = "Profile", modifier = Modifier.weight(1f), onClick = onProfileClick)
+      QuickActionButton(
+          text = "Profile",
+          modifier = Modifier.weight(1f).testTag("profileButton"),
+          onClick = onProfileClick)
     }
   }
   if (showDialog.value) {

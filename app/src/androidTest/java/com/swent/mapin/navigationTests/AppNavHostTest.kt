@@ -45,10 +45,28 @@ class AppNavHostTest {
     // Verify we're on the map screen
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for profile screen to appear after navigation
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're on the profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
@@ -62,10 +80,28 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile from map
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for profile screen to appear after fade transition
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're on profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
@@ -88,6 +124,16 @@ class AppNavHostTest {
       AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
     }
 
+    composeTestRule.waitForIdle()
+
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
     composeTestRule.waitForIdle()
 
     // Navigate to profile
@@ -119,10 +165,28 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Go to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for profile screen to appear after fade transition
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Scroll to and click logout
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()

@@ -96,7 +96,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("eventLocation").assertTextEquals("📍 Paris")
     composeTestRule.onNodeWithTag("eventDescriptionPreview").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfo").assertTextEquals("8 spots left")
   }
 
   @Test
@@ -175,13 +177,14 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun mediumState_nullCapacity_showsAttendeeCountWithZero() {
+  fun mediumState_nullCapacity_showsAttendeeCountOnly() {
     setEventDetailSheet(
         event = testEvent.copy(capacity = null, participantIds = List(5) { "user$it" }),
         sheetState = BottomSheetState.MEDIUM)
 
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 / 0 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertDoesNotExist()
     composeTestRule.onNodeWithTag("joinEventButton").assertIsEnabled()
   }
 
@@ -199,7 +202,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("organizerName").assertTextEquals("John Doe")
     composeTestRule.onNodeWithTag("eventLocationFull").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("8 spots left")
     composeTestRule.onNodeWithTag("eventDescription").assertIsDisplayed()
   }
 
@@ -284,7 +289,9 @@ class EventDetailSheetTest {
         organizerName = "John Doe")
 
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("10 spots left")
   }
 
   // COMMON FUNCTIONALITY TESTS (applicable to all states)
