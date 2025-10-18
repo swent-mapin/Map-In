@@ -15,8 +15,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.LocalEventRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -172,7 +172,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(3)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
@@ -186,7 +186,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_handlesEventInteractions() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(1)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -206,7 +206,7 @@ class BottomSheetContentTest {
   fun joinedEventsTab_handlesEdgeCases() {
     // Test event with null date
     val eventWithNullDate =
-        SampleEventRepository.getSampleEvents()[0].copy(date = null)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(date = null)
 
     rule.setContent { JoinedEventsContent(events = listOf(eventWithNullDate)) }
     rule.waitForIdle()
@@ -219,7 +219,7 @@ class BottomSheetContentTest {
 
   @Test
   fun tabSwitch_betweenRecentActivitiesAndJoinedEvents() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(1)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
     var currentTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES
 
     rule.setContent {

@@ -30,7 +30,6 @@ class EventDetailSheetTest {
           date = Timestamp(Calendar.getInstance().apply { set(2025, 9, 20, 14, 30) }.time),
           ownerId = "owner123",
           participantIds = listOf("user1", "user2"),
-          attendeeCount = 2,
           capacity = 10,
           tags = listOf("Music", "Concert"),
           imageUrl = "https://example.com/image.jpg",
@@ -120,7 +119,7 @@ class EventDetailSheetTest {
   @Test
   fun mediumState_eventAtCapacity_disablesJoinButton() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = 10, capacity = 10),
+        event = testEvent.copy(participantIds = List(10) { "user$it" }, capacity = 10),
         sheetState = BottomSheetState.MEDIUM,
         isParticipating = false)
 
@@ -178,7 +177,7 @@ class EventDetailSheetTest {
   @Test
   fun mediumState_nullCapacity_showsAttendeeCountWithZero() {
     setEventDetailSheet(
-        event = testEvent.copy(capacity = null, attendeeCount = 5),
+        event = testEvent.copy(capacity = null, participantIds = List(5) { "user$it" }),
         sheetState = BottomSheetState.MEDIUM)
 
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
@@ -278,9 +277,9 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun fullState_nullAttendeeCount_displaysZero() {
+  fun fullState_emptyParticipants_displaysZero() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = null, capacity = 10),
+        event = testEvent.copy(participantIds = emptyList(), capacity = 10),
         sheetState = BottomSheetState.FULL,
         organizerName = "John Doe")
 
