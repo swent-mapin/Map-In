@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
@@ -213,8 +214,9 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = false, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("joinEventButtonFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("saveForLaterButton").assertIsDisplayed()
+    // Scroll to make buttons visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("unregisterButtonFull").assertDoesNotExist()
   }
 
@@ -223,7 +225,8 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = true, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("unregisterButtonFull").assertIsDisplayed()
+    // Scroll to make button visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("joinEventButtonFull").assertDoesNotExist()
   }
 
@@ -236,7 +239,8 @@ class EventDetailSheetTest {
         organizerName = "John Doe",
         onSaveForLater = { saveCalled = true })
 
-    composeTestRule.onNodeWithTag("saveForLaterButton").performClick()
+    // Scroll to make button visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().performClick()
     assertTrue(saveCalled)
   }
 
