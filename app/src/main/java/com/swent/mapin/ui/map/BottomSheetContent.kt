@@ -404,7 +404,7 @@ private fun SearchBar(
           modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
             isFocused = focusState.isFocused
             if (focusState.isFocused) {
-              if (!isFull) onTap()
+              onTap()
             }
           },
       singleLine = true,
