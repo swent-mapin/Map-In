@@ -588,6 +588,11 @@ class MapScreenViewModel(
     return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
   }
 
+  fun isUserParticipating(event: Event): Boolean {
+    val currentUserId = auth.currentUser?.uid ?: return false
+    return event.participantIds.contains(currentUserId)
+  }
+
   fun joinEvent() {
     viewModelScope.launch {
       val event = _selectedEvent ?: return@launch

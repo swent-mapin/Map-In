@@ -6,9 +6,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -215,52 +219,67 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-
-          // Si un event est sélectionné montrer le détail, sinon le contenu standard
-          if (viewModel.selectedEvent != null) {
-            EventDetailSheet(
-                event = viewModel.selectedEvent!!,
-                sheetState = viewModel.bottomSheetState,
-                isParticipating = viewModel.isUserParticipating(),
-                organizerName = viewModel.organizerName,
-                onJoinEvent = { viewModel.joinEvent() },
-                onUnregisterEvent = { viewModel.unregisterFromEvent() },
-                onSaveForLater = { viewModel.saveEventForLater() },
-                onClose = { viewModel.closeEventDetail() },
-                onShare = { viewModel.showShareDialog() })
-          } else {
-            BottomSheetContent(
-                state = viewModel.bottomSheetState,
-                fullEntryKey = viewModel.fullEntryKey,
-                searchBarState =
-                    SearchBarState(
-                        query = viewModel.searchQuery,
-                        shouldRequestFocus = viewModel.shouldFocusSearch,
-                        onQueryChange = viewModel::onSearchQueryChange,
-                        onTap = viewModel::onSearchTap,
-                        onFocusHandled = viewModel::onSearchFocusHandled,
-                        onClear = viewModel::onClearSearch),
-                searchResults = viewModel.searchResults,
-                isSearchMode = viewModel.isSearchMode,
-                showMemoryForm = viewModel.showMemoryForm,
-                availableEvents = viewModel.availableEvents,
-                topTags = viewModel.topTags,
-                selectedTags = viewModel.selectedTags,
-                onTagClick = viewModel::toggleTagSelection,
-                onEventClick = { event ->
-                  // Handle event click from search - focus pin, show details, remember search mode
-                  viewModel.onEventClickedFromSearch(event)
-                  onEventClick(event)
-                },
-                onCreateMemoryClick = viewModel::showMemoryForm,
-                onMemorySave = viewModel::onMemorySave,
-                onMemoryCancel = viewModel::onMemoryCancel,
-                onTabChange = viewModel::setBottomSheetTab,
-                joinedEvents = viewModel.joinedEvents,
-                selectedTab = viewModel.selectedBottomSheetTab,
-                onJoinedEventClick = viewModel::onJoinedEventClicked,
-                onProfileClick = onNavigateToProfile)
-          }
+          AnimatedContent(
+              targetState = viewModel.selectedEvent,
+              transitionSpec = {
+                val direction = if (targetState != null) 1 else -1
+                (fadeIn(animationSpec = androidx.compose.animation.core.tween(260)) +
+                        slideInVertically(
+                            animationSpec = androidx.compose.animation.core.tween(260),
+                            initialOffsetY = { direction * it / 6 }))
+                    .togetherWith(
+                        fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                            slideOutVertically(
+                                animationSpec = androidx.compose.animation.core.tween(200),
+                                targetOffsetY = { -direction * it / 6 }))
+              },
+              label = "eventSheetTransition") { selectedEvent ->
+                if (selectedEvent != null) {
+                  EventDetailSheet(
+                      event = selectedEvent,
+                      sheetState = viewModel.bottomSheetState,
+                      isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      organizerName = viewModel.organizerName,
+                      onJoinEvent = { viewModel.joinEvent() },
+                      onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                      onSaveForLater = { viewModel.saveEventForLater() },
+                      onClose = { viewModel.closeEventDetail() },
+                      onShare = { viewModel.showShareDialog() })
+                } else {
+                  BottomSheetContent(
+                      state = viewModel.bottomSheetState,
+                      fullEntryKey = viewModel.fullEntryKey,
+                      searchBarState =
+                          SearchBarState(
+                              query = viewModel.searchQuery,
+                              shouldRequestFocus = viewModel.shouldFocusSearch,
+                              onQueryChange = viewModel::onSearchQueryChange,
+                              onTap = viewModel::onSearchTap,
+                              onFocusHandled = viewModel::onSearchFocusHandled,
+                              onClear = viewModel::onClearSearch),
+                      searchResults = viewModel.searchResults,
+                      isSearchMode = viewModel.isSearchMode,
+                      showMemoryForm = viewModel.showMemoryForm,
+                      availableEvents = viewModel.availableEvents,
+                      topTags = viewModel.topTags,
+                      selectedTags = viewModel.selectedTags,
+                      onTagClick = viewModel::toggleTagSelection,
+                      onEventClick = { event ->
+                        // Handle event click from search - focus pin, show details, remember
+                        // search mode
+                        viewModel.onEventClickedFromSearch(event)
+                        onEventClick(event)
+                      },
+                      onCreateMemoryClick = viewModel::showMemoryForm,
+                      onMemorySave = viewModel::onMemorySave,
+                      onMemoryCancel = viewModel::onMemoryCancel,
+                      onTabChange = viewModel::setBottomSheetTab,
+                      joinedEvents = viewModel.joinedEvents,
+                      selectedTab = viewModel.selectedBottomSheetTab,
+                      onJoinedEventClick = viewModel::onJoinedEventClicked,
+                      onProfileClick = onNavigateToProfile)
+                }
+              }
         }
 
     // Share dialog

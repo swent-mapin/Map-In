@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -178,78 +179,101 @@ fun BottomSheetContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (isSearchMode) {
-              SearchResultsSection(
-                  results = searchResults,
-                  query = searchBarState.query,
-                  modifier = Modifier.weight(1f, fill = true),
-                  onEventClick = onEventClick)
-            } else {
-              val contentModifier =
-                  if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                  else Modifier.fillMaxWidth()
+            AnimatedContent(
+                targetState = isSearchMode,
+                transitionSpec = {
+                  (fadeIn(animationSpec = androidx.compose.animation.core.tween(250)) +
+                          slideInVertically(
+                              animationSpec = androidx.compose.animation.core.tween(250),
+                              initialOffsetY = { it / 6 }))
+                      .togetherWith(
+                          fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                              slideOutVertically(
+                                  animationSpec = androidx.compose.animation.core.tween(200),
+                                  targetOffsetY = { it / 6 }))
+                },
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                label = "searchModeTransition") { searchActive ->
+                  if (searchActive) {
+                    SearchResultsSection(
+                        results = searchResults,
+                        query = searchBarState.query,
+                        modifier = Modifier.fillMaxSize(),
+                        onEventClick = onEventClick)
+                  } else {
+                    val contentModifier =
+                        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                        else Modifier.fillMaxWidth()
 
-              Column(modifier = contentModifier) {
-                QuickActionsSection(
-                    onCreateMemoryClick = onCreateMemoryClick, onProfileClick = onProfileClick)
+                    Column(modifier = contentModifier) {
+                      QuickActionsSection(
+                          onCreateMemoryClick = onCreateMemoryClick,
+                          onProfileClick = onProfileClick)
 
-                Spacer(modifier = Modifier.height(16.dp))
+                      Spacer(modifier = Modifier.height(16.dp))
 
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                Spacer(modifier = Modifier.height(16.dp))
+                      Spacer(modifier = Modifier.height(16.dp))
 
-                // Tab selector
-                TabRow(
-                    selectedTabIndex =
-                        if (selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES) 0
-                        else 1,
-                    modifier = Modifier.fillMaxWidth()) {
-                      Tab(
-                          selected =
-                              selectedTab == MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
-                          onClick = {
-                            onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
-                          },
-                          text = { Text("Recent Activities") })
-                      Tab(
-                          selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                          onClick = {
-                            onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                          },
-                          text = { Text("Joined Events") })
+                      // Tab selector
+                      TabRow(
+                          selectedTabIndex =
+                              if (selectedTab ==
+                                  MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                                  0
+                              else 1,
+                          modifier = Modifier.fillMaxWidth()) {
+                            Tab(
+                                selected =
+                                    selectedTab ==
+                                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                                onClick = {
+                                  onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                                },
+                                text = { Text("Recent Activities") })
+                            Tab(
+                                selected =
+                                    selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                onClick = {
+                                  onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                },
+                                text = { Text("Joined Events") })
+                          }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+
+                      // Content based on selected tab
+                      when (selectedTab) {
+                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
+                          // We removed the previous duplicated recent-activities list and sample
+                          // items. If you want to show recent items later, pass them in and render
+                          // here; for now we display a friendly message indicating there are no
+                          // recent events.
+                          NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
+                        }
+                        MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                          JoinedEventsSection(
+                              events = joinedEvents, onEventClick = onJoinedEventClick)
+                        }
+                      }
+
+                      Spacer(modifier = Modifier.height(16.dp))
+
+                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+                      Spacer(modifier = Modifier.height(16.dp))
+
+                      // Dynamic tag selection
+                      if (topTags.isNotEmpty()) {
+                        TagsSection(
+                            topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
+                      }
+
+                      Spacer(modifier = Modifier.height(24.dp))
                     }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Content based on selected tab
-                when (selectedTab) {
-                  MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                    // We removed the previous duplicated recent-activities list and sample items.
-                    // If you want to show recent items later, pass them in and render here; for now
-                    // we display a friendly message indicating there are no recent events.
-                    NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
-                  }
-                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                    JoinedEventsSection(events = joinedEvents, onEventClick = onJoinedEventClick)
                   }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Dynamic tag selection
-                if (topTags.isNotEmpty()) {
-                  TagsSection(
-                      topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-              }
-            }
           }
         }
       }
