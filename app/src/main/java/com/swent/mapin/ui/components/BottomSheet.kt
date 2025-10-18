@@ -140,8 +140,10 @@ fun <T> BottomSheet(
             // Handle fling gestures
             val velocityY = available.y
 
-            // If flinging down (negative velocity) with significant speed, collapse
-            if (velocityY < -500f) {
+            // Only intercept strong downward flings while the sheet isn't already fully expanded
+            if (velocityY > 500f &&
+                currentHeight.value > config.collapsedHeight.value &&
+                currentHeight.value < config.fullHeight.value) {
               val currentHeightPx = currentHeight.value * density.density
               val collapsedPx = config.collapsedHeight.value * density.density
               val mediumPx = config.mediumHeight.value * density.density
