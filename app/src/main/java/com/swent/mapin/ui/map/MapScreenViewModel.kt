@@ -95,6 +95,10 @@ class MapScreenViewModel(
   private var _lastZoom by mutableFloatStateOf(0f)
   private var hideScaleBarJob: kotlinx.coroutines.Job? = null
 
+  // Track programmatic zooms to prevent sheet collapse during camera animations
+  private var isProgrammaticZoom by mutableStateOf(false)
+  private var programmaticZoomJob: kotlinx.coroutines.Job? = null
+
   enum class MapStyle {
     STANDARD,
     SATELLITE,
@@ -240,6 +244,8 @@ class MapScreenViewModel(
 
   fun checkZoomInteraction(currentZoom: Float): Boolean {
     if (!isInMediumMode) return false
+    // Don't collapse during programmatic zooms (e.g., when centering on an event)
+    if (isProgrammaticZoom) return false
 
     val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
     return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
@@ -498,6 +504,7 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
     hideScaleBarJob?.cancel()
+    programmaticZoomJob?.cancel()
   }
 
   private fun restorePreviousSheetState() {
@@ -524,7 +531,18 @@ class MapScreenViewModel(
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
+
+      // Mark as programmatic zoom to prevent sheet collapse during camera animation
+      isProgrammaticZoom = true
       onCenterCamera?.invoke(event, forceZoom)
+
+      // Clear the flag after animation completes (500ms animation + 600ms buffer)
+      programmaticZoomJob?.cancel()
+      programmaticZoomJob =
+          viewModelScope.launch {
+            kotlinx.coroutines.delay(1100)
+            isProgrammaticZoom = false
+          }
     }
   }
 
