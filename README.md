@@ -11,3 +11,5 @@ The core experience is simple:
 - **View everything on an interactive map**, combining past and upcoming activities  
 
 This way, students can not only discover and attend events, but also relive them afterwards through a collaborative map.  
+
+## Link of the Figma : https://www.figma.com/design/1O4tdBFh8A6mPBKelmKLjo/Map-In?version-id=2275690016325390039&node-id=238-48&p=f&t=2B8ru3yUVYpRWBZv-0
