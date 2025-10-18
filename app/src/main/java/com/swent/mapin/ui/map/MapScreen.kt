@@ -406,6 +406,10 @@ private fun MapLayers(
     // No clustering: used for heatmap mode or when a pin is selected
     PointAnnotationGroup(annotations = annotations) {
       markerBitmap?.let { iconImage = IconImage(it) }
+      iconAllowOverlap = false // Enable collision detection
+      textAllowOverlap = false // Enable collision detection for text
+      iconIgnorePlacement = false // Respect other symbols
+      textIgnorePlacement = false // Respect other symbols
       interactionsState.onClicked { annotation ->
         findEventForAnnotation(annotation, viewModel.events)?.let { event ->
           onEventClick(event)
@@ -417,6 +421,10 @@ private fun MapLayers(
     // With clustering: default behavior when no pin is selected
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
       markerBitmap?.let { iconImage = IconImage(it) }
+      iconAllowOverlap = false // Enable collision detection
+      textAllowOverlap = false // Enable collision detection for text
+      iconIgnorePlacement = false // Respect other symbols
+      textIgnorePlacement = false // Respect other symbols
       interactionsState
           .onClicked { annotation ->
             findEventForAnnotation(annotation, viewModel.events)?.let { event ->
@@ -660,6 +668,9 @@ private fun createEventAnnotations(
   return events.mapIndexed { index, event ->
     val isSelected = event.uid == selectedEventId
     val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
+    val sortKey =
+        if (isSelected) 0.0
+        else 100.0 // Selected pin gets LOWEST value for priority when allowOverlap=false
 
     PointAnnotationOptions()
         .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
@@ -674,6 +685,7 @@ private fun createEventAnnotations(
         .withTextHaloWidth(1.5)
         .withTextField(event.title)
         .withData(JsonPrimitive(index))
+        .withSymbolSortKey(sortKey) // Ensures selected pin is prioritized for visibility
   }
 }
 
