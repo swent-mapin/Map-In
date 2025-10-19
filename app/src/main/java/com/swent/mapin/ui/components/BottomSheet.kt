@@ -27,6 +27,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -89,94 +90,14 @@ fun <T> BottomSheet(
   // Nested scroll connection to handle scrolling in content
   val nestedScrollConnection =
       remember(density, config, currentHeight) {
-        object : NestedScrollConnection {
-          override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            // Only handle drag gestures (not flings)
-            if (source != NestedScrollSource.UserInput) return Offset.Zero
-
-            val delta = available.y
-            val currentHeightValue = currentHeight.value
-
-            // If sheet is not at full height, prioritize expanding the sheet
-            // over allowing content to scroll
-            if (currentHeightValue < config.fullHeight.value) {
-              // Always consume scroll to expand sheet when not full
-              scope.launch {
-                val newHeight = (currentHeightValue - delta / density.density)
-                val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-                val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
-                currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
-              }
-              // Consume the scroll so content doesn't scroll
-              return Offset(0f, delta)
-            }
-
-            return Offset.Zero
-          }
-
-          override fun onPostScroll(
-              consumed: Offset,
-              available: Offset,
-              source: NestedScrollSource
-          ): Offset {
-            // Only handle drag gestures (not flings)
-            if (source != NestedScrollSource.UserInput) return Offset.Zero
-
-            val delta = available.y
-            if (delta == 0f) return Offset.Zero
-
-            // If there's unconsumed scroll, apply it to the sheet
-            scope.launch {
-              val newHeight = (currentHeight.value - delta / density.density)
-              val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-              val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
-              currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
-            }
-
-            return Offset(0f, delta)
-          }
-
-          override suspend fun onPreFling(available: Velocity): Velocity {
-            // Handle fling gestures
-            val velocityY = available.y
-
-            // Only intercept strong downward flings while the sheet isn't already fully expanded
-            if (velocityY > 500f &&
-                currentHeight.value > config.collapsedHeight.value &&
-                currentHeight.value < config.fullHeight.value) {
-              val currentHeightPx = currentHeight.value * density.density
-              val collapsedPx = config.collapsedHeight.value * density.density
-              val mediumPx = config.mediumHeight.value * density.density
-              val fullPx = config.fullHeight.value * density.density
-
-              val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
-              onStateChange(targetState)
-
-              return Velocity(0f, velocityY) // Consume the fling
-            }
-
-            return Velocity.Zero
-          }
-
-          override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-            // After content finishes flinging, snap sheet to nearest state
-            val currentHeightPx = currentHeight.value * density.density
-            val collapsedPx = config.collapsedHeight.value * density.density
-            val mediumPx = config.mediumHeight.value * density.density
-            val fullPx = config.fullHeight.value * density.density
-
-            val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
-            val targetHeightValue = stateToHeight(targetState).value
-
-            onStateChange(targetState)
-
-            currentHeight.animateTo(
-                targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
-                animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
-
-            return available
-          }
-        }
+        createBottomSheetNestedScrollConnection(
+            density = density,
+            config = config,
+            currentHeight = currentHeight,
+            scope = scope,
+            calculateTargetState = calculateTargetState,
+            stateToHeight = stateToHeight,
+            onStateChange = onStateChange)
       }
 
   Surface(
@@ -231,4 +152,109 @@ fun <T> BottomSheet(
           content()
         }
       }
+}
+
+/**
+ * Creates a nested scroll connection for the bottom sheet that handles pre-scroll, post-scroll, and
+ * fling gestures to prioritize sheet expansion over content scrolling.
+ *
+ * This function is extracted for testability.
+ */
+fun <T> createBottomSheetNestedScrollConnection(
+    density: Density,
+    config: BottomSheetConfig,
+    currentHeight: Animatable<Float, *>,
+    scope: kotlinx.coroutines.CoroutineScope,
+    calculateTargetState: (Float, Float, Float, Float) -> T,
+    stateToHeight: (T) -> Dp,
+    onStateChange: (T) -> Unit
+): NestedScrollConnection {
+  return object : NestedScrollConnection {
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+      // Only handle drag gestures (not flings)
+      if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+      val delta = available.y
+      val currentHeightValue = currentHeight.value
+
+      // If sheet is not at full height, prioritize expanding the sheet
+      // over allowing content to scroll
+      if (currentHeightValue < config.fullHeight.value) {
+        // Always consume scroll to expand sheet when not full
+        scope.launch {
+          val newHeight = (currentHeightValue - delta / density.density)
+          val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
+          val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+          currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
+        }
+        // Consume the scroll so content doesn't scroll
+        return Offset(0f, delta)
+      }
+
+      return Offset.Zero
+    }
+
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource
+    ): Offset {
+      // Only handle drag gestures (not flings)
+      if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+      val delta = available.y
+      if (delta == 0f) return Offset.Zero
+
+      // If there's unconsumed scroll, apply it to the sheet
+      scope.launch {
+        val newHeight = (currentHeight.value - delta / density.density)
+        val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
+        val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+        currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
+      }
+
+      return Offset(0f, delta)
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+      // Handle fling gestures
+      val velocityY = available.y
+
+      // Only intercept strong downward flings while the sheet isn't already fully expanded
+      if (velocityY > 500f &&
+          currentHeight.value > config.collapsedHeight.value &&
+          currentHeight.value < config.fullHeight.value) {
+        val currentHeightPx = currentHeight.value * density.density
+        val collapsedPx = config.collapsedHeight.value * density.density
+        val mediumPx = config.mediumHeight.value * density.density
+        val fullPx = config.fullHeight.value * density.density
+
+        val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
+        onStateChange(targetState)
+
+        return Velocity(0f, velocityY) // Consume the fling
+      }
+
+      return Velocity.Zero
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+      // After content finishes flinging, snap sheet to nearest state
+      val currentHeightPx = currentHeight.value * density.density
+      val collapsedPx = config.collapsedHeight.value * density.density
+      val mediumPx = config.mediumHeight.value * density.density
+      val fullPx = config.fullHeight.value * density.density
+
+      val targetState = calculateTargetState(currentHeightPx, collapsedPx, mediumPx, fullPx)
+      val targetHeightValue = stateToHeight(targetState).value
+
+      onStateChange(targetState)
+
+      currentHeight.animateTo(
+          targetValue = targetHeightValue.coerceAtMost(config.fullHeight.value),
+          animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f))
+
+      return available
+    }
+  }
 }

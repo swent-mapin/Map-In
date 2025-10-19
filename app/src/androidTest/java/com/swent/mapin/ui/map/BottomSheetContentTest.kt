@@ -460,4 +460,69 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
   }
+
+  @Composable
+  private fun TestContentWithSearch(
+      query: String = "",
+      searchResults: List<Event> = emptyList(),
+      isSearchMode: Boolean = false
+  ) {
+    MaterialTheme {
+      var searchQuery by remember { mutableStateOf(query) }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = searchQuery,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { searchQuery = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false },
+                  onClear = {}),
+          searchResults = searchResults,
+          isSearchMode = isSearchMode)
+    }
+  }
+
+  @Test
+  fun noResultsMessage_displaysInSearchModeWithEmptyResultsAndBlankQuery() {
+    rule.setContent {
+      TestContentWithSearch(query = "", searchResults = emptyList(), isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No events available yet.").assertIsDisplayed()
+    rule.onNodeWithText("Try again once events are added.").assertIsDisplayed()
+  }
+
+  @Test
+  fun noResultsMessage_displaysInSearchModeWithEmptyResultsAndQuery() {
+    rule.setContent {
+      TestContentWithSearch(query = "concert", searchResults = emptyList(), isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No results found").assertIsDisplayed()
+    rule.onNodeWithText("Try a different keyword or check the spelling.").assertIsDisplayed()
+  }
+
+  @Test
+  fun noResultsMessage_doesNotDisplayWhenSearchResultsExist() {
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    rule.setContent {
+      TestContentWithSearch(query = "test", searchResults = testEvents, isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No events available yet.").assertDoesNotExist()
+    rule.onNodeWithText("No results found").assertDoesNotExist()
+    // Should display the event instead
+    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+  }
 }

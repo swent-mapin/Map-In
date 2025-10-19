@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,25 +74,7 @@ fun EventDetailSheet(
       BottomSheetState.COLLAPSED ->
           CollapsedEventContent(event = event, onShare = onShare, onClose = onClose)
       BottomSheetState.MEDIUM -> {
-        // Header with close and share buttons
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share event",
-                    tint = MaterialTheme.colorScheme.primary)
-              }
-
-              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
-            }
+        EventDetailHeader(onShare = onShare, onClose = onClose)
         MediumEventContent(
             event = event,
             isParticipating = isParticipating,
@@ -98,25 +82,7 @@ fun EventDetailSheet(
             onUnregisterEvent = onUnregisterEvent)
       }
       BottomSheetState.FULL -> {
-        // Header with close and share buttons
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share event",
-                    tint = MaterialTheme.colorScheme.primary)
-              }
-
-              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
-            }
+        EventDetailHeader(onShare = onShare, onClose = onClose)
         FullEventContent(
             event = event,
             isParticipating = isParticipating,
@@ -129,7 +95,31 @@ fun EventDetailSheet(
   }
 }
 
+/** Header with share and close buttons used in MEDIUM and FULL states */
+@Composable
+private fun EventDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
+          Icon(
+              imageVector = Icons.Default.Share,
+              contentDescription = "Share event",
+              tint = MaterialTheme.colorScheme.primary)
+        }
+
+        IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
+          Icon(
+              imageVector = Icons.Default.Close,
+              contentDescription = "Close",
+              tint = MaterialTheme.colorScheme.onSurface)
+        }
+      }
+}
+
 /** Collapsed state: Shows only title and category/tag */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CollapsedEventContent(
     event: Event,
@@ -157,8 +147,7 @@ private fun CollapsedEventContent(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("eventTitleCollapsed"))
+                    modifier = Modifier.basicMarquee().testTag("eventTitleCollapsed"))
 
                 if (event.tags.isNotEmpty()) {
                   Spacer(modifier = Modifier.height(4.dp))
