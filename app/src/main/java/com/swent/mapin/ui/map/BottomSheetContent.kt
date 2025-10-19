@@ -180,6 +180,7 @@ fun BottomSheetContent(
                 value = searchBarState.query,
                 onValueChange = searchBarState.onQueryChange,
                 isFull = isFull,
+                isSearchMode = isSearchMode,
                 onTap = searchBarState.onTap,
                 focusRequester = focusRequester,
                 onSearchAction = { focusManager.clearFocus() },
@@ -419,6 +420,7 @@ private fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
     isFull: Boolean,
+    isSearchMode: Boolean,
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
@@ -427,7 +429,8 @@ private fun SearchBar(
     modifier: Modifier = Modifier
 ) {
   var isFocused by remember { mutableStateOf(false) }
-  val profileVisible = !isFocused
+  // Keep the profile shortcut hidden whenever the search sheet is active
+  val profileVisible = !isFocused && !isSearchMode
   val fieldHeight = TextFieldDefaults.MinHeight
 
   Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
