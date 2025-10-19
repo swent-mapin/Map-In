@@ -231,26 +231,7 @@ private fun MediumEventContent(
     }
 
     // Attendee count and capacity
-    val attendees = event.participantIds.size
-    val spotsLeft = event.capacity?.let { it - attendees }
-
-    if (event.capacity != null && spotsLeft != null && spotsLeft > 0) {
-      Column {
-        Text(
-            text = "$attendees attending",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.testTag("attendeeCount"))
-        Text(
-            text = "$spotsLeft spots left",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.testTag("capacityInfo"))
-      }
-    } else {
-      Text(
-          text = "$attendees attending",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.testTag("attendeeCount"))
-    }
+    AttendeeInfo(event = event, testTagSuffix = "")
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -264,7 +245,7 @@ private fun MediumEventContent(
             Text("Unregister")
           }
     } else {
-      val isFull = event.capacity?.let { attendees >= it } ?: false
+      val isFull = event.capacity?.let { it <= event.participantIds.size } ?: false
       Button(
           onClick = onJoinEvent,
           modifier = Modifier.fillMaxWidth().testTag("joinEventButton"),
@@ -290,8 +271,6 @@ private fun FullEventContent(
     modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
-  val attendees = event.participantIds.size
-  val spotsLeft = event.capacity?.let { it - attendees }
 
   Column(
       modifier =
@@ -383,23 +362,7 @@ private fun FullEventContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Attendee count and capacity
-        if (event.capacity != null && spotsLeft != null && spotsLeft > 0) {
-          Column {
-            Text(
-                text = "$attendees attending",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag("attendeeCountFull"))
-            Text(
-                text = "$spotsLeft spots left",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag("capacityInfoFull"))
-          }
-        } else {
-          Text(
-              text = "$attendees attending",
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.testTag("attendeeCountFull"))
-        }
+        AttendeeInfo(event = event, testTagSuffix = "Full")
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -428,7 +391,7 @@ private fun FullEventContent(
                 Text("Unregister")
               }
         } else {
-          val isFull = event.capacity?.let { attendees >= it } ?: false
+          val isFull = event.capacity?.let { it <= event.participantIds.size } ?: false
           Button(
               onClick = onJoinEvent,
               modifier = Modifier.fillMaxWidth().testTag("joinEventButtonFull"),
@@ -446,4 +409,29 @@ private fun FullEventContent(
               Text("Save for Later")
             }
       }
+}
+
+/** Reusable attendee count and capacity display */
+@Composable
+private fun AttendeeInfo(event: Event, testTagSuffix: String) {
+  val attendees = event.participantIds.size
+  val spotsLeft = event.capacity?.let { it - attendees }
+
+  if (event.capacity != null && spotsLeft != null && spotsLeft > 0) {
+    Column {
+      Text(
+          text = "$attendees attending",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
+      Text(
+          text = "$spotsLeft spots left",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
+    }
+  } else {
+    Text(
+        text = "$attendees attending",
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
+  }
 }
