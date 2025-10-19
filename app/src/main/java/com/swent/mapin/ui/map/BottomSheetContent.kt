@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -299,7 +300,7 @@ private fun SearchResultsSection(
     return
   }
 
-  val heading = if (query.isBlank()) "All events" else "Results for \"$query\""
+  val heading = remember(query) { buildSearchHeading(query) }
 
   LazyColumn(
       modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -321,28 +322,33 @@ private fun SearchResultsSection(
       }
 }
 
+@VisibleForTesting internal data class NoResultsCopy(val title: String, val subtitle: String)
+
+@VisibleForTesting
+internal fun buildNoResultsCopy(query: String): NoResultsCopy {
+  return if (query.isBlank()) {
+    NoResultsCopy(title = "No events available yet.", subtitle = "Try again once events are added.")
+  } else {
+    NoResultsCopy(
+        title = "No results found", subtitle = "Try a different keyword or check the spelling.")
+  }
+}
+
+@VisibleForTesting
+internal fun buildSearchHeading(query: String): String {
+  return if (query.isBlank()) "All events" else "Results for \"$query\""
+}
+
 @Composable
 private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
-  val message =
-      if (query.isBlank()) {
-        "No events available yet."
-      } else {
-        "No results found"
-      }
-
-  val subtitle =
-      if (query.isBlank()) {
-        "Try again once events are added."
-      } else {
-        "Try a different keyword or check the spelling."
-      }
+  val copy = remember(query) { buildNoResultsCopy(query) }
 
   Box(modifier = modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      Text(text = message, style = MaterialTheme.typography.titleMedium)
+      Text(text = copy.title, style = MaterialTheme.typography.titleMedium)
       Spacer(modifier = Modifier.height(8.dp))
       Text(
-          text = subtitle,
+          text = copy.subtitle,
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center)

@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -235,8 +237,12 @@ private fun MediumEventContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Join/Unregister button
-    if (isParticipating) {
+    val joinButtonUi =
+        remember(event.participantIds, event.capacity, isParticipating) {
+          resolveJoinButtonUi(event, isParticipating)
+        }
+
+    if (!joinButtonUi.showJoinButton) {
       OutlinedButton(
           onClick = onUnregisterEvent,
           modifier = Modifier.fillMaxWidth().testTag("unregisterButton"),
@@ -245,12 +251,11 @@ private fun MediumEventContent(
             Text("Unregister")
           }
     } else {
-      val isFull = event.capacity?.let { it <= event.participantIds.size } ?: false
       Button(
           onClick = onJoinEvent,
           modifier = Modifier.fillMaxWidth().testTag("joinEventButton"),
-          enabled = !isFull) {
-            Text(if (isFull) "Event is full" else "Join Event")
+          enabled = joinButtonUi.enabled) {
+            Text(joinButtonUi.label)
           }
     }
   }
@@ -380,8 +385,12 @@ private fun FullEventContent(
           Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Action buttons
-        if (isParticipating) {
+        val joinButtonUi =
+            remember(event.participantIds, event.capacity, isParticipating) {
+              resolveJoinButtonUi(event, isParticipating)
+            }
+
+        if (!joinButtonUi.showJoinButton) {
           OutlinedButton(
               onClick = onUnregisterEvent,
               modifier = Modifier.fillMaxWidth().testTag("unregisterButtonFull"),
@@ -391,12 +400,11 @@ private fun FullEventContent(
                 Text("Unregister")
               }
         } else {
-          val isFull = event.capacity?.let { it <= event.participantIds.size } ?: false
           Button(
               onClick = onJoinEvent,
               modifier = Modifier.fillMaxWidth().testTag("joinEventButtonFull"),
-              enabled = !isFull) {
-                Text(if (isFull) "Event is full" else "Join Event")
+              enabled = joinButtonUi.enabled) {
+                Text(joinButtonUi.label)
               }
         }
 
@@ -411,27 +419,52 @@ private fun FullEventContent(
       }
 }
 
+@VisibleForTesting
+internal data class JoinButtonUi(
+    val showJoinButton: Boolean,
+    val label: String,
+    val enabled: Boolean
+)
+
+@VisibleForTesting
+internal fun resolveJoinButtonUi(event: Event, isParticipating: Boolean): JoinButtonUi {
+  if (isParticipating) {
+    return JoinButtonUi(showJoinButton = false, label = "", enabled = false)
+  }
+
+  val isFull = event.capacity?.let { capacity -> capacity <= event.participantIds.size } ?: false
+  val label = if (isFull) "Event is full" else "Join Event"
+  return JoinButtonUi(showJoinButton = true, label = label, enabled = !isFull)
+}
+
+@VisibleForTesting
+internal data class AttendeeInfoUi(val attendeeText: String, val capacityText: String?)
+
+@VisibleForTesting
+internal fun buildAttendeeInfoUi(event: Event): AttendeeInfoUi {
+  val attendees = event.participantIds.size
+  val spotsLeft = event.capacity?.let { capacity -> capacity - attendees }
+  val attendeeText = "$attendees attending"
+  val capacityText = spotsLeft?.takeIf { it > 0 }?.let { "$it spots left" }
+  return AttendeeInfoUi(attendeeText = attendeeText, capacityText = capacityText)
+}
+
 /** Reusable attendee count and capacity display */
 @Composable
 private fun AttendeeInfo(event: Event, testTagSuffix: String) {
-  val attendees = event.participantIds.size
-  val spotsLeft = event.capacity?.let { it - attendees }
+  val attendeeInfo = remember(event.participantIds, event.capacity) { buildAttendeeInfoUi(event) }
 
-  if (event.capacity != null && spotsLeft != null && spotsLeft > 0) {
-    Column {
+  Column {
+    Text(
+        text = attendeeInfo.attendeeText,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
+
+    attendeeInfo.capacityText?.let {
       Text(
-          text = "$attendees attending",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
-      Text(
-          text = "$spotsLeft spots left",
+          text = it,
           style = MaterialTheme.typography.bodyMedium,
           modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
     }
-  } else {
-    Text(
-        text = "$attendees attending",
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
   }
 }

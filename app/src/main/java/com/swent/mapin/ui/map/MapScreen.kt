@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.annotation.DrawableRes
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -621,7 +622,8 @@ private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
  * @property haloColorInt Halo color for text outline (ARGB integer)
  * @property markerBitmap Optional bitmap for the marker icon
  */
-private data class AnnotationStyle(
+@VisibleForTesting
+internal data class AnnotationStyle(
     val textColorInt: Int,
     val haloColorInt: Int,
     val markerBitmap: Bitmap?
@@ -634,7 +636,8 @@ private data class AnnotationStyle(
  * @param markerBitmap Optional bitmap for marker icon
  * @return AnnotationStyle with theme-appropriate colors
  */
-private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
+@VisibleForTesting
+internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
   val textColor = if (isDarkTheme) Color.White else Color.Black
   val haloColor =
       if (isDarkTheme) {
@@ -660,36 +663,58 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
  * @param selectedEventId UID of the currently selected event (if any)
  * @return List of configured PointAnnotationOptions
  */
-private fun createEventAnnotations(
+@VisibleForTesting
+internal data class AnnotationVisualParameters(
+    val iconSize: Double,
+    val textSize: Double,
+    val textOffset: List<Double>,
+    val textHaloWidth: Double,
+    val sortKey: Double
+)
+
+@VisibleForTesting
+internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationVisualParameters {
+  return if (isSelected) {
+    AnnotationVisualParameters(
+        iconSize = 1.5,
+        textSize = 15.0,
+        textOffset = listOf(0.0, 0.5),
+        textHaloWidth = 2.0,
+        sortKey = 0.0)
+  } else {
+    AnnotationVisualParameters(
+        iconSize = 1.0,
+        textSize = 12.0,
+        textOffset = listOf(0.0, 0.2),
+        textHaloWidth = 1.5,
+        sortKey = 100.0)
+  }
+}
+
+@VisibleForTesting
+internal fun createEventAnnotations(
     events: List<Event>,
     style: AnnotationStyle,
     selectedEventId: String? = null
 ): List<PointAnnotationOptions> {
   return events.mapIndexed { index, event ->
     val isSelected = event.uid == selectedEventId
-    val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
-    val textSize = if (isSelected) 15.0 else 12.0 // Larger text for selected
-    val textOffset =
-        if (isSelected) listOf(0.0, 0.5) else listOf(0.0, 0.2) // Closer to icon when not selected
-    val textHaloWidth = if (isSelected) 2.0 else 1.5 // Stronger halo for selected
-    val sortKey =
-        if (isSelected) 0.0
-        else 100.0 // Selected pin gets LOWEST value for priority when allowOverlap=false
+    val visual = computeAnnotationVisualParameters(isSelected)
 
     PointAnnotationOptions()
         .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
         .apply { style.markerBitmap?.let { withIconImage(it) } }
-        .withIconSize(iconSize)
+        .withIconSize(visual.iconSize)
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(textOffset)
-        .withTextSize(textSize)
+        .withTextOffset(visual.textOffset)
+        .withTextSize(visual.textSize)
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(textHaloWidth)
+        .withTextHaloWidth(visual.textHaloWidth)
         .withTextField(event.title)
         .withData(JsonPrimitive(index))
-        .withSymbolSortKey(sortKey) // Ensures selected pin is prioritized for visibility
+        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
   }
 }
 
@@ -700,7 +725,8 @@ private fun createEventAnnotations(
  *
  * @return AnnotationConfig with clustering enabled
  */
-private fun createClusterConfig(): AnnotationConfig {
+@VisibleForTesting
+internal fun createClusterConfig(): AnnotationConfig {
   val clusterColorLevels =
       listOf(
           0 to Color(0xFF64B5F6).toArgb(),
@@ -727,7 +753,8 @@ private fun createClusterConfig(): AnnotationConfig {
  * @param events List of all events
  * @return Matching Event or null if not found
  */
-private fun findEventForAnnotation(
+@VisibleForTesting
+internal fun findEventForAnnotation(
     annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
     events: List<Event>
 ): Event? {
