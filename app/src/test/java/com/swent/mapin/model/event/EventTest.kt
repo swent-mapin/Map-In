@@ -28,7 +28,7 @@ class EventTest {
             ownerId = "owner123",
             imageUrl = "https://example.com/image.jpg",
             capacity = 100,
-            attendeeCount = 50)
+            participantIds = List(50) { "user$it" })
 
     assertEquals("event123", event.uid)
     assertEquals("Test Event", event.title)
@@ -43,7 +43,7 @@ class EventTest {
     assertEquals("owner123", event.ownerId)
     assertEquals("https://example.com/image.jpg", event.imageUrl)
     assertEquals(100, event.capacity)
-    assertEquals(50, event.attendeeCount)
+    assertEquals(50, event.participantIds.size)
   }
 
   @Test
@@ -63,7 +63,7 @@ class EventTest {
     assertEquals("", event.ownerId)
     assertNull(event.imageUrl)
     assertNull(event.capacity)
-    assertEquals(0, event.attendeeCount)
+    assertEquals(0, event.participantIds.size)
   }
 
   @Test
@@ -174,25 +174,31 @@ class EventTest {
   }
 
   @Test
-  fun event_withZeroAttendeeCount() {
-    val event = Event(uid = "event707", title = "No Attendees", attendeeCount = 0)
+  fun event_withZeroParticipantCount() {
+    val event = Event(uid = "event707", title = "No Attendees", participantIds = emptyList())
 
-    assertEquals(0, event.attendeeCount)
+    assertEquals(0, event.participantIds.size)
   }
 
   @Test
-  fun event_withLargeAttendeeCount() {
-    val event = Event(uid = "event808", title = "Big Event", attendeeCount = 10000)
+  fun event_withLargeParticipantCount() {
+    val event =
+        Event(uid = "event808", title = "Big Event", participantIds = List(10000) { "user$it" })
 
-    assertEquals(10000, event.attendeeCount)
+    assertEquals(10000, event.participantIds.size)
   }
 
   @Test
   fun event_withCapacity() {
-    val event = Event(uid = "event909", title = "Limited Event", capacity = 50, attendeeCount = 30)
+    val event =
+        Event(
+            uid = "event909",
+            title = "Limited Event",
+            capacity = 50,
+            participantIds = List(30) { "user$it" })
 
     assertEquals(50, event.capacity)
-    assertEquals(30, event.attendeeCount)
+    assertEquals(30, event.participantIds.size)
   }
 
   @Test
@@ -265,7 +271,7 @@ class EventTest {
             ownerId = "owner555",
             imageUrl = "https://example.com/image.jpg",
             capacity = 100,
-            attendeeCount = 50)
+            participantIds = List(50) { "user$it" })
 
     val modified = original.copy(title = "Modified")
 
@@ -280,7 +286,7 @@ class EventTest {
     assertEquals("owner555", modified.ownerId)
     assertEquals("https://example.com/image.jpg", modified.imageUrl)
     assertEquals(100, modified.capacity)
-    assertEquals(50, modified.attendeeCount)
+    assertEquals(50, modified.participantIds.size)
   }
 
   @Test

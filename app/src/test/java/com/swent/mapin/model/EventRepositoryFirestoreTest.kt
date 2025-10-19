@@ -104,8 +104,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 50,
-            attendeeCount = 0)
+            capacity = 50)
 
     val snap: DocumentSnapshot = mock()
     whenever(snap.id).thenReturn("E1")
@@ -140,8 +139,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "o",
             imageUrl = null,
-            capacity = 10,
-            attendeeCount = 1)
+            capacity = 10)
     val goodDoc = doc("GOOD", valid)
 
     // Simulate a doc that throws during toObject -> documentToEvent returns null
@@ -176,8 +174,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "a",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
     val e2 =
         Event(
             uid = "",
@@ -190,8 +187,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "b",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
     val e3 =
         Event(
             uid = "",
@@ -204,8 +200,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "c",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
 
     val snap = qs(doc("1", e1), doc("2", e2), doc("3", e3))
 
@@ -232,8 +227,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "o",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
 
     repo.addEvent(input)
 
@@ -260,8 +254,7 @@ class EventRepositoryFirestoreTest {
             public = false,
             ownerId = "o",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 2)
+            capacity = 5)
 
     repo.editEvent("E1", updated)
 
@@ -295,7 +288,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner1",
             imageUrl = null,
             capacity = 50,
-            attendeeCount = 2,
             participantIds = listOf("user1", "user2"))
 
     val e2 =
@@ -311,7 +303,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner2",
             imageUrl = null,
             capacity = 30,
-            attendeeCount = 1,
             participantIds = listOf("user1", "user3"))
 
     val snap = qs(doc("E1", e1), doc("E2", e2))
@@ -344,7 +335,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner123",
             imageUrl = null,
             capacity = 10,
-            attendeeCount = 0,
             participantIds = listOf("user1", "user2"))
 
     repo.addEvent(input)
@@ -376,7 +366,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner123",
             imageUrl = null,
             capacity = 10,
-            attendeeCount = 0,
             participantIds = listOf("user1", "owner123", "user2"))
 
     repo.addEvent(input)
@@ -402,8 +391,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 10,
-            attendeeCount = 1)
+            capacity = 10)
     val snap = qs(doc("E1", e))
     whenever(collection.orderBy("date")).thenReturn(query)
     whenever(query.get()).thenReturn(taskOf(snap))
@@ -430,8 +418,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 0)
+            capacity = 5)
     val snap = qs(doc("E1", e1))
 
     whenever(collection.whereGreaterThanOrEqualTo(eq("date"), eq(start))).thenReturn(query)
@@ -458,8 +445,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner1",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 0)
+            capacity = 5)
     val snap = qs(doc("E1", e1))
 
     whenever(collection.whereEqualTo(eq("ownerId"), eq("owner1"))).thenReturn(query)

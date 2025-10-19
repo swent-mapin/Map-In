@@ -200,6 +200,16 @@ class UserProfileEndToEndTest {
     // ============================================
     // STEP 2: Navigate to profile screen
     // ============================================
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
@@ -320,6 +330,16 @@ class UserProfileEndToEndTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
@@ -389,6 +409,16 @@ class UserProfileEndToEndTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
@@ -430,6 +460,20 @@ class UserProfileEndToEndTest {
 
     // Verify we're on map screen
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+
+    // Swipe up on bottom sheet to reveal profile button
+    composeTestRule.onNodeWithTag("bottomSheet", useUnmergedTree = true).performTouchInput {
+      swipeUp()
+    }
+    composeTestRule.waitForIdle()
+
+    // Wait for profile button to appear
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileButton", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Navigate back to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()

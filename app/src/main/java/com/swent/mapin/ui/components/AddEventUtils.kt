@@ -94,8 +94,7 @@ fun saveEvent(
           public = isPublic,
           ownerId = uid,
           imageUrl = null,
-          capacity = null,
-          attendeeCount = ATTENDEES_DEFAULT)
+          capacity = null)
   viewModel.addEvent(newEvent)
   onDone()
 }

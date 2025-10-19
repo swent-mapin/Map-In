@@ -37,8 +37,7 @@ class MemoryFormScreenTest {
               public = true,
               ownerId = "user1",
               imageUrl = null,
-              capacity = 50,
-              attendeeCount = 10),
+              capacity = 50),
           Event(
               uid = "2",
               title = "Mountain Hike",
@@ -50,8 +49,7 @@ class MemoryFormScreenTest {
               public = true,
               ownerId = "user2",
               imageUrl = null,
-              capacity = 20,
-              attendeeCount = 5))
+              capacity = 20))
 
   @Test
   fun memoryForm_rendersSuccessfully() {
