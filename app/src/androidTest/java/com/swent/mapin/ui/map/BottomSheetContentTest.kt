@@ -71,7 +71,6 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").assertIsDisplayed()
     rule.onNodeWithText("Create Event").assertIsDisplayed()
-    rule.onNodeWithText("Profile").assertIsDisplayed()
   }
 
   @Test
@@ -117,13 +116,13 @@ class BottomSheetContentTest {
 
   @Test
   fun buttons_areClickable() {
+    // Test Quick Action buttons in FULL state
     rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
 
     rule.waitForIdle()
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Create Event").assertHasClickAction()
-    rule.onNodeWithText("Profile").assertHasClickAction()
   }
 
   @Test

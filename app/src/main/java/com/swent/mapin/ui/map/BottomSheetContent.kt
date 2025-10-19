@@ -1,6 +1,11 @@
 package com.swent.mapin.ui.map
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -99,7 +107,7 @@ data class SearchBarState(
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
  * @param onJoinedEventClick Callback when a joined event is clicked
- * @param onProfileClick Callback when "Profile" button is clicked
+ * @param onProfileClick Callback when the profile icon is tapped
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -175,7 +183,8 @@ fun BottomSheetContent(
                 onTap = searchBarState.onTap,
                 focusRequester = focusRequester,
                 onSearchAction = { focusManager.clearFocus() },
-                onClear = searchBarState.onClear)
+                onClear = searchBarState.onClear,
+                onProfileClick = onProfileClick)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -206,9 +215,7 @@ fun BottomSheetContent(
                         else Modifier.fillMaxWidth()
 
                     Column(modifier = contentModifier) {
-                      QuickActionsSection(
-                          onCreateMemoryClick = onCreateMemoryClick,
-                          onProfileClick = onProfileClick)
+                      QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
                       Spacer(modifier = Modifier.height(16.dp))
 
@@ -416,49 +423,100 @@ private fun SearchBar(
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
     onClear: () -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   var isFocused by remember { mutableStateOf(false) }
+  val profileVisible = !isFocused
+  val fieldHeight = TextFieldDefaults.MinHeight
 
-  TextField(
-      value = value,
-      onValueChange = onValueChange,
-      placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
-      modifier =
-          modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { focusState ->
-            isFocused = focusState.isFocused
-            if (focusState.isFocused) {
-              onTap()
-            }
-          },
-      singleLine = true,
-      textStyle = MaterialTheme.typography.bodyLarge,
-      trailingIcon = {
-        if (isFocused) {
-          IconButton(onClick = onClear) {
-            Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear search")
-          }
+  Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
+        modifier =
+            Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
+                focusState ->
+              val nowFocused = focusState.isFocused
+              if (nowFocused && !isFocused) {
+                onTap()
+              }
+              isFocused = nowFocused
+            },
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        trailingIcon = {
+          AnimatedVisibility(
+              visible = isFocused || value.isNotEmpty(),
+              enter =
+                  fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)),
+              exit =
+                  fadeOut(
+                      animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing))) {
+                IconButton(onClick = onClear) {
+                  Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear search")
+                }
+              }
+        },
+        shape = RoundedCornerShape(16.dp),
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                unfocusedContainerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
+
+    val profileSlotWidth by
+        animateDpAsState(
+            targetValue = if (profileVisible) fieldHeight else 0.dp,
+            animationSpec =
+                tween(
+                    durationMillis = if (profileVisible) 220 else 180,
+                    easing = FastOutSlowInEasing),
+            label = "profileWidth")
+
+    val profileAlpha by
+        animateFloatAsState(
+            targetValue = if (profileVisible) 1f else 0f,
+            animationSpec =
+                tween(
+                    durationMillis = if (profileVisible) 220 else 180,
+                    easing = FastOutSlowInEasing),
+            label = "profileFade")
+
+    val slotPadding = if (profileSlotWidth > 0.dp) 12.dp else 0.dp
+
+    Box(
+        modifier =
+            Modifier.padding(start = slotPadding).height(fieldHeight).width(profileSlotWidth),
+        contentAlignment = Alignment.Center) {
+          Surface(
+              modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+              shape = RoundedCornerShape(16.dp)) {
+                IconButton(
+                    onClick = onProfileClick,
+                    enabled = profileVisible,
+                    modifier = Modifier.fillMaxSize()) {
+                      Icon(
+                          imageVector = Icons.Outlined.AccountCircle,
+                          contentDescription = "Profile",
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
+              }
         }
-      },
-      shape = RoundedCornerShape(16.dp),
-      colors =
-          TextFieldDefaults.colors(
-              focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-              unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              disabledIndicatorColor = Color.Transparent),
-      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-      keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
+  }
 }
 
-/** Row of quick action buttons (Create Memory, Create Event, Profile). */
+/** Row of quick action buttons (Create Memory, Create Event). */
 @Composable
-private fun QuickActionsSection(
-    modifier: Modifier = Modifier,
-    onCreateMemoryClick: () -> Unit,
-    onProfileClick: () -> Unit = {}
-) {
+private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
   val focusManager = LocalFocusManager.current
   val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
@@ -477,10 +535,6 @@ private fun QuickActionsSection(
             focusManager.clearFocus()
             showDialog.value = true
           })
-      QuickActionButton(
-          text = "Profile",
-          modifier = Modifier.weight(1f).testTag("profileButton"),
-          onClick = onProfileClick)
     }
   }
   if (showDialog.value) {
