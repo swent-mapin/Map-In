@@ -61,7 +61,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-const val ATTENDEES_DEFAULT = 1
 const val LONGITUDE_DEFAULT = 0.0
 const val LATITUDE_DEFAULT = 0.0
 

@@ -15,8 +15,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.LocalEventRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -71,7 +71,6 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").assertIsDisplayed()
     rule.onNodeWithText("Create Event").assertIsDisplayed()
-    rule.onNodeWithText("Filters").assertIsDisplayed()
   }
 
   @Test
@@ -117,13 +116,13 @@ class BottomSheetContentTest {
 
   @Test
   fun buttons_areClickable() {
+    // Test Quick Action buttons in FULL state
     rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = false) }
 
     rule.waitForIdle()
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Create Event").assertHasClickAction()
-    rule.onNodeWithText("Filters").assertHasClickAction()
   }
 
   @Test
@@ -172,7 +171,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(3)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
@@ -186,7 +185,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_handlesEventInteractions() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(1)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -206,7 +205,7 @@ class BottomSheetContentTest {
   fun joinedEventsTab_handlesEdgeCases() {
     // Test event with null date
     val eventWithNullDate =
-        SampleEventRepository.getSampleEvents()[0].copy(date = null)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(date = null)
 
     rule.setContent { JoinedEventsContent(events = listOf(eventWithNullDate)) }
     rule.waitForIdle()
@@ -219,7 +218,7 @@ class BottomSheetContentTest {
 
   @Test
   fun tabSwitch_betweenRecentActivitiesAndJoinedEvents() {
-    val testEvents = SampleEventRepository.getSampleEvents().take(1)
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
     var currentTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES
 
     rule.setContent {
@@ -460,5 +459,70 @@ class BottomSheetContentTest {
     // Scroll to make tags visible on smaller screens
     rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
+  }
+
+  @Composable
+  private fun TestContentWithSearch(
+      query: String = "",
+      searchResults: List<Event> = emptyList(),
+      isSearchMode: Boolean = false
+  ) {
+    MaterialTheme {
+      var searchQuery by remember { mutableStateOf(query) }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = searchQuery,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { searchQuery = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false },
+                  onClear = {}),
+          searchResults = searchResults,
+          isSearchMode = isSearchMode)
+    }
+  }
+
+  @Test
+  fun noResultsMessage_displaysInSearchModeWithEmptyResultsAndBlankQuery() {
+    rule.setContent {
+      TestContentWithSearch(query = "", searchResults = emptyList(), isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No events available yet.").assertIsDisplayed()
+    rule.onNodeWithText("Try again once events are added.").assertIsDisplayed()
+  }
+
+  @Test
+  fun noResultsMessage_displaysInSearchModeWithEmptyResultsAndQuery() {
+    rule.setContent {
+      TestContentWithSearch(query = "concert", searchResults = emptyList(), isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No results found").assertIsDisplayed()
+    rule.onNodeWithText("Try a different keyword or check the spelling.").assertIsDisplayed()
+  }
+
+  @Test
+  fun noResultsMessage_doesNotDisplayWhenSearchResultsExist() {
+    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    rule.setContent {
+      TestContentWithSearch(query = "test", searchResults = testEvents, isSearchMode = true)
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithText("No events available yet.").assertDoesNotExist()
+    rule.onNodeWithText("No results found").assertDoesNotExist()
+    // Should display the event instead
+    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
   }
 }

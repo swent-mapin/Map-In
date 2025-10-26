@@ -488,12 +488,12 @@ class MapScreenViewModelTest {
                 uid = "event1",
                 title = "Event 1",
                 location = com.swent.mapin.model.Location("Location 1", 46.5, 6.5),
-                attendeeCount = 10),
+                participantIds = List(10) { "user$it" }),
             com.swent.mapin.model.event.Event(
                 uid = "event2",
                 title = "Event 2",
                 location = com.swent.mapin.model.Location("Location 2", 47.0, 7.0),
-                attendeeCount = 25))
+                participantIds = List(25) { "user$it" }))
 
     val geoJson = eventsToGeoJson(events)
 
@@ -646,7 +646,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun events_initiallyContainsAllSampleEvents() {
-    val sampleEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents()
+    val sampleEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()
     assertEquals(sampleEvents.size, viewModel.events.size)
   }
 
@@ -662,9 +662,9 @@ class MapScreenViewModelTest {
 
   @Test
   fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { cameraCentered = true }
+    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
 
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
@@ -678,7 +678,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun closeEventDetail_clearsSelectedEventAndReturnsToCollapsed() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
@@ -703,14 +703,14 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.isUserParticipating())
 
     val notParticipatingEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
             participantIds = listOf("otherUser"))
     viewModel.onEventPinClicked(notParticipatingEvent)
     advanceUntilIdle()
     assertFalse(viewModel.isUserParticipating())
 
     val participatingEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
             participantIds = listOf("testUserId", "otherUser"))
     viewModel.onEventPinClicked(participatingEvent)
     advanceUntilIdle()
@@ -724,7 +724,7 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
 
     whenever(mockAuth.currentUser).thenReturn(null)
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
     viewModel.joinEvent()
@@ -734,7 +734,7 @@ class MapScreenViewModelTest {
     viewModel.clearError()
     whenever(mockAuth.currentUser).thenReturn(mockUser)
 
-    val fullEvent = testEvent.copy(attendeeCount = 10, capacity = 10)
+    val fullEvent = testEvent.copy(participantIds = List(10) { "user$it" }, capacity = 10)
     viewModel.onEventPinClicked(fullEvent)
     advanceUntilIdle()
     viewModel.joinEvent()
@@ -745,8 +745,8 @@ class MapScreenViewModelTest {
   @Test
   fun joinEvent_success_updatesEventAndList() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(), capacity = 10)
 
     viewModel.setEvents(listOf(testEvent))
     viewModel.onEventPinClicked(testEvent)
@@ -760,7 +760,7 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
     assertNotNull(viewModel.selectedEvent)
     assertTrue(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
-    assertEquals(1, viewModel.selectedEvent!!.attendeeCount)
+    assertEquals(1, viewModel.selectedEvent!!.participantIds.size)
     assertTrue(
         viewModel.events.find { it.uid == testEvent.uid }!!.participantIds.contains("testUserId"))
   }
@@ -768,8 +768,8 @@ class MapScreenViewModelTest {
   @Test
   fun unregisterFromEvent_success_updatesEventAndList() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf("testUserId"), attendeeCount = 1, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf("testUserId"), capacity = 10)
 
     viewModel.setEvents(listOf(testEvent))
     viewModel.onEventPinClicked(testEvent)
@@ -783,14 +783,14 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
     assertNotNull(viewModel.selectedEvent)
     assertFalse(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
-    assertEquals(0, viewModel.selectedEvent!!.attendeeCount)
+    assertEquals(0, viewModel.selectedEvent!!.participantIds.size)
   }
 
   @Test
   fun joinAndUnregisterEvent_withRepositoryError_setsErrorMessage() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(), capacity = 10)
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
@@ -829,9 +829,9 @@ class MapScreenViewModelTest {
 
   @Test
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { cameraCentered = true }
+    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
 
     viewModel.onJoinedEventClicked(testEvent)
     advanceUntilIdle()
@@ -845,8 +845,8 @@ class MapScreenViewModelTest {
   fun setEvents_updatesEventsList() {
     val newEvents =
         listOf(
-            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0],
-            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[1])
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0],
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[1])
 
     viewModel.setEvents(newEvents)
 

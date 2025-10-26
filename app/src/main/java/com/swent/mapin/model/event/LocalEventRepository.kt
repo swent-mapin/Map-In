@@ -107,6 +107,12 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
   }
 
   companion object {
+    /** Helper function to generate a list of participant IDs with a specific count */
+    private fun generateParticipants(ownerId: String, additionalCount: Int): List<String> {
+      return listOf(ownerId) +
+          (1..additionalCount).map { "user${ownerId.removePrefix("user").toIntOrNull() ?: 0}_$it" }
+    }
+
     /** Returns a deterministic list of sample events positioned around the EPFL campus. */
     fun defaultSampleEvents(): List<Event> {
       val now = Timestamp(Date())
@@ -122,7 +128,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Music", "Festival"),
               public = true,
               ownerId = "user1",
-              attendeeCount = 200),
+              capacity = null,
+              participantIds = generateParticipants("user1", 450)), // Huge event, no capacity limit
           Event(
               uid = "event2",
               title = "Tech Conference",
@@ -132,7 +139,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Technology", "Conference"),
               public = true,
               ownerId = "user2",
-              attendeeCount = 180),
+              capacity = 500,
+              participantIds = generateParticipants("user2", 385)), // Very popular, near full
           Event(
               uid = "event3",
               title = "Food Festival",
@@ -142,7 +150,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Festival"),
               public = true,
               ownerId = "user3",
-              attendeeCount = 150),
+              capacity = 400,
+              participantIds = generateParticipants("user3", 320)), // Popular hotspot
 
           // Moderate attendance around Sports Center
           Event(
@@ -154,7 +163,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Basketball"),
               public = true,
               ownerId = "user4",
-              attendeeCount = 80),
+              capacity = 200,
+              participantIds = generateParticipants("user4", 145)),
           Event(
               uid = "event5",
               title = "Volleyball Tournament",
@@ -164,7 +174,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Volleyball"),
               public = true,
               ownerId = "user5",
-              attendeeCount = 65),
+              capacity = 150,
+              participantIds = generateParticipants("user5", 98)),
           Event(
               uid = "event6",
               title = "Running Club",
@@ -174,7 +185,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Running"),
               public = true,
               ownerId = "user6",
-              attendeeCount = 45),
+              capacity = 80,
+              participantIds = generateParticipants("user6", 52)),
 
           // Low attendance cultural events near ArtLab
           Event(
@@ -186,7 +198,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Art", "Culture"),
               public = true,
               ownerId = "user7",
-              attendeeCount = 30),
+              capacity = 100,
+              participantIds = generateParticipants("user7", 35)),
           Event(
               uid = "event8",
               title = "Photography Workshop",
@@ -196,7 +209,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Art", "Workshop"),
               public = true,
               ownerId = "user8",
-              attendeeCount = 20),
+              capacity = 40,
+              participantIds = generateParticipants("user8", 18)),
 
           // Very small attendance study groups scattered around
           Event(
@@ -208,7 +222,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Study", "Math"),
               public = true,
               ownerId = "user9",
-              attendeeCount = 8),
+              capacity = 20,
+              participantIds = generateParticipants("user9", 7)),
           Event(
               uid = "event10",
               title = "Coding Meetup",
@@ -218,7 +233,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Coding", "Tech"),
               public = true,
               ownerId = "user10",
-              attendeeCount = 12),
+              capacity = 30,
+              participantIds = generateParticipants("user10", 12)),
           Event(
               uid = "event11",
               title = "Language Exchange",
@@ -228,7 +244,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Languages", "Social"),
               public = true,
               ownerId = "user11",
-              attendeeCount = 15),
+              capacity = 35,
+              participantIds = generateParticipants("user11", 15)),
 
           // Medium attendance around Esplanade
           Event(
@@ -240,7 +257,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Market"),
               public = true,
               ownerId = "user12",
-              attendeeCount = 95),
+              capacity = 250,
+              participantIds = generateParticipants("user12", 180)),
           Event(
               uid = "event13",
               title = "Farmers Market",
@@ -250,7 +268,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Market"),
               public = true,
               ownerId = "user13",
-              attendeeCount = 110),
+              capacity = 300,
+              participantIds = generateParticipants("user13", 225)),
 
           // Very high attendance hotspot - special events
           Event(
@@ -262,7 +281,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Science", "Exhibition"),
               public = true,
               ownerId = "user14",
-              attendeeCount = 250),
+              capacity = 600,
+              participantIds = generateParticipants("user14", 520)),
           Event(
               uid = "event15",
               title = "Startup Fair",
@@ -272,7 +292,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Business", "Networking"),
               public = true,
               ownerId = "user15",
-              attendeeCount = 300),
+              capacity = 700,
+              participantIds = generateParticipants("user15", 650)), // Nearly full, very hot
 
           // Workshops and classes
           Event(
@@ -284,7 +305,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Wellness", "Yoga"),
               public = true,
               ownerId = "user16",
-              attendeeCount = 25),
+              capacity = 60,
+              participantIds = generateParticipants("user16", 42)),
           Event(
               uid = "event17",
               title = "Cooking Workshop",
@@ -294,7 +316,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Workshop"),
               public = true,
               ownerId = "user17",
-              attendeeCount = 18),
+              capacity = 45,
+              participantIds = generateParticipants("user17", 28)),
           Event(
               uid = "event18",
               title = "Photography Class",
@@ -304,7 +327,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Art", "Photography"),
               public = true,
               ownerId = "user18",
-              attendeeCount = 22),
+              capacity = 50,
+              participantIds = generateParticipants("user18", 31)),
 
           // Student clubs
           Event(
@@ -316,7 +340,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Games", "Club"),
               public = true,
               ownerId = "user19",
-              attendeeCount = 14),
+              capacity = 30,
+              participantIds = generateParticipants("user19", 14)),
           Event(
               uid = "event20",
               title = "Board Game Night",
@@ -326,7 +351,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Games", "Social"),
               public = true,
               ownerId = "user20",
-              attendeeCount = 35),
+              capacity = 100,
+              participantIds = generateParticipants("user20", 75)),
           Event(
               uid = "event21",
               title = "Robotics Workshop",
@@ -336,7 +362,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Science", "Physics"),
               public = true,
               ownerId = "user21",
-              attendeeCount = 40),
+              capacity = 80,
+              participantIds = generateParticipants("user21", 58)),
           Event(
               uid = "event22",
               title = "Biology Lecture",
@@ -346,7 +373,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Science", "Biology"),
               public = true,
               ownerId = "user22",
-              attendeeCount = 50),
+              capacity = 120,
+              participantIds = generateParticipants("user22", 88)),
 
           // Music performances - varying attendance
           Event(
@@ -358,7 +386,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Music", "Jazz"),
               public = true,
               ownerId = "user23",
-              attendeeCount = 120),
+              capacity = 300,
+              participantIds = generateParticipants("user23", 245)),
           Event(
               uid = "event24",
               title = "Open Mic Night",
@@ -368,7 +397,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Music", "Performance"),
               public = true,
               ownerId = "user24",
-              attendeeCount = 60),
+              capacity = 150,
+              participantIds = generateParticipants("user24", 112)),
           Event(
               uid = "event25",
               title = "Classical Concert",
@@ -378,7 +408,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Music", "Classical"),
               public = true,
               ownerId = "user25",
-              attendeeCount = 85),
+              capacity = 200,
+              participantIds = generateParticipants("user25", 165)),
 
           // Extended area - North of EPFL
           Event(
@@ -390,7 +421,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Business", "Startup"),
               public = true,
               ownerId = "user26",
-              attendeeCount = 90),
+              capacity = 250,
+              participantIds = generateParticipants("user26", 195)),
           Event(
               uid = "event27",
               title = "Hackathon",
@@ -400,7 +432,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Tech", "Coding"),
               public = true,
               ownerId = "user27",
-              attendeeCount = 140),
+              capacity = 400,
+              participantIds = generateParticipants("user27", 368)),
           Event(
               uid = "event28",
               title = "Robotics Demo",
@@ -410,7 +443,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Robotics", "Tech"),
               public = true,
               ownerId = "user28",
-              attendeeCount = 75),
+              capacity = 180,
+              participantIds = generateParticipants("user28", 134)),
 
           // Extended area - South of EPFL
           Event(
@@ -422,7 +456,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Social", "Outdoor"),
               public = true,
               ownerId = "user29",
-              attendeeCount = 100),
+              capacity = 200,
+              participantIds = generateParticipants("user29", 156)),
           Event(
               uid = "event30",
               title = "Beach Volleyball",
@@ -432,7 +467,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Beach"),
               public = true,
               ownerId = "user30",
-              attendeeCount = 55),
+              capacity = 100,
+              participantIds = generateParticipants("user30", 78)),
           Event(
               uid = "event31",
               title = "Sailing Club",
@@ -442,7 +478,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Sailing"),
               public = true,
               ownerId = "user31",
-              attendeeCount = 28),
+              capacity = 50,
+              participantIds = generateParticipants("user31", 34)),
 
           // Extended area - East of EPFL
           Event(
@@ -454,7 +491,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Running"),
               public = true,
               ownerId = "user32",
-              attendeeCount = 38),
+              capacity = 70,
+              participantIds = generateParticipants("user32", 46)),
           Event(
               uid = "event33",
               title = "Outdoor Cinema",
@@ -464,7 +502,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Entertainment", "Film"),
               public = true,
               ownerId = "user33",
-              attendeeCount = 165),
+              capacity = 500,
+              participantIds = generateParticipants("user33", 425)), // Very popular
           Event(
               uid = "event34",
               title = "Cycling Club",
@@ -474,7 +513,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Cycling"),
               public = true,
               ownerId = "user34",
-              attendeeCount = 42),
+              capacity = 90,
+              participantIds = generateParticipants("user34", 62)),
 
           // Extended area - West of EPFL
           Event(
@@ -486,7 +526,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Social"),
               public = true,
               ownerId = "user35",
-              attendeeCount = 32),
+              capacity = 60,
+              participantIds = generateParticipants("user35", 44)),
           Event(
               uid = "event36",
               title = "Cooking Class",
@@ -496,7 +537,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Workshop"),
               public = true,
               ownerId = "user36",
-              attendeeCount = 24),
+              capacity = 50,
+              participantIds = generateParticipants("user36", 32)),
           Event(
               uid = "event37",
               title = "Comedy Night",
@@ -506,7 +548,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Entertainment", "Comedy"),
               public = true,
               ownerId = "user37",
-              attendeeCount = 88),
+              capacity = 220,
+              participantIds = generateParticipants("user37", 185)),
 
           // Scattered small events across wider area
           Event(
@@ -518,7 +561,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Art", "Photography"),
               public = true,
               ownerId = "user38",
-              attendeeCount = 16),
+              capacity = 25,
+              participantIds = generateParticipants("user38", 11)),
           Event(
               uid = "event39",
               title = "Book Club",
@@ -528,7 +572,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Reading", "Social"),
               public = true,
               ownerId = "user39",
-              attendeeCount = 14),
+              capacity = 25,
+              participantIds = generateParticipants("user39", 9)),
           Event(
               uid = "event40",
               title = "Chess Tournament",
@@ -538,7 +583,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Games", "Competition"),
               public = true,
               ownerId = "user40",
-              attendeeCount = 22),
+              capacity = 50,
+              participantIds = generateParticipants("user40", 28)),
 
           // More scattered medium events
           Event(
@@ -550,7 +596,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Environment", "Fair"),
               public = true,
               ownerId = "user41",
-              attendeeCount = 105),
+              capacity = 350,
+              participantIds = generateParticipants("user41", 275)),
           Event(
               uid = "event42",
               title = "3D Printing Workshop",
@@ -560,7 +607,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Tech", "Workshop"),
               public = true,
               ownerId = "user42",
-              attendeeCount = 34),
+              capacity = 70,
+              participantIds = generateParticipants("user42", 48)),
           Event(
               uid = "event43",
               title = "Dance Class",
@@ -570,7 +618,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Dance", "Social"),
               public = true,
               ownerId = "user43",
-              attendeeCount = 48),
+              capacity = 110,
+              participantIds = generateParticipants("user43", 82)),
           Event(
               uid = "event44",
               title = "Debate Club",
@@ -580,7 +629,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Debate", "Education"),
               public = true,
               ownerId = "user44",
-              attendeeCount = 26),
+              capacity = 60,
+              participantIds = generateParticipants("user44", 38)),
           Event(
               uid = "event45",
               title = "Astronomy Night",
@@ -590,9 +640,10 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Science", "Astronomy"),
               public = true,
               ownerId = "user45",
-              attendeeCount = 52),
+              capacity = 100,
+              participantIds = generateParticipants("user45", 72)),
 
-          // Additional high-attendance events for better distribution
+          // Additional high-attendance events for better heatmap distribution
           Event(
               uid = "event46",
               title = "International Food Festival",
@@ -602,7 +653,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Festival"),
               public = true,
               ownerId = "user46",
-              attendeeCount = 220),
+              capacity = 800,
+              participantIds = generateParticipants("user46", 742)), // Massive event, nearly full
           Event(
               uid = "event47",
               title = "Student Party",
@@ -612,7 +664,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Party", "Social"),
               public = true,
               ownerId = "user47",
-              attendeeCount = 280),
+              capacity = 600,
+              participantIds = generateParticipants("user47", 580)), // Huge party
           Event(
               uid = "event48",
               title = "Rock Concert",
@@ -622,7 +675,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Music", "Rock"),
               public = true,
               ownerId = "user48",
-              attendeeCount = 190),
+              capacity = 550,
+              participantIds = generateParticipants("user48", 488)),
           Event(
               uid = "event49",
               title = "Marathon Training",
@@ -632,7 +686,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Sports", "Running"),
               public = true,
               ownerId = "user49",
-              attendeeCount = 67),
+              capacity = 140,
+              participantIds = generateParticipants("user49", 105)),
           Event(
               uid = "event50",
               title = "Craft Beer Festival",
@@ -642,7 +697,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               tags = listOf("Food", "Festival"),
               public = true,
               ownerId = "user50",
-              attendeeCount = 135))
+              capacity = 450,
+              participantIds = generateParticipants("user50", 398))) // Very popular
     }
   }
 }

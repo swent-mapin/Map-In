@@ -20,10 +20,10 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
-import com.swent.mapin.model.SampleEventRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -72,7 +72,7 @@ class MapScreenViewModel(
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
 
   // Visible events for map (after filtering)
-  private var _events by mutableStateOf<List<Event>>(SampleEventRepository.getSampleEvents())
+  private var _events by mutableStateOf<List<Event>>(LocalEventRepository.defaultSampleEvents())
   val events: List<Event>
     get() = _events
 
@@ -94,6 +94,10 @@ class MapScreenViewModel(
 
   private var _lastZoom by mutableFloatStateOf(0f)
   private var hideScaleBarJob: kotlinx.coroutines.Job? = null
+
+  // Track programmatic zooms to prevent sheet collapse during camera animations
+  private var isProgrammaticZoom by mutableStateOf(false)
+  private var programmaticZoomJob: kotlinx.coroutines.Job? = null
 
   enum class MapStyle {
     STANDARD,
@@ -158,7 +162,10 @@ class MapScreenViewModel(
   val showShareDialog: Boolean
     get() = _showShareDialog
 
-  var onCenterCamera: ((Event) -> Unit)? = null
+  var onCenterCamera: ((Event, Boolean) -> Unit)? = null
+
+  // Track if we came from search mode to return to it after closing event detail
+  private var _cameFromSearch by mutableStateOf(false)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -175,7 +182,7 @@ class MapScreenViewModel(
     // Preload events so the form has immediate data
     loadEvents()
     loadJoinedEvents()
-    _topTags = SampleEventRepository.getTopTags()
+    _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
@@ -183,8 +190,20 @@ class MapScreenViewModel(
 
   /** Loads initial sample events synchronously for immediate UI responsiveness. */
   private fun loadInitialSamples() {
-    _events = SampleEventRepository.getSampleEvents()
+    _events = LocalEventRepository.defaultSampleEvents()
     _searchResults = _events
+  }
+
+  /** Returns the top 5 most frequent tags across all events. */
+  private fun getTopTags(count: Int = 5): List<String> {
+    val events = LocalEventRepository.defaultSampleEvents()
+    val tagCounts = mutableMapOf<String, Int>()
+
+    events.forEach { event ->
+      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
+    }
+
+    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
   }
 
   /** Loads primary events list for immediate UI usage with fallback to local samples. */
@@ -197,7 +216,7 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         android.util.Log.w(
             "MapScreenViewModel", "Failed to load events from repository, using samples", e)
-        _events = SampleEventRepository.getSampleEvents()
+        _events = LocalEventRepository.defaultSampleEvents()
         _searchResults = _events
       }
     }
@@ -225,6 +244,8 @@ class MapScreenViewModel(
 
   fun checkZoomInteraction(currentZoom: Float): Boolean {
     if (!isInMediumMode) return false
+    // Don't collapse during programmatic zooms (e.g., when centering on an event)
+    if (isProgrammaticZoom) return false
 
     val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
     return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
@@ -344,7 +365,8 @@ class MapScreenViewModel(
   }
 
   private fun applyFilters() {
-    val base = if (_allEvents.isNotEmpty()) _allEvents else SampleEventRepository.getSampleEvents()
+    val base =
+        if (_allEvents.isNotEmpty()) _allEvents else LocalEventRepository.defaultSampleEvents()
 
     val tagFiltered =
         if (_selectedTags.isEmpty()) {
@@ -482,6 +504,7 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
     hideScaleBarJob?.cancel()
+    programmaticZoomJob?.cancel()
   }
 
   private fun restorePreviousSheetState() {
@@ -503,19 +526,50 @@ class MapScreenViewModel(
     _selectedBottomSheetTab = tab
   }
 
-  fun onEventPinClicked(event: Event) {
+  fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     viewModelScope.launch {
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
-      onCenterCamera?.invoke(event)
+
+      // Mark as programmatic zoom to prevent sheet collapse during camera animation
+      isProgrammaticZoom = true
+      onCenterCamera?.invoke(event, forceZoom)
+
+      // Clear the flag after animation completes (500ms animation + 600ms buffer)
+      programmaticZoomJob?.cancel()
+      programmaticZoomJob =
+          viewModelScope.launch {
+            kotlinx.coroutines.delay(1100)
+            isProgrammaticZoom = false
+          }
     }
+  }
+
+  /**
+   * Handles event clicks from search results. Focuses the pin, shows event details, and remembers
+   * we came from search mode. Forces zoom to ensure the pin is visible.
+   */
+  fun onEventClickedFromSearch(event: Event) {
+    _cameFromSearch = true
+    onEventPinClicked(event, forceZoom = true)
   }
 
   fun closeEventDetail() {
     _selectedEvent = null
     _organizerName = ""
-    setBottomSheetState(BottomSheetState.COLLAPSED)
+
+    if (_cameFromSearch) {
+      // Return to search mode: full sheet with cleared search, no keyboard
+      _cameFromSearch = false
+      _searchQuery = ""
+      isSearchActivated = true
+      _shouldFocusSearch = false
+      setBottomSheetState(BottomSheetState.FULL)
+      applyFilters()
+    } else {
+      setBottomSheetState(BottomSheetState.COLLAPSED)
+    }
   }
 
   fun showShareDialog() {
@@ -534,6 +588,11 @@ class MapScreenViewModel(
     return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
   }
 
+  fun isUserParticipating(event: Event): Boolean {
+    val currentUserId = auth.currentUser?.uid ?: return false
+    return event.participantIds.contains(currentUserId)
+  }
+
   fun joinEvent() {
     viewModelScope.launch {
       val event = _selectedEvent ?: return@launch
@@ -545,7 +604,7 @@ class MapScreenViewModel(
       _errorMessage = null
       try {
         val capacity = event.capacity
-        val currentAttendees = event.attendeeCount ?: 0
+        val currentAttendees = event.participantIds.size
         if (capacity != null && currentAttendees >= capacity) {
           _errorMessage = "Event is at full capacity"
           return@launch
@@ -554,9 +613,7 @@ class MapScreenViewModel(
             event.participantIds.toMutableList().apply {
               if (!contains(currentUserId)) add(currentUserId)
             }
-        val newAttendeeCount = currentAttendees + 1
-        val updatedEvent =
-            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
@@ -575,10 +632,7 @@ class MapScreenViewModel(
       try {
         val updatedParticipantIds =
             event.participantIds.toMutableList().apply { remove(currentUserId) }
-        val currentAttendees = event.attendeeCount ?: 0
-        val newAttendeeCount = (currentAttendees - 1).coerceAtLeast(0)
-        val updatedEvent =
-            event.copy(participantIds = updatedParticipantIds, attendeeCount = newAttendeeCount)
+        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
@@ -626,7 +680,7 @@ fun eventsToGeoJson(events: List<Event>): String {
       events.map { event ->
         Feature.fromGeometry(
             Point.fromLngLat(event.location.longitude, event.location.latitude),
-            JsonObject().apply { addProperty("weight", event.attendeeCount) })
+            JsonObject().apply { addProperty("weight", event.participantIds.size) })
       }
   return FeatureCollection.fromFeatures(features).toJson()
 }

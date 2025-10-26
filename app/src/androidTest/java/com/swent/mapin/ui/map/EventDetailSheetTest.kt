@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
@@ -30,7 +31,6 @@ class EventDetailSheetTest {
           date = Timestamp(Calendar.getInstance().apply { set(2025, 9, 20, 14, 30) }.time),
           ownerId = "owner123",
           participantIds = listOf("user1", "user2"),
-          attendeeCount = 2,
           capacity = 10,
           tags = listOf("Music", "Concert"),
           imageUrl = "https://example.com/image.jpg",
@@ -97,7 +97,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("eventLocation").assertTextEquals("📍 Paris")
     composeTestRule.onNodeWithTag("eventDescriptionPreview").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfo").assertTextEquals("8 spots left")
   }
 
   @Test
@@ -120,7 +122,7 @@ class EventDetailSheetTest {
   @Test
   fun mediumState_eventAtCapacity_disablesJoinButton() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = 10, capacity = 10),
+        event = testEvent.copy(participantIds = List(10) { "user$it" }, capacity = 10),
         sheetState = BottomSheetState.MEDIUM,
         isParticipating = false)
 
@@ -176,13 +178,14 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun mediumState_nullCapacity_showsAttendeeCountWithZero() {
+  fun mediumState_nullCapacity_showsAttendeeCountOnly() {
     setEventDetailSheet(
-        event = testEvent.copy(capacity = null, attendeeCount = 5),
+        event = testEvent.copy(capacity = null, participantIds = List(5) { "user$it" }),
         sheetState = BottomSheetState.MEDIUM)
 
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 / 0 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertDoesNotExist()
     composeTestRule.onNodeWithTag("joinEventButton").assertIsEnabled()
   }
 
@@ -200,7 +203,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("organizerName").assertTextEquals("John Doe")
     composeTestRule.onNodeWithTag("eventLocationFull").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("8 spots left")
     composeTestRule.onNodeWithTag("eventDescription").assertIsDisplayed()
   }
 
@@ -209,8 +214,9 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = false, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("joinEventButtonFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("saveForLaterButton").assertIsDisplayed()
+    // Scroll to make buttons visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("unregisterButtonFull").assertDoesNotExist()
   }
 
@@ -219,7 +225,8 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = true, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("unregisterButtonFull").assertIsDisplayed()
+    // Scroll to make button visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("joinEventButtonFull").assertDoesNotExist()
   }
 
@@ -232,7 +239,8 @@ class EventDetailSheetTest {
         organizerName = "John Doe",
         onSaveForLater = { saveCalled = true })
 
-    composeTestRule.onNodeWithTag("saveForLaterButton").performClick()
+    // Scroll to make button visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().performClick()
     assertTrue(saveCalled)
   }
 
@@ -278,14 +286,16 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun fullState_nullAttendeeCount_displaysZero() {
+  fun fullState_emptyParticipants_displaysZero() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = null, capacity = 10),
+        event = testEvent.copy(participantIds = emptyList(), capacity = 10),
         sheetState = BottomSheetState.FULL,
         organizerName = "John Doe")
 
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("10 spots left")
   }
 
   // COMMON FUNCTIONALITY TESTS (applicable to all states)
