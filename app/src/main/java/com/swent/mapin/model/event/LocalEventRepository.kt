@@ -23,6 +23,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
           .associateBy { it.uid }
           .toMutableMap()
 
+  private var savedEvents = mutableListOf<Event>()
+
   private var nextNumericId: Int =
       events.keys.mapNotNull { key -> key.removePrefix("event").toIntOrNull() }.maxOrNull()?.plus(1)
           ?: 1
@@ -105,6 +107,28 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventID)")
     }
   }
+
+    override suspend fun getSavedEventIds(userId: String): Set<String> {
+        return savedEvents.map { it.uid }.toSet()
+    }
+
+    override suspend fun getSavedEvents(userId: String): List<Event> {
+        return savedEvents
+    }
+
+    override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
+        val event = events[eventId] ?: return false
+        if (!savedEvents.any { it.uid == eventId }) {
+            savedEvents.add(event)
+        }
+        return true
+    }
+
+    override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
+        val event = savedEvents.find { it.uid == eventId } ?: return false
+        savedEvents.remove(event)
+        return true
+    }
 
   companion object {
     /** Helper function to generate a list of participant IDs with a specific count */
