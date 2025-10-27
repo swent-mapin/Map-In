@@ -562,30 +562,51 @@ class BottomSheetContentTest {
 
   @Test
   fun savedEventsTab_showMoreAndShowLessToggle() {
-    // Use >3 events to trigger the "Show more" control from EventsSection
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
-    rule.setContent { SavedEventsContent(events = testEvents) }
-    rule.waitForIdle()
+      // >3 events so EventsSection shows the "Show more" control
+      val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
+      rule.setContent { SavedEventsContent(events = testEvents) }
+      rule.waitForIdle()
 
-    // Initially only first 3 should be visible; the 4th/5th are NOT COMPOSED
-    testEvents.take(3).forEach { e -> rule.onNodeWithText(e.title).assertIsDisplayed() }
-    testEvents.drop(3).forEach { e -> rule.onNodeWithText(e.title).assertDoesNotExist() }
+      // Initially only first 3 are visible (others exist but are off-screen/not visible)
+      testEvents.take(3).forEach { e ->
+          rule.onNodeWithText(e.title, substring = true)
+              .performScrollTo()
+              .assertIsDisplayed()
+      }
+      testEvents.drop(3).forEach { e ->
+          // We only assert not displayed; they might exist off-screen
+          rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+      }
 
-    // "Show more" appears -> expand
-    rule.onNodeWithTag("eventsShowMoreButton").assertIsDisplayed()
-    rule.onNodeWithTag("eventsShowMoreButton").performClick()
-    rule.waitForIdle()
+      // Scroll to reveal the "Show more" button before asserting
+      rule.onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+          .performScrollTo()
+          .assertIsDisplayed()
+          .performClick()
+      rule.waitForIdle()
 
-    // After expanding, ALL events exist; scroll to each to assert they are visible
-    testEvents.forEach { e -> rule.onNodeWithText(e.title).performScrollTo().assertIsDisplayed() }
+      // After expanding, scroll to each and assert visibility
+      testEvents.forEach { e ->
+          rule.onNodeWithText(e.title, substring = true)
+              .performScrollTo()
+              .assertIsDisplayed()
+      }
 
-    // Button toggles to "Show less" -> collapse again
-    rule.onNodeWithTag("eventsShowMoreButton").performScrollTo().performClick()
-    rule.waitForIdle()
+      // Toggle back to "Show less" (same button)
+      rule.onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+          .performScrollTo()
+          .performClick()
+      rule.waitForIdle()
 
-    // Back to collapsed: only first 3 composed again
-    testEvents.take(3).forEach { e -> rule.onNodeWithText(e.title).assertIsDisplayed() }
-    testEvents.drop(3).forEach { e -> rule.onNodeWithText(e.title).assertDoesNotExist() }
+      // Collapsed again: only first 3 visible
+      testEvents.take(3).forEach { e ->
+          rule.onNodeWithText(e.title, substring = true)
+              .performScrollTo()
+              .assertIsDisplayed()
+      }
+      testEvents.drop(3).forEach { e ->
+          rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+      }
   }
 
   @Test
