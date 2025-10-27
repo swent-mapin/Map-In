@@ -87,4 +87,37 @@ interface EventRepository {
    * @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun deleteEvent(eventID: String)
+
+  /**
+   * Retrieves the IDs of Event items saved by the specified user.
+   *
+   * @param userId The unique identifier of the user.
+   * @return A set of IDs of Event items saved by the specified user.
+   */
+  suspend fun getSavedEventIds(userId: String): Set<String>
+  /**
+   * Retrieves Event items saved by the specified user.
+   *
+   * @param userId The unique identifier of the user.
+   * @return A list of Event items saved by the specified user.
+   */
+  suspend fun getSavedEvents(userId: String): List<Event>
+
+    /**
+     * Saves an Event item for the specified user.
+     *
+     * @param userId The unique identifier of the user.
+     * @param eventId The unique identifier of the Event item to save.
+     * @return True if the Event item was successfully saved for the user, false otherwise.
+     */
+  suspend fun saveEventForUser(userId: String, eventId: String): Boolean
+    /**
+     * Removes a saved Event item for the specified user.
+     *
+     * @param userId The unique identifier of the user.
+     * @param eventId The unique identifier of the Event item to remove.
+     * @return True if the Event item was successfully removed from the user's saved list, false
+     *   otherwise.
+     */
+  suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
 }
