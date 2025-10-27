@@ -119,72 +119,71 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
         null
       }
 
-    // ============================
-    // Saved Events (per-user)
-    // ============================
+  // ============================
+  // Saved Events (per-user)
+  // ============================
 
-    /** Get the set of saved event IDs for a user. */
-    override suspend fun getSavedEventIds(userId: String): Set<String> {
-        return try {
-            val snap = db.collection(USERS_COLLECTION_PATH)
-                .document(userId)
-                .collection(SAVED_SUBCOLLECTION)
-                .get()
-                .await()
-            snap.documents.map { it.id }.toSet()
-        } catch (e: Exception) {
-            Log.w("EventRepositoryFirestore", "getSavedEventIds failed", e)
-            emptySet()
-        }
+  /** Get the set of saved event IDs for a user. */
+  override suspend fun getSavedEventIds(userId: String): Set<String> {
+    return try {
+      val snap =
+          db.collection(USERS_COLLECTION_PATH)
+              .document(userId)
+              .collection(SAVED_SUBCOLLECTION)
+              .get()
+              .await()
+      snap.documents.map { it.id }.toSet()
+    } catch (e: Exception) {
+      Log.w("EventRepositoryFirestore", "getSavedEventIds failed", e)
+      emptySet()
     }
+  }
 
-    /** Get the saved events for a user (sorted by date ascending). */
-    override suspend fun getSavedEvents(userId: String): List<Event> {
-        val ids = getSavedEventIds(userId).toList()
-        if (ids.isEmpty()) return emptyList()
+  /** Get the saved events for a user (sorted by date ascending). */
+  override suspend fun getSavedEvents(userId: String): List<Event> {
+    val ids = getSavedEventIds(userId).toList()
+    if (ids.isEmpty()) return emptyList()
 
-        // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
-        val chunks = ids.chunked(LIMIT)
-        val results = mutableListOf<Event>()
-        for (chunk in chunks) {
-            val snap = db.collection(EVENTS_COLLECTION_PATH)
-                .whereIn(FieldPath.documentId(), chunk)
-                .get()
-                .await()
-            results += snap.documents.mapNotNull { documentToEvent(it) }
-        }
-        return results.sortedBy { it.date } // sort in-memory by event date
+    // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
+    val chunks = ids.chunked(LIMIT)
+    val results = mutableListOf<Event>()
+    for (chunk in chunks) {
+      val snap =
+          db.collection(EVENTS_COLLECTION_PATH).whereIn(FieldPath.documentId(), chunk).get().await()
+      results += snap.documents.mapNotNull { documentToEvent(it) }
     }
+    return results.sortedBy { it.date } // sort in-memory by event date
+  }
 
-    /** Mark an event as saved for a user (idempotent). */
-    override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-        return try {
-            db.collection(USERS_COLLECTION_PATH)
-                .document(userId)
-                .collection(SAVED_SUBCOLLECTION)
-                .document(eventId)
-                .set(mapOf(FIELD_SAVED_AT to FieldValue.serverTimestamp()))
-                .await()
-            true
-        } catch (e: Exception) {
-            Log.w("EventRepositoryFirestore", "saveEventForUser failed", e)
-            false
-        }
+  /** Mark an event as saved for a user (idempotent). */
+  override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
+    return try {
+      db.collection(USERS_COLLECTION_PATH)
+          .document(userId)
+          .collection(SAVED_SUBCOLLECTION)
+          .document(eventId)
+          .set(mapOf(FIELD_SAVED_AT to FieldValue.serverTimestamp()))
+          .await()
+      true
+    } catch (e: Exception) {
+      Log.w("EventRepositoryFirestore", "saveEventForUser failed", e)
+      false
     }
+  }
 
-    /** Remove an event from a user's saved list (idempotent). */
-    override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-        return try {
-            db.collection(USERS_COLLECTION_PATH)
-                .document(userId)
-                .collection(SAVED_SUBCOLLECTION)
-                .document(eventId)
-                .delete()
-                .await()
-            true
-        } catch (e: Exception) {
-            Log.w("EventRepositoryFirestore", "unsaveEventForUser failed", e)
-            false
-        }
+  /** Remove an event from a user's saved list (idempotent). */
+  override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
+    return try {
+      db.collection(USERS_COLLECTION_PATH)
+          .document(userId)
+          .collection(SAVED_SUBCOLLECTION)
+          .document(eventId)
+          .delete()
+          .await()
+      true
+    } catch (e: Exception) {
+      Log.w("EventRepositoryFirestore", "unsaveEventForUser failed", e)
+      false
     }
+  }
 }

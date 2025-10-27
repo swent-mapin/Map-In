@@ -107,26 +107,25 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     }
   }
 
-    private fun bucket(userId: String) =
-        savedIdsByUser.getOrPut(userId) { LinkedHashSet() }
+  private fun bucket(userId: String) = savedIdsByUser.getOrPut(userId) { LinkedHashSet() }
 
-    override suspend fun getSavedEventIds(userId: String): Set<String> {
-        return bucket(userId).toSet()
-    }
+  override suspend fun getSavedEventIds(userId: String): Set<String> {
+    return bucket(userId).toSet()
+  }
 
-    override suspend fun getSavedEvents(userId: String): List<Event> {
-        return bucket(userId).mapNotNull { id -> events[id] }
-    }
+  override suspend fun getSavedEvents(userId: String): List<Event> {
+    return bucket(userId).mapNotNull { id -> events[id] }
+  }
 
-    override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-        if (!events.containsKey(eventId)) return false
-        bucket(userId).add(eventId)
-        return true
-    }
+  override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
+    if (!events.containsKey(eventId)) return false
+    bucket(userId).add(eventId)
+    return true
+  }
 
-    override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-        return bucket(userId).remove(eventId)
-    }
+  override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
+    return bucket(userId).remove(eventId)
+  }
 
   companion object {
     /** Helper function to generate a list of participant IDs with a specific count */

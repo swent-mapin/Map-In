@@ -87,19 +87,19 @@ class EventDetailSheetLogicTest {
     assertTrue(ui.enabled)
   }
 
-    @Test
-    fun resolveSaveButtonUi_whenNotSaved_showsSaveForLater() {
-        val ui = resolveSaveButtonUi(isSaved = false)
+  @Test
+  fun resolveSaveButtonUi_whenNotSaved_showsSaveForLater() {
+    val ui = resolveSaveButtonUi(isSaved = false)
 
-        assertTrue(ui.showSaveButton)
-        assertEquals("Save for later", ui.label)
-    }
+    assertTrue(ui.showSaveButton)
+    assertEquals("Save for later", ui.label)
+  }
 
-    @Test
-    fun resolveSaveButtonUi_whenAlreadySaved_showsUnsave() {
-        val ui = resolveSaveButtonUi(isSaved = true)
+  @Test
+  fun resolveSaveButtonUi_whenAlreadySaved_showsUnsave() {
+    val ui = resolveSaveButtonUi(isSaved = true)
 
-        assertFalse(ui.showSaveButton)
-        assertEquals("Unsave", ui.label)
-    }
+    assertFalse(ui.showSaveButton)
+    assertEquals("Unsave", ui.label)
+  }
 }

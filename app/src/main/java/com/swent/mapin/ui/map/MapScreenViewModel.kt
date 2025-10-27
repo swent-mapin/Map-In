@@ -148,7 +148,7 @@ class MapScreenViewModel(
     get() = _savedEvents
 
   // Saved events ids for quick lookup
-    private var _savedEventIds by mutableStateOf<Set<String>>(emptySet())
+  private var _savedEventIds by mutableStateOf<Set<String>>(emptySet())
   private val savedEventIds: Set<String>
     get() = _savedEventIds
 
@@ -227,8 +227,7 @@ class MapScreenViewModel(
         _events = events
         _searchResults = events
       } catch (e: Exception) {
-        Log.w(
-            "MapScreenViewModel", "Failed to load events from repository, using samples", e)
+        Log.w("MapScreenViewModel", "Failed to load events from repository, using samples", e)
         _events = LocalEventRepository.defaultSampleEvents()
         _searchResults = _events
       }
@@ -379,8 +378,7 @@ class MapScreenViewModel(
   }
 
   private fun applyFilters() {
-    val base =
-        _allEvents.ifEmpty { LocalEventRepository.defaultSampleEvents() }
+    val base = _allEvents.ifEmpty { LocalEventRepository.defaultSampleEvents() }
 
     val tagFiltered =
         if (_selectedTags.isEmpty()) {
@@ -433,7 +431,12 @@ class MapScreenViewModel(
   }
 
   private fun loadJoinedEvents() {
-    val uid = auth.currentUser?.uid ?: run { _joinedEvents = emptyList(); return }
+    val uid =
+        auth.currentUser?.uid
+            ?: run {
+              _joinedEvents = emptyList()
+              return
+            }
     val base = _allEvents.ifEmpty { _events }
     _joinedEvents = base.filter { uid in it.participantIds }
   }
@@ -444,9 +447,7 @@ class MapScreenViewModel(
       _savedEvents = emptyList()
       return
     }
-    viewModelScope.launch {
-      _savedEvents = eventRepository.getSavedEvents(currentUserId)
-    }
+    viewModelScope.launch { _savedEvents = eventRepository.getSavedEvents(currentUserId) }
   }
 
   private fun loadSavedEventIds() {
@@ -455,10 +456,9 @@ class MapScreenViewModel(
       _savedEventIds = emptySet()
       return
     }
-    viewModelScope.launch {
-      _savedEventIds = eventRepository.getSavedEventIds(currentUserId)
-    }
+    viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
   }
+
   fun showMemoryForm() {
     _previousSheetState = _bottomSheetState
     _showMemoryForm = true
@@ -650,7 +650,7 @@ class MapScreenViewModel(
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
-        _allEvents  = _allEvents.map  { if (it.uid == event.uid) updatedEvent else it }
+        _allEvents = _allEvents.map { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
         for (event in _joinedEvents) {
           Log.d("test", "Joined event after join: ${event.uid}")
@@ -707,9 +707,9 @@ class MapScreenViewModel(
     }
   }
 
-    /** Unsaves the selected event for later by the current user. */
+  /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
-    val eventUid= _selectedEvent?.uid ?: return
+    val eventUid = _selectedEvent?.uid ?: return
     val currentUserId = auth.currentUser?.uid ?: return
     viewModelScope.launch {
       _errorMessage = null
@@ -728,8 +728,8 @@ class MapScreenViewModel(
   }
 
   /**
-   * Called when the user taps an event from the "Joined events" or "Saved events" list.
-   * Reuses the existing onEventPinClicked behavior to select the event and center the camera.
+   * Called when the user taps an event from the "Joined events" or "Saved events" list. Reuses the
+   * existing onEventPinClicked behavior to select the event and center the camera.
    */
   fun onTabEventClicked(event: Event) {
     onEventPinClicked(event)

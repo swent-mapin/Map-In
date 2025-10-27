@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
-import com.google.firebase.storage.UploadTask
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
@@ -29,8 +26,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.Mockito.clearInvocations
+import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -811,8 +808,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun setBottomSheetTab_updatesSelectedTab() {
-    assertEquals(
-        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
     viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
   }
@@ -856,10 +852,8 @@ class MapScreenViewModelTest {
 
   // === Save / Unsave tests ===
   private fun sampleEvent() =
-    com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
-      uid = "evt-1",
-      participantIds = emptyList()
-    )
+      com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+          uid = "evt-1", participantIds = emptyList())
 
   @Test
   fun saveEventForLater_noUser_setsErrorMessage() = runTest {

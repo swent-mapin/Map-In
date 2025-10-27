@@ -103,21 +103,21 @@ interface EventRepository {
    */
   suspend fun getSavedEvents(userId: String): List<Event>
 
-    /**
-     * Saves an Event item for the specified user.
-     *
-     * @param userId The unique identifier of the user.
-     * @param eventId The unique identifier of the Event item to save.
-     * @return True if the Event item was successfully saved for the user, false otherwise.
-     */
+  /**
+   * Saves an Event item for the specified user.
+   *
+   * @param userId The unique identifier of the user.
+   * @param eventId The unique identifier of the Event item to save.
+   * @return True if the Event item was successfully saved for the user, false otherwise.
+   */
   suspend fun saveEventForUser(userId: String, eventId: String): Boolean
-    /**
-     * Removes a saved Event item for the specified user.
-     *
-     * @param userId The unique identifier of the user.
-     * @param eventId The unique identifier of the Event item to remove.
-     * @return True if the Event item was successfully removed from the user's saved list, false
-     *   otherwise.
-     */
+  /**
+   * Removes a saved Event item for the specified user.
+   *
+   * @param userId The unique identifier of the user.
+   * @param eventId The unique identifier of the Event item to remove.
+   * @return True if the Event item was successfully removed from the user's saved list, false
+   *   otherwise.
+   */
   suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
 }
