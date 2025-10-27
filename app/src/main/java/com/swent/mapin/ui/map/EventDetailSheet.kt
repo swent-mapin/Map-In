@@ -416,22 +416,41 @@ private fun FullEventContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (!isSaved) {
-          Button(
-              onClick = onSaveForLater,
-              modifier = Modifier.fillMaxWidth().testTag("saveForLaterButtonFull")) {
-                Text("Save for later")
-              }
-        } else {
+      val saveButtonUi = remember(isSaved) {
+              resolveSaveButtonUi(isSaved) }
+
+      if (!saveButtonUi.showSaveButton) {
           OutlinedButton(
               onClick = onUnsaveForLater,
-              modifier = Modifier.fillMaxWidth().testTag("unsaveForLaterButtonFull"),
-              colors = ButtonDefaults.outlinedButtonColors(
+              modifier = Modifier.fillMaxWidth().testTag("unsaveButtonFull"),
+              colors =
+                  ButtonDefaults.outlinedButtonColors(
                       contentColor = MaterialTheme.colorScheme.error)) {
-                Text("Unsave")
-              }
-        }
+              Text(saveButtonUi.label)
+          }
+      } else {
+          Button(
+              onClick = onSaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("saveButtonFull")) {
+              Text(saveButtonUi.label)
+          }
       }
+      }
+}
+
+@VisibleForTesting
+internal data class SaveButtonUi(
+    val showSaveButton: Boolean,
+    val label: String
+)
+
+@VisibleForTesting
+internal fun resolveSaveButtonUi(isSaved: Boolean): SaveButtonUi {
+    return if (isSaved) {
+        SaveButtonUi(showSaveButton = false, label = "Unsave")
+    } else {
+        SaveButtonUi(showSaveButton = true, label = "Save for later")
+    }
 }
 
 @VisibleForTesting
