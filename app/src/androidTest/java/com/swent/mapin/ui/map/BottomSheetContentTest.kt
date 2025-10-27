@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -53,6 +54,31 @@ class BottomSheetContentTest {
                   onTap = onTap,
                   onFocusHandled = { shouldRequestFocus = false },
                   onClear = {}))
+    }
+  }
+
+  @Composable
+  private fun SavedEventsContent(
+      events: List<Event>,
+      onEventClick: (Event) -> Unit = {},
+      onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          savedEvents = events,
+          selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+          onTabEventClick = onEventClick,
+          onTabChange = onTabChange)
     }
   }
 
@@ -499,5 +525,107 @@ class BottomSheetContentTest {
     rule.onNodeWithText("No results found").assertDoesNotExist()
     // Should display the event instead
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+  }
+
+  @Test
+  fun savedEventsTab_displaysMultipleEventsWithAllData() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
+    rule.setContent { SavedEventsContent(events = testEvents) }
+    rule.waitForIdle()
+
+    // Ensure Saved Events tab title is visible (it is selected by default in this content)
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+
+    testEvents.forEach { event ->
+      rule.onNodeWithText(event.title).assertIsDisplayed()
+      // Location line is shown in SearchResultItem; use substring for safety
+      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+    }
+  }
+
+  @Test
+  fun savedEventsTab_handlesEventInteractions() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    var clickedEvent: Event? = null
+
+    rule.setContent {
+      SavedEventsContent(events = testEvents, onEventClick = { clickedEvent = it })
+    }
+    rule.waitForIdle()
+
+    // Click the single event in the Saved tab
+    rule.onNodeWithText(testEvents[0].title).performClick()
+    rule.waitForIdle()
+
+    assertEquals(testEvents[0], clickedEvent)
+  }
+
+  @Test
+  fun savedEventsTab_showMoreAndShowLessToggle() {
+    // Use >3 events to trigger the "Show more" control from EventsSection
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
+    rule.setContent { SavedEventsContent(events = testEvents) }
+    rule.waitForIdle()
+
+    // Initially only first 3 should be visible; the 4th/5th are NOT COMPOSED
+    testEvents.take(3).forEach { e -> rule.onNodeWithText(e.title).assertIsDisplayed() }
+    testEvents.drop(3).forEach { e -> rule.onNodeWithText(e.title).assertDoesNotExist() }
+
+    // "Show more" appears -> expand
+    rule.onNodeWithTag("eventsShowMoreButton").assertIsDisplayed()
+    rule.onNodeWithTag("eventsShowMoreButton").performClick()
+    rule.waitForIdle()
+
+    // After expanding, ALL events exist; scroll to each to assert they are visible
+    testEvents.forEach { e -> rule.onNodeWithText(e.title).performScrollTo().assertIsDisplayed() }
+
+    // Button toggles to "Show less" -> collapse again
+    rule.onNodeWithTag("eventsShowMoreButton").performScrollTo().performClick()
+    rule.waitForIdle()
+
+    // Back to collapsed: only first 3 composed again
+    testEvents.take(3).forEach { e -> rule.onNodeWithText(e.title).assertIsDisplayed() }
+    testEvents.drop(3).forEach { e -> rule.onNodeWithText(e.title).assertDoesNotExist() }
+  }
+
+  @Test
+  fun tabSwitch_startOnSaved_thenSwitchToJoined_showsJoinedContent() {
+    val saved = LocalEventRepository.defaultSampleEvents().take(1)
+    val joined = LocalEventRepository.defaultSampleEvents().drop(1).take(1)
+
+    rule.setContent {
+      MaterialTheme {
+        var selectedTab by remember {
+          mutableStateOf(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+        }
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            savedEvents = saved,
+            joinedEvents = joined,
+            selectedTab = selectedTab,
+            onTabChange = { selectedTab = it })
+      }
+    }
+    rule.waitForIdle()
+
+    // On Saved tab first
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText(saved[0].title).assertIsDisplayed()
+
+    // Switch to Joined tab
+    rule.onNodeWithText("Joined Events").performClick()
+    rule.waitForIdle()
+
+    // Joined event title visible; saved no longer present
+    rule.onNodeWithText(joined[0].title).assertIsDisplayed()
   }
 }
