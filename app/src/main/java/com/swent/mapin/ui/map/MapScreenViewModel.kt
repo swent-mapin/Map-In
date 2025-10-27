@@ -2,6 +2,7 @@ package com.swent.mapin.ui.map
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -33,7 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /**
- * ViewModel central pour MapScreen — gère la feuille, la recherche, les événements, et la mémoire.
+ * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
 class MapScreenViewModel(
     initialSheetState: BottomSheetState,
@@ -72,7 +73,7 @@ class MapScreenViewModel(
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
 
   // Visible events for map (after filtering)
-  private var _events by mutableStateOf<List<Event>>(LocalEventRepository.defaultSampleEvents())
+  private var _events by mutableStateOf(LocalEventRepository.defaultSampleEvents())
   val events: List<Event>
     get() = _events
 
@@ -141,12 +142,22 @@ class MapScreenViewModel(
   val joinedEvents: List<Event>
     get() = _joinedEvents
 
+  // Saved events for bottom sheet display
+  private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
+  val savedEvents: List<Event>
+    get() = _savedEvents
+
+  // Saved events ids for quick lookup
+    private var _savedEventIds by mutableStateOf<Set<String>>(emptySet())
+  private val savedEventIds: Set<String>
+    get() = _savedEventIds
+
   enum class BottomSheetTab {
-    RECENT_ACTIVITIES,
+    SAVED_EVENTS,
     JOINED_EVENTS
   }
 
-  private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.RECENT_ACTIVITIES)
+  private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.SAVED_EVENTS)
   val selectedBottomSheetTab: BottomSheetTab
     get() = _selectedBottomSheetTab
 
@@ -182,6 +193,8 @@ class MapScreenViewModel(
     // Preload events so the form has immediate data
     loadEvents()
     loadJoinedEvents()
+    loadSavedEvents()
+    loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
@@ -366,7 +379,7 @@ class MapScreenViewModel(
 
   private fun applyFilters() {
     val base =
-        if (_allEvents.isNotEmpty()) _allEvents else LocalEventRepository.defaultSampleEvents()
+        _allEvents.ifEmpty { LocalEventRepository.defaultSampleEvents() }
 
     val tagFiltered =
         if (_selectedTags.isEmpty()) {
@@ -427,6 +440,27 @@ class MapScreenViewModel(
     _joinedEvents = _events.filter { event -> event.participantIds.contains(currentUserId) }
   }
 
+  private fun loadSavedEvents() {
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _savedEvents = emptyList()
+      return
+    }
+    viewModelScope.launch {
+      _savedEvents = eventRepository.getSavedEvents(currentUserId)
+    }
+  }
+
+  private fun loadSavedEventIds() {
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _savedEventIds = emptySet()
+      return
+    }
+    viewModelScope.launch {
+      _savedEventIds = eventRepository.getSavedEventIds(currentUserId)
+    }
+  }
   fun showMemoryForm() {
     _previousSheetState = _bottomSheetState
     _showMemoryForm = true
@@ -580,9 +614,6 @@ class MapScreenViewModel(
     _showShareDialog = false
   }
 
-  // NOTE: recentActivities and recordRecentActivity removed — UI no longer tracks recent
-  // activities.
-
   fun isUserParticipating(): Boolean {
     val currentUserId = auth.currentUser?.uid ?: return false
     return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
@@ -591,6 +622,10 @@ class MapScreenViewModel(
   fun isUserParticipating(event: Event): Boolean {
     val currentUserId = auth.currentUser?.uid ?: return false
     return event.participantIds.contains(currentUserId)
+  }
+
+  fun isEventSaved(event: Event): Boolean {
+    return savedEventIds.contains(event.uid)
   }
 
   fun joinEvent() {
@@ -618,6 +653,9 @@ class MapScreenViewModel(
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
+        for (event in _joinedEvents) {
+          Log.d("test", "Joined event after join: ${event.uid}")
+        }
       } catch (e: Exception) {
         _errorMessage = "Failed to join event: ${e.message}"
       }
@@ -637,22 +675,64 @@ class MapScreenViewModel(
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
+        for (event in _joinedEvents) {
+          Log.d("test", "Joined event after unregister: ${event.uid}")
+        }
       } catch (e: Exception) {
         _errorMessage = "Failed to unregister: ${e.message}"
       }
     }
   }
 
-  /** Placeholder action for "save for later" used by the UI/tests. */
+  /** Saves the selected event for later by the current user. */
   fun saveEventForLater() {
-    _errorMessage = "Save for later - Coming soon!"
+    viewModelScope.launch {
+      val eventUid = _selectedEvent?.uid ?: return@launch
+      val currentUserId = auth.currentUser?.uid
+      if (currentUserId == null) {
+        _errorMessage = "You must be signed in to save events"
+        return@launch
+      }
+      _errorMessage = null
+      try {
+        val success = eventRepository.saveEventForUser(currentUserId, eventUid)
+        if (success) {
+          _savedEventIds = _savedEventIds + eventUid
+          loadSavedEvents()
+        } else {
+          _errorMessage = "Event is already saved"
+        }
+      } catch (e: Exception) {
+        _errorMessage = "Failed to save event: ${e.message}"
+      }
+    }
+  }
+
+    /** Unsaves the selected event for later by the current user. */
+  fun unsaveEventForLater() {
+    val eventUid= _selectedEvent?.uid ?: return
+    val currentUserId = auth.currentUser?.uid ?: return
+    viewModelScope.launch {
+      _errorMessage = null
+      try {
+        val success = eventRepository.unsaveEventForUser(currentUserId, eventUid)
+        if (success) {
+          _savedEventIds = _savedEventIds - eventUid
+          loadSavedEvents()
+        } else {
+          _errorMessage = "Event was not saved"
+        }
+      } catch (e: Exception) {
+        _errorMessage = "Failed to unsave: ${e.message}"
+      }
+    }
   }
 
   /**
-   * Called when the user taps an event from the "Joined events" list. Reuses the existing
-   * onEventPinClicked behavior to select the event and center the camera.
+   * Called when the user taps an event from the "Joined events" or "Saved events" list.
+   * Reuses the existing onEventPinClicked behavior to select the event and center the camera.
    */
-  fun onJoinedEventClicked(event: Event) {
+  fun onTabEventClicked(event: Event) {
     onEventPinClicked(event)
   }
 }
