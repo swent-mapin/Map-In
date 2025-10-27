@@ -23,8 +23,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
           .associateBy { it.uid }
           .toMutableMap()
 
-  private var savedEvents = mutableListOf<Event>()
-
+  private val savedIdsByUser = mutableMapOf<String, LinkedHashSet<String>>()
   private var nextNumericId: Int =
       events.keys.mapNotNull { key -> key.removePrefix("event").toIntOrNull() }.maxOrNull()?.plus(1)
           ?: 1
@@ -108,26 +107,25 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     }
   }
 
+    private fun bucket(userId: String) =
+        savedIdsByUser.getOrPut(userId) { LinkedHashSet() }
+
     override suspend fun getSavedEventIds(userId: String): Set<String> {
-        return savedEvents.map { it.uid }.toSet()
+        return bucket(userId).toSet()
     }
 
     override suspend fun getSavedEvents(userId: String): List<Event> {
-        return savedEvents
+        return bucket(userId).mapNotNull { id -> events[id] }
     }
 
     override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-        val event = events[eventId] ?: return false
-        if (!savedEvents.any { it.uid == eventId }) {
-            savedEvents.add(event)
-        }
+        if (!events.containsKey(eventId)) return false
+        bucket(userId).add(eventId)
         return true
     }
 
     override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-        val event = savedEvents.find { it.uid == eventId } ?: return false
-        savedEvents.remove(event)
-        return true
+        return bucket(userId).remove(eventId)
     }
 
   companion object {
