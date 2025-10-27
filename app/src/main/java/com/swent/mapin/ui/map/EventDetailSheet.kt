@@ -63,10 +63,12 @@ fun EventDetailSheet(
     event: Event,
     sheetState: BottomSheetState,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     onClose: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -88,10 +90,12 @@ fun EventDetailSheet(
         FullEventContent(
             event = event,
             isParticipating = isParticipating,
+            isSaved = isSaved,
             organizerName = organizerName,
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
-            onSaveForLater = onSaveForLater)
+            onSaveForLater = onSaveForLater,
+            onUnsaveForLater = onUnsaveForLater)
       }
     }
   }
@@ -269,10 +273,12 @@ private fun MediumEventContent(
 private fun FullEventContent(
     event: Event,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
@@ -410,12 +416,21 @@ private fun FullEventContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Save for later button
-        OutlinedButton(
-            onClick = onSaveForLater,
-            modifier = Modifier.fillMaxWidth().testTag("saveForLaterButton")) {
-              Text("Save for Later")
-            }
+        if (!isSaved) {
+          Button(
+              onClick = onSaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("saveForLaterButtonFull")) {
+                Text("Save for later")
+              }
+        } else {
+          OutlinedButton(
+              onClick = onUnsaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("unsaveForLaterButtonFull"),
+              colors = ButtonDefaults.outlinedButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error)) {
+                Text("Unsave")
+              }
+        }
       }
 }
 
