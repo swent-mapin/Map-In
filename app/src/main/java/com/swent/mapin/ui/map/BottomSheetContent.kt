@@ -157,14 +157,14 @@ fun BottomSheetContent(
   AnimatedContent(
       targetState = showMemoryForm,
       transitionSpec = {
-        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+        (fadeIn(animationSpec = tween(300)) +
                 slideInVertically(
-                    animationSpec = androidx.compose.animation.core.tween(300),
+                    animationSpec = tween(300),
                     initialOffsetY = { it / 4 }))
             .togetherWith(
-                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                fadeOut(animationSpec = tween(200)) +
                     slideOutVertically(
-                        animationSpec = androidx.compose.animation.core.tween(200),
+                        animationSpec = tween(200),
                         targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
@@ -195,14 +195,14 @@ fun BottomSheetContent(
             AnimatedContent(
                 targetState = isSearchMode,
                 transitionSpec = {
-                  (fadeIn(animationSpec = androidx.compose.animation.core.tween(250)) +
+                  (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = androidx.compose.animation.core.tween(250),
+                              animationSpec = tween(250),
                               initialOffsetY = { it / 6 }))
                       .togetherWith(
-                          fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                          fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = androidx.compose.animation.core.tween(200),
+                                  animationSpec = tween(200),
                                   targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
