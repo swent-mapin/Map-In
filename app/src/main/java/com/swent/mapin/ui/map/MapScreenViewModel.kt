@@ -227,7 +227,7 @@ class MapScreenViewModel(
         _events = events
         _searchResults = events
       } catch (e: Exception) {
-        android.util.Log.w(
+        Log.w(
             "MapScreenViewModel", "Failed to load events from repository, using samples", e)
         _events = LocalEventRepository.defaultSampleEvents()
         _searchResults = _events
@@ -359,12 +359,12 @@ class MapScreenViewModel(
         val events = eventRepository.getAllEvents()
         applyEventsDataset(events)
       } catch (primary: Exception) {
-        android.util.Log.e("MapScreenViewModel", "Error loading events from repository", primary)
+        Log.e("MapScreenViewModel", "Error loading events from repository", primary)
         try {
           val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
           applyEventsDataset(localEvents)
         } catch (fallback: Exception) {
-          android.util.Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
+          Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
           _allEvents = emptyList()
           applyFilters()
         }
@@ -374,6 +374,7 @@ class MapScreenViewModel(
 
   private fun applyEventsDataset(events: List<Event>) {
     _allEvents = events
+    loadJoinedEvents()
     applyFilters()
   }
 
@@ -425,19 +426,16 @@ class MapScreenViewModel(
             if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
             else emptyList()
       } catch (e: Exception) {
-        android.util.Log.e("MapScreenViewModel", "Error loading events", e)
+        Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
       }
     }
   }
 
   private fun loadJoinedEvents() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _joinedEvents = emptyList()
-      return
-    }
-    _joinedEvents = _events.filter { event -> event.participantIds.contains(currentUserId) }
+    val uid = auth.currentUser?.uid ?: run { _joinedEvents = emptyList(); return }
+    val base = _allEvents.ifEmpty { _events }
+    _joinedEvents = base.filter { uid in it.participantIds }
   }
 
   private fun loadSavedEvents() {
@@ -479,7 +477,7 @@ class MapScreenViewModel(
         val currentUserId = auth.currentUser?.uid
         if (currentUserId == null) {
           _errorMessage = "You must be signed in to create a memory"
-          android.util.Log.e("MapScreenViewModel", "Cannot save memory: User not authenticated")
+          Log.e("MapScreenViewModel", "Cannot save memory: User not authenticated")
           return@launch
         }
 
@@ -496,12 +494,12 @@ class MapScreenViewModel(
                 mediaUrls = mediaUrls,
                 taggedUserIds = formData.taggedUserIds)
         memoryRepository.addMemory(memory)
-        android.util.Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
+        Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
         hideMemoryForm()
         restorePreviousSheetState()
       } catch (e: Exception) {
         _errorMessage = "Failed to save memory: ${e.message ?: "Unknown error"}"
-        android.util.Log.e("MapScreenViewModel", "Error saving memory", e)
+        Log.e("MapScreenViewModel", "Error saving memory", e)
       } finally {
         _isSavingMemory = false
       }
@@ -522,9 +520,9 @@ class MapScreenViewModel(
         fileRef.putFile(uri).await()
         val downloadUrl = fileRef.downloadUrl.await().toString()
         downloadUrls.add(downloadUrl)
-        android.util.Log.d("MapScreenViewModel", "Uploaded media: $downloadUrl")
+        Log.d("MapScreenViewModel", "Uploaded media: $downloadUrl")
       } catch (e: Exception) {
-        android.util.Log.e("MapScreenViewModel", "Failed to upload media file: $uri", e)
+        Log.e("MapScreenViewModel", "Failed to upload media file: $uri", e)
       }
     }
     return downloadUrls
@@ -652,6 +650,7 @@ class MapScreenViewModel(
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
+        _allEvents  = _allEvents.map  { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
         for (event in _joinedEvents) {
           Log.d("test", "Joined event after join: ${event.uid}")
