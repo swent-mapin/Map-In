@@ -78,7 +78,8 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText("Joined Events").assertIsDisplayed()
   }
 
   @Test
@@ -153,25 +154,14 @@ class BottomSheetContentTest {
                   onClear = {}),
           joinedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-          onJoinedEventClick = onEventClick,
+          onTabEventClick = onEventClick,
           onTabChange = onTabChange)
     }
   }
 
-  // JOINED EVENTS TAB TESTS
-  /*@Test
-  fun joinedEventsTab_showsEmptyState() {
-    rule.setContent { JoinedEventsContent(events = emptyList()) }
-    rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithText("You haven't joined any events yet").assertIsDisplayed()
-  }*/
-
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(3)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
@@ -185,7 +175,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_handlesEventInteractions() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -201,25 +191,10 @@ class BottomSheetContentTest {
     assertEquals(testEvents[0], clickedEvent)
   }
 
-  /*@Test
-  fun joinedEventsTab_handlesEdgeCases() {
-    // Test event with null date
-    val eventWithNullDate =
-        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(date = null)
-
-    rule.setContent { JoinedEventsContent(events = listOf(eventWithNullDate)) }
-    rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithText(eventWithNullDate.title).assertIsDisplayed()
-    rule.onNodeWithText("No date").assertIsDisplayed()
-  }*/
-
   @Test
-  fun tabSwitch_betweenRecentActivitiesAndJoinedEvents() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
-    var currentTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES
+  fun tabSwitch_betweenSavedEventsAndJoinedEvents() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    var currentTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS
 
     rule.setContent {
       MaterialTheme {
@@ -513,7 +488,7 @@ class BottomSheetContentTest {
 
   @Test
   fun noResultsMessage_doesNotDisplayWhenSearchResultsExist() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
     rule.setContent {
       TestContentWithSearch(query = "test", searchResults = testEvents, isSearchMode = true)
     }

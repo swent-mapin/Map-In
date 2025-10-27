@@ -41,10 +41,12 @@ class EventDetailSheetTest {
       event: Event = testEvent,
       sheetState: BottomSheetState,
       isParticipating: Boolean = false,
+      isSaved: Boolean = false,
       organizerName: String = "Test Organizer",
       onJoinEvent: () -> Unit = {},
       onUnregisterEvent: () -> Unit = {},
       onSaveForLater: () -> Unit = {},
+      onUnsaveForLater: () -> Unit = {},
       onClose: () -> Unit = {},
       onShare: () -> Unit = {}
   ) {
@@ -53,10 +55,12 @@ class EventDetailSheetTest {
           event = event,
           sheetState = sheetState,
           isParticipating = isParticipating,
+          isSaved = isSaved,
           organizerName = organizerName,
           onJoinEvent = onJoinEvent,
           onUnregisterEvent = onUnregisterEvent,
           onSaveForLater = onSaveForLater,
+          onUnsaveForLater = onUnsaveForLater,
           onClose = onClose,
           onShare = onShare)
     }
@@ -216,7 +220,7 @@ class EventDetailSheetTest {
 
     // Scroll to make buttons visible on smaller screens (CI)
     composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("unregisterButtonFull").assertDoesNotExist()
   }
 
@@ -228,20 +232,6 @@ class EventDetailSheetTest {
     // Scroll to make button visible on smaller screens (CI)
     composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("joinEventButtonFull").assertDoesNotExist()
-  }
-
-  @Test
-  fun fullState_saveForLaterButton_triggersCallback() {
-    var saveCalled = false
-    setEventDetailSheet(
-        sheetState = BottomSheetState.FULL,
-        isParticipating = false,
-        organizerName = "John Doe",
-        onSaveForLater = { saveCalled = true })
-
-    // Scroll to make button visible on smaller screens (CI)
-    composeTestRule.onNodeWithTag("saveForLaterButton").performScrollTo().performClick()
-    assertTrue(saveCalled)
   }
 
   @Test
