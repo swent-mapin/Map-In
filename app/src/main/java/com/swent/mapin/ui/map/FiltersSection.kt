@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,12 +34,22 @@ import java.util.*
 
 // Assisted by AI tools
 
+/**
+ * Enum defining the three location selection modes in the "Place" filter.
+ * - SEARCH: Text-based location search
+ * - MAP: Manual selection on map (to be implemented)
+ * - USER: Use current user geolocation
+ */
 enum class AroundOption {
   SEARCH,
   MAP,
   USER
 }
 
+/**
+ * Centralized test tag registry for FiltersSection. All UI elements are tagged for reliable,
+ * maintainable Compose UI testing.
+ */
 object FiltersSectionTestTags {
   const val RESET_BUTTON = "reset_button"
 
@@ -78,6 +87,15 @@ object FiltersSectionTestTags {
   fun tag(tagName: String) = "tag_${tagName.lowercase()}"
 }
 
+/**
+ * Main entry point for the filter panel UI. Renders a collapsible, interactive filter interface
+ * with 6 sections.
+ *
+ * @param modifier Layout modifier
+ * @param filterViewModel Manages all filter states (default: new instance via viewModel())
+ * @param locationViewModel Provides location search results
+ * @param userProfile Required for "My location" option
+ */
 class FiltersSection {
   @Composable
   fun Render(
@@ -87,6 +105,7 @@ class FiltersSection {
       userProfile: UserProfile
   ) {
     Column(modifier = modifier.fillMaxWidth()) {
+      // Header with title and reset button
       Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Text(
             text = "Filter Events by:",
@@ -100,7 +119,7 @@ class FiltersSection {
             }
       }
 
-      // --- When Section ---
+      // Time Filter
       ToggleSection(
           title = "Time",
           isChecked = filterViewModel.isWhenChecked.value,
@@ -118,7 +137,7 @@ class FiltersSection {
           },
           content = { DateRangePicker(filterViewModel) })
 
-      // --- Where Section ---
+      // Place Filter
       ToggleSection(
           title = "Place",
           isChecked = filterViewModel.isWhereChecked.value,
@@ -128,7 +147,7 @@ class FiltersSection {
           },
           content = { AroundSpotPicker(filterViewModel, locationViewModel, userProfile) })
 
-      // --- Price Section ---
+      // Price Filter
       ToggleSection(
           title = "Price",
           isChecked = filterViewModel.isPriceChecked.value,
@@ -138,7 +157,7 @@ class FiltersSection {
           },
           content = { PricePicker(filterViewModel) })
 
-      // --- Tags Section ---
+      // Tags Filter
       ToggleSection(
           title = "Tags",
           isChecked = filterViewModel.tagsEnabled.value,
@@ -148,7 +167,7 @@ class FiltersSection {
           },
           content = { TagsPicker(filterViewModel) })
 
-      // --- Friends Only Section ---
+      // Friends Only
       ToggleSection(
           title = "Friends only",
           isChecked = filterViewModel.friendsOnly.value,
@@ -156,7 +175,7 @@ class FiltersSection {
           onCheckedChange = { checked -> filterViewModel.setFriendsOnly(checked) },
           content = {})
 
-      // --- Popular Only Section ---
+      // Popular Only
       ToggleSection(
           title = "Popular only",
           isChecked = filterViewModel.popularOnly.value,
@@ -166,6 +185,15 @@ class FiltersSection {
     }
   }
 
+  /**
+   * Reusable toggle section with checkbox, title, and expandable content.
+   *
+   * @param title Section title
+   * @param isChecked Current checked state
+   * @param hasContent Whether expandable content exists
+   * @param onCheckedChange Callback when checkbox is toggled
+   * @param content Composable content shown when expanded
+   */
   @Composable
   fun ToggleSection(
       title: String,
@@ -235,6 +263,10 @@ class FiltersSection {
     }
   }
 
+  /**
+   * Date range picker with two-step dialog flow. First selects start date, then end date (min =
+   * start). Defaults to today if no start date set.
+   */
   @Composable
   fun DateRangePicker(filterViewModel: FiltersSectionViewModel) {
     val context = LocalContext.current
@@ -305,6 +337,7 @@ class FiltersSection {
         }
   }
 
+  /** Location picker with 3 modes: Search, Map, User. Includes radius input (0–999 km). */
   @Composable
   fun AroundSpotPicker(
       filterViewModel: FiltersSectionViewModel,
@@ -392,6 +425,10 @@ class FiltersSection {
     }
   }
 
+  /**
+   * Location search with autocomplete using LocationViewModel. Shows up to 5 results. Powered by
+   * Nominatim/OpenStreetMap.
+   */
   @Composable
   fun SearchPlacePicker(
       locationViewModel: LocationViewModel,
@@ -440,11 +477,16 @@ class FiltersSection {
     }
   }
 
+  /** Placeholder for future map-based location picker. */
   @Composable
   fun MapPicker() {
     Button(onClick = { /* open map picker */}) { Text("Pick on map to implement") }
   }
 
+  /**
+   * Sets user location when selected. Uses dummy coordinates. Note: userProfile.location should be
+   * Location type in future.
+   */
   @Composable
   fun UserLocationPicker(filterViewModel: FiltersSectionViewModel, userProfile: UserProfile) {
     LaunchedEffect(userProfile.location) {
@@ -453,6 +495,7 @@ class FiltersSection {
     }
   }
 
+  /** Max price input (CHF). Accepts only digits, max 999. */
   @Composable
   fun PricePicker(filterViewModel: FiltersSectionViewModel) {
     var priceInput by
@@ -494,6 +537,10 @@ class FiltersSection {
         }
   }
 
+  /**
+   * Tag selector with FlowRow layout. Supports up to 3 lines. Tags are hardcoded but can be
+   * externalized later.
+   */
   @OptIn(ExperimentalLayoutApi::class)
   @Composable
   fun TagsPicker(filterViewModel: FiltersSectionViewModel) {
@@ -542,21 +589,5 @@ class FiltersSection {
                 }
           }
         }
-  }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FiltersSectionPreview() {
-  MaterialTheme {
-    val viewModel = FiltersSectionViewModel()
-    val locationViewModel = LocationViewModel()
-    val userProfile = UserProfile()
-
-    FiltersSection()
-        .Render(
-            filterViewModel = viewModel,
-            locationViewModel = locationViewModel,
-            userProfile = userProfile)
   }
 }

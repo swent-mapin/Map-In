@@ -12,6 +12,17 @@ import org.junit.Test
 
 // Assisted by AI tools
 
+/**
+ * UI tests for the FiltersSection composable. Uses Compose UI testing with test tags to verify:
+ * - Reset functionality
+ * - Toggle expand/collapse
+ * - Date picker default value
+ * - Location mode switching
+ * - Input filtering (digits only)
+ * - Tag selection
+ * - Friends/Popular toggles
+ * - Global reset clears all filters
+ */
 class FiltersSectionTest {
 
   @get:Rule val composeTestRule = createComposeRule()

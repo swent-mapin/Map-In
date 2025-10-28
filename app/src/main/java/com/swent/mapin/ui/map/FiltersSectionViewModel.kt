@@ -5,9 +5,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.swent.mapin.model.Location
 
+/**
+ * ViewModel for FiltersSection.
+ * Centralizes all filter state and provides reset logic.
+ * Uses mutableStateOf and mutableStateListOf for Compose reactivity.
+ */
 class FiltersSectionViewModel : ViewModel() {
 
-  // --- Section toggle states ---
+  // SECTION TOGGLES
   var isWhenChecked = mutableStateOf(false)
     private set
 
@@ -29,7 +34,7 @@ class FiltersSectionViewModel : ViewModel() {
     isPriceChecked.value = checked
   }
 
-  // --- When section ---
+  // TIME FILTER
   var startDate = mutableStateOf("")
     private set
 
@@ -44,7 +49,7 @@ class FiltersSectionViewModel : ViewModel() {
     endDate.value = date
   }
 
-  // --- Where section ---
+  // WHERE FILTER
   var pickedLocation = mutableStateOf<Location?>(null)
     private set
 
@@ -59,7 +64,7 @@ class FiltersSectionViewModel : ViewModel() {
     radiusKm.value = km
   }
 
-  // --- Price section ---
+  // PRICE FILTER
   var maxPriceCHF = mutableStateOf<Int?>(null)
     private set
 
@@ -67,7 +72,7 @@ class FiltersSectionViewModel : ViewModel() {
     maxPriceCHF.value = value
   }
 
-  // --- Tags section ---
+  // TAGS FILTER
   var tagsEnabled = mutableStateOf(false)
     private set
 
@@ -82,7 +87,7 @@ class FiltersSectionViewModel : ViewModel() {
     if (selectedTags.contains(tag)) selectedTags.remove(tag) else selectedTags.add(tag)
   }
 
-  // --- Other filters ---
+  // OTHER FILTERS
   var friendsOnly = mutableStateOf(false)
     private set
 
@@ -97,7 +102,7 @@ class FiltersSectionViewModel : ViewModel() {
     popularOnly.value = enabled
   }
 
-  // --- Section Resets ---
+  // SECTION RESETS
   fun resetWhen() {
     setStartDate("")
     setEndDate("")
@@ -120,7 +125,7 @@ class FiltersSectionViewModel : ViewModel() {
     tagsEnabled.value = false
   }
 
-  // --- GLOBAL RESET ---
+  // GLOBAL RESET
   fun reset() {
     resetWhen()
     resetWhere()
