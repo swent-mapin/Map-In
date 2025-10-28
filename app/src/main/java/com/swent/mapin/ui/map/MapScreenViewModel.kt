@@ -523,7 +523,7 @@ class MapScreenViewModel(
                 mediaUrls = mediaUrls,
                 taggedUserIds = formData.taggedUserIds)
         memoryRepository.addMemory(memory)
-        Log.d("MapScreenViewModel", "Memory saved successfully: ${memory.uid}")
+        Log.d("MapScreenViewModel", "Memory saved successfully")
         hideMemoryForm()
         restorePreviousSheetState()
       } catch (e: Exception) {
@@ -549,9 +549,9 @@ class MapScreenViewModel(
         fileRef.putFile(uri).await()
         val downloadUrl = fileRef.downloadUrl.await().toString()
         downloadUrls.add(downloadUrl)
-        Log.d("MapScreenViewModel", "Uploaded media: $downloadUrl")
+        Log.d("MapScreenViewModel", "Uploaded media file successfully")
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to upload media file: $uri", e)
+        Log.e("MapScreenViewModel", "Failed to upload media file", e)
       }
     }
     return downloadUrls
