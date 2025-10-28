@@ -207,26 +207,27 @@ class MapScreenViewModel(
   /**
    * Reacts to Firebase auth transitions:
    * - On sign-out: clear user-scoped state (saved IDs/list, joined).
-   * - On sign-in: load saved IDs/list and joined/participant events.
-   * Keeps UI consistent when users change auth state mid-session.
+   * - On sign-in: load saved IDs/list and joined/participant events. Keeps UI consistent when users
+   *   change auth state mid-session.
    */
   private fun registerAuthStateListener() {
     if (authListener != null) return
-    authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-      val uid = firebaseAuth.currentUser?.uid
-      if (uid == null) {
-        // Signed out → clear user-scoped state immediately
-        _savedEvents = emptyList()
-        _savedEventIds = emptySet()
-        _joinedEvents = emptyList()
-      } else {
-        // Signed in → (re)load user-scoped data
-        loadSavedEvents()
-        loadSavedEventIds()
-        loadJoinedEvents()
-        loadParticipantEvents()
-      }
-    }
+    authListener =
+        FirebaseAuth.AuthStateListener { firebaseAuth ->
+          val uid = firebaseAuth.currentUser?.uid
+          if (uid == null) {
+            // Signed out → clear user-scoped state immediately
+            _savedEvents = emptyList()
+            _savedEventIds = emptySet()
+            _joinedEvents = emptyList()
+          } else {
+            // Signed in → (re)load user-scoped data
+            loadSavedEvents()
+            loadSavedEventIds()
+            loadJoinedEvents()
+            loadParticipantEvents()
+          }
+        }
     auth.addAuthStateListener(authListener!!)
   }
 
