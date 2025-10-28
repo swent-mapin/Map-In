@@ -47,6 +47,7 @@ class MapScreenViewModel(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
 
+  private var authListener: FirebaseAuth.AuthStateListener? = null
   // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
@@ -199,6 +200,34 @@ class MapScreenViewModel(
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
+
+    registerAuthStateListener()
+  }
+
+  /**
+   * Reacts to Firebase auth transitions:
+   * - On sign-out: clear user-scoped state (saved IDs/list, joined).
+   * - On sign-in: load saved IDs/list and joined/participant events.
+   * Keeps UI consistent when users change auth state mid-session.
+   */
+  private fun registerAuthStateListener() {
+    if (authListener != null) return
+    authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+      val uid = firebaseAuth.currentUser?.uid
+      if (uid == null) {
+        // Signed out → clear user-scoped state immediately
+        _savedEvents = emptyList()
+        _savedEventIds = emptySet()
+        _joinedEvents = emptyList()
+      } else {
+        // Signed in → (re)load user-scoped data
+        loadSavedEvents()
+        loadSavedEventIds()
+        loadJoinedEvents()
+        loadParticipantEvents()
+      }
+    }
+    auth.addAuthStateListener(authListener!!)
   }
 
   /** Loads initial sample events synchronously for immediate UI responsiveness. */
@@ -537,6 +566,10 @@ class MapScreenViewModel(
     super.onCleared()
     hideScaleBarJob?.cancel()
     programmaticZoomJob?.cancel()
+
+    // Remove auth listener to avoid leaks
+    authListener?.let { auth.removeAuthStateListener(it) }
+    authListener = null
   }
 
   private fun restorePreviousSheetState() {
