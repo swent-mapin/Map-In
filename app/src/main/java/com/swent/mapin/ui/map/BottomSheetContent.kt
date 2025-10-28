@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -34,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -43,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,9 +58,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.profile.ProfileViewModel
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -124,12 +126,17 @@ fun BottomSheetContent(
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
-    onJoinedEventClick: (Event) -> Unit = {}
+    onJoinedEventClick: (Event) -> Unit = {},
+    filterViewModel: FiltersSectionViewModel = remember { FiltersSectionViewModel() },
+    locationViewModel: LocationViewModel = remember { LocationViewModel() },
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
+  val filterSection = remember { FiltersSection() }
+  val userProfile by profileViewModel.userProfile.collectAsState()
 
   LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
     if (isFull && searchBarState.shouldRequestFocus) {
@@ -187,6 +194,13 @@ fun BottomSheetContent(
                   else Modifier.fillMaxWidth()
 
               Column(modifier = contentModifier) {
+
+                // Dynamic tag selection
+                filterSection.Render(
+                    Modifier.fillMaxWidth(), filterViewModel, locationViewModel, userProfile)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -234,14 +248,6 @@ fun BottomSheetContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Dynamic tag selection
-                if (topTags.isNotEmpty()) {
-                  TagsSection(
-                      topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
-                }
 
                 Spacer(modifier = Modifier.height(24.dp))
               }
@@ -472,33 +478,6 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
       }
 }
 
-/** Section displaying dynamic tags - replaces the hardcoded discover section. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TagsSection(
-    topTags: List<String>,
-    selectedTags: Set<String>,
-    onTagClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(modifier = modifier.fillMaxWidth()) {
-    Text(
-        text = "Discover",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(bottom = 8.dp))
-
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          topTags.forEach { tag ->
-            val isSelected = selectedTags.contains(tag)
-            TagItem(text = tag, isSelected = isSelected, onClick = { onTagClick(tag) })
-          }
-        }
-  }
-}
-
 @Composable
 private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
@@ -517,31 +496,4 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
       Spacer(modifier = Modifier.height(8.dp))
     }
   }
-}
-
-@Composable
-private fun TagItem(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-  val contentColor =
-      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-
-  OutlinedButton(
-      onClick = onClick,
-      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors =
-          ButtonDefaults.buttonColors(
-              containerColor = backgroundColor, contentColor = contentColor)) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
-      }
 }

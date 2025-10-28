@@ -6,9 +6,8 @@ import androidx.lifecycle.ViewModel
 import com.swent.mapin.model.Location
 
 /**
- * ViewModel for FiltersSection.
- * Centralizes all filter state and provides reset logic.
- * Uses mutableStateOf and mutableStateListOf for Compose reactivity.
+ * ViewModel for FiltersSection. Centralizes all filter state and provides reset logic. Uses
+ * mutableStateOf and mutableStateListOf for Compose reactivity.
  */
 class FiltersSectionViewModel : ViewModel() {
 
