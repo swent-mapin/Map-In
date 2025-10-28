@@ -501,7 +501,10 @@ class EventRepositoryFirestoreTest {
     whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(Tasks.forResult(null))
     val ok = repo.saveEventForUser("user123", "E1")
     assertTrue(ok)
-    verify(savedDoc).set(any<Map<String, Any>>())
+      argumentCaptor<Map<String, Any?>>().apply {
+          verify(savedDoc).set(capture())
+          assertTrue(firstValue.containsKey("savedAt"))
+      }
   }
 
   @Test
