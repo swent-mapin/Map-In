@@ -50,7 +50,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +67,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
@@ -101,7 +101,6 @@ data class SearchBarState(
  * @param availableEvents List of events that can be linked to memories
  * @param joinedEvents List of events the user has joined
  * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
- * @param topTags List of top tags to display in the discover section
  * @param selectedTags Set of currently selected tags
  * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
@@ -131,7 +130,6 @@ fun BottomSheetContent(
     // Tab and tags
     selectedTab: MapScreenViewModel.BottomSheetTab =
         MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
-    topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
     // Callbacks
@@ -151,7 +149,7 @@ fun BottomSheetContent(
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
   val filterSection = remember { FiltersSection() }
-  val userProfile by profileViewModel.userProfile.collectAsState()
+  val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
   LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
     if (isFull && searchBarState.shouldRequestFocus) {
@@ -273,7 +271,7 @@ fun BottomSheetContent(
                       Spacer(modifier = Modifier.height(16.dp))
 
                       filterSection.Render(
-                        Modifier.fillMaxWidth(), filterViewModel, locationViewModel, userProfile)
+                          Modifier.fillMaxWidth(), filterViewModel, locationViewModel, userProfile)
                     }
                   }
                 }

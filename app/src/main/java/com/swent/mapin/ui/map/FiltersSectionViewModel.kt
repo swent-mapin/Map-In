@@ -60,7 +60,7 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   fun setRadius(km: Int?) {
-    radiusKm.value = km
+    radiusKm.value = km?.coerceIn(0, 999)
   }
 
   // PRICE FILTER
@@ -68,7 +68,7 @@ class FiltersSectionViewModel : ViewModel() {
     private set
 
   fun setMaxPriceCHF(value: Int?) {
-    maxPriceCHF.value = value
+    maxPriceCHF.value = value?.coerceIn(0, 999)
   }
 
   // TAGS FILTER

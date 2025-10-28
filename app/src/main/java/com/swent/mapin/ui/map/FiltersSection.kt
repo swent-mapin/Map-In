@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
@@ -52,6 +53,7 @@ enum class AroundOption {
  */
 object FiltersSectionTestTags {
   const val RESET_BUTTON = "reset_button"
+  const val TITLE = "filters_section_title"
 
   // ToggleSection
   const val TOGGLE_TIME = "toggle_time"
@@ -110,7 +112,7 @@ class FiltersSection {
         Text(
             text = "Filter Events by:",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 12.dp))
+            modifier = Modifier.padding(bottom = 12.dp).testTag(FiltersSectionTestTags.TITLE))
 
         TextButton(
             onClick = { filterViewModel.reset() },
@@ -436,7 +438,7 @@ class FiltersSection {
   ) {
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
-    val results by locationViewModel.locations.collectAsState()
+    val results by locationViewModel.locations.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxWidth()) {
       OutlinedTextField(

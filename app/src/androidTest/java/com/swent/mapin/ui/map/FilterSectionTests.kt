@@ -6,6 +6,7 @@ import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.UserProfile
 import java.text.SimpleDateFormat
 import java.util.*
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -50,8 +51,8 @@ class FiltersSectionTest {
   fun resetButton_callsReset() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RESET_BUTTON).performClick()
     composeTestRule.runOnIdle {
-      assert(!viewModel.isWhenChecked.value)
-      assert(viewModel.pickedLocation.value == null)
+      assertFalse(viewModel.isWhenChecked.value)
+      assertNull(viewModel.pickedLocation.value)
     }
   }
 
@@ -98,7 +99,7 @@ class FiltersSectionTest {
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_USER).performClick()
 
-    composeTestRule.runOnIdle { assert(viewModel.pickedLocation.value?.name == "user") }
+    composeTestRule.runOnIdle { assertEquals("user", viewModel.pickedLocation.value?.name) }
   }
 
   @Test
@@ -142,26 +143,26 @@ class FiltersSectionTest {
 
     val musicTag = composeTestRule.onNodeWithTag(FiltersSectionTestTags.tag("Music"))
     musicTag.performClick()
-    composeTestRule.runOnIdle { assert("Music" in viewModel.selectedTags) }
+    composeTestRule.runOnIdle { assertTrue("Music" in viewModel.selectedTags) }
 
     musicTag.performClick()
-    composeTestRule.runOnIdle { assert("Music" !in viewModel.selectedTags) }
+    composeTestRule.runOnIdle { assertFalse("Music" in viewModel.selectedTags) }
   }
 
   @Test
   fun friendsOnly_togglesCorrectly() {
     val toggle = composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_FRIENDS)
     toggle.performClick()
-    composeTestRule.runOnIdle { assert(viewModel.friendsOnly.value) }
+    composeTestRule.runOnIdle { assertTrue(viewModel.friendsOnly.value) }
     toggle.performClick()
-    composeTestRule.runOnIdle { assert(!viewModel.friendsOnly.value) }
+    composeTestRule.runOnIdle { assertFalse(viewModel.friendsOnly.value) }
   }
 
   @Test
   fun popularOnly_togglesCorrectly() {
     val toggle = composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR)
     toggle.performClick()
-    composeTestRule.runOnIdle { assert(viewModel.popularOnly.value) }
+    composeTestRule.runOnIdle { assertTrue(viewModel.popularOnly.value) }
   }
 
   @Test
@@ -186,15 +187,15 @@ class FiltersSectionTest {
     sportTag.assertIsDisplayed()
     sportTag.performClick()
 
-    composeTestRule.runOnIdle { assert("Sport" in viewModel.selectedTags) }
+    composeTestRule.runOnIdle { assertTrue("Sport" in viewModel.selectedTags) }
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RESET_BUTTON).performClick()
 
     composeTestRule.runOnIdle {
-      assert(!viewModel.isWhenChecked.value)
-      assert(!viewModel.isPriceChecked.value)
-      assert(!viewModel.tagsEnabled.value)
-      assert(viewModel.selectedTags.isEmpty())
+      assertFalse(viewModel.isWhenChecked.value)
+      assertFalse(viewModel.isPriceChecked.value)
+      assertFalse(viewModel.tagsEnabled.value)
+      assertTrue(viewModel.selectedTags.isEmpty())
     }
   }
 }
