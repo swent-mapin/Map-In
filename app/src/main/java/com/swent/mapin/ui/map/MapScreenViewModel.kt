@@ -743,8 +743,12 @@ class MapScreenViewModel(
   /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
     val eventUid = _selectedEvent?.uid ?: return
-    val currentUserId = auth.currentUser?.uid ?: return
     viewModelScope.launch {
+      val currentUserId = auth.currentUser?.uid
+      if (currentUserId == null) {
+        _errorMessage = "You must be signed in to unsave events"
+        return@launch
+      }
       _errorMessage = null
       try {
         val success = eventRepository.unsaveEventForUser(currentUserId, eventUid)
