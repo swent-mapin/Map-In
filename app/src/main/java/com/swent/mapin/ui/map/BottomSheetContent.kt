@@ -163,14 +163,10 @@ fun BottomSheetContent(
       targetState = showMemoryForm,
       transitionSpec = {
         (fadeIn(animationSpec = tween(300)) +
-                slideInVertically(
-                    animationSpec = tween(300),
-                    initialOffsetY = { it / 4 }))
+                slideInVertically(animationSpec = tween(300), initialOffsetY = { it / 4 }))
             .togetherWith(
                 fadeOut(animationSpec = tween(200)) +
-                    slideOutVertically(
-                        animationSpec = tween(200),
-                        targetOffsetY = { -it / 4 }))
+                    slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
         if (showForm) {
@@ -202,13 +198,11 @@ fun BottomSheetContent(
                 transitionSpec = {
                   (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = tween(250),
-                              initialOffsetY = { it / 6 }))
+                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
                       .togetherWith(
                           fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = tween(200),
-                                  targetOffsetY = { it / 6 }))
+                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                 label = "searchModeTransition") { searchActive ->
