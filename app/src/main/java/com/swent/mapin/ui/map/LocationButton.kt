@@ -24,28 +24,16 @@ import androidx.compose.ui.unit.dp
  * @param modifier Modifier for the button
  */
 @Composable
-fun LocationButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF2196F3)) // Blue color
-    ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier
-                .size(40.dp)
-                .testTag("locationButton")
-        ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = "Center on my location",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
+fun LocationButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Box(
+      modifier = modifier.size(40.dp).clip(CircleShape).background(Color(0xFF2196F3)) // Blue color
+      ) {
+        IconButton(onClick = onClick, modifier = Modifier.size(40.dp).testTag("locationButton")) {
+          Icon(
+              imageVector = Icons.Default.MyLocation,
+              contentDescription = "Center on my location",
+              tint = Color.White,
+              modifier = Modifier.size(24.dp))
         }
-    }
+      }
 }

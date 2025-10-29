@@ -628,16 +628,12 @@ class MapScreenViewModel(
 
   // Location management methods
 
-  /**
-   * Checks and updates the location permission status.
-   */
+  /** Checks and updates the location permission status. */
   fun checkLocationPermission() {
     _hasLocationPermission = locationManager.hasLocationPermission()
   }
 
-  /**
-   * Starts listening to location updates if permission is granted.
-   */
+  /** Starts listening to location updates if permission is granted. */
   fun startLocationUpdates() {
     if (!locationManager.hasLocationPermission()) {
       _hasLocationPermission = false
@@ -647,7 +643,8 @@ class MapScreenViewModel(
     _hasLocationPermission = true
 
     viewModelScope.launch {
-      locationManager.getLocationUpdates()
+      locationManager
+          .getLocationUpdates()
           .catch { e ->
             android.util.Log.e("MapScreenViewModel", "Error getting location updates", e)
             _errorMessage = "Failed to get location updates"
@@ -661,9 +658,7 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Gets the last known location and optionally centers the camera on it.
-   */
+  /** Gets the last known location and optionally centers the camera on it. */
   fun getLastKnownLocation(centerCamera: Boolean = false) {
     locationManager.getLastKnownLocation(
         onSuccess = { location ->
@@ -675,15 +670,11 @@ class MapScreenViewModel(
             onCenterOnUserLocation?.invoke()
           }
         },
-        onError = {
-          android.util.Log.w("MapScreenViewModel", "Could not get last known location")
-        }
-    )
+        onError = { android.util.Log.w("MapScreenViewModel", "Could not get last known location") })
   }
 
   /**
-   * Handles the location button click.
-   * If permission is granted, centers on user location.
+   * Handles the location button click. If permission is granted, centers on user location.
    * Otherwise, requests permission.
    */
   fun onLocationButtonClick() {
@@ -696,8 +687,8 @@ class MapScreenViewModel(
   }
 
   /**
-   * Updates the centered state based on camera position.
-   * Call this when the camera moves to check if still centered on user.
+   * Updates the centered state based on camera position. Call this when the camera moves to check
+   * if still centered on user.
    */
   fun updateCenteredState(cameraLat: Double, cameraLon: Double) {
     val userLoc = _currentLocation
@@ -715,8 +706,8 @@ class MapScreenViewModel(
   }
 
   /**
-   * Manually marks that the camera is no longer centered on the user.
-   * Call this when user manually moves the map.
+   * Manually marks that the camera is no longer centered on the user. Call this when user manually
+   * moves the map.
    */
   fun onMapMoved() {
     _isCenteredOnUser = false

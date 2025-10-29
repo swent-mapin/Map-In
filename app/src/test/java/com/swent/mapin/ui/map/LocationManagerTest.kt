@@ -1,4 +1,3 @@
-
 package com.swent.mapin.ui.map
 
 import android.Manifest
@@ -97,9 +96,7 @@ class LocationManagerTest {
     var successInvoked = false
 
     manager.getLastKnownLocation(
-        onSuccess = { successInvoked = true },
-        onError = { errorInvoked = true }
-    )
+        onSuccess = { successInvoked = true }, onError = { errorInvoked = true })
 
     assertTrue("Error callback should be invoked", errorInvoked)
     assertFalse("Success callback should not be invoked", successInvoked)
@@ -114,13 +111,9 @@ class LocationManagerTest {
 
     try {
       kotlinx.coroutines.runBlocking {
-        manager.getLocationUpdates().collect {
-          locationReceived = true
-        }
+        manager.getLocationUpdates().collect { locationReceived = true }
       }
-    } catch (_: SecurityException) {
-    } catch (_: Exception) {
-    }
+    } catch (_: SecurityException) {} catch (_: Exception) {}
 
     assertFalse("Should not receive location without permission", locationReceived)
   }
@@ -150,10 +143,7 @@ class LocationManagerTest {
     val manager = LocationManager(mockContext)
 
     try {
-      manager.getLastKnownLocation(
-          onSuccess = { },
-          onError = { }
-      )
+      manager.getLastKnownLocation(onSuccess = {}, onError = {})
       assertTrue("Method should execute without throwing SecurityException", true)
     } catch (_: SecurityException) {
       assertTrue("Should not throw SecurityException with permissions granted", false)
@@ -176,7 +166,6 @@ class LocationManagerTest {
 
     assertFalse(manager.hasLocationPermission())
   }
-
 
   @Test
   fun locationManager_multipleInstances_eachHasOwnState() {

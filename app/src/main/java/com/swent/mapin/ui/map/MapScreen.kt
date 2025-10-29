@@ -52,12 +52,12 @@ import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
+import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
-import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.ColorValue
 import com.mapbox.maps.extension.compose.style.DoubleValue
@@ -74,6 +74,7 @@ import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleSta
 import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
 import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
 import com.mapbox.maps.extension.style.layers.properties.generated.TextAnchor
+import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
 import com.mapbox.maps.plugin.annotation.AnnotationConfig
 import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
@@ -81,7 +82,6 @@ import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.mapbox.maps.plugin.PuckBearing
 import com.swent.mapin.R
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
@@ -112,22 +112,21 @@ fun MapScreen(
   val coroutineScope = rememberCoroutineScope()
 
   // Location permission launcher
-  val locationPermissionLauncher = rememberLauncherForActivityResult(
-      contract = ActivityResultContracts.RequestMultiplePermissions()
-  ) { permissions ->
-    val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-    val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+  val locationPermissionLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val coarseLocationGranted =
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
-    if (fineLocationGranted && coarseLocationGranted) {
-      viewModel.checkLocationPermission()
-      viewModel.startLocationUpdates()
-      viewModel.getLastKnownLocation(centerCamera = true)
-    } else {
-      coroutineScope.launch {
-        snackbarHostState.showSnackbar("Location permission denied")
-      }
-    }
-  }
+            if (fineLocationGranted && coarseLocationGranted) {
+              viewModel.checkLocationPermission()
+              viewModel.startLocationUpdates()
+              viewModel.getLastKnownLocation(centerCamera = true)
+            } else {
+              coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
+            }
+          }
 
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
@@ -147,10 +146,7 @@ fun MapScreen(
     viewModel.onRequestLocationPermission = {
       locationPermissionLauncher.launch(
           arrayOf(
-              Manifest.permission.ACCESS_FINE_LOCATION,
-              Manifest.permission.ACCESS_COARSE_LOCATION
-          )
-      )
+              Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
   }
 
@@ -398,17 +394,13 @@ private fun MapboxLayer(
                       .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp),
               horizontalAlignment = Alignment.End) {
                 AnimatedVisibility(
-                    visible = !viewModel.isCenteredOnUser,
-                    enter = fadeIn(),
-                    exit = fadeOut()) {
+                    visible = !viewModel.isCenteredOnUser, enter = fadeIn(), exit = fadeOut()) {
                       LocationButton(onClick = { viewModel.onLocationButtonClick() })
                     }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Box(modifier = Modifier.size(48.dp)) {
-                  Compass()
-                }
+                Box(modifier = Modifier.size(48.dp)) { Compass() }
               }
         }
       },

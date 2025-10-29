@@ -225,11 +225,8 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
   }
-
 
   @Test
   fun mapScreen_switchBetweenStyles_maintainsState() {
@@ -425,7 +422,8 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_locationButton_clickTriggersViewModel() {
-    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
     var permissionRequested = false
 
@@ -439,9 +437,7 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      viewModel.onLocationButtonClick()
-    }
+    rule.runOnIdle { viewModel.onLocationButtonClick() }
     rule.waitForIdle()
 
     assertTrue(permissionRequested)
@@ -449,7 +445,8 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_locationButton_stateChangesWithMapMovement() {
-    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
 
     rule.setContent {
@@ -461,29 +458,19 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
 
-    rule.runOnIdle {
-      viewModel.onMapMoved()
-    }
+    rule.runOnIdle { viewModel.onMapMoved() }
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
 
-    rule.runOnIdle {
-      viewModel.updateCenteredState(46.5, 6.5)
-    }
+    rule.runOnIdle { viewModel.updateCenteredState(46.5, 6.5) }
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
   }
-/*
+  /*
   @Test
   fun mapScreen_locationFeature_centersCameraWhenPermissionGranted() {
     val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
@@ -509,7 +496,6 @@ class MapScreenTest {
     assertTrue(cameraCentered)
   } */
 
-
   @Test
   fun mapScreen_compassAndLocationButton_positioning() {
     rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
@@ -520,7 +506,8 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_launchedEffect_initiatesLocationChecks() {
-    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
 
     rule.setContent {
@@ -531,14 +518,13 @@ class MapScreenTest {
     }
 
     rule.waitForIdle()
-    rule.runOnIdle {
-      assertFalse(viewModel.hasLocationPermission)
-    }
+    rule.runOnIdle { assertFalse(viewModel.hasLocationPermission) }
   }
 
   @Test
   fun mapScreen_updateCenteredState_tracksCamera() {
-    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
 
     rule.setContent {
@@ -550,17 +536,11 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
 
-    rule.runOnIdle {
-      viewModel.updateCenteredState(46.518, 6.566)
-    }
+    rule.runOnIdle { viewModel.updateCenteredState(46.518, 6.566) }
     rule.waitForIdle()
 
-    rule.runOnIdle {
-      assertFalse(viewModel.isCenteredOnUser)
-    }
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
   }
 }

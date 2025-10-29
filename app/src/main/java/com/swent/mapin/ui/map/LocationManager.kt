@@ -22,96 +22,88 @@ import kotlinx.coroutines.flow.callbackFlow
  * Provides a flow-based API for location updates and checks for location permissions.
  */
 class LocationManager(private val context: Context) {
-    private val fusedLocationClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(context)
+  private val fusedLocationClient: FusedLocationProviderClient =
+      LocationServices.getFusedLocationProviderClient(context)
 
-    /**
-     * Checks if location permissions are granted.
-     *
-     * @return true if both FINE and COARSE location permissions are granted
-     */
-    fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+  /**
+   * Checks if location permissions are granted.
+   *
+   * @return true if both FINE and COARSE location permissions are granted
+   */
+  fun hasLocationPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        PackageManager.PERMISSION_GRANTED &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+  }
+
+  /**
+   * Creates a Flow that emits location updates.
+   *
+   * Automatically handles lifecycle by removing location updates when the flow is cancelled.
+   *
+   * @return Flow of Location objects
+   * @throws SecurityException if location permissions are not granted
+   */
+  @Suppress("MissingPermission")
+  fun getLocationUpdates(): Flow<Location> = callbackFlow {
+    if (!hasLocationPermission()) {
+      close(SecurityException("Location permission not granted"))
+      return@callbackFlow
     }
 
-    /**
-     * Creates a Flow that emits location updates.
-     *
-     * Automatically handles lifecycle by removing location updates when the flow is cancelled.
-     *
-     * @return Flow of Location objects
-     * @throws SecurityException if location permissions are not granted
-     */
-    @Suppress("MissingPermission")
-    fun getLocationUpdates(): Flow<Location> = callbackFlow {
-        if (!hasLocationPermission()) {
-            close(SecurityException("Location permission not granted"))
-            return@callbackFlow
-        }
-
-        val locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            10000L // 10 seconds
-        ).apply {
-            setMinUpdateIntervalMillis(5000L) // 5 seconds
-            setMaxUpdateDelayMillis(15000L) // 15 seconds
-        }.build()
-
-        val locationCallback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                result.locations.forEach { location ->
-                    trySend(location)
-                }
+    val locationRequest =
+        LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY, 10000L // 10 seconds
+                )
+            .apply {
+              setMinUpdateIntervalMillis(5000L) // 5 seconds
+              setMaxUpdateDelayMillis(15000L) // 15 seconds
             }
+            .build()
+
+    val locationCallback =
+        object : LocationCallback() {
+          override fun onLocationResult(result: LocationResult) {
+            result.locations.forEach { location -> trySend(location) }
+          }
         }
 
-        try {
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
-        } catch (e: SecurityException) {
-            close(e)
-        }
-
-        awaitClose {
-            fusedLocationClient.removeLocationUpdates(locationCallback)
-        }
+    try {
+      fusedLocationClient.requestLocationUpdates(
+          locationRequest, locationCallback, Looper.getMainLooper())
+    } catch (e: SecurityException) {
+      close(e)
     }
 
-    /**
-     * Gets the last known location immediately.
-     *
-     * @param onSuccess Callback invoked with the location if available
-     * @param onError Callback invoked if location cannot be retrieved
-     */
-    @Suppress("MissingPermission")
-    fun getLastKnownLocation(onSuccess: (Location) -> Unit, onError: () -> Unit) {
-        if (!hasLocationPermission()) {
-            onError()
-            return
-        }
+    awaitClose { fusedLocationClient.removeLocationUpdates(locationCallback) }
+  }
 
-        try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                if (location != null) {
-                    onSuccess(location)
-                } else {
-                    onError()
-                }
-            }.addOnFailureListener {
-                onError()
+  /**
+   * Gets the last known location immediately.
+   *
+   * @param onSuccess Callback invoked with the location if available
+   * @param onError Callback invoked if location cannot be retrieved
+   */
+  @Suppress("MissingPermission")
+  fun getLastKnownLocation(onSuccess: (Location) -> Unit, onError: () -> Unit) {
+    if (!hasLocationPermission()) {
+      onError()
+      return
+    }
+
+    try {
+      fusedLocationClient.lastLocation
+          .addOnSuccessListener { location: Location? ->
+            if (location != null) {
+              onSuccess(location)
+            } else {
+              onError()
             }
-        } catch (e: SecurityException) {
-            onError()
-        }
+          }
+          .addOnFailureListener { onError() }
+    } catch (e: SecurityException) {
+      onError()
     }
+  }
 }

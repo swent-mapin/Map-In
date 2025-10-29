@@ -49,9 +49,7 @@ class LocationButtonTest {
   @Test
   fun locationButton_canBeClickedMultipleTimes() {
     var clickCount = 0
-    composeTestRule.setContent {
-      MaterialTheme { LocationButton(onClick = { clickCount++ }) }
-    }
+    composeTestRule.setContent { MaterialTheme { LocationButton(onClick = { clickCount++ }) } }
 
     composeTestRule.onNodeWithTag("locationButton").performClick()
     composeTestRule.onNodeWithTag("locationButton").performClick()
@@ -60,4 +58,3 @@ class LocationButtonTest {
     assertTrue(clickCount == 3)
   }
 }
-
