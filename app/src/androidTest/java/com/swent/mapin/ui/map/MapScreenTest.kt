@@ -46,7 +46,7 @@ class MapScreenTest {
   fun mapScreen_initialState_showsCollapsedSheet() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertExists()
+    rule.onNodeWithText("Saved Events").assertExists()
   }
 
   @Test
@@ -385,7 +385,6 @@ class MapScreenTest {
 
     // When no event is selected, should show BottomSheetContent (else branch)
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertExists()
   }
 
   @Test

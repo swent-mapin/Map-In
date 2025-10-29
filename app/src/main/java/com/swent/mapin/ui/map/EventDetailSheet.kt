@@ -63,10 +63,12 @@ fun EventDetailSheet(
     event: Event,
     sheetState: BottomSheetState,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     onClose: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -88,10 +90,12 @@ fun EventDetailSheet(
         FullEventContent(
             event = event,
             isParticipating = isParticipating,
+            isSaved = isSaved,
             organizerName = organizerName,
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
-            onSaveForLater = onSaveForLater)
+            onSaveForLater = onSaveForLater,
+            onUnsaveForLater = onUnsaveForLater)
       }
     }
   }
@@ -269,10 +273,12 @@ private fun MediumEventContent(
 private fun FullEventContent(
     event: Event,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
@@ -410,13 +416,48 @@ private fun FullEventContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Save for later button
-        OutlinedButton(
-            onClick = onSaveForLater,
-            modifier = Modifier.fillMaxWidth().testTag("saveForLaterButton")) {
-              Text("Save for Later")
-            }
+        val saveButtonUi = remember(isSaved) { resolveSaveButtonUi(isSaved) }
+
+        if (!saveButtonUi.showSaveButton) {
+          OutlinedButton(
+              onClick = onUnsaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("unsaveButtonFull"),
+              colors =
+                  ButtonDefaults.outlinedButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error)) {
+                Text(saveButtonUi.label)
+              }
+        } else {
+          Button(
+              onClick = onSaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("saveButtonFull")) {
+                Text(saveButtonUi.label)
+              }
+        }
       }
+}
+
+/**
+ * Data class representing the state of the save button.
+ *
+ * @param showSaveButton Whether the save button should be shown
+ * @param label The label to display on the button
+ */
+@VisibleForTesting internal data class SaveButtonUi(val showSaveButton: Boolean, val label: String)
+
+/**
+ * Resolves the UI state for the save button based on whether the event is already saved.
+ *
+ * @param isSaved Whether the event is already saved
+ * @return The UI state for the save button
+ */
+@VisibleForTesting
+internal fun resolveSaveButtonUi(isSaved: Boolean): SaveButtonUi {
+  return if (isSaved) {
+    SaveButtonUi(showSaveButton = false, label = "Unsave")
+  } else {
+    SaveButtonUi(showSaveButton = true, label = "Save for later")
+  }
 }
 
 @VisibleForTesting
