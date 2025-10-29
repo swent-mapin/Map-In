@@ -3,9 +3,9 @@ package com.swent.mapin.ui.friends
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.FriendshipStatus
+import com.swent.mapin.model.UserProfile
 import org.junit.Rule
 import org.junit.Test
 
@@ -38,9 +38,7 @@ class FriendsScreenTest {
   // Assertion: Tab row and individual tabs are displayed.
   @Test
   fun friendsScreen_displaysAllTabs() {
-    composeTestRule.setContent {
-      MaterialTheme { FriendsScreen(onNavigateBack = {}) }
-    }
+    composeTestRule.setContent { MaterialTheme { FriendsScreen(onNavigateBack = {}) } }
 
     composeTestRule.onNodeWithTag("friendsTabRow").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tabFRIENDS").assertIsDisplayed()
@@ -70,9 +68,7 @@ class FriendsScreenTest {
   // Assertion: The corresponding tab content node is displayed after each click.
   @Test
   fun friendsScreen_tabSwitchingWorks() {
-    composeTestRule.setContent {
-      MaterialTheme { FriendsScreen(onNavigateBack = {}) }
-    }
+    composeTestRule.setContent { MaterialTheme { FriendsScreen(onNavigateBack = {}) } }
 
     // Switch to Requests tab
     composeTestRule.onNodeWithTag("tabREQUESTS").performClick()
@@ -207,7 +203,9 @@ class FriendsScreenTest {
   @Test
   fun requestsTab_displaysEmptyState() {
     composeTestRule.setContent {
-      MaterialTheme { FriendsScreen(onNavigateBack = {}, pendingRequests = emptyList<FriendWithProfile>()) }
+      MaterialTheme {
+        FriendsScreen(onNavigateBack = {}, pendingRequests = emptyList<FriendWithProfile>())
+      }
     }
 
     composeTestRule.onNodeWithTag("tabREQUESTS").performClick()
@@ -335,7 +333,8 @@ class FriendsScreenTest {
   fun searchTab_displaysNoResultsState() {
     composeTestRule.setContent {
       MaterialTheme {
-        FriendsScreen(onNavigateBack = {}, searchQuery = "xyz", searchResults = emptyList<UserProfile>())
+        FriendsScreen(
+            onNavigateBack = {}, searchQuery = "xyz", searchResults = emptyList<UserProfile>())
       }
     }
 

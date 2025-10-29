@@ -4,7 +4,6 @@ import com.google.firebase.Timestamp
 
 // Assisted by AI
 
-
 /** Represents the status of a friendship or friend request. */
 enum class FriendshipStatus {
   PENDING, // Request sent but not yet accepted
