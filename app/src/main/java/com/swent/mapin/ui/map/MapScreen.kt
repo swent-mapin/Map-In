@@ -1,9 +1,12 @@
 package com.swent.mapin.ui.map
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
@@ -12,10 +15,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -25,6 +31,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +57,7 @@ import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
+import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.ColorValue
 import com.mapbox.maps.extension.compose.style.DoubleValue
@@ -71,6 +79,9 @@ import com.mapbox.maps.plugin.annotation.AnnotationConfig
 import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
+import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.PuckBearing
 import com.swent.mapin.R
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
@@ -78,6 +89,7 @@ import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
@@ -97,11 +109,48 @@ fun MapScreen(
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
+  val coroutineScope = rememberCoroutineScope()
+
+  // Location permission launcher
+  val locationPermissionLauncher = rememberLauncherForActivityResult(
+      contract = ActivityResultContracts.RequestMultiplePermissions()
+  ) { permissions ->
+    val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+    val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+    if (fineLocationGranted && coarseLocationGranted) {
+      viewModel.checkLocationPermission()
+      viewModel.startLocationUpdates()
+      viewModel.getLastKnownLocation(centerCamera = true)
+    } else {
+      coroutineScope.launch {
+        snackbarHostState.showSnackbar("Location permission denied")
+      }
+    }
+  }
 
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
       viewModel.clearError()
+    }
+  }
+
+  // Setup location management
+  LaunchedEffect(Unit) {
+    viewModel.checkLocationPermission()
+    if (viewModel.hasLocationPermission) {
+      viewModel.startLocationUpdates()
+      viewModel.getLastKnownLocation(centerCamera = true)
+    }
+
+    viewModel.onRequestLocationPermission = {
+      locationPermissionLauncher.launch(
+          arrayOf(
+              Manifest.permission.ACCESS_FINE_LOCATION,
+              Manifest.permission.ACCESS_COARSE_LOCATION
+          )
+      )
     }
   }
 
@@ -132,6 +181,20 @@ fun MapScreen(
             padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
+    }
+
+    // Setup location centering callback
+    viewModel.onCenterOnUserLocation = {
+      viewModel.currentLocation?.let { location ->
+        val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
+        mapViewportState.easeTo(
+            cameraOptions {
+              center(Point.fromLngLat(location.longitude, location.latitude))
+              zoom(16.0)
+              bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
+            },
+            animationOptions = animationOptions)
+      }
     }
   }
 
@@ -302,6 +365,15 @@ private fun MapboxLayer(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .collect { cameraState ->
+          val center = cameraState.center
+          viewModel.updateCenteredState(center.latitude(), center.longitude())
+        }
+  }
+
   MapboxMap(
       Modifier.fillMaxSize()
           .then(
@@ -320,10 +392,24 @@ private fun MapboxLayer(
       },
       compass = {
         Box(modifier = Modifier.fillMaxSize()) {
-          Compass(
+          Column(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp),
+              horizontalAlignment = Alignment.End) {
+                AnimatedVisibility(
+                    visible = !viewModel.isCenteredOnUser,
+                    enter = fadeIn(),
+                    exit = fadeOut()) {
+                      LocationButton(onClick = { viewModel.onLocationButtonClick() })
+                    }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(modifier = Modifier.size(48.dp)) {
+                  Compass()
+                }
+              }
         }
       },
       scaleBar = {
@@ -351,6 +437,8 @@ private fun MapboxLayer(
  *
  * Switches between heatmap mode (with simple annotations) and clustering mode based on
  * [MapScreenViewModel.showHeatmap].
+ *
+ * Also configures the user location puck to display the device's position and bearing on the map.
  */
 @Composable
 private fun MapLayers(
@@ -373,12 +461,10 @@ private fun MapLayers(
 
   val clusterConfig = remember { createClusterConfig() }
 
-  // Render heatmap layer when enabled
   if (viewModel.showHeatmap) {
     CreateHeatmapLayer(heatmapSource)
   }
 
-  // Render annotations (with or without clustering)
   if (viewModel.showHeatmap) {
     PointAnnotationGroup(annotations = annotations) {
       markerBitmap?.let { iconImage = IconImage(it) }
@@ -414,6 +500,20 @@ private fun MapLayers(
                 animationOptions = animationOptions)
             true
           }
+    }
+  }
+
+  MapEffect(Unit) { mapView ->
+    mapView.location.updateSettings {
+      if (viewModel.hasLocationPermission) {
+        locationPuck = createDefault2DPuck(withBearing = true)
+        enabled = true
+        pulsingEnabled = false
+        puckBearingEnabled = true
+        puckBearing = PuckBearing.COURSE
+      } else {
+        enabled = false
+      }
     }
   }
 }

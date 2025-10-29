@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.map
 
 import android.content.Context
+import android.location.Location
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import java.util.UUID
 import kotlin.math.abs
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -168,6 +170,28 @@ class MapScreenViewModel(
   private var _topTags by mutableStateOf<List<String>>(emptyList())
   val topTags: List<String>
     get() = _topTags
+
+  // Location state
+  private val locationManager = LocationManager(applicationContext)
+
+  private var _currentLocation by mutableStateOf<Location?>(null)
+  val currentLocation: Location?
+    get() = _currentLocation
+
+  private var _hasLocationPermission by mutableStateOf(false)
+  val hasLocationPermission: Boolean
+    get() = _hasLocationPermission
+
+  var onCenterOnUserLocation: (() -> Unit)? = null
+  var onRequestLocationPermission: (() -> Unit)? = null
+
+  private var _locationBearing by mutableFloatStateOf(0f)
+  val locationBearing: Float
+    get() = _locationBearing
+
+  private var _isCenteredOnUser by mutableStateOf(false)
+  val isCenteredOnUser: Boolean
+    get() = _isCenteredOnUser
 
   init {
     // Initialize with sample events quickly, then load remote data
@@ -600,6 +624,102 @@ class MapScreenViewModel(
    */
   fun onJoinedEventClicked(event: Event) {
     onEventPinClicked(event)
+  }
+
+  // Location management methods
+
+  /**
+   * Checks and updates the location permission status.
+   */
+  fun checkLocationPermission() {
+    _hasLocationPermission = locationManager.hasLocationPermission()
+  }
+
+  /**
+   * Starts listening to location updates if permission is granted.
+   */
+  fun startLocationUpdates() {
+    if (!locationManager.hasLocationPermission()) {
+      _hasLocationPermission = false
+      return
+    }
+
+    _hasLocationPermission = true
+
+    viewModelScope.launch {
+      locationManager.getLocationUpdates()
+          .catch { e ->
+            android.util.Log.e("MapScreenViewModel", "Error getting location updates", e)
+            _errorMessage = "Failed to get location updates"
+          }
+          .collect { location ->
+            _currentLocation = location
+            if (location.hasBearing()) {
+              _locationBearing = location.bearing
+            }
+          }
+    }
+  }
+
+  /**
+   * Gets the last known location and optionally centers the camera on it.
+   */
+  fun getLastKnownLocation(centerCamera: Boolean = false) {
+    locationManager.getLastKnownLocation(
+        onSuccess = { location ->
+          _currentLocation = location
+          if (location.hasBearing()) {
+            _locationBearing = location.bearing
+          }
+          if (centerCamera) {
+            onCenterOnUserLocation?.invoke()
+          }
+        },
+        onError = {
+          android.util.Log.w("MapScreenViewModel", "Could not get last known location")
+        }
+    )
+  }
+
+  /**
+   * Handles the location button click.
+   * If permission is granted, centers on user location.
+   * Otherwise, requests permission.
+   */
+  fun onLocationButtonClick() {
+    if (locationManager.hasLocationPermission()) {
+      _isCenteredOnUser = true
+      onCenterOnUserLocation?.invoke()
+    } else {
+      onRequestLocationPermission?.invoke()
+    }
+  }
+
+  /**
+   * Updates the centered state based on camera position.
+   * Call this when the camera moves to check if still centered on user.
+   */
+  fun updateCenteredState(cameraLat: Double, cameraLon: Double) {
+    val userLoc = _currentLocation
+    if (userLoc == null) {
+      _isCenteredOnUser = false
+      return
+    }
+
+    // Check if camera is close enough to user location (within ~50 meters)
+    val latDiff = abs(cameraLat - userLoc.latitude)
+    val lonDiff = abs(cameraLon - userLoc.longitude)
+    val threshold = 0.0005
+
+    _isCenteredOnUser = latDiff < threshold && lonDiff < threshold
+  }
+
+  /**
+   * Manually marks that the camera is no longer centered on the user.
+   * Call this when user manually moves the map.
+   */
+  fun onMapMoved() {
+    _isCenteredOnUser = false
   }
 }
 
