@@ -416,8 +416,6 @@ class MapScreenTest {
     rule.onNodeWithText("Basketball Game").assertIsDisplayed()
   }
 
-
-
   @Test
   fun mapScreen_locationButton_stateChangesWithMapMovement() {
     val config =
