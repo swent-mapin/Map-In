@@ -495,14 +495,14 @@ private fun MapLayers(
     }
   }
 
-  MapEffect(Unit) { mapView ->
+  MapEffect(viewModel.hasLocationPermission) { mapView ->
     mapView.location.updateSettings {
       if (viewModel.hasLocationPermission) {
         locationPuck = createDefault2DPuck(withBearing = true)
         enabled = true
-        pulsingEnabled = false
+        pulsingEnabled = true
         puckBearingEnabled = true
-        puckBearing = PuckBearing.COURSE
+        puckBearing = PuckBearing.HEADING
       } else {
         enabled = false
       }
