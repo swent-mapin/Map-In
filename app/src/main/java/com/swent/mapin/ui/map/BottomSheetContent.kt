@@ -330,7 +330,7 @@ internal fun buildSearchHeading(query: String): String {
 private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
   val copy = remember(query) { buildNoResultsCopy(query) }
 
-  Box(modifier = modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
+  Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(text = copy.title, style = MaterialTheme.typography.titleMedium)
       Spacer(modifier = Modifier.height(8.dp))
