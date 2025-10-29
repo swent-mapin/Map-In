@@ -209,6 +209,14 @@ class MapScreenViewModel(
    * - On sign-out: clear user-scoped state (saved IDs/list, joined).
    * - On sign-in: load saved IDs/list and joined/participant events. Keeps UI consistent when users
    *   change auth state mid-session.
+   *
+   *  Why the null-guard?
+   *  - This ViewModel may be re-used across configuration changes or refactors that
+   *  call this registration method more than once. The guard ensures we never
+   *  double-register the same listener, which would cause duplicate loads and leaks.
+   *  - The listener is explicitly removed in onCleared(), so the ViewModel lifecycle
+   *  controls cleanup; re-registration should only ever happen after a new instance
+   *  is created.
    */
   private fun registerAuthStateListener() {
     if (authListener != null) return
