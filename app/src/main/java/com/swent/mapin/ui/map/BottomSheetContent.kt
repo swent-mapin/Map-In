@@ -202,29 +202,29 @@ fun BottomSheetContent(
 
               Spacer(modifier = Modifier.height(24.dp))
 
-            AnimatedContent(
-                targetState = isSearchMode,
-                transitionSpec = {
-                  (fadeIn(animationSpec = tween(250)) +
-                          slideInVertically(
-                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
-                      .togetherWith(
-                          fadeOut(animationSpec = tween(200)) +
-                              slideOutVertically(
-                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
-                },
-                modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
-                label = "searchModeTransition") { searchActive ->
-                  if (searchActive) {
-                    SearchResultsSection(
-                        results = searchResults,
-                        query = searchBarState.query,
-                        modifier = Modifier.fillMaxSize(),
-                        onEventClick = onEventClick)
-                  } else {
-                    val contentModifier =
-                        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                        else Modifier.fillMaxWidth()
+              AnimatedContent(
+                  targetState = isSearchMode,
+                  transitionSpec = {
+                    (fadeIn(animationSpec = tween(250)) +
+                            slideInVertically(
+                                animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                        .togetherWith(
+                            fadeOut(animationSpec = tween(200)) +
+                                slideOutVertically(
+                                    animationSpec = tween(200), targetOffsetY = { it / 6 }))
+                  },
+                  modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                  label = "searchModeTransition") { searchActive ->
+                    if (searchActive) {
+                      SearchResultsSection(
+                          results = searchResults,
+                          query = searchBarState.query,
+                          modifier = Modifier.fillMaxSize(),
+                          onEventClick = onEventClick)
+                    } else {
+                      val contentModifier =
+                          if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                          else Modifier.fillMaxWidth()
 
                       Column(modifier = contentModifier) {
                         QuickActionsSection(
@@ -237,39 +237,40 @@ fun BottomSheetContent(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                      // Tab selector
-                      TabRow(
-                          selectedTabIndex =
-                              if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
-                              else 1,
-                          modifier = Modifier.fillMaxWidth()) {
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                },
-                                text = { Text("Saved Events") })
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                                },
-                                text = { Text("Joined Events") })
-                          }
+                        // Tab selector
+                        TabRow(
+                            selectedTabIndex =
+                                if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
+                                else 1,
+                            modifier = Modifier.fillMaxWidth()) {
+                              Tab(
+                                  selected =
+                                      selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                  },
+                                  text = { Text("Saved Events") })
+                              Tab(
+                                  selected =
+                                      selectedTab ==
+                                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                  },
+                                  text = { Text("Joined Events") })
+                            }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                      // Content based on selected tab
-                      when (selectedTab) {
-                        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
-                          EventsSection(events = savedEvents, onEventClick = onTabEventClick)
+                        // Content based on selected tab
+                        when (selectedTab) {
+                          MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                            EventsSection(events = savedEvents, onEventClick = onTabEventClick)
+                          }
+                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                            EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
+                          }
                         }
-                        MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                          EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
-                        }
-                      }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
