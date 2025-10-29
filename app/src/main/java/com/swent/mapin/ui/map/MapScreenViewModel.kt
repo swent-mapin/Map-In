@@ -686,9 +686,6 @@ class MapScreenViewModel(
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
         _allEvents = _allEvents.map { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
-        for (event in _joinedEvents) {
-          Log.d("test", "Joined event after join: ${event.uid}")
-        }
       } catch (e: Exception) {
         _errorMessage = "Failed to join event: ${e.message}"
       }
