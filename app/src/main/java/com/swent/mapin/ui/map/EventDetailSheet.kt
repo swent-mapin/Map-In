@@ -437,8 +437,18 @@ private fun FullEventContent(
       }
 }
 
+/**
+ * Data class representing the state of the save button.
+ * @param showSaveButton Whether the save button should be shown
+ * @param label The label to display on the button
+ */
 @VisibleForTesting internal data class SaveButtonUi(val showSaveButton: Boolean, val label: String)
 
+/**
+ * Resolves the UI state for the save button based on whether the event is already saved.
+ * @param isSaved Whether the event is already saved
+ * @return The UI state for the save button
+ */
 @VisibleForTesting
 internal fun resolveSaveButtonUi(isSaved: Boolean): SaveButtonUi {
   return if (isSaved) {
