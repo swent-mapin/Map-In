@@ -4,11 +4,7 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
-import com.google.firebase.storage.UploadTask
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +27,9 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -46,11 +45,6 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
-  @Mock private lateinit var mockFirebaseStorage: FirebaseStorage
-  @Mock private lateinit var mockStorageReference: StorageReference
-  @Mock private lateinit var mockFileReference: StorageReference
-  @Mock private lateinit var mockUploadTask: UploadTask
-  @Mock private lateinit var mockUploadTaskSnapshot: UploadTask.TaskSnapshot
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -441,11 +435,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun isSavingMemory_correctlyTracksState() = runTest {
-    var capturedMemory: Memory? = null
-    whenever(mockMemoryRepository.addMemory(any())).thenAnswer { invocation ->
-      capturedMemory = invocation.getArgument(0)
-      Unit
-    }
+    whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
 
     assertFalse(viewModel.isSavingMemory)
 
@@ -862,5 +852,295 @@ class MapScreenViewModelTest {
   @Test
   fun availableEvents_initiallyEmpty() {
     assertEquals(0, viewModel.availableEvents.size)
+  }
+
+  // ============================================================================
+  // Tests for Location Management
+  // ============================================================================
+
+  @Test
+  fun startLocationUpdates_withoutPermission_setsPermissionToFalseAndReturns() {
+    // Create a mock LocationManager that denies permission
+    val mockLocationManager =
+        mock<LocationManager> { on { hasLocationPermission() } doReturn false }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    // Inject the mock location manager through reflection
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    vmWithMockLocation.startLocationUpdates()
+
+    assertFalse(vmWithMockLocation.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_withPermission_setsPermissionToTrue() = runTest {
+    val mockLocation = mock<android.location.Location>(lenient = true)
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { hasLocationPermission() } doReturn true
+          on { getLocationUpdates() } doReturn kotlinx.coroutines.flow.flowOf(mockLocation)
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    vmWithMockLocation.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertTrue(vmWithMockLocation.hasLocationPermission)
+    assertNotNull(vmWithMockLocation.currentLocation)
+  }
+
+  @Test
+  fun startLocationUpdates_receivesLocationWithBearing_updatesBearing() = runTest {
+    val mockLocation = mock<android.location.Location>(lenient = true)
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(90.0f)
+
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { hasLocationPermission() } doReturn true
+          on { getLocationUpdates() } doReturn kotlinx.coroutines.flow.flowOf(mockLocation)
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    vmWithMockLocation.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals(90.0f, vmWithMockLocation.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun startLocationUpdates_withError_setsErrorMessage() = runTest {
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { hasLocationPermission() } doReturn true
+          on { getLocationUpdates() } doReturn
+              kotlinx.coroutines.flow.flow<android.location.Location> {
+                throw RuntimeException("GPS error")
+              }
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    vmWithMockLocation.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals("Failed to get location updates", vmWithMockLocation.errorMessage)
+  }
+
+  @Test
+  fun getLastKnownLocation_withoutCentering_updatesLocationOnly() {
+    val mockLocation = mock<android.location.Location>(lenient = true)
+    whenever(mockLocation.latitude).thenReturn(47.0)
+    whenever(mockLocation.longitude).thenReturn(7.0)
+
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { getLastKnownLocation(any(), any()) } doAnswer
+              { invocation ->
+                val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+                onSuccess(mockLocation)
+              }
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    var cameraCentered = false
+    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
+
+    vmWithMockLocation.getLastKnownLocation(centerCamera = false)
+
+    assertNotNull(vmWithMockLocation.currentLocation)
+    assertEquals(47.0, vmWithMockLocation.currentLocation!!.latitude, 0.001)
+    assertFalse(cameraCentered)
+  }
+
+  @Test
+  fun getLastKnownLocation_withCentering_updatesLocationAndCentersCamera() {
+    val mockLocation = mock<android.location.Location>(lenient = true)
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(180.0f)
+
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { getLastKnownLocation(any(), any()) } doAnswer
+              { invocation ->
+                val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+                onSuccess(mockLocation)
+              }
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    var cameraCentered = false
+    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
+
+    vmWithMockLocation.getLastKnownLocation(centerCamera = true)
+
+    assertNotNull(vmWithMockLocation.currentLocation)
+    assertEquals(180.0f, vmWithMockLocation.locationBearing, 0.001f)
+    assertTrue(cameraCentered)
+  }
+
+  @Test
+  fun getLastKnownLocation_withError_doesNotUpdateLocation() {
+    val mockLocationManager =
+        mock<LocationManager> {
+          on { getLastKnownLocation(any(), any()) } doAnswer
+              { invocation ->
+                val onError = invocation.getArgument<() -> Unit>(1)
+                onError()
+              }
+        }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    vmWithMockLocation.getLastKnownLocation(centerCamera = true)
+
+    assertNull(vmWithMockLocation.currentLocation)
+  }
+
+  @Test
+  fun onLocationButtonClick_withPermission_centersOnUserLocation() {
+    val mockLocationManager = mock<LocationManager> { on { hasLocationPermission() } doReturn true }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    var cameraCentered = false
+    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
+
+    vmWithMockLocation.onLocationButtonClick()
+
+    assertTrue(cameraCentered)
+    assertTrue(vmWithMockLocation.isCenteredOnUser)
+  }
+
+  @Test
+  fun onLocationButtonClick_withoutPermission_requestsPermission() {
+    val mockLocationManager =
+        mock<LocationManager> { on { hasLocationPermission() } doReturn false }
+
+    val vmWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth)
+
+    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
+    locationManagerField.isAccessible = true
+    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+
+    var permissionRequested = false
+    vmWithMockLocation.onRequestLocationPermission = { permissionRequested = true }
+
+    vmWithMockLocation.onLocationButtonClick()
+
+    assertTrue(permissionRequested)
+    assertFalse(vmWithMockLocation.isCenteredOnUser)
   }
 }
