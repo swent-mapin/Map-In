@@ -240,10 +240,12 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      isSaved = viewModel.isEventSaved(selectedEvent),
                       organizerName = viewModel.organizerName,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },
+                      onUnsaveForLater = { viewModel.unsaveEventForLater() },
                       onClose = { viewModel.closeEventDetail() },
                       onShare = { viewModel.showShareDialog() })
                 } else {
@@ -278,8 +280,9 @@ fun MapScreen(
                       onCreateEventDone = viewModel::onAddEventCancel,
                       onTabChange = viewModel::setBottomSheetTab,
                       joinedEvents = viewModel.joinedEvents,
+                      savedEvents = viewModel.savedEvents,
                       selectedTab = viewModel.selectedBottomSheetTab,
-                      onJoinedEventClick = viewModel::onJoinedEventClicked,
+                      onTabEventClick = viewModel::onTabEventClicked,
                       onProfileClick = onNavigateToProfile)
                 }
               }
@@ -654,17 +657,6 @@ internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?):
       markerBitmap = markerBitmap)
 }
 
-/**
- * Converts a list of events to Mapbox point annotation options.
- *
- * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval. Selected event pins are enlarged.
- *
- * @param events List of events to convert
- * @param style Styling to apply to annotations
- * @param selectedEventId UID of the currently selected event (if any)
- * @return List of configured PointAnnotationOptions
- */
 @VisibleForTesting
 internal data class AnnotationVisualParameters(
     val iconSize: Double,
@@ -692,7 +684,17 @@ internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationV
         sortKey = 100.0)
   }
 }
-
+/**
+ * Converts a list of events to Mapbox point annotation options.
+ *
+ * Each annotation includes position, icon, label, and custom styling. The index is stored as data
+ * for later retrieval. Selected event pins are enlarged.
+ *
+ * @param events List of events to convert
+ * @param style Styling to apply to annotations
+ * @param selectedEventId UID of the currently selected event (if any)
+ * @return List of configured PointAnnotationOptions
+ */
 @VisibleForTesting
 internal fun createEventAnnotations(
     events: List<Event>,

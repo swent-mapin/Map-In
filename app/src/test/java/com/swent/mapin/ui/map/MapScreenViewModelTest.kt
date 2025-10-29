@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
-import com.google.firebase.storage.UploadTask
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
@@ -29,6 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.clearInvocations
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
@@ -46,11 +44,6 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
-  @Mock private lateinit var mockFirebaseStorage: FirebaseStorage
-  @Mock private lateinit var mockStorageReference: StorageReference
-  @Mock private lateinit var mockFileReference: StorageReference
-  @Mock private lateinit var mockUploadTask: UploadTask
-  @Mock private lateinit var mockUploadTaskSnapshot: UploadTask.TaskSnapshot
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -71,6 +64,8 @@ class MapScreenViewModelTest {
       whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
+      whenever(mockEventRepository.getSavedEventIds(any())).thenReturn(emptySet())
+      whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
     }
 
     viewModel =
@@ -812,17 +807,8 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun saveEventForLater_setsPlaceholderMessage() {
-    viewModel.saveEventForLater()
-    assertEquals("Save for later - Coming soon!", viewModel.errorMessage)
-    viewModel.clearError()
-    assertNull(viewModel.errorMessage)
-  }
-
-  @Test
   fun setBottomSheetTab_updatesSelectedTab() {
-    assertEquals(
-        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
     viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
   }
@@ -833,7 +819,7 @@ class MapScreenViewModelTest {
     var cameraCentered = false
     viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
 
-    viewModel.onJoinedEventClicked(testEvent)
+    viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
 
     assertEquals(testEvent, viewModel.selectedEvent)
@@ -862,6 +848,114 @@ class MapScreenViewModelTest {
   @Test
   fun availableEvents_initiallyEmpty() {
     assertEquals(0, viewModel.availableEvents.size)
+  }
+
+  // === Save / Unsave tests ===
+  private fun sampleEvent() =
+      com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+          uid = "evt-1", participantIds = emptyList())
+
+  @Test
+  fun saveEventForLater_noUser_setsErrorMessage() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+
+    // Sign out
+    whenever(mockAuth.currentUser).thenReturn(null)
+
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+
+    assertTrue(viewModel.errorMessage?.contains("signed in") == true)
+  }
+
+  @Test
+  fun saveEventForLater_success_updatesIdsAndLoadsSavedList() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+    clearInvocations(mockEventRepository)
+
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
+
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+
+    assertTrue(viewModel.isEventSaved(e))
+    assertTrue(viewModel.savedEvents.any { it.uid == e.uid })
+
+    verify(mockEventRepository).saveEventForUser("testUserId", e.uid)
+    verify(mockEventRepository).getSavedEvents("testUserId")
+  }
+
+  @Test
+  fun saveEventForLater_alreadySaved_setsError() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(false)
+
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+
+    assertTrue(viewModel.errorMessage?.contains("already saved") == true)
+  }
+
+  @Test
+  fun unsaveEventForLater_success_updatesIdsAndReloads() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+    assertTrue(viewModel.isEventSaved(e))
+
+    org.mockito.Mockito.clearInvocations(mockEventRepository)
+
+    whenever(mockEventRepository.unsaveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(emptyList())
+
+    viewModel.unsaveEventForLater()
+    advanceUntilIdle()
+
+    assertFalse(viewModel.isEventSaved(e))
+    assertTrue(viewModel.savedEvents.isEmpty())
+
+    verify(mockEventRepository).unsaveEventForUser("testUserId", e.uid)
+    verify(mockEventRepository).getSavedEvents("testUserId")
+  }
+
+  @Test
+  fun unsaveEventForLater_failure_setsError() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+
+    // Pretend it was saved locally (save path)
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+    assertTrue(viewModel.isEventSaved(e))
+
+    // Unsave fails
+    whenever(mockEventRepository.unsaveEventForUser("testUserId", e.uid)).thenReturn(false)
+
+    viewModel.unsaveEventForLater()
+    advanceUntilIdle()
+
+    assertTrue(viewModel.errorMessage?.contains("was not saved") == true)
   }
 
   @Test

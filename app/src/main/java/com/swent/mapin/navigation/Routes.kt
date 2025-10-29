@@ -6,4 +6,6 @@ sealed class Route(val route: String) {
   object Map : Route("map")
 
   object Profile : Route("profile")
+
+  object Friends : Route("friends")
 }
