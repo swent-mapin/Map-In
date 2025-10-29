@@ -303,6 +303,8 @@ class UserProfileEndToEndTest {
     // ============================================
     // STEP 8: Logout from Settings screen
     // ============================================
+    // Scroll to and click logout button
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()

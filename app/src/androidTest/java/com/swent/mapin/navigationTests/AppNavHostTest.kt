@@ -120,7 +120,8 @@ class AppNavHostTest {
           .isNotEmpty()
     }
 
-    // Click logout button in Settings
+    // Scroll to and click logout button in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
@@ -181,13 +182,14 @@ class AppNavHostTest {
           .isNotEmpty()
     }
 
-    // Click logout button in Settings
+    // Scroll to and click logout button in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
-    // Wait for dialog to appear
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
+    // Wait for dialog to appear (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -254,7 +256,8 @@ class AppNavHostTest {
           .isNotEmpty()
     }
 
-    // Click logout in Settings
+    // Scroll to and click logout in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
