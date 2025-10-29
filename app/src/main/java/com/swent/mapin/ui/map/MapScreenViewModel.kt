@@ -713,9 +713,6 @@ class MapScreenViewModel(
         _selectedEvent = updatedEvent
         _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
         loadJoinedEvents()
-        for (event in _joinedEvents) {
-          Log.d("test", "Joined event after unregister: ${event.uid}")
-        }
       } catch (e: Exception) {
         _errorMessage = "Failed to unregister: ${e.message}"
       }
