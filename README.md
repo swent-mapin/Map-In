@@ -16,9 +16,11 @@ This way, students can not only discover and attend events, but also relive them
 
 For detailed information about the app's architecture, please refer to:
 
+- **[ARCHITECTURE_SUMMARY.md](ARCHITECTURE_SUMMARY.md)** - 🎯 **Complete system diagram** (all-in-one view)
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - High-level architecture overview, layers, and patterns
 - **[COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md)** - Detailed component structure and relationships
 - **[USER_FLOWS.md](USER_FLOWS.md)** - User journeys and sequence diagrams
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick lookup guide for developers
 
 ## Design
 

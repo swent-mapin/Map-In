@@ -4,6 +4,19 @@ This directory contains comprehensive architecture documentation for the Map'In 
 
 ## 📚 Documentation Files
 
+### 0. [ARCHITECTURE_SUMMARY.md](../ARCHITECTURE_SUMMARY.md)
+**🎯 Complete System Architecture Diagram**
+
+This document provides:
+- **One comprehensive diagram** showing the entire system
+- All layers in a single view (UI → ViewModel → Repository → Data Sources)
+- Complete data flow patterns
+- User interaction flows
+- Technology stack overview
+- Color-coded architecture layers
+
+**Best for:** Getting a complete overview of the entire system in one place. **Start here!**
+
 ### 1. [ARCHITECTURE.md](../ARCHITECTURE.md)
 **High-Level Architecture Overview**
 
@@ -50,11 +63,24 @@ This document provides:
 
 **Best for:** Understanding how data flows through the system during user interactions.
 
+### 4. [QUICK_REFERENCE.md](../QUICK_REFERENCE.md)
+**Quick Reference Guide**
+
+This document provides:
+- Quick lookup tables for key classes
+- Project structure summary
+- Common patterns with code examples
+- Build & run commands
+- Navigation flow diagram
+
+**Best for:** Quick lookups and code examples for developers.
+
 ## 🎯 Quick Navigation Guide
 
 **If you want to...**
 
-- **Understand the overall architecture** → Start with [ARCHITECTURE.md](../ARCHITECTURE.md)
+- **See the entire system at once** → Start with [ARCHITECTURE_SUMMARY.md](../ARCHITECTURE_SUMMARY.md) ⭐
+- **Understand the overall architecture** → Read [ARCHITECTURE.md](../ARCHITECTURE.md)
 - **Find a specific component/file** → Check [COMPONENT_ARCHITECTURE.md](../COMPONENT_ARCHITECTURE.md)
 - **Understand user interactions** → Review [USER_FLOWS.md](../USER_FLOWS.md)
 - **Add a new feature** → Read all three documents in order
