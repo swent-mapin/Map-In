@@ -60,10 +60,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -71,8 +73,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.draw.clip
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
@@ -161,14 +161,10 @@ fun BottomSheetContent(
       targetState = showMemoryForm,
       transitionSpec = {
         (fadeIn(animationSpec = tween(300)) +
-                slideInVertically(
-                    animationSpec = tween(300),
-                    initialOffsetY = { it / 4 }))
+                slideInVertically(animationSpec = tween(300), initialOffsetY = { it / 4 }))
             .togetherWith(
                 fadeOut(animationSpec = tween(200)) +
-                    slideOutVertically(
-                        animationSpec = tween(200),
-                        targetOffsetY = { -it / 4 }))
+                    slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
         if (showForm) {
@@ -200,13 +196,11 @@ fun BottomSheetContent(
                 transitionSpec = {
                   (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = tween(250),
-                              initialOffsetY = { it / 6 }))
+                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
                       .togetherWith(
                           fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = tween(200),
-                                  targetOffsetY = { it / 6 }))
+                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                 label = "searchModeTransition") { searchActive ->
@@ -514,32 +508,42 @@ internal fun SearchBar(
           // Use a clipped Box with a background and no internal padding so the image exactly
           // matches the slot shape. Disable ripple to avoid overflow visual artifacts.
           val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-          val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+          val interactionSource = remember {
+            androidx.compose.foundation.interaction.MutableInteractionSource()
+          }
 
           Surface(
-              modifier = Modifier
-                  .fillMaxSize()
-                  .testTag("profileButton")
-                  .alpha(profileAlpha)
-                  .clickable(enabled = profileVisible, onClick = onProfileClick, interactionSource = interactionSource, indication = null),
+              modifier =
+                  Modifier.fillMaxSize()
+                      .testTag("profileButton")
+                      .alpha(profileAlpha)
+                      .clickable(
+                          enabled = profileVisible,
+                          onClick = onProfileClick,
+                          interactionSource = interactionSource,
+                          indication = null),
               shape = RoundedCornerShape(16.dp),
-              color = backgroundColor
-          ) {
-             if (isRemoteAvatarUrl(profileAvatarUrl)) {
-               AsyncImage(
-                   model = profileAvatarUrl,
-                   contentDescription = "Profile",
-                   contentScale = ContentScale.Crop,
-                   modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).testTag("profileImage"))
-             } else {
-               Box(modifier = Modifier.fillMaxSize().testTag("profileIcon"), contentAlignment = Alignment.Center) {
-                 Icon(
-                     imageVector = Icons.Outlined.AccountCircle,
-                     contentDescription = "Profile",
-                     tint = MaterialTheme.colorScheme.onSurface)
-               }
-             }
-          }
+              color = backgroundColor) {
+                if (isRemoteAvatarUrl(profileAvatarUrl)) {
+                  AsyncImage(
+                      model = profileAvatarUrl,
+                      contentDescription = "Profile",
+                      contentScale = ContentScale.Crop,
+                      modifier =
+                          Modifier.fillMaxSize()
+                              .clip(RoundedCornerShape(16.dp))
+                              .testTag("profileImage"))
+                } else {
+                  Box(
+                      modifier = Modifier.fillMaxSize().testTag("profileIcon"),
+                      contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.onSurface)
+                      }
+                }
+              }
         }
   }
 }

@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
@@ -79,10 +80,9 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.ui.profile.ProfileViewModel
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
@@ -287,7 +287,8 @@ fun MapScreen(
                       onJoinedEventClick = mapViewModel::onJoinedEventClicked,
                       onProfileClick = onNavigateToProfile,
                       profileAvatarUrl =
-                          if (profileViewModel.selectedAvatar.isNotEmpty()) profileViewModel.selectedAvatar
+                          if (profileViewModel.selectedAvatar.isNotEmpty())
+                              profileViewModel.selectedAvatar
                           else userProfile.avatarUrl)
                 }
               }
@@ -665,8 +666,8 @@ internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?):
 /**
  * Converts a list of events to Mapbox point annotation options.
  *
- * Each annotation includes position, icon, label, and custom styling. The index is stored as
- * data for later retrieval. Selected event pins are enlarged.
+ * Each annotation includes position, icon, label, and custom styling. The index is stored as data
+ * for later retrieval. Selected event pins are enlarged.
  *
  * @param events List of events to convert
  * @param style Styling to apply to annotations
@@ -771,7 +772,6 @@ internal fun findEventForAnnotation(
   val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
   return index?.let { events.getOrNull(it) }
       ?: events.firstOrNull { event ->
-
         val point = annotation.point
         event.location.latitude == point.latitude() && event.location.longitude == point.longitude()
       }
@@ -835,7 +835,6 @@ private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
               linear()
               heatmapDensity()
               MapConstants.HeatmapColors.COLOR_STOPS.forEach { (position, color) ->
-
                 stop {
                   literal(position)
                   if (color.a == 0.0) {
