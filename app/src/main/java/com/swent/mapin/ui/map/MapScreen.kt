@@ -90,7 +90,9 @@ import kotlinx.coroutines.flow.filterNotNull
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    // Accept a shared ProfileViewModel (created at NavHost) so avatar updates are reflected
+    profileViewModel: com.swent.mapin.ui.profile.ProfileViewModel = viewModel()
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -103,8 +105,7 @@ fun MapScreen(
   val mapViewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
 
-  // ProfileViewModel to obtain current user's avatar URL for bottom sheet profile slot
-  val profileViewModel: ProfileViewModel = viewModel()
+  // Use the provided/shared ProfileViewModel to obtain current user's avatar URL for bottom sheet
   val userProfile = profileViewModel.userProfile.collectAsState().value
 
   LaunchedEffect(mapViewModel.errorMessage) {
@@ -247,28 +248,31 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = mapViewModel.bottomSheetState,
                       isParticipating = mapViewModel.isUserParticipating(selectedEvent),
+                      isSaved = mapViewModel.isEventSaved(selectedEvent),
                       organizerName = mapViewModel.organizerName,
                       onJoinEvent = { mapViewModel.joinEvent() },
                       onUnregisterEvent = { mapViewModel.unregisterFromEvent() },
                       onSaveForLater = { mapViewModel.saveEventForLater() },
+                      onUnsaveForLater = { mapViewModel.unsaveEventForLater() },
                       onClose = { mapViewModel.closeEventDetail() },
                       onShare = { mapViewModel.showShareDialog() })
                 } else {
                   BottomSheetContent(
                       state = mapViewModel.bottomSheetState,
                       fullEntryKey = mapViewModel.fullEntryKey,
-                      searchBarState =
-                          SearchBarState(
-                              query = mapViewModel.searchQuery,
-                              shouldRequestFocus = mapViewModel.shouldFocusSearch,
-                              onQueryChange = mapViewModel::onSearchQueryChange,
-                              onTap = mapViewModel::onSearchTap,
-                              onFocusHandled = mapViewModel::onSearchFocusHandled,
-                              onClear = mapViewModel::onClearSearch),
+                      searchBarState = SearchBarState(
+                          query = mapViewModel.searchQuery,
+                          shouldRequestFocus = mapViewModel.shouldFocusSearch,
+                          onQueryChange = mapViewModel::onSearchQueryChange,
+                          onTap = mapViewModel::onSearchTap,
+                          onFocusHandled = mapViewModel::onSearchFocusHandled,
+                          onClear = mapViewModel::onClearSearch),
                       searchResults = mapViewModel.searchResults,
                       isSearchMode = mapViewModel.isSearchMode,
                       showMemoryForm = mapViewModel.showMemoryForm,
                       availableEvents = mapViewModel.availableEvents,
+                      joinedEvents = mapViewModel.joinedEvents,
+                      // use ViewModel-provided tags and selections
                       topTags = mapViewModel.topTags,
                       selectedTags = mapViewModel.selectedTags,
                       onTagClick = mapViewModel::toggleTagSelection,
@@ -280,13 +284,10 @@ fun MapScreen(
                       onMemorySave = mapViewModel::onMemorySave,
                       onMemoryCancel = mapViewModel::onMemoryCancel,
                       onTabChange = mapViewModel::setBottomSheetTab,
-                      joinedEvents = mapViewModel.joinedEvents,
-                      selectedTab = mapViewModel.selectedBottomSheetTab,
-                      onJoinedEventClick = mapViewModel::onJoinedEventClicked,
+                      onTabEventClick = mapViewModel::onTabEventClicked,
                       onProfileClick = onNavigateToProfile,
-                      profileAvatarUrl =
-                          profileViewModel.selectedAvatar.takeIf { it.isNotBlank() }
-                              ?: userProfile.avatarUrl)
+                      profileAvatarUrl = profileViewModel.selectedAvatar.takeIf { it.isNotBlank() }
+                          ?: userProfile.avatarUrl)
                 }
               }
         }
@@ -660,17 +661,6 @@ internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?):
       markerBitmap = markerBitmap)
 }
 
-/**
- * Converts a list of events to Mapbox point annotation options.
- *
- * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval. Selected event pins are enlarged.
- *
- * @param events List of events to convert
- * @param style Styling to apply to annotations
- * @param selectedEventId UID of the currently selected event (if any)
- * @return List of configured PointAnnotationOptions
- */
 @VisibleForTesting
 internal fun createEventAnnotations(
     events: List<Event>,

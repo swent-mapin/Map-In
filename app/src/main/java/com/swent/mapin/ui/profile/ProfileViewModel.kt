@@ -413,6 +413,8 @@ class ProfileViewModel(
           // Force recomposition by reassigning the entire value
           selectedAvatar = ""
           selectedAvatar = downloadUrl
+          // Also update the in-flight user profile so collectors reflect the new avatar immediately
+          _userProfile.value = _userProfile.value.copy(avatarUrl = downloadUrl)
           println("ProfileViewModel - Avatar uploaded: $downloadUrl")
         } else {
           println("ProfileViewModel - Failed to upload avatar")
@@ -435,6 +437,8 @@ class ProfileViewModel(
           // Force recomposition by reassigning the entire value
           selectedBanner = ""
           selectedBanner = downloadUrl
+          // Also update the in-flight user profile so collectors reflect the new banner immediately
+          _userProfile.value = _userProfile.value.copy(bannerUrl = downloadUrl)
           println("ProfileViewModel - Banner uploaded: $downloadUrl")
         } else {
           println("ProfileViewModel - Failed to upload banner")

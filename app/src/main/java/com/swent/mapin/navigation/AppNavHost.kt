@@ -6,8 +6,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.ui.auth.SignInScreen
+import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun AppNavHost(
@@ -16,6 +18,9 @@ fun AppNavHost(
     renderMap: Boolean = true
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
+
+  // Create a shared ProfileViewModel at the NavHost (activity) scope so Map and Profile share state
+  val profileViewModel: com.swent.mapin.ui.profile.ProfileViewModel = viewModel()
 
   NavHost(navController = navController, startDestination = startDest) {
     composable(Route.Auth.route) {
@@ -31,7 +36,8 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
-          renderMap = renderMap)
+          renderMap = renderMap,
+          profileViewModel = profileViewModel)
     }
 
     composable(Route.Profile.route) {
@@ -42,7 +48,13 @@ fun AppNavHost(
               popUpTo(0) { inclusive = true }
               launchSingleTop = true
             }
-          })
+          },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) },
+          viewModel = profileViewModel)
+    }
+
+    composable(Route.Friends.route) {
+      FriendsScreen(onNavigateBack = { navController.popBackStack() })
     }
   }
 }
