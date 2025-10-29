@@ -81,7 +81,7 @@ class SettingsScreenTest {
   fun settingsScreen_displaysLogoutButton() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    composeTestRule.onNodeWithTag("logoutButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().assertIsDisplayed()
 
     composeTestRule.onNodeWithText("Logout").assertIsDisplayed()
 
@@ -92,7 +92,7 @@ class SettingsScreenTest {
   fun settingsScreen_displaysDeleteAccountButton() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    composeTestRule.onNodeWithTag("deleteAccountButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("deleteAccountButton").performScrollTo().assertIsDisplayed()
 
     composeTestRule.onNodeWithText("Delete Account").assertIsDisplayed()
 
@@ -110,8 +110,8 @@ class SettingsScreenTest {
   fun settingsScreen_logoutButtonShowsConfirmationDialog() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    // Click logout button
-    composeTestRule.onNodeWithTag("logoutButton_action").performClick()
+    // Scroll to and click logout button
+    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
 
     composeTestRule.waitForIdle()
 
@@ -125,8 +125,8 @@ class SettingsScreenTest {
   fun settingsScreen_deleteAccountButtonShowsWarningDialog() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    // Click delete account button
-    composeTestRule.onNodeWithTag("deleteAccountButton_action").performClick()
+    // Scroll to and click delete account button
+    composeTestRule.onNodeWithTag("deleteAccountButton_action").performScrollTo().performClick()
 
     composeTestRule.waitForIdle()
 
@@ -141,8 +141,8 @@ class SettingsScreenTest {
   fun settingsScreen_confirmationDialogHasCancelButton() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    // Click logout button
-    composeTestRule.onNodeWithTag("logoutButton_action").performClick()
+    // Scroll to and click logout button
+    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
 
     composeTestRule.waitForIdle()
 

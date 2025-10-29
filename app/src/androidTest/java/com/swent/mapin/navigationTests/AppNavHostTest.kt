@@ -125,8 +125,8 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-    // Wait for dialog to appear
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
+    // Wait for dialog to appear (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -259,8 +259,8 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
-    // Wait for dialog
-    composeTestRule.waitUntil(timeoutMillis = 3000) {
+    // Wait for dialog (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
           .fetchSemanticsNodes()
