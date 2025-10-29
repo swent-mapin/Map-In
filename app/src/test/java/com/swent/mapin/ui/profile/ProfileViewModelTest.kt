@@ -29,6 +29,10 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
+  // NOTE: The logout button has been moved to the Settings page
+  // ProfileScreen now has a Settings button that navigates to SettingsScreen
+  // Logout functionality is now in SettingsScreen and SettingsViewModel
+  // The following tests remain valid for profile functionality
 
   private lateinit var viewModel: ProfileViewModel
   private lateinit var mockRepository: UserProfileRepository
