@@ -45,7 +45,8 @@ fun AppNavHost(
               popUpTo(0) { inclusive = true }
               launchSingleTop = true
             }
-          })
+          },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
     }
 
     composable(Route.Settings.route) {
@@ -56,8 +57,7 @@ fun AppNavHost(
               popUpTo(0) { inclusive = true }
               launchSingleTop = true
             }
-          },
-          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
+          })
     }
 
     composable(Route.Friends.route) {
