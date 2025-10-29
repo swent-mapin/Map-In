@@ -109,6 +109,7 @@ interface EventRepository {
    * @param userId The unique identifier of the user.
    * @param eventId The unique identifier of the Event item to save.
    * @return True if the Event item was successfully saved for the user, false otherwise.
+   * @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun saveEventForUser(userId: String, eventId: String): Boolean
   /**
@@ -118,6 +119,7 @@ interface EventRepository {
    * @param eventId The unique identifier of the Event item to remove.
    * @return True if the Event item was successfully removed from the user's saved list, false
    *   otherwise.
+   *   @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
 }
