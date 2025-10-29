@@ -245,14 +245,16 @@ fun MapScreen(
                 if (selectedEvent != null) {
                   EventDetailSheet(
                       event = selectedEvent,
-                      sheetState = mapViewModel.bottomSheetState,
-                      isParticipating = mapViewModel.isUserParticipating(selectedEvent),
-                      organizerName = mapViewModel.organizerName,
-                      onJoinEvent = { mapViewModel.joinEvent() },
-                      onUnregisterEvent = { mapViewModel.unregisterFromEvent() },
-                      onSaveForLater = { mapViewModel.saveEventForLater() },
-                      onClose = { mapViewModel.closeEventDetail() },
-                      onShare = { mapViewModel.showShareDialog() })
+                      sheetState = viewModel.bottomSheetState,
+                      isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      isSaved = viewModel.isEventSaved(selectedEvent),
+                      organizerName = viewModel.organizerName,
+                      onJoinEvent = { viewModel.joinEvent() },
+                      onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                      onSaveForLater = { viewModel.saveEventForLater() },
+                      onUnsaveForLater = { viewModel.unsaveEventForLater() },
+                      onClose = { viewModel.closeEventDetail() },
+                      onShare = { viewModel.showShareDialog() })
                 } else {
                   BottomSheetContent(
                       state = mapViewModel.bottomSheetState,
@@ -278,18 +280,15 @@ fun MapScreen(
                         mapViewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
                       },
-                      onCreateMemoryClick = mapViewModel::showMemoryForm,
-                      onMemorySave = mapViewModel::onMemorySave,
-                      onMemoryCancel = mapViewModel::onMemoryCancel,
-                      onTabChange = mapViewModel::setBottomSheetTab,
-                      joinedEvents = mapViewModel.joinedEvents,
-                      selectedTab = mapViewModel.selectedBottomSheetTab,
-                      onJoinedEventClick = mapViewModel::onJoinedEventClicked,
-                      onProfileClick = onNavigateToProfile,
-                      profileAvatarUrl =
-                          if (profileViewModel.selectedAvatar.isNotEmpty())
-                              profileViewModel.selectedAvatar
-                          else userProfile.avatarUrl)
+                      onCreateMemoryClick = viewModel::showMemoryForm,
+                      onMemorySave = viewModel::onMemorySave,
+                      onMemoryCancel = viewModel::onMemoryCancel,
+                      onTabChange = viewModel::setBottomSheetTab,
+                      joinedEvents = viewModel.joinedEvents,
+                      savedEvents = viewModel.savedEvents,
+                      selectedTab = viewModel.selectedBottomSheetTab,
+                      onTabEventClick = viewModel::onTabEventClicked,
+                      onProfileClick = onNavigateToProfile)
                 }
               }
         }
@@ -663,17 +662,6 @@ internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?):
       markerBitmap = markerBitmap)
 }
 
-/**
- * Converts a list of events to Mapbox point annotation options.
- *
- * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval. Selected event pins are enlarged.
- *
- * @param events List of events to convert
- * @param style Styling to apply to annotations
- * @param selectedEventId UID of the currently selected event (if any)
- * @return List of configured PointAnnotationOptions
- */
 @VisibleForTesting
 internal fun createEventAnnotations(
     events: List<Event>,
@@ -726,6 +714,43 @@ internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationV
         textOffset = listOf(0.0, 0.2),
         textHaloWidth = 1.5,
         sortKey = 100.0)
+  }
+}
+/**
+ * Converts a list of events to Mapbox point annotation options.
+ *
+ * Each annotation includes position, icon, label, and custom styling. The index is stored as data
+ * for later retrieval. Selected event pins are enlarged.
+ *
+ * @param events List of events to convert
+ * @param style Styling to apply to annotations
+ * @param selectedEventId UID of the currently selected event (if any)
+ * @return List of configured PointAnnotationOptions
+ */
+@VisibleForTesting
+internal fun createEventAnnotations(
+    events: List<Event>,
+    style: AnnotationStyle,
+    selectedEventId: String? = null
+): List<PointAnnotationOptions> {
+  return events.mapIndexed { index, event ->
+    val isSelected = event.uid == selectedEventId
+    val visual = computeAnnotationVisualParameters(isSelected)
+
+    PointAnnotationOptions()
+        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
+        .apply { style.markerBitmap?.let { withIconImage(it) } }
+        .withIconSize(visual.iconSize)
+        .withIconAnchor(IconAnchor.BOTTOM)
+        .withTextAnchor(TextAnchor.TOP)
+        .withTextOffset(visual.textOffset)
+        .withTextSize(visual.textSize)
+        .withTextColor(style.textColorInt)
+        .withTextHaloColor(style.haloColorInt)
+        .withTextHaloWidth(visual.textHaloWidth)
+        .withTextField(event.title)
+        .withData(JsonPrimitive(index))
+        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
   }
 }
 
