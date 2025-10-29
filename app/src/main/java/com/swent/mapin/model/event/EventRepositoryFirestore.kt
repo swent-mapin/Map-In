@@ -11,7 +11,7 @@ import kotlinx.coroutines.tasks.await
 const val EVENTS_COLLECTION_PATH = "events"
 
 /** Number of tags to limit in queries, due to Firestore constraints. */
-const val LIMIT: Int = 10
+const val FIRESTORE_QUERY_LIMIT: Int = 10
 
 // Saved-events constants
 private const val USERS_COLLECTION_PATH = "users"
@@ -36,7 +36,7 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
   override suspend fun getEventsByTags(tags: List<String>): List<Event> {
     if (tags.isEmpty()) return getAllEvents()
     // Firestore allows a maximum of 10 elements in whereArrayContainsAny
-    val limited = if (tags.size > LIMIT) tags.take(LIMIT) else tags
+    val limited = if (tags.size > FIRESTORE_QUERY_LIMIT) tags.take(FIRESTORE_QUERY_LIMIT) else tags
     val snap =
         db.collection(EVENTS_COLLECTION_PATH)
             .whereArrayContainsAny("tags", limited)
@@ -145,7 +145,7 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
     if (ids.isEmpty()) return emptyList()
 
     // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
-    val chunks = ids.chunked(LIMIT)
+    val chunks = ids.chunked(FIRESTORE_QUERY_LIMIT)
     val results = mutableListOf<Event>()
     for (chunk in chunks) {
       val snap =
