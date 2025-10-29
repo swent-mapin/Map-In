@@ -23,6 +23,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
           .associateBy { it.uid }
           .toMutableMap()
 
+  private val savedIdsByUser = mutableMapOf<String, LinkedHashSet<String>>()
   private var nextNumericId: Int =
       events.keys.mapNotNull { key -> key.removePrefix("event").toIntOrNull() }.maxOrNull()?.plus(1)
           ?: 1
@@ -104,6 +105,26 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     if (events.remove(eventID) == null) {
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventID)")
     }
+  }
+
+  private fun bucket(userId: String) = savedIdsByUser.getOrPut(userId) { LinkedHashSet() }
+
+  override suspend fun getSavedEventIds(userId: String): Set<String> {
+    return bucket(userId).toSet()
+  }
+
+  override suspend fun getSavedEvents(userId: String): List<Event> {
+    return bucket(userId).mapNotNull { id -> events[id] }
+  }
+
+  override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
+    if (!events.containsKey(eventId)) return false
+    bucket(userId).add(eventId)
+    return true
+  }
+
+  override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
+    return bucket(userId).remove(eventId)
   }
 
   companion object {

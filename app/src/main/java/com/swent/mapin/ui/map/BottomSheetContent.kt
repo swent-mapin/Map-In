@@ -48,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -107,7 +108,6 @@ data class SearchBarState(
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
- * @param onJoinedEventClick Callback when a joined event is clicked
  * @param onProfileClick Callback when the profile icon is tapped
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -124,9 +124,10 @@ fun BottomSheetContent(
     availableEvents: List<Event> = emptyList(),
     // Joined events
     joinedEvents: List<Event> = emptyList(),
+    // Saved events
+    savedEvents: List<Event> = emptyList(),
     // Tab and tags
-    selectedTab: MapScreenViewModel.BottomSheetTab =
-        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+    selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
@@ -136,7 +137,7 @@ fun BottomSheetContent(
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
-    onJoinedEventClick: (Event) -> Unit = {},
+    onTabEventClick: (Event) -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
@@ -155,15 +156,11 @@ fun BottomSheetContent(
   AnimatedContent(
       targetState = showMemoryForm,
       transitionSpec = {
-        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
-                slideInVertically(
-                    animationSpec = androidx.compose.animation.core.tween(300),
-                    initialOffsetY = { it / 4 }))
+        (fadeIn(animationSpec = tween(300)) +
+                slideInVertically(animationSpec = tween(300), initialOffsetY = { it / 4 }))
             .togetherWith(
-                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
-                    slideOutVertically(
-                        animationSpec = androidx.compose.animation.core.tween(200),
-                        targetOffsetY = { -it / 4 }))
+                fadeOut(animationSpec = tween(200)) +
+                    slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
         if (showForm) {
@@ -193,15 +190,13 @@ fun BottomSheetContent(
             AnimatedContent(
                 targetState = isSearchMode,
                 transitionSpec = {
-                  (fadeIn(animationSpec = androidx.compose.animation.core.tween(250)) +
+                  (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = androidx.compose.animation.core.tween(250),
-                              initialOffsetY = { it / 6 }))
+                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
                       .togetherWith(
-                          fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                          fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = androidx.compose.animation.core.tween(200),
-                                  targetOffsetY = { it / 6 }))
+                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                 label = "searchModeTransition") { searchActive ->
@@ -228,19 +223,16 @@ fun BottomSheetContent(
                       // Tab selector
                       TabRow(
                           selectedTabIndex =
-                              if (selectedTab ==
-                                  MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
-                                  0
+                              if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
                               else 1,
                           modifier = Modifier.fillMaxWidth()) {
                             Tab(
                                 selected =
-                                    selectedTab ==
-                                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                                    selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
                                 onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                                  onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
                                 },
-                                text = { Text("Recent Activities") })
+                                text = { Text("Saved Events") })
                             Tab(
                                 selected =
                                     selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
@@ -254,16 +246,11 @@ fun BottomSheetContent(
 
                       // Content based on selected tab
                       when (selectedTab) {
-                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                          // We removed the previous duplicated recent-activities list and sample
-                          // items. If you want to show recent items later, pass them in and render
-                          // here; for now we display a friendly message indicating there are no
-                          // recent events.
-                          NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
+                        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                          EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                         }
                         MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                          JoinedEventsSection(
-                              events = joinedEvents, onEventClick = onJoinedEventClick)
+                          EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
                         }
                       }
 
@@ -343,7 +330,7 @@ internal fun buildSearchHeading(query: String): String {
 private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
   val copy = remember(query) { buildNoResultsCopy(query) }
 
-  Box(modifier = modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
+  Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(text = copy.title, style = MaterialTheme.typography.titleMedium)
       Spacer(modifier = Modifier.height(8.dp))
@@ -605,14 +592,17 @@ private fun TagsSection(
 }
 
 @Composable
-private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
     return
   }
 
+  var expanded by remember { mutableStateOf(false) }
+  val visible = if (expanded) events else events.take(3)
+
   Column(modifier = Modifier.fillMaxWidth()) {
-    events.forEach { event ->
+    visible.forEach { event ->
       SearchResultItem(
           event = event,
           modifier = Modifier.padding(horizontal = 16.dp),
@@ -620,6 +610,16 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    if (events.size > 3) {
+      Spacer(modifier = Modifier.height(4.dp))
+      TextButton(
+          onClick = { expanded = !expanded },
+          modifier =
+              Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
+            Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
+          }
     }
   }
 }

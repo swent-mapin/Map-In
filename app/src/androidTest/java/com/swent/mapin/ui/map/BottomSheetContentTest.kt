@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -56,6 +57,31 @@ class BottomSheetContentTest {
     }
   }
 
+  @Composable
+  private fun SavedEventsContent(
+      events: List<Event>,
+      onEventClick: (Event) -> Unit = {},
+      onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          savedEvents = events,
+          selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+          onTabEventClick = onEventClick,
+          onTabChange = onTabChange)
+    }
+  }
+
   @Test
   fun collapsedState_showsSearchBarOnly() {
     rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
@@ -78,7 +104,8 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertIsDisplayed()
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText("Joined Events").assertIsDisplayed()
   }
 
   @Test
@@ -153,25 +180,14 @@ class BottomSheetContentTest {
                   onClear = {}),
           joinedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-          onJoinedEventClick = onEventClick,
+          onTabEventClick = onEventClick,
           onTabChange = onTabChange)
     }
   }
 
-  // JOINED EVENTS TAB TESTS
-  /*@Test
-  fun joinedEventsTab_showsEmptyState() {
-    rule.setContent { JoinedEventsContent(events = emptyList()) }
-    rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithText("You haven't joined any events yet").assertIsDisplayed()
-  }*/
-
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(3)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
@@ -185,7 +201,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_handlesEventInteractions() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -201,25 +217,10 @@ class BottomSheetContentTest {
     assertEquals(testEvents[0], clickedEvent)
   }
 
-  /*@Test
-  fun joinedEventsTab_handlesEdgeCases() {
-    // Test event with null date
-    val eventWithNullDate =
-        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(date = null)
-
-    rule.setContent { JoinedEventsContent(events = listOf(eventWithNullDate)) }
-    rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithText(eventWithNullDate.title).assertIsDisplayed()
-    rule.onNodeWithText("No date").assertIsDisplayed()
-  }*/
-
   @Test
-  fun tabSwitch_betweenRecentActivitiesAndJoinedEvents() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
-    var currentTab = MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES
+  fun tabSwitch_betweenSavedEventsAndJoinedEvents() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    var currentTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS
 
     rule.setContent {
       MaterialTheme {
@@ -513,7 +514,7 @@ class BottomSheetContentTest {
 
   @Test
   fun noResultsMessage_doesNotDisplayWhenSearchResultsExist() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
     rule.setContent {
       TestContentWithSearch(query = "test", searchResults = testEvents, isSearchMode = true)
     }
@@ -524,5 +525,124 @@ class BottomSheetContentTest {
     rule.onNodeWithText("No results found").assertDoesNotExist()
     // Should display the event instead
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+  }
+
+  @Test
+  fun savedEventsTab_displaysMultipleEventsWithAllData() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
+    rule.setContent { SavedEventsContent(events = testEvents) }
+    rule.waitForIdle()
+
+    // Ensure Saved Events tab title is visible (it is selected by default in this content)
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+
+    testEvents.forEach { event ->
+      rule.onNodeWithText(event.title).assertIsDisplayed()
+      // Location line is shown in SearchResultItem; use substring for safety
+      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+    }
+  }
+
+  @Test
+  fun savedEventsTab_handlesEventInteractions() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    var clickedEvent: Event? = null
+
+    rule.setContent {
+      SavedEventsContent(events = testEvents, onEventClick = { clickedEvent = it })
+    }
+    rule.waitForIdle()
+
+    // Click the single event in the Saved tab
+    rule.onNodeWithText(testEvents[0].title).performClick()
+    rule.waitForIdle()
+
+    assertEquals(testEvents[0], clickedEvent)
+  }
+
+  @Test
+  fun savedEventsTab_showMoreAndShowLessToggle() {
+    // >3 events so EventsSection shows the "Show more" control
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
+    rule.setContent { SavedEventsContent(events = testEvents) }
+    rule.waitForIdle()
+
+    // Initially only first 3 are visible (others exist but are off-screen/not visible)
+    testEvents.take(3).forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
+    }
+    testEvents.drop(3).forEach { e ->
+      // We only assert not displayed; they might exist off-screen
+      rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+    }
+
+    // Scroll to reveal the "Show more" button before asserting
+    rule
+        .onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+        .performScrollTo()
+        .assertIsDisplayed()
+        .performClick()
+    rule.waitForIdle()
+
+    // After expanding, scroll to each and assert visibility
+    testEvents.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    // Toggle back to "Show less" (same button)
+    rule
+        .onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+        .performScrollTo()
+        .performClick()
+    rule.waitForIdle()
+
+    // Collapsed again: only first 3 visible
+    testEvents.take(3).forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
+    }
+    testEvents.drop(3).forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+    }
+  }
+
+  @Test
+  fun tabSwitch_startOnSaved_thenSwitchToJoined_showsJoinedContent() {
+    val saved = LocalEventRepository.defaultSampleEvents().take(1)
+    val joined = LocalEventRepository.defaultSampleEvents().drop(1).take(1)
+
+    rule.setContent {
+      MaterialTheme {
+        var selectedTab by remember {
+          mutableStateOf(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+        }
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            savedEvents = saved,
+            joinedEvents = joined,
+            selectedTab = selectedTab,
+            onTabChange = { selectedTab = it })
+      }
+    }
+    rule.waitForIdle()
+
+    // On Saved tab first
+    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText(saved[0].title).assertIsDisplayed()
+
+    // Switch to Joined tab
+    rule.onNodeWithText("Joined Events").performClick()
+    rule.waitForIdle()
+
+    // Joined event title visible; saved no longer present
+    rule.onNodeWithText(joined[0].title).assertIsDisplayed()
   }
 }

@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.ui.auth.SignInScreen
+import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.SettingsScreen
@@ -55,7 +56,12 @@ fun AppNavHost(
               popUpTo(0) { inclusive = true }
               launchSingleTop = true
             }
-          })
+          },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
+    }
+
+    composable(Route.Friends.route) {
+      FriendsScreen(onNavigateBack = { navController.popBackStack() })
     }
   }
 }
