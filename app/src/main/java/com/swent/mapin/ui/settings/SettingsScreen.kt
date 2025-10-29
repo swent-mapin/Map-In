@@ -26,9 +26,9 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -95,9 +95,7 @@ fun SettingsScreen(
             },
             navigationIcon = {
               IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back")
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
             },
             colors =
@@ -230,9 +228,7 @@ fun SettingsScreen(
   }
 }
 
-/**
- * Section title for grouping settings
- */
+/** Section title for grouping settings */
 @Composable
 private fun SettingsSectionTitle(title: String, icon: ImageVector) {
   Row(
@@ -262,9 +258,7 @@ private fun SettingsSectionTitle(title: String, icon: ImageVector) {
       }
 }
 
-/**
- * Toggle item for boolean settings
- */
+/** Toggle item for boolean settings */
 @Composable
 private fun SettingsToggleItem(
     title: String,
@@ -275,54 +269,45 @@ private fun SettingsToggleItem(
     testTag: String
 ) {
   Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .shadow(4.dp, RoundedCornerShape(12.dp))
-              .testTag(testTag),
+      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
       shape = RoundedCornerShape(12.dp),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(16.dp)
-                    .clickable { onToggle(!isEnabled) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onToggle(!isEnabled) },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-              Row(
-                  modifier = Modifier.weight(1f),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier =
-                            Modifier.size(40.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    color =
-                                        MaterialTheme.colorScheme.primaryContainer.copy(
-                                            alpha = 0.7f)),
-                        contentAlignment = Alignment.Center) {
-                          Icon(
-                              imageVector =
-                                  if (isEnabled) Icons.Default.Visibility
-                                  else Icons.Default.VisibilityOff,
-                              contentDescription = title,
-                              tint = MaterialTheme.colorScheme.primary,
-                              modifier = Modifier.size(20.dp))
-                        }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                      Text(
-                          text = title,
-                          style = MaterialTheme.typography.labelLarge,
-                          fontWeight = FontWeight.SemiBold,
-                          color = MaterialTheme.colorScheme.onSurface)
-                      Spacer(modifier = Modifier.height(4.dp))
-                      Text(
-                          text = subtitle,
-                          style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.onSurfaceVariant)
+              Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier =
+                        Modifier.size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                color =
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center) {
+                      Icon(
+                          imageVector =
+                              if (isEnabled) Icons.Default.Visibility
+                              else Icons.Default.VisibilityOff,
+                          contentDescription = title,
+                          tint = MaterialTheme.colorScheme.primary,
+                          modifier = Modifier.size(20.dp))
                     }
-                  }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                  Text(
+                      text = title,
+                      style = MaterialTheme.typography.labelLarge,
+                      fontWeight = FontWeight.SemiBold,
+                      color = MaterialTheme.colorScheme.onSurface)
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text(
+                      text = subtitle,
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+              }
               Spacer(modifier = Modifier.width(8.dp))
               Switch(
                   checked = isEnabled,
@@ -338,9 +323,7 @@ private fun SettingsToggleItem(
       }
 }
 
-/**
- * Action button for settings (Logout, Delete Account, etc.)
- */
+/** Action button for settings (Logout, Delete Account, etc.) */
 @Composable
 private fun SettingsActionButton(
     label: String,
@@ -352,10 +335,7 @@ private fun SettingsActionButton(
     testTag: String
 ) {
   Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .shadow(4.dp, RoundedCornerShape(12.dp))
-              .testTag(testTag),
+      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
       shape = RoundedCornerShape(12.dp),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
@@ -372,40 +352,37 @@ private fun SettingsActionButton(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-              Row(
-                  modifier = Modifier.weight(1f),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier =
-                            Modifier.size(40.dp)
-                                .clip(CircleShape)
-                                .background(color = backgroundColor.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center) {
-                          Icon(
-                              imageVector = icon,
-                              contentDescription = label,
-                              tint = backgroundColor,
-                              modifier = Modifier.size(20.dp))
-                        }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                      Text(
-                          text = label,
-                          style = MaterialTheme.typography.labelLarge,
-                          fontWeight = FontWeight.SemiBold,
-                          color = backgroundColor)
-                      Spacer(modifier = Modifier.height(4.dp))
-                      Text(
-                          text = description,
-                          style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.onSurfaceVariant)
+              Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier =
+                        Modifier.size(40.dp)
+                            .clip(CircleShape)
+                            .background(color = backgroundColor.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center) {
+                      Icon(
+                          imageVector = icon,
+                          contentDescription = label,
+                          tint = backgroundColor,
+                          modifier = Modifier.size(20.dp))
                     }
-                  }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                  Text(
+                      text = label,
+                      style = MaterialTheme.typography.labelLarge,
+                      fontWeight = FontWeight.SemiBold,
+                      color = backgroundColor)
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text(
+                      text = description,
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+              }
               OutlinedButton(
                   onClick = onAction,
                   shape = RoundedCornerShape(8.dp),
-                  colors =
-                      ButtonDefaults.outlinedButtonColors(contentColor = backgroundColor),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = backgroundColor),
                   modifier = Modifier.testTag("${testTag}_action")) {
                     Text(
                         "Go",
@@ -416,9 +393,7 @@ private fun SettingsActionButton(
       }
 }
 
-/**
- * Generic confirmation dialog
- */
+/** Generic confirmation dialog */
 @Composable
 private fun ConfirmationDialog(
     title: String,
@@ -433,9 +408,7 @@ private fun ConfirmationDialog(
       onDismissRequest = onDismiss,
       title = {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold)
+            text = title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
       },
       text = {
         Text(
@@ -462,4 +435,3 @@ private fun ConfirmationDialog(
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(16.dp))
 }
-
