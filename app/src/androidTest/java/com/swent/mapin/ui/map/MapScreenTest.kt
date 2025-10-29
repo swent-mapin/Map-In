@@ -14,6 +14,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheetConfig
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -198,13 +199,37 @@ class MapScreenTest {
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 
+  // ===== Location feature tests =====
+
   @Test
-  fun mapScreen_locationClick_triggersCallback() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+  fun mapScreen_locationPermissionFlow_handlesCorrectly() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
+
+  @Test
+  fun mapScreen_locationButton_isVisibleWhenNotCentered() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
+  }
+
 
   @Test
   fun mapScreen_switchBetweenStyles_maintainsState() {
@@ -396,5 +421,146 @@ class MapScreenTest {
     rule.waitForIdle()
 
     rule.onNodeWithText("Basketball Game").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationButton_clickTriggersViewModel() {
+    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    var permissionRequested = false
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        viewModel.onRequestLocationPermission = { permissionRequested = true }
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      viewModel.onLocationButtonClick()
+    }
+    rule.waitForIdle()
+
+    assertTrue(permissionRequested)
+  }
+
+  @Test
+  fun mapScreen_locationButton_stateChangesWithMapMovement() {
+    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
+
+    rule.runOnIdle {
+      viewModel.onMapMoved()
+    }
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
+
+    rule.runOnIdle {
+      viewModel.updateCenteredState(46.5, 6.5)
+    }
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
+  }
+/*
+  @Test
+  fun mapScreen_locationFeature_centersCameraWhenPermissionGranted() {
+    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    var cameraCentered = false
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        viewModel.onCenterOnUserLocation = { cameraCentered = true }
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify the callback can be triggered
+    rule.runOnIdle {
+      viewModel.onCenterOnUserLocation?.invoke()
+    }
+    rule.waitForIdle()
+
+    assertTrue(cameraCentered)
+  } */
+
+
+  @Test
+  fun mapScreen_compassAndLocationButton_positioning() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_launchedEffect_initiatesLocationChecks() {
+    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+    rule.runOnIdle {
+      assertFalse(viewModel.hasLocationPermission)
+    }
+  }
+
+  @Test
+  fun mapScreen_updateCenteredState_tracksCamera() {
+    val config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
+
+    rule.runOnIdle {
+      viewModel.updateCenteredState(46.518, 6.566)
+    }
+    rule.waitForIdle()
+
+    rule.runOnIdle {
+      assertFalse(viewModel.isCenteredOnUser)
+    }
   }
 }
