@@ -439,6 +439,7 @@ private fun FullEventContent(
 
 /**
  * Data class representing the state of the save button.
+ *
  * @param showSaveButton Whether the save button should be shown
  * @param label The label to display on the button
  */
@@ -446,6 +447,7 @@ private fun FullEventContent(
 
 /**
  * Resolves the UI state for the save button based on whether the event is already saved.
+ *
  * @param isSaved Whether the event is already saved
  * @return The UI state for the save button
  */

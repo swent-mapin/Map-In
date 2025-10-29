@@ -119,7 +119,7 @@ interface EventRepository {
    * @param eventId The unique identifier of the Event item to remove.
    * @return True if the Event item was successfully removed from the user's saved list, false
    *   otherwise.
-   *   @throws NoSuchElementException if the Event item is not found.
+   *     @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
 }
