@@ -863,4 +863,66 @@ class MapScreenViewModelTest {
   fun availableEvents_initiallyEmpty() {
     assertEquals(0, viewModel.availableEvents.size)
   }
+
+  @Test
+  fun `showMemoryForm sets state correctly`() {
+    val initialState = viewModel.bottomSheetState
+
+    viewModel.showMemoryForm()
+
+    assertTrue(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.MEMORY_FORM, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun `hideMemoryForm resets showMemoryForm and sets MAIN_CONTENT`() {
+    viewModel.showMemoryForm()
+
+    viewModel.hideMemoryForm()
+
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
+
+  @Test
+  fun `showAddEventForm sets state correctly`() {
+    viewModel.showAddEventForm()
+
+    assertFalse(viewModel.showMemoryForm) // legacy boolean remains false
+    assertEquals(BottomSheetScreen.ADD_EVENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun `hideAddEventForm resets to MAIN_CONTENT`() {
+    viewModel.showAddEventForm()
+
+    viewModel.hideAddEventForm()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
+
+  @Test
+  fun `onAddEventCancel hides AddEvent form and returns to MAIN_CONTENT`() {
+    // Simulate showing AddEvent form
+    viewModel.showAddEventForm()
+
+    // Cancel
+    viewModel.onAddEventCancel()
+
+    // Validate public state
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun `showMemoryForm and showAddEventForm are mutually exclusive`() {
+    viewModel.showMemoryForm()
+
+    viewModel.showAddEventForm()
+
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.ADD_EVENT, viewModel.currentBottomSheetScreen)
+  }
 }

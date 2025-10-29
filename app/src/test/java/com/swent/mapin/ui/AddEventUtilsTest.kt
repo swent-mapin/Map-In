@@ -1,9 +1,9 @@
 package com.swent.mapin.ui
 
 import com.swent.mapin.model.Location
-import com.swent.mapin.ui.components.extractTags
-import com.swent.mapin.ui.components.isValidLocation
-import com.swent.mapin.ui.components.isValidTagInput
+import com.swent.mapin.ui.event.extractTags
+import com.swent.mapin.ui.event.isValidLocation
+import com.swent.mapin.ui.event.isValidTagInput
 import junit.framework.TestCase.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertEquals

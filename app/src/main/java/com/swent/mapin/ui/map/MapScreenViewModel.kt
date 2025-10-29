@@ -115,6 +115,12 @@ class MapScreenViewModel(
   val useSatelliteStyle: Boolean
     get() = _mapStyle == MapStyle.SATELLITE
 
+  // State of the bottomsheet
+
+  private var _currentBottomSheetScreen by mutableStateOf(BottomSheetScreen.MAIN_CONTENT)
+  val currentBottomSheetScreen: BottomSheetScreen
+    get() = _currentBottomSheetScreen
+
   // Memory creation form state
   private var _showMemoryForm by mutableStateOf(false)
   val showMemoryForm: Boolean
@@ -430,11 +436,24 @@ class MapScreenViewModel(
   fun showMemoryForm() {
     _previousSheetState = _bottomSheetState
     _showMemoryForm = true
+    _currentBottomSheetScreen = BottomSheetScreen.MEMORY_FORM
     setBottomSheetState(BottomSheetState.FULL)
   }
 
   fun hideMemoryForm() {
     _showMemoryForm = false
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+  }
+
+  fun showAddEventForm() {
+    _previousSheetState = _bottomSheetState
+    _showMemoryForm = false
+    _currentBottomSheetScreen = BottomSheetScreen.ADD_EVENT
+    setBottomSheetState(BottomSheetState.FULL)
+  }
+
+  fun hideAddEventForm() {
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
   }
 
   fun onMemorySave(formData: MemoryFormData) {
@@ -498,6 +517,11 @@ class MapScreenViewModel(
 
   fun onMemoryCancel() {
     hideMemoryForm()
+    restorePreviousSheetState()
+  }
+
+  fun onAddEventCancel() {
+    hideAddEventForm()
     restorePreviousSheetState()
   }
 

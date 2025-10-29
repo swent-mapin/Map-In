@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.components.AddEvent
+package com.swent.mapin.ui.components.addEvent
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -8,8 +8,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
-import com.swent.mapin.ui.components.AddEventPopUpTestTags
-import com.swent.mapin.ui.components.LocationDropDownMenu
+import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.event.LocationDropDownMenu
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
@@ -39,7 +39,7 @@ class LocationDropDownMenuTests {
     }
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performTextInput("Par")
 
     verify { fakeViewModel.onQueryChanged("Par") }

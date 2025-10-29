@@ -2,7 +2,7 @@
     <string name="app_name">MapIn</string>
     <string name="event_creation_title">New Event Manager</string>>
     <string name="title_field">Title</string>>
-    <string name="date_field">Date</string>>
+    <string name="date_field">Date and Time</string>>
     <string name="time_field">Pick a time</string>
     <string name="location_field">Location</string>>
     <string name="description_field">Description</string>>
