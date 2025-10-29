@@ -70,6 +70,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
@@ -137,7 +140,9 @@ fun BottomSheetContent(
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onJoinedEventClick: (Event) -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    // New: current user's avatar URL to display in the profile slot
+    profileAvatarUrl: String? = null
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -155,14 +160,14 @@ fun BottomSheetContent(
   AnimatedContent(
       targetState = showMemoryForm,
       transitionSpec = {
-        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+        (fadeIn(animationSpec = tween(300)) +
                 slideInVertically(
-                    animationSpec = androidx.compose.animation.core.tween(300),
+                    animationSpec = tween(300),
                     initialOffsetY = { it / 4 }))
             .togetherWith(
-                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                fadeOut(animationSpec = tween(200)) +
                     slideOutVertically(
-                        animationSpec = androidx.compose.animation.core.tween(200),
+                        animationSpec = tween(200),
                         targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
@@ -180,27 +185,27 @@ fun BottomSheetContent(
             SearchBar(
                 value = searchBarState.query,
                 onValueChange = searchBarState.onQueryChange,
-                isFull = isFull,
                 isSearchMode = isSearchMode,
                 onTap = searchBarState.onTap,
                 focusRequester = focusRequester,
                 onSearchAction = { focusManager.clearFocus() },
                 onClear = searchBarState.onClear,
-                onProfileClick = onProfileClick)
+                onProfileClick = onProfileClick,
+                profileAvatarUrl = profileAvatarUrl)
 
             Spacer(modifier = Modifier.height(24.dp))
 
             AnimatedContent(
                 targetState = isSearchMode,
                 transitionSpec = {
-                  (fadeIn(animationSpec = androidx.compose.animation.core.tween(250)) +
+                  (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = androidx.compose.animation.core.tween(250),
+                              animationSpec = tween(250),
                               initialOffsetY = { it / 6 }))
                       .togetherWith(
-                          fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                          fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = androidx.compose.animation.core.tween(200),
+                                  animationSpec = tween(200),
                                   targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
@@ -400,7 +405,7 @@ private fun SearchResultItem(
                     overflow = TextOverflow.Ellipsis)
               }
 
-              val tagsSummary = event.tags.take(3).joinToString(separator = " • ")
+              val tagsSummary = buildTagsSummary(event.tags)
               if (tagsSummary.isNotBlank()) {
                 Text(
                     text = tagsSummary,
@@ -422,17 +427,18 @@ private fun SearchResultItem(
 
 /** Search bar that triggers full mode when tapped. Modern, minimalist design. */
 @Composable
-private fun SearchBar(
+internal fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
-    isFull: Boolean,
     isSearchMode: Boolean,
     onTap: () -> Unit,
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
     onClear: () -> Unit,
     onProfileClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // New param: avatar url to display instead of icon
+    profileAvatarUrl: String? = null
 ) {
   var isFocused by remember { mutableStateOf(false) }
   // Keep the profile shortcut hidden whenever the search sheet is active
@@ -505,20 +511,35 @@ private fun SearchBar(
         modifier =
             Modifier.padding(start = slotPadding).height(fieldHeight).width(profileSlotWidth),
         contentAlignment = Alignment.Center) {
+          // Use a clipped Box with a background and no internal padding so the image exactly
+          // matches the slot shape. Disable ripple to avoid overflow visual artifacts.
+          val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+          val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+
           Surface(
-              modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-              shape = RoundedCornerShape(16.dp)) {
-                IconButton(
-                    onClick = onProfileClick,
-                    enabled = profileVisible,
-                    modifier = Modifier.fillMaxSize()) {
-                      Icon(
-                          imageVector = Icons.Outlined.AccountCircle,
-                          contentDescription = "Profile",
-                          tint = MaterialTheme.colorScheme.onSurface)
-                    }
-              }
+              modifier = Modifier
+                  .fillMaxSize()
+                  .testTag("profileButton")
+                  .alpha(profileAlpha)
+                  .clickable(enabled = profileVisible, onClick = onProfileClick, interactionSource = interactionSource, indication = null),
+              shape = RoundedCornerShape(16.dp),
+              color = backgroundColor
+          ) {
+             if (isRemoteAvatarUrl(profileAvatarUrl)) {
+               AsyncImage(
+                   model = profileAvatarUrl,
+                   contentDescription = "Profile",
+                   contentScale = ContentScale.Crop,
+                   modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).testTag("profileImage"))
+             } else {
+               Box(modifier = Modifier.fillMaxSize().testTag("profileIcon"), contentAlignment = Alignment.Center) {
+                 Icon(
+                     imageVector = Icons.Outlined.AccountCircle,
+                     contentDescription = "Profile",
+                     tint = MaterialTheme.colorScheme.onSurface)
+               }
+             }
+          }
         }
   }
 }
@@ -649,4 +670,25 @@ private fun TagItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis)
       }
+}
+
+// Testable helpers
+@VisibleForTesting
+internal fun isProfileVisible(isFocused: Boolean, isSearchMode: Boolean): Boolean {
+  return !isFocused && !isSearchMode
+}
+
+@VisibleForTesting
+internal fun buildTagsSummary(tags: List<String>): String {
+  return tags.take(3).joinToString(separator = " • ")
+}
+
+@VisibleForTesting
+internal fun isRemoteAvatarUrl(url: String?): Boolean {
+  if (url == null) return false
+  // Normalize common whitespace (including NBSP) and trim
+  val cleaned = url.replace('\u00A0', ' ').trim()
+  if (cleaned.isEmpty()) return false
+  // Case-insensitive regex matching at start for http or https
+  return Regex("^(?i)https?://").containsMatchIn(cleaned)
 }
