@@ -273,8 +273,6 @@ fun MapScreen(
                       selectedTags = mapViewModel.selectedTags,
                       onTagClick = mapViewModel::toggleTagSelection,
                       onEventClick = { event ->
-                        // Handle event click from search - focus pin, show details, remember
-                        // search mode
                         mapViewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
                       },
@@ -287,9 +285,8 @@ fun MapScreen(
                       onJoinedEventClick = mapViewModel::onJoinedEventClicked,
                       onProfileClick = onNavigateToProfile,
                       profileAvatarUrl =
-                          if (profileViewModel.selectedAvatar.isNotEmpty())
-                              profileViewModel.selectedAvatar
-                          else userProfile.avatarUrl)
+                          profileViewModel.selectedAvatar.takeIf { it.isNotBlank() }
+                              ?: userProfile.avatarUrl)
                 }
               }
         }
