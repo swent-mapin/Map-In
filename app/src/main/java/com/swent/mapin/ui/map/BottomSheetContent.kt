@@ -18,10 +18,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +41,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -70,9 +67,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
+import com.swent.mapin.ui.profile.ProfileViewModel
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -100,7 +101,6 @@ data class SearchBarState(
  * @param availableEvents List of events that can be linked to memories
  * @param joinedEvents List of events the user has joined
  * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
- * @param topTags List of top tags to display in the discover section
  * @param selectedTags Set of currently selected tags
  * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
@@ -109,6 +109,9 @@ data class SearchBarState(
  * @param onTabChange Callback when tab is changed
  * @param onJoinedEventClick Callback when a joined event is clicked
  * @param onProfileClick Callback when the profile icon is tapped
+ * @param filterViewModel ViewModel managing filter state (time, place, price, tags, etc.)
+ * @param locationViewModel ViewModel for location search and autocomplete
+ * @param profileViewModel ViewModel providing current user profile
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -127,7 +130,6 @@ fun BottomSheetContent(
     // Tab and tags
     selectedTab: MapScreenViewModel.BottomSheetTab =
         MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
-    topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
     // Callbacks
@@ -137,12 +139,17 @@ fun BottomSheetContent(
     onMemoryCancel: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onJoinedEventClick: (Event) -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    filterViewModel: FiltersSectionViewModel = viewModel(),
+    locationViewModel: LocationViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
+  val filterSection = remember { FiltersSection() }
+  val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
   LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
     if (isFull && searchBarState.shouldRequestFocus) {
@@ -155,15 +162,11 @@ fun BottomSheetContent(
   AnimatedContent(
       targetState = showMemoryForm,
       transitionSpec = {
-        (fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
-                slideInVertically(
-                    animationSpec = androidx.compose.animation.core.tween(300),
-                    initialOffsetY = { it / 4 }))
+        (fadeIn(animationSpec = tween(300)) +
+                slideInVertically(animationSpec = tween(300), initialOffsetY = { it / 4 }))
             .togetherWith(
-                fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
-                    slideOutVertically(
-                        animationSpec = androidx.compose.animation.core.tween(200),
-                        targetOffsetY = { -it / 4 }))
+                fadeOut(animationSpec = tween(200)) +
+                    slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it / 4 }))
       },
       label = "memoryFormTransition") { showForm ->
         if (showForm) {
@@ -193,15 +196,13 @@ fun BottomSheetContent(
             AnimatedContent(
                 targetState = isSearchMode,
                 transitionSpec = {
-                  (fadeIn(animationSpec = androidx.compose.animation.core.tween(250)) +
+                  (fadeIn(animationSpec = tween(250)) +
                           slideInVertically(
-                              animationSpec = androidx.compose.animation.core.tween(250),
-                              initialOffsetY = { it / 6 }))
+                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
                       .togetherWith(
-                          fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                          fadeOut(animationSpec = tween(200)) +
                               slideOutVertically(
-                                  animationSpec = androidx.compose.animation.core.tween(200),
-                                  targetOffsetY = { it / 6 }))
+                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
                 },
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                 label = "searchModeTransition") { searchActive ->
@@ -225,7 +226,6 @@ fun BottomSheetContent(
 
                       Spacer(modifier = Modifier.height(16.dp))
 
-                      // Tab selector
                       TabRow(
                           selectedTabIndex =
                               if (selectedTab ==
@@ -252,13 +252,8 @@ fun BottomSheetContent(
 
                       Spacer(modifier = Modifier.height(16.dp))
 
-                      // Content based on selected tab
                       when (selectedTab) {
                         MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                          // We removed the previous duplicated recent-activities list and sample
-                          // items. If you want to show recent items later, pass them in and render
-                          // here; for now we display a friendly message indicating there are no
-                          // recent events.
                           NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
                         }
                         MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
@@ -267,19 +262,15 @@ fun BottomSheetContent(
                         }
                       }
 
-                      Spacer(modifier = Modifier.height(16.dp))
+                      if (state != BottomSheetState.COLLAPSED) {
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-                      Spacer(modifier = Modifier.height(16.dp))
-
-                      // Dynamic tag selection
-                      if (topTags.isNotEmpty()) {
-                        TagsSection(
-                            topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
+                        filterSection.Render(
+                            Modifier.fillMaxWidth(),
+                            filterViewModel,
+                            locationViewModel,
+                            userProfile)
                       }
-
-                      Spacer(modifier = Modifier.height(24.dp))
                     }
                   }
                 }
@@ -577,33 +568,6 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
       }
 }
 
-/** Section displaying dynamic tags - replaces the hardcoded discover section. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TagsSection(
-    topTags: List<String>,
-    selectedTags: Set<String>,
-    onTagClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(modifier = modifier.fillMaxWidth()) {
-    Text(
-        text = "Discover",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(bottom = 8.dp))
-
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          topTags.forEach { tag ->
-            val isSelected = selectedTags.contains(tag)
-            TagItem(text = tag, isSelected = isSelected, onClick = { onTagClick(tag) })
-          }
-        }
-  }
-}
-
 @Composable
 private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
@@ -622,31 +586,4 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
       Spacer(modifier = Modifier.height(8.dp))
     }
   }
-}
-
-@Composable
-private fun TagItem(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-  val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-  val contentColor =
-      if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-
-  OutlinedButton(
-      onClick = onClick,
-      modifier = modifier.padding(4.dp).defaultMinSize(minHeight = 36.dp),
-      shape = RoundedCornerShape(16.dp),
-      colors =
-          ButtonDefaults.buttonColors(
-              containerColor = backgroundColor, contentColor = contentColor)) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
-      }
 }
