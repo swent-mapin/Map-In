@@ -62,6 +62,8 @@ const val LATITUDE_DEFAULT = 0.0
 
 object AddEventScreenTestTags {
   const val INPUT_EVENT_TITLE = "inputEventTitle"
+
+  const val DATE_TIME_ERROR = "dateTimeErrorMessage"
   const val PICK_EVENT_DATE = "pickEventDate"
   const val PICK_EVENT_TIME = "pickEventTime"
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
@@ -211,7 +213,9 @@ fun TimePickerButton(
           TimePickerDialog(
                   context,
                   { _, pickedHour, pickedMinute ->
-                      selectedTime.value = pickedHour.toString().padStart(2, '0') + pickedMinute.toString().padStart(2, '0') // internal "HHmm"
+                    selectedTime.value =
+                        pickedHour.toString().padStart(2, '0') +
+                            pickedMinute.toString().padStart(2, '0') // internal "HHmm"
                     onTimeChanged?.invoke()
                   },
                   hour,
@@ -228,7 +232,9 @@ fun TimePickerButton(
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
               disabledContainerColor = Color.Unspecified)) {
-        Text(("Select Time: ${selectedTime.value.chunked(2).joinToString("h")}"), color = MaterialTheme.colorScheme.onPrimary)
+        Text(
+            ("Select Time: ${selectedTime.value.chunked(2).joinToString("h")}"),
+            color = MaterialTheme.colorScheme.onPrimary)
       }
 }
 
@@ -302,7 +308,8 @@ fun AddEventScreen(
           if (timeError.value) stringResource(R.string.time) else null)
 
   val isEventValid = !error && isLoggedIn.value
-  val isDateAndTimeValid = dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
+  val isDateAndTimeValid =
+      dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
   val scrollState = rememberScrollState()
 
   Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
@@ -330,7 +337,8 @@ fun AddEventScreen(
               onClick = {
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
                 sdf.timeZone = java.util.TimeZone.getDefault()
-                val rawTime = if (time.value.contains("h")) time.value.replace("h","") else time.value
+                val rawTime =
+                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
                 val parsed = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
                 val timestamp = parsed?.let { Timestamp(it) } ?: Timestamp.now()
                 saveEvent(
@@ -385,11 +393,12 @@ fun AddEventScreen(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
     if (isDateAndTimeValid) {
-        Text(
-            stringResource(R.string.date_time_error),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Red,
-            modifier = Modifier.padding(bottom = 8.dp))
+      Text(
+          stringResource(R.string.date_time_error),
+          style = MaterialTheme.typography.labelMedium,
+          color = Color.Red,
+          modifier =
+              Modifier.padding(bottom = 8.dp).testTag(AddEventScreenTestTags.DATE_TIME_ERROR))
     }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
