@@ -1,122 +1,136 @@
-package com.swent.mapin.ui.components.AddEvent
+package com.swent.mapin.ui.event.addEvent
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.components.AddEventPopUp
-import com.swent.mapin.ui.components.AddEventPopUpTestTags
-import com.swent.mapin.ui.components.EventViewModel
-import com.swent.mapin.ui.components.saveEvent
+import com.swent.mapin.ui.event.AddEventScreen
+import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.event.EventViewModel
+import com.swent.mapin.ui.event.saveEvent
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class AddEventPopUpTests {
+class AddEventScreenTests {
   private var saveClicked = false
   private var cancelClicked = false
-  private var backClicked = false
-  private var dismissCalled = false
 
   @get:Rule val composeTestRule = createComposeRule()
 
   @Before
   fun setUp() {
     composeTestRule.setContent {
-      AddEventPopUp(
-          onBack = { backClicked = true },
-          onDismiss = { dismissCalled = true },
-          onDone = { saveClicked = true },
-          onCancel = { cancelClicked = true })
+      AddEventScreen(onDone = { saveClicked = true }, onCancel = { cancelClicked = true })
     }
   }
 
   @Test
   fun displayAllComponents() {
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .assertTextContains("Save", substring = true, ignoreCase = true)
-    composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.EVENT_CANCEL)
-        .performScrollTo()
-        .assertTextContains("Cancel", substring = true, ignoreCase = true)
-    composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE)
+        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG)
+        .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
         .performScrollTo()
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_TIME)
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
         .performScrollTo()
         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_LOCATION)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performScrollTo()
         .assertIsDisplayed()
   }
 
   @Test
-  fun showsErrorMessageInitially() {
-    composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
+  fun doesNotShowErrorMessageInitially() {
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsNotDisplayed()
+  }
+
+  @Test
+  fun dateAndTimeErrorMessageShowsInitially() {
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
   }
 
   @Test
   fun nonEmptyTitleRemovesTitleError() {
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("a")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
         .performTextInput("This is a valid title")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Title", substring = true, ignoreCase = true))
   }
 
   @Test
   fun nonEmptyDescriptionRemovesDescriptionError() {
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION).assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("a")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid Description")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Description", substring = true, ignoreCase = true))
   }
 
   @Test
   fun clickingCancelInvokesCallback() {
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.EVENT_CANCEL)
+        .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
         .performScrollTo()
         .performClick()
     assert(cancelClicked)
@@ -126,90 +140,92 @@ class AddEventPopUpTests {
   fun publicPrivateSwitchTogglesCorrectly() {
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_TEXT)
         .performScrollTo()
         .assertTextContains("Public", substring = true, ignoreCase = true)
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
         .performScrollTo()
         .performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_TEXT)
         .performScrollTo()
         .assertTextContains("Private", substring = true, ignoreCase = true)
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_SWITCH)
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
         .performScrollTo()
         .performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PUBLIC_TEXT)
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_TEXT)
         .performScrollTo()
         .assertTextContains("Public", substring = true, ignoreCase = true)
-  }
-
-  @Test
-  fun clickingCloseButtonInvokesBackCallback() {
-    composeTestRule.onNodeWithContentDescription("Close").performClick()
-    assert(backClicked)
   }
 
   @Test
   fun datePickerButtonDisplaysDefaultText() {
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_DATE)
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
   }
 
   @Test
   fun timePickerButtonDisplaysDefaultText() {
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.PICK_EVENT_TIME)
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
   }
 
   @Test
   fun tagInputValidationWorks() {
-    val tagNode = composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG)
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.performTextInput("Invalid Tag !!")
     tagNode.assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assertTextContains("Tag", substring = true, ignoreCase = true)
   }
 
   @Test
   fun tagValidSpaceInputValidationWorks() {
-    val tagNode = composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG)
-    tagNode.performTextInput("#ValidTag #ValidTag2")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidTag")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("#ValidTag #ValidTag2")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Tag", substring = true, ignoreCase = true))
   }
 
   @Test
   fun tagValiCommaInputValidationWorks() {
-    val tagNode = composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TAG)
-    tagNode.performTextInput("#ValidTag, #ValidTag2")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidTag")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("#ValidTag, #ValidTag2")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.ERROR_MESSAGE)
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Tag", substring = true, ignoreCase = true))
   }
 
   @Test
   fun invalidInputsKeepSaveButtonDisabled() {
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_TITLE).performTextInput("")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("")
     composeTestRule
-        .onNodeWithTag(AddEventPopUpTestTags.INPUT_EVENT_DESCRIPTION)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid description")
-    composeTestRule.onNodeWithTag(AddEventPopUpTestTags.EVENT_SAVE).assertIsNotEnabled()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
   }
 }
 

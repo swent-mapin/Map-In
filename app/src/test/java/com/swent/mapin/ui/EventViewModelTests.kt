@@ -3,7 +3,7 @@ package com.swent.mapin.ui
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.ui.components.EventViewModel
+import com.swent.mapin.ui.event.EventViewModel
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
