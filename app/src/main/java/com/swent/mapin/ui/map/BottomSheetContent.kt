@@ -389,7 +389,8 @@ private fun SearchResultItem(
   Surface(
       shape = RoundedCornerShape(16.dp),
       tonalElevation = 2.dp,
-      modifier = modifier.fillMaxWidth().clickable { onClick() }) {
+      modifier =
+          modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
