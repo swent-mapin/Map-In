@@ -92,6 +92,7 @@ import com.swent.mapin.model.UserProfile
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToSignIn: () -> Unit,
     onNavigateToFriends: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
@@ -242,26 +243,23 @@ fun ProfileScreen(
 
                         // Logout button
                         OutlinedButton(
-                            onClick = {
-                              viewModel.signOut()
-                              onNavigateToSignIn()
-                            },
+                            onClick = onNavigateToSettings,
                             modifier =
-                                Modifier.fillMaxWidth().height(50.dp).testTag("logoutButton"),
+                                Modifier.fillMaxWidth().height(50.dp).testTag("settingsButton"),
                             shape = RoundedCornerShape(12.dp),
                             colors =
                                 ButtonDefaults.outlinedButtonColors(
-                                    contentColor = Color(0xFFef5350))) {
+                                    contentColor = MaterialTheme.colorScheme.primary)) {
                               Row(
                                   verticalAlignment = Alignment.CenterVertically,
                                   horizontalArrangement = Arrangement.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
-                                        contentDescription = "Logout",
+                                        contentDescription = "Settings",
                                         modifier = Modifier.size(20.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Logout",
+                                        text = "Settings",
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.bodyLarge)
                                   }

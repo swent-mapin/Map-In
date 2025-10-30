@@ -7,5 +7,7 @@ sealed class Route(val route: String) {
 
   object Profile : Route("profile")
 
+  object Settings : Route("settings")
+
   object Friends : Route("friends")
 }
