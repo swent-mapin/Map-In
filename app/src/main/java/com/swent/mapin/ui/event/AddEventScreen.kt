@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,7 +75,7 @@ object AddEventScreenTestTags {
 
   const val PUBLIC_TEXT = "publicText"
 
-  const val SCREEN = "AddEventPopUp"
+  const val SCREEN = "AddEventScreen"
 }
 
 /**
@@ -173,7 +173,7 @@ fun FutureDatePickerButton(
       },
       shape = RoundedCornerShape(4.dp),
       colors =
-          ButtonColors(
+          ButtonDefaults.buttonColors(
               containerColor = MaterialTheme.colorScheme.primary,
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
@@ -211,9 +211,7 @@ fun TimePickerButton(
           TimePickerDialog(
                   context,
                   { _, pickedHour, pickedMinute ->
-                    selectedTime.value =
-                        "${pickedHour.toString().padStart(2, '0')}h" +
-                            pickedMinute.toString().padStart(2, '0')
+                      selectedTime.value = pickedHour.toString().padStart(2, '0') + pickedMinute.toString().padStart(2, '0') // internal "HHmm"
                     onTimeChanged?.invoke()
                   },
                   hour,
@@ -225,12 +223,12 @@ fun TimePickerButton(
       modifier = Modifier.width(200.dp).testTag(AddEventScreenTestTags.PICK_EVENT_TIME),
       shape = RoundedCornerShape(4.dp),
       colors =
-          ButtonColors(
+          ButtonDefaults.buttonColors(
               containerColor = MaterialTheme.colorScheme.primary,
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
               disabledContainerColor = Color.Unspecified)) {
-        Text("Select Time: ${selectedTime.value}", color = MaterialTheme.colorScheme.onPrimary)
+        Text(("Select Time: ${selectedTime.value.chunked(2).joinToString("h")}"), color = MaterialTheme.colorScheme.onPrimary)
       }
 }
 
@@ -304,10 +302,10 @@ fun AddEventScreen(
           if (timeError.value) stringResource(R.string.time) else null)
 
   val isEventValid = !error && isLoggedIn.value
-
+  val isDateAndTimeValid = dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
   val scrollState = rememberScrollState()
 
-  Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+  Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
     // TopBar
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -331,8 +329,10 @@ fun AddEventScreen(
           IconButton(
               onClick = {
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                val dateTime = sdf.parse(date.value + time.value.replace("h", ""))
-                val timestamp = if (dateTime != null) Timestamp(dateTime) else Timestamp.now()
+                sdf.timeZone = java.util.TimeZone.getDefault()
+                val rawTime = if (time.value.contains("h")) time.value.replace("h","") else time.value
+                val parsed = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+                val timestamp = parsed?.let { Timestamp(it) } ?: Timestamp.now()
                 saveEvent(
                     eventViewModel,
                     title.value,
@@ -384,6 +384,13 @@ fun AddEventScreen(
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
+    if (isDateAndTimeValid) {
+        Text(
+            stringResource(R.string.date_time_error),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Red,
+            modifier = Modifier.padding(bottom = 8.dp))
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),

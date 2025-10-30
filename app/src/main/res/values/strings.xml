@@ -3,6 +3,7 @@
     <string name="event_creation_title">New Event Manager</string>>
     <string name="title_text">Title *</string>>
     <string name="date_text">Date and Time *</string>>
+    <string name= "date_time_error">Please pick a valid time and date !</string>>
     <string name="time_text">Pick a time</string>
     <string name="location_text">Location *</string>>
     <string name="description_text">Description *</string>>
