@@ -259,11 +259,11 @@ fun AddEventScreen(
   val time = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
 
-  val dateError = remember { mutableStateOf(true) }
-  val timeError = remember { mutableStateOf(true) }
-  val titleError = remember { mutableStateOf(true) }
-  val descriptionError = remember { mutableStateOf(true) }
-  val locationError = remember { mutableStateOf(true) }
+  val dateError = remember { mutableStateOf(false) }
+  val timeError = remember { mutableStateOf(false) }
+  val titleError = remember { mutableStateOf(false) }
+  val descriptionError = remember { mutableStateOf(false) }
+  val locationError = remember { mutableStateOf(false) }
   val tagError = remember { mutableStateOf(false) }
   val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
@@ -273,12 +273,17 @@ fun AddEventScreen(
   }
   val locations by locationViewModel.locations.collectAsState()
 
-  val error =
-      titleError.value ||
-          descriptionError.value ||
-          locationError.value ||
+  val error = titleError.value || title.value.isBlank() ||
+          descriptionError.value || description.value.isBlank() ||
+          locationError.value || location.value.isBlank() ||
           timeError.value ||
           dateError.value
+
+  val showMissingFields = titleError.value ||
+          descriptionError.value ||
+          locationError.value ||
+    timeError.value ||
+            dateError.value
 
   val errorFields =
       listOfNotNull(
@@ -286,7 +291,7 @@ fun AddEventScreen(
           if (dateError.value) stringResource(R.string.date_field) else null,
           if (locationError.value) stringResource(R.string.location_field) else null,
           if (descriptionError.value) stringResource(R.string.description_field) else null,
-          if (tagError.value) stringResource(R.string.tag_field) else null,
+          if (tagError.value) stringResource(R.string.tag_text) else null,
           if (timeError.value) stringResource(R.string.time) else null)
 
   val isEventValid = !error && isLoggedIn.value
@@ -351,13 +356,13 @@ fun AddEventScreen(
     Spacer(modifier = Modifier.padding(5.dp))
     // Title field
     Text(
-        text = stringResource(R.string.title_field),
+        text = stringResource(R.string.title_text),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
     AddEventTextField(
         title,
-        titleError,
+        titleError ,
         stringResource(R.string.title_place_holder),
         modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
         singleLine = true)
@@ -366,7 +371,7 @@ fun AddEventScreen(
     // Date and time fields
 
     Text(
-        stringResource(R.string.date_field),
+        stringResource(R.string.date_text),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
@@ -386,7 +391,7 @@ fun AddEventScreen(
         }
     // Location Field
     Text(
-        stringResource(R.string.location_field),
+        stringResource(R.string.location_text),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
@@ -402,7 +407,7 @@ fun AddEventScreen(
     Spacer(modifier = Modifier.padding(10.dp))
     // Description field
     Text(
-        stringResource(R.string.description_field),
+        stringResource(R.string.description_text),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(bottom = 8.dp))
@@ -415,6 +420,11 @@ fun AddEventScreen(
 
     Spacer(modifier = Modifier.padding(10.dp))
     // Tag Field
+    Text(
+      stringResource(R.string.tag_text),
+      style = MaterialTheme.typography.labelMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.padding(bottom = 8.dp))
     AddEventTextField(
         tag,
         tagError,
@@ -443,7 +453,7 @@ fun AddEventScreen(
     }
 
     // Error displaying
-    if (error) {
+    if (showMissingFields) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(60.dp)) {
         Spacer(modifier = Modifier.padding(2.dp))
         Icon(
