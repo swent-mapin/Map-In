@@ -21,6 +21,8 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
+import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
@@ -30,6 +32,12 @@ import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import java.util.UUID
 import kotlin.math.abs
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -44,7 +52,8 @@ class MapScreenViewModel(
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -187,6 +196,18 @@ class MapScreenViewModel(
   private var _topTags by mutableStateOf<List<String>>(emptyList())
   val topTags: List<String>
     get() = _topTags
+
+  // User profile from Firestore for reactive profile picture updates
+  val userProfile: StateFlow<UserProfile?> =
+      auth.currentUser?.uid?.let { uid ->
+        userProfileRepository
+            .observeUserProfile(uid)
+            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+      } ?: MutableStateFlow(null).asStateFlow()
+
+  // Reactive profile picture URL from Firestore profile
+  val reactiveProfilePictureUrl: StateFlow<String?> =
+      userProfile.map { it?.avatarUrl }.stateIn(viewModelScope, SharingStarted.Lazily, null)
 
   init {
     // Initialize with sample events quickly, then load remote data
