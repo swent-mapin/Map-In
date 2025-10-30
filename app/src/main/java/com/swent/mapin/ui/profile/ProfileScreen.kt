@@ -60,6 +60,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -77,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.swent.mapin.model.UserProfile
+import kotlinx.coroutines.launch
 
 // Assisted by AI
 
@@ -99,6 +101,22 @@ fun ProfileScreen(
   val userProfile by viewModel.userProfile.collectAsState()
   val isLoading by viewModel.isLoading.collectAsState()
 
+  // Prevent multiple rapid back presses
+  var isNavigatingBack by remember { mutableStateOf(false) }
+  val coroutineScope = rememberCoroutineScope()
+
+  val handleNavigateBack = {
+    if (!isNavigatingBack) {
+      isNavigatingBack = true
+      onNavigateBack()
+      // Reset the flag after a short delay to allow future navigation
+      coroutineScope.launch {
+        kotlinx.coroutines.delay(300)
+        isNavigatingBack = false
+      }
+    }
+  }
+
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("profileScreen"),
       topBar = {
@@ -110,7 +128,7 @@ fun ProfileScreen(
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
+              IconButton(onClick = handleNavigateBack, modifier = Modifier.testTag("backButton")) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
             },
