@@ -53,7 +53,8 @@ class BottomSheetContentTest {
                   },
                   onTap = onTap,
                   onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}))
+                  onClear = {}),
+          profilePictureUrl = null)
     }
   }
 
@@ -78,7 +79,92 @@ class BottomSheetContentTest {
           savedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
           onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
+          onTabChange = onTabChange,
+          profilePictureUrl = null)
+    }
+  }
+
+  // Helper function to reduce boilerplate for Joined Events tests
+  @Composable
+  private fun JoinedEventsContent(
+      events: List<Event>,
+      onEventClick: (Event) -> Unit = {},
+      onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          joinedEvents = events,
+          selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+          onTabEventClick = onEventClick,
+          onTabChange = onTabChange,
+          profilePictureUrl = null)
+    }
+  }
+
+  // Tests for tag filtering functionality
+  @Composable
+  private fun TestContentWithTags(
+      state: BottomSheetState,
+      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
+      selectedTags: Set<String> = emptySet(),
+      onTagClick: (String) -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf("") }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { query = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false },
+                  onClear = {}),
+          topTags = topTags,
+          selectedTags = selectedTags,
+          onTagClick = onTagClick,
+          profilePictureUrl = null)
+    }
+  }
+
+  @Composable
+  private fun TestContentWithSearch(
+      query: String = "",
+      searchResults: List<Event> = emptyList(),
+      isSearchMode: Boolean = false
+  ) {
+    MaterialTheme {
+      var searchQuery by remember { mutableStateOf(query) }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = searchQuery,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { searchQuery = it },
+                  onTap = {},
+                  onFocusHandled = { shouldRequestFocus = false },
+                  onClear = {}),
+          searchResults = searchResults,
+          isSearchMode = isSearchMode,
+          profilePictureUrl = null)
     }
   }
 
@@ -100,7 +186,7 @@ class BottomSheetContentTest {
   }
 
   @Test
-  fun fullState_showsAllContent() {
+  fun fullState_showsAllContentWithTags() {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
@@ -159,32 +245,6 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Coffee").assertIsDisplayed()
   }
 
-  // Helper function to reduce boilerplate for Joined Events tests
-  @Composable
-  private fun JoinedEventsContent(
-      events: List<Event>,
-      onEventClick: (Event) -> Unit = {},
-      onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {}
-  ) {
-    MaterialTheme {
-      BottomSheetContent(
-          state = BottomSheetState.FULL,
-          fullEntryKey = 0,
-          searchBarState =
-              SearchBarState(
-                  query = "",
-                  shouldRequestFocus = false,
-                  onQueryChange = {},
-                  onTap = {},
-                  onFocusHandled = {},
-                  onClear = {}),
-          joinedEvents = events,
-          selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-          onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
-    }
-  }
-
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
     val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
@@ -241,7 +301,8 @@ class BottomSheetContentTest {
             onTabChange = { tab ->
               selectedTab = tab
               currentTab = tab
-            })
+            },
+            profilePictureUrl = null)
       }
     }
     rule.waitForIdle()
@@ -253,35 +314,6 @@ class BottomSheetContentTest {
     // Should now show joined events
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, currentTab)
-  }
-
-  // Tests for tag filtering functionality
-  @Composable
-  private fun TestContentWithTags(
-      state: BottomSheetState,
-      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
-      selectedTags: Set<String> = emptySet(),
-      onTagClick: (String) -> Unit = {}
-  ) {
-    MaterialTheme {
-      var query by remember { mutableStateOf("") }
-      var shouldRequestFocus by remember { mutableStateOf(false) }
-
-      BottomSheetContent(
-          state = state,
-          fullEntryKey = 0,
-          searchBarState =
-              SearchBarState(
-                  query = query,
-                  shouldRequestFocus = shouldRequestFocus,
-                  onQueryChange = { query = it },
-                  onTap = {},
-                  onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}),
-          topTags = topTags,
-          selectedTags = selectedTags,
-          onTagClick = onTagClick)
-    }
   }
 
   @Test
@@ -462,32 +494,6 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
   }
 
-  @Composable
-  private fun TestContentWithSearch(
-      query: String = "",
-      searchResults: List<Event> = emptyList(),
-      isSearchMode: Boolean = false
-  ) {
-    MaterialTheme {
-      var searchQuery by remember { mutableStateOf(query) }
-      var shouldRequestFocus by remember { mutableStateOf(false) }
-
-      BottomSheetContent(
-          state = BottomSheetState.FULL,
-          fullEntryKey = 0,
-          searchBarState =
-              SearchBarState(
-                  query = searchQuery,
-                  shouldRequestFocus = shouldRequestFocus,
-                  onQueryChange = { searchQuery = it },
-                  onTap = {},
-                  onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}),
-          searchResults = searchResults,
-          isSearchMode = isSearchMode)
-    }
-  }
-
   @Test
   fun noResultsMessage_displaysInSearchModeWithEmptyResultsAndBlankQuery() {
     rule.setContent {
@@ -629,7 +635,8 @@ class BottomSheetContentTest {
             savedEvents = saved,
             joinedEvents = joined,
             selectedTab = selectedTab,
-            onTabChange = { selectedTab = it })
+            onTabChange = { selectedTab = it },
+            profilePictureUrl = null)
       }
     }
     rule.waitForIdle()
@@ -644,5 +651,540 @@ class BottomSheetContentTest {
 
     // Joined event title visible; saved no longer present
     rule.onNodeWithText(joined[0].title).assertIsDisplayed()
+  }
+
+  // Tests for profile picture button functionality
+  @Composable
+  private fun TestContentWithProfilePicture(
+      state: BottomSheetState,
+      profilePictureUrl: String? = "https://example.com/profile.jpg",
+      onProfileClick: () -> Unit = {}
+  ) {
+    MaterialTheme {
+      var query by remember { mutableStateOf("") }
+      var shouldRequestFocus by remember { mutableStateOf(false) }
+
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = shouldRequestFocus,
+                  onQueryChange = { query = it },
+                  onTap = { shouldRequestFocus = true },
+                  onFocusHandled = { shouldRequestFocus = false },
+                  onClear = { query = "" }),
+          profilePictureUrl = profilePictureUrl,
+          onProfileClick = onProfileClick)
+    }
+  }
+
+  @Test
+  fun profileButton_isDisplayedInCollapsedState() {
+    rule.setContent { TestContentWithProfilePicture(state = BottomSheetState.COLLAPSED) }
+
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_isDisplayedInMediumState() {
+    rule.setContent { TestContentWithProfilePicture(state = BottomSheetState.MEDIUM) }
+
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_isDisplayedInFullStateWhenNotSearching() {
+    rule.setContent { TestContentWithProfilePicture(state = BottomSheetState.FULL) }
+
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_clickTriggersCallback() {
+    var profileClicked = false
+
+    rule.setContent {
+      TestContentWithProfilePicture(
+          state = BottomSheetState.COLLAPSED, onProfileClick = { profileClicked = true })
+    }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("profileButton").performClick()
+    rule.waitForIdle()
+
+    assertTrue("Profile click callback should be triggered", profileClicked)
+  }
+
+  @Test
+  fun profileButton_hasClickAction() {
+    rule.setContent { TestContentWithProfilePicture(state = BottomSheetState.COLLAPSED) }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("profileButton").assertHasClickAction()
+  }
+
+  @Test
+  fun profileButton_displaysWithNullUrl() {
+    rule.setContent {
+      TestContentWithProfilePicture(state = BottomSheetState.COLLAPSED, profilePictureUrl = null)
+    }
+
+    rule.waitForIdle()
+
+    // Button should still be displayed even with null URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_displaysWithEmptyUrl() {
+    rule.setContent {
+      TestContentWithProfilePicture(state = BottomSheetState.COLLAPSED, profilePictureUrl = "")
+    }
+
+    rule.waitForIdle()
+
+    // Button should still be displayed even with empty URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_updatesWhenUrlChanges() {
+    var currentUrl by mutableStateOf<String?>("https://example.com/profile1.jpg")
+
+    rule.setContent {
+      MaterialTheme {
+        var query by remember { mutableStateOf("") }
+        var shouldRequestFocus by remember { mutableStateOf(false) }
+
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = query,
+                    shouldRequestFocus = shouldRequestFocus,
+                    onQueryChange = { query = it },
+                    onTap = {},
+                    onFocusHandled = { shouldRequestFocus = false },
+                    onClear = {}),
+            profilePictureUrl = currentUrl,
+            onProfileClick = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Initially displayed with first URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+
+    // Change to new URL and verify button is still displayed
+    currentUrl = "https://example.com/profile2.jpg"
+    rule.waitForIdle()
+
+    // Button should still be displayed with new URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_handlesInvalidUrlGracefully() {
+    rule.setContent {
+      TestContentWithProfilePicture(
+          state = BottomSheetState.COLLAPSED, profilePictureUrl = "invalid-url")
+    }
+
+    rule.waitForIdle()
+
+    // Button should still be displayed even with invalid URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_displaysWithVeryLongUrl() {
+    val longUrl =
+        "https://example.com/very/long/path/to/profile/image/with/many/directories/and/a/very/long/filename_that_might_cause_issues.jpg"
+    rule.setContent {
+      TestContentWithProfilePicture(state = BottomSheetState.COLLAPSED, profilePictureUrl = longUrl)
+    }
+
+    rule.waitForIdle()
+
+    // Button should still be displayed even with very long URL
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileButton_stateTransitionsCorrectly() {
+    // Test transition from collapsed -> medium -> full states
+    var currentState by mutableStateOf(BottomSheetState.COLLAPSED)
+
+    rule.setContent {
+      MaterialTheme {
+        var query by remember { mutableStateOf("") }
+        var shouldRequestFocus by remember { mutableStateOf(false) }
+
+        BottomSheetContent(
+            state = currentState,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = query,
+                    shouldRequestFocus = shouldRequestFocus,
+                    onQueryChange = { query = it },
+                    onTap = {},
+                    onFocusHandled = { shouldRequestFocus = false },
+                    onClear = {}),
+            profilePictureUrl = "https://example.com/profile.jpg",
+            onProfileClick = {})
+      }
+    }
+
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+
+    // Change to medium state
+    currentState = BottomSheetState.MEDIUM
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+
+    // Change to full state
+    currentState = BottomSheetState.FULL
+    rule.waitForIdle()
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
+
+  // Tests to increase line coverage
+
+  @Test
+  fun memoryForm_showsWhenShowMemoryFormIsTrue() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            showMemoryForm = true,
+            availableEvents = LocalEventRepository.defaultSampleEvents().take(2),
+            onMemorySave = {},
+            onMemoryCancel = {},
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When showMemoryForm is true, MemoryFormScreen should be displayed
+    // We can verify this by checking that the regular content (like search bar) is not visible
+    rule.onNodeWithText("Search activities").assertDoesNotExist()
+    // And some element from MemoryFormScreen should be visible
+    rule.onNodeWithText("New Memory").assertIsDisplayed()
+  }
+
+  @Test
+  fun searchMode_showsSearchResultsWhenHasResults() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "test",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            searchResults = testEvents,
+            isSearchMode = true,
+            onEventClick = {},
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When in search mode with results, should show search results
+    rule.onNodeWithText("Results for \"test\"").assertIsDisplayed()
+    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+    rule.onNodeWithText(testEvents[1].title).assertIsDisplayed()
+
+    // Regular content should not be visible
+    rule.onNodeWithText("Quick Actions").assertDoesNotExist()
+    rule.onNodeWithText("Saved Events").assertDoesNotExist()
+  }
+
+  @Test
+  fun searchMode_showsNoResultsWhenEmptyResults() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "nonexistent",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            searchResults = emptyList(),
+            isSearchMode = true,
+            onEventClick = {},
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When in search mode with no results, should show no results message
+    rule.onNodeWithText("No results found").assertIsDisplayed()
+    rule.onNodeWithText("Try a different keyword or check the spelling.").assertIsDisplayed()
+
+    // Regular content should not be visible
+    rule.onNodeWithText("Quick Actions").assertDoesNotExist()
+    rule.onNodeWithText("Saved Events").assertDoesNotExist()
+  }
+
+  @Test
+  fun searchMode_showsAllEventsWhenEmptyQuery() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            searchResults = testEvents,
+            isSearchMode = true,
+            onEventClick = {},
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When in search mode with empty query, should show "All events"
+    rule.onNodeWithText("All events").assertIsDisplayed()
+    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+    rule.onNodeWithText(testEvents[1].title).assertIsDisplayed()
+    rule.onNodeWithText(testEvents[2].title).assertIsDisplayed()
+  }
+
+  @Test
+  fun contentUsesVerticalScrollInFullState() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            topTags = listOf("Tag1", "Tag2", "Tag3", "Tag4", "Tag5"),
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // In FULL state, content should be scrollable
+    rule.onNodeWithText("Tag1").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Tag5").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun contentDoesNotScrollInNonFullStates() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.MEDIUM,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // In MEDIUM state, content should not be scrollable (fillMaxWidth without verticalScroll)
+    // Tags are not displayed in MEDIUM state, so we just verify Quick Actions are shown
+    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+  }
+
+  @Test
+  fun focusRequesterActivatesWhenFullAndShouldRequestFocus() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = true,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When in FULL state and shouldRequestFocus is true, search bar should be focused
+    rule.onNodeWithText("Search activities").assertIsFocused()
+  }
+
+  @Test
+  fun focusRequesterDoesNotActivateWhenNotFull() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.MEDIUM,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = true,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When not in FULL state, even with shouldRequestFocus=true, search bar should not be focused
+    rule.onNodeWithText("Search activities").assertIsNotFocused()
+  }
+
+  // Additional tests to increase line coverage to 90%+
+
+  @Test
+  fun eventsSection_showsNoResultsWhenEmptyEvents() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            savedEvents = emptyList(),
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // When saved events is empty, should show no results message
+    rule.onNodeWithText("No events available yet.").assertIsDisplayed()
+    rule.onNodeWithText("Try again once events are added.").assertIsDisplayed()
+  }
+
+  @Test
+  fun eventsSection_showsShowMoreButtonWhenMoreThan3Events() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            savedEvents = testEvents,
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Should show "Show more" button when there are more than 3 events
+    rule.onNodeWithTag("eventsShowMoreButton").assertIsDisplayed()
+    rule.onNodeWithText("Show more (2 more)").assertIsDisplayed()
+  }
+
+  @Test
+  fun joinedEventsTab_showsNoResultsWhenEmptyEvents() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            joinedEvents = emptyList(),
+            selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+            profilePictureUrl = null)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Switch to Joined Events tab
+    rule.onNodeWithText("Joined Events").performClick()
+    rule.waitForIdle()
+
+    // When joined events is empty, should show no results message
+    rule.onNodeWithText("No events available yet.").assertIsDisplayed()
+    rule.onNodeWithText("Try again once events are added.").assertIsDisplayed()
   }
 }
