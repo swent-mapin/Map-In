@@ -72,9 +72,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.components.AddEventPopUp
-import com.swent.mapin.ui.components.AddEventPopUpTestTags
 import com.swent.mapin.ui.profile.ProfileViewModel
+import com.swent.mapin.ui.event.AddEventScreen
+import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.map.FiltersSection
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -87,6 +88,12 @@ data class SearchBarState(
     val onFocusHandled: () -> Unit,
     val onClear: () -> Unit
 )
+
+enum class BottomSheetScreen {
+  MAIN_CONTENT,
+  MEMORY_FORM,
+  ADD_EVENT
+}
 
 /**
  * Content for the bottom sheet
@@ -123,7 +130,7 @@ fun BottomSheetContent(
     searchResults: List<Event> = emptyList(),
     isSearchMode: Boolean = false,
     // Memory form and events
-    showMemoryForm: Boolean = false,
+    currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
     // Joined events
     joinedEvents: List<Event> = emptyList(),
@@ -136,8 +143,10 @@ fun BottomSheetContent(
     // Callbacks
     onEventClick: (Event) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
+    onCreateEventClick: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
+    onCreateEventDone: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onJoinedEventClick: (Event) -> Unit = {},
     onProfileClick: () -> Unit = {},
@@ -162,7 +171,7 @@ fun BottomSheetContent(
 
   // Animated transition between regular content and memory form
   AnimatedContent(
-      targetState = showMemoryForm,
+      targetState = currentScreen,
       transitionSpec = {
         (fadeIn(animationSpec = tween(300)) +
                 slideInVertically(animationSpec = tween(300), initialOffsetY = { it / 4 }))
@@ -170,95 +179,109 @@ fun BottomSheetContent(
                 fadeOut(animationSpec = tween(200)) +
                     slideOutVertically(animationSpec = tween(200), targetOffsetY = { -it / 4 }))
       },
-      label = "memoryFormTransition") { showForm ->
-        if (showForm) {
-          // Memory form content
-          val memoryFormScrollState = remember { ScrollState(0) }
-          MemoryFormScreen(
-              scrollState = memoryFormScrollState,
-              availableEvents = availableEvents,
-              onSave = onMemorySave,
-              onCancel = onMemoryCancel)
-        } else {
-          // Regular bottom sheet content
-          Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            SearchBar(
-                value = searchBarState.query,
-                onValueChange = searchBarState.onQueryChange,
-                isFull = isFull,
-                isSearchMode = isSearchMode,
-                onTap = searchBarState.onTap,
-                focusRequester = focusRequester,
-                onSearchAction = { focusManager.clearFocus() },
-                onClear = searchBarState.onClear,
-                onProfileClick = onProfileClick)
+      label = "memoryFormTransition") { screen ->
+        when (screen) {
+          BottomSheetScreen.MEMORY_FORM -> {
+            val memoryFormScrollState = remember { ScrollState(0) }
+            MemoryFormScreen(
+                scrollState = memoryFormScrollState,
+                availableEvents = availableEvents,
+                onSave = onMemorySave,
+                onCancel = onMemoryCancel)
+          }
+          BottomSheetScreen.ADD_EVENT -> {
+            AddEventScreen(
+                modifier = Modifier.testTag(AddEventScreenTestTags.SCREEN),
+                onCancel = onCreateEventDone,
+                onDone = onCreateEventDone)
+          }
+          BottomSheetScreen.MAIN_CONTENT -> {
+            // Regular bottom sheet content
+            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+              SearchBar(
+                  value = searchBarState.query,
+                  onValueChange = searchBarState.onQueryChange,
+                  isFull = isFull,
+                  isSearchMode = isSearchMode,
+                  onTap = searchBarState.onTap,
+                  focusRequester = focusRequester,
+                  onSearchAction = { focusManager.clearFocus() },
+                  onClear = searchBarState.onClear,
+                  onProfileClick = onProfileClick)
 
-            Spacer(modifier = Modifier.height(24.dp))
+              Spacer(modifier = Modifier.height(24.dp))
 
-            AnimatedContent(
-                targetState = isSearchMode,
-                transitionSpec = {
-                  (fadeIn(animationSpec = tween(250)) +
-                          slideInVertically(
-                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
-                      .togetherWith(
-                          fadeOut(animationSpec = tween(200)) +
-                              slideOutVertically(
-                                  animationSpec = tween(200), targetOffsetY = { it / 6 }))
-                },
-                modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
-                label = "searchModeTransition") { searchActive ->
-                  if (searchActive) {
-                    SearchResultsSection(
-                        results = searchResults,
-                        query = searchBarState.query,
-                        modifier = Modifier.fillMaxSize(),
-                        onEventClick = onEventClick)
-                  } else {
-                    val contentModifier =
-                        if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                        else Modifier.fillMaxWidth()
+              AnimatedContent(
+                  targetState = isSearchMode,
+                  transitionSpec = {
+                    (fadeIn(animationSpec = tween(250)) +
+                            slideInVertically(
+                                animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                        .togetherWith(
+                            fadeOut(animationSpec = tween(200)) +
+                                slideOutVertically(
+                                    animationSpec = tween(200), targetOffsetY = { it / 6 }))
+                  },
+                  modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                  label = "searchModeTransition") { searchActive ->
+                    if (searchActive) {
+                      SearchResultsSection(
+                          results = searchResults,
+                          query = searchBarState.query,
+                          modifier = Modifier.fillMaxSize(),
+                          onEventClick = onEventClick)
+                    } else {
+                      val contentModifier =
+                          if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                          else Modifier.fillMaxWidth()
 
-                    Column(modifier = contentModifier) {
-                      QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+                      Column(modifier = contentModifier) {
+                        QuickActionsSection(
+                            onCreateMemoryClick = onCreateMemoryClick,
+                            onCreateEventClick = onCreateEventClick)
 
-                      Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                      Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                      TabRow(
-                          selectedTabIndex =
-                              if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
-                              else 1,
-                          modifier = Modifier.fillMaxWidth()) {
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                },
-                                text = { Text("Saved Events") })
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                                },
-                                text = { Text("Joined Events") })
+                        // Tab selector
+                        TabRow(
+                            selectedTabIndex =
+                                if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
+                                else 1,
+                            modifier = Modifier.fillMaxWidth()) {
+                              Tab(
+                                  selected =
+                                      selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                  },
+                                  text = { Text("Saved Events") })
+                              Tab(
+                                  selected =
+                                      selectedTab ==
+                                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                  },
+                                  text = { Text("Joined Events") })
+                            }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Content based on selected tab
+                        when (selectedTab) {
+                          MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                            EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                           }
-
-                      Spacer(modifier = Modifier.height(16.dp))
-
-                      when (selectedTab) {
-                        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
-                          EventsSection(events = savedEvents, onEventClick = onTabEventClick)
+                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                            EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
+                          }
                         }
-                        MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                          EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
-                        }
-                      }
+                        
+                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
                       if (state != BottomSheetState.COLLAPSED) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -268,10 +291,13 @@ fun BottomSheetContent(
                             filterViewModel,
                             locationViewModel,
                             userProfile)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Spacer(modifier = Modifier.height(24.dp))
                       }
                     }
                   }
-                }
+            }
           }
         }
       }
@@ -370,7 +396,8 @@ private fun SearchResultItem(
   Surface(
       shape = RoundedCornerShape(16.dp),
       tonalElevation = 2.dp,
-      modifier = modifier.fillMaxWidth().clickable { onClick() }) {
+      modifier =
+          modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -514,9 +541,12 @@ private fun SearchBar(
 
 /** Row of quick action buttons (Create Memory, Create Event). */
 @Composable
-private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryClick: () -> Unit) {
+private fun QuickActionsSection(
+    modifier: Modifier = Modifier,
+    onCreateMemoryClick: () -> Unit,
+    onCreateEventClick: () -> Unit
+) {
   val focusManager = LocalFocusManager.current
-  val showDialog = remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -527,22 +557,8 @@ private fun QuickActionsSection(modifier: Modifier = Modifier, onCreateMemoryCli
       QuickActionButton(
           text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
       QuickActionButton(
-          text = "Create Event",
-          modifier = Modifier.weight(1f),
-          onClick = {
-            focusManager.clearFocus()
-            showDialog.value = true
-          })
+          text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
     }
-  }
-  if (showDialog.value) {
-    AddEventPopUp(
-        modifier = Modifier.testTag(AddEventPopUpTestTags.POPUP),
-        onDone = { showDialog.value = false },
-        onBack = { showDialog.value = false },
-        onCancel = { showDialog.value = false },
-        onDismiss = { showDialog.value = false },
-    )
   }
 }
 
