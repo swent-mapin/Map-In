@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -107,7 +108,6 @@ data class SearchBarState(
  * @param onMemorySave Callback when memory is saved
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
- * @param onJoinedEventClick Callback when a joined event is clicked
  * @param onProfileClick Callback when the profile icon is tapped
  * @param filterViewModel ViewModel managing filter state (time, place, price, tags, etc.)
  * @param locationViewModel ViewModel for location search and autocomplete
@@ -127,9 +127,10 @@ fun BottomSheetContent(
     availableEvents: List<Event> = emptyList(),
     // Joined events
     joinedEvents: List<Event> = emptyList(),
+    // Saved events
+    savedEvents: List<Event> = emptyList(),
     // Tab and tags
-    selectedTab: MapScreenViewModel.BottomSheetTab =
-        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+    selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
     // Callbacks
@@ -143,6 +144,7 @@ fun BottomSheetContent(
     filterViewModel: FiltersSectionViewModel = viewModel(),
     locationViewModel: LocationViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
+    onTabEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -227,20 +229,25 @@ fun BottomSheetContent(
                       Spacer(modifier = Modifier.height(16.dp))
 
                       TabRow(
-                          selectedTabIndex =
-                              if (selectedTab ==
-                                  MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
-                                  0
+                          
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        Index =
+                              if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
                               else 1,
                           modifier = Modifier.fillMaxWidth()) {
                             Tab(
                                 selected =
-                                    selectedTab ==
-                                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES,
+                                    selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
                                 onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES)
+                                  onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
                                 },
-                                text = { Text("Recent Activities") })
+                                text = { Text("Saved Events") })
                             Tab(
                                 selected =
                                     selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
@@ -253,12 +260,11 @@ fun BottomSheetContent(
                       Spacer(modifier = Modifier.height(16.dp))
 
                       when (selectedTab) {
-                        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES -> {
-                          NoActivitiesMessage(modifier = Modifier.fillMaxWidth())
+                        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                          EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                         }
                         MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                          JoinedEventsSection(
-                              events = joinedEvents, onEventClick = onJoinedEventClick)
+                          EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
                         }
                       }
 
@@ -334,7 +340,7 @@ internal fun buildSearchHeading(query: String): String {
 private fun NoResultsMessage(query: String, modifier: Modifier = Modifier) {
   val copy = remember(query) { buildNoResultsCopy(query) }
 
-  Box(modifier = modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
+  Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       Text(text = copy.title, style = MaterialTheme.typography.titleMedium)
       Spacer(modifier = Modifier.height(8.dp))
@@ -569,14 +575,17 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 }
 
 @Composable
-private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
     return
   }
 
+  var expanded by remember { mutableStateOf(false) }
+  val visible = if (expanded) events else events.take(3)
+
   Column(modifier = Modifier.fillMaxWidth()) {
-    events.forEach { event ->
+    visible.forEach { event ->
       SearchResultItem(
           event = event,
           modifier = Modifier.padding(horizontal = 16.dp),
@@ -584,6 +593,16 @@ private fun JoinedEventsSection(events: List<Event>, onEventClick: (Event) -> Un
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    if (events.size > 3) {
+      Spacer(modifier = Modifier.height(4.dp))
+      TextButton(
+          onClick = { expanded = !expanded },
+          modifier =
+              Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
+            Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
+          }
     }
   }
 }

@@ -283,10 +283,42 @@ class UserProfileEndToEndTest {
     composeTestRule.onNodeWithText(updatedBio, useUnmergedTree = true).assertExists()
 
     // ============================================
-    // STEP 7: Logout from profile screen
+    // STEP 7: Navigate to Settings
     // ============================================
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("settingsScreen", useUnmergedTree = true).assertIsDisplayed()
+
+    // ============================================
+    // STEP 8: Logout from Settings screen
+    // ============================================
+    // Scroll to and click logout button
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Wait for dialog to appear (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Confirm logout in dialog - use index to get dialog button (not the Settings button)
+    composeTestRule.onAllNodesWithText("Logout", useUnmergedTree = true)[1].performClick()
 
     composeTestRule.waitForIdle()
 
@@ -294,7 +326,7 @@ class UserProfileEndToEndTest {
     verify { mockAuth.signOut() }
 
     // ============================================
-    // STEP 8: Verify redirection to login screen
+    // STEP 9: Verify redirection to login screen
     // ============================================
     composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule

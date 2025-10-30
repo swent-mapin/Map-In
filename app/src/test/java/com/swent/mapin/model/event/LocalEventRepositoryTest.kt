@@ -1,6 +1,6 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.event
 
-import com.swent.mapin.model.event.LocalEventRepository
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -111,5 +111,85 @@ class LocalEventRepositoryTest {
     val events = LocalEventRepository.defaultSampleEvents()
     val basketballGame = events.find { it.title == "Basketball Game" }
     assertNotNull(basketballGame)
+  }
+
+  // ==== Saved Events (LocalEventRepository) ====
+
+  @Test
+  fun `saved events initial state is empty`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
+    assertEquals(emptyList<com.swent.mapin.model.event.Event>(), repo.getSavedEvents(user))
+  }
+
+  @Test
+  fun `saveEventForUser adds id and getSavedEvents returns event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event1"
+
+    val ok = repo.saveEventForUser(user, id)
+    assertEquals(true, ok)
+    assertEquals(setOf(id), repo.getSavedEventIds(user))
+    assertEquals(listOf(id), repo.getSavedEvents(user).map { it.uid })
+  }
+
+  @Test
+  fun `saveEventForUser is idempotent`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event2"
+
+    repo.saveEventForUser(user, id)
+    repo.saveEventForUser(user, id) // no duplicate
+    assertEquals(setOf(id), repo.getSavedEventIds(user))
+  }
+
+  @Test
+  fun `unsaveEventForUser removes id`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event3"
+
+    repo.saveEventForUser(user, id)
+    val removed = repo.unsaveEventForUser(user, id)
+    assertEquals(true, removed)
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
+    assertEquals(emptyList<String>(), repo.getSavedEvents(user).map { it.uid })
+  }
+
+  @Test
+  fun `per-user isolation for saved events`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val userA = "userA"
+    val userB = "userB"
+
+    repo.saveEventForUser(userA, "event1")
+    repo.saveEventForUser(userA, "event2")
+
+    assertEquals(setOf("event1", "event2"), repo.getSavedEventIds(userA))
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(userB))
+  }
+
+  @Test
+  fun `saveEventForUser returns false for missing event id`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val ok = repo.saveEventForUser(user, "does-not-exist")
+    assertEquals(false, ok)
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
+  }
+
+  @Test
+  fun `getSavedEvents preserves insertion order`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+
+    // Local repository keeps a LinkedHashSet under the hood
+    repo.saveEventForUser(user, "event2")
+    repo.saveEventForUser(user, "event1")
+
+    assertEquals(listOf("event2", "event1"), repo.getSavedEvents(user).map { it.uid })
   }
 }
