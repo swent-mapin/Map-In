@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,7 +37,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -71,6 +72,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.AddEventPopUp
 import com.swent.mapin.ui.components.AddEventPopUpTestTags
@@ -116,6 +118,7 @@ fun BottomSheetContent(
     state: BottomSheetState,
     fullEntryKey: Int,
     searchBarState: SearchBarState,
+    profilePictureUrl: String?, // Added parameter for profile picture URL
     // Search results and mode
     searchResults: List<Event> = emptyList(),
     isSearchMode: Boolean = false,
@@ -183,7 +186,9 @@ fun BottomSheetContent(
                 focusRequester = focusRequester,
                 onSearchAction = { focusManager.clearFocus() },
                 onClear = searchBarState.onClear,
-                onProfileClick = onProfileClick)
+                onProfileClick = onProfileClick,
+                profilePictureUrl = profilePictureUrl // Pass the profile picture URL here
+                )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -212,61 +217,70 @@ fun BottomSheetContent(
                         else Modifier.fillMaxWidth()
 
                     Column(modifier = contentModifier) {
-                      QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
+                      // Show Quick Actions in MEDIUM and FULL states
+                      if (state != BottomSheetState.COLLAPSED) {
+                        QuickActionsSection(onCreateMemoryClick = onCreateMemoryClick)
 
-                      Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                      Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                      }
 
-                      // Tab selector
-                      TabRow(
-                          selectedTabIndex =
-                              if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
-                              else 1,
-                          modifier = Modifier.fillMaxWidth()) {
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                },
-                                text = { Text("Saved Events") })
-                            Tab(
-                                selected =
-                                    selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                                onClick = {
-                                  onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                                },
-                                text = { Text("Joined Events") })
+                      // Show tabs and events only in FULL state
+                      if (isFull) {
+                        // Tab selector
+                        TabRow(
+                            selectedTabIndex =
+                                if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
+                                else 1,
+                            modifier = Modifier.fillMaxWidth()) {
+                              Tab(
+                                  selected =
+                                      selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                  },
+                                  text = { Text("Saved Events") })
+                              Tab(
+                                  selected =
+                                      selectedTab ==
+                                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                  onClick = {
+                                    onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                  },
+                                  text = { Text("Joined Events") })
+                            }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Content based on selected tab
+                        when (selectedTab) {
+                          MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                            EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                           }
-
-                      Spacer(modifier = Modifier.height(16.dp))
-
-                      // Content based on selected tab
-                      when (selectedTab) {
-                        MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
-                          EventsSection(events = savedEvents, onEventClick = onTabEventClick)
+                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                            EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
+                          }
                         }
-                        MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                          EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Dynamic tag selection
+                        if (topTags.isNotEmpty()) {
+                          TagsSection(
+                              topTags = topTags,
+                              selectedTags = selectedTags,
+                              onTagClick = onTagClick)
                         }
+
+                        Spacer(modifier = Modifier.height(24.dp))
                       }
-
-                      Spacer(modifier = Modifier.height(16.dp))
-
-                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
-                      Spacer(modifier = Modifier.height(16.dp))
-
-                      // Dynamic tag selection
-                      if (topTags.isNotEmpty()) {
-                        TagsSection(
-                            topTags = topTags, selectedTags = selectedTags, onTagClick = onTagClick)
-                      }
-
-                      Spacer(modifier = Modifier.height(24.dp))
                     }
                   }
                 }
@@ -419,6 +433,7 @@ private fun SearchBar(
     onSearchAction: () -> Unit,
     onClear: () -> Unit,
     onProfileClick: () -> Unit,
+    profilePictureUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
   var isFocused by remember { mutableStateOf(false) }
@@ -493,18 +508,17 @@ private fun SearchBar(
             Modifier.padding(start = slotPadding).height(fieldHeight).width(profileSlotWidth),
         contentAlignment = Alignment.Center) {
           Surface(
-              modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
+              modifier =
+                  Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha).clickable(
+                      enabled = profileVisible) {
+                        onProfileClick()
+                      },
               color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
               shape = RoundedCornerShape(16.dp)) {
-                IconButton(
-                    onClick = onProfileClick,
-                    enabled = profileVisible,
-                    modifier = Modifier.fillMaxSize()) {
-                      Icon(
-                          imageVector = Icons.Outlined.AccountCircle,
-                          contentDescription = "Profile",
-                          tint = MaterialTheme.colorScheme.onSurface)
-                    }
+                AsyncImage(
+                    model = profilePictureUrl ?: "", // Use the URL or an empty string if null
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)))
               }
         }
   }
