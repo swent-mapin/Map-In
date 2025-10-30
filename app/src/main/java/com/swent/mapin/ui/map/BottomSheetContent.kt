@@ -143,7 +143,7 @@ fun BottomSheetContent(
     onProfileClick: () -> Unit = {},
     filterViewModel: FiltersSectionViewModel = viewModel(),
     locationViewModel: LocationViewModel = viewModel(),
-    profileViewModel: ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel = viewModel(),
     onTabEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
@@ -229,15 +229,7 @@ fun BottomSheetContent(
                       Spacer(modifier = Modifier.height(16.dp))
 
                       TabRow(
-                          
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        Index =
+                          selectedTabIndex =
                               if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
                               else 1,
                           modifier = Modifier.fillMaxWidth()) {
