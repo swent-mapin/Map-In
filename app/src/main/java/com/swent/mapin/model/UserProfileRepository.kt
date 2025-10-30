@@ -1,6 +1,9 @@
 package com.swent.mapin.model
 
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -75,5 +78,32 @@ class UserProfileRepository(
 
     saveUserProfile(defaultProfile)
     return defaultProfile
+  }
+
+  /**
+   * Observe user profile changes in real-time using Firestore snapshot listener. Returns a Flow
+   * that emits the updated profile whenever it changes.
+   */
+  fun observeUserProfile(userId: String): Flow<UserProfile?> = callbackFlow {
+    val listenerRegistration =
+        firestore.collection(COLLECTION_USERS).document(userId).addSnapshotListener {
+            snapshot,
+            error ->
+          if (error != null) {
+            close(error)
+            return@addSnapshotListener
+          }
+
+          val profile =
+              if (snapshot != null && snapshot.exists()) {
+                snapshot.toObject(UserProfile::class.java)
+              } else {
+                null
+              }
+
+          trySend(profile)
+        }
+
+    awaitClose { listenerRegistration.remove() }
   }
 }
