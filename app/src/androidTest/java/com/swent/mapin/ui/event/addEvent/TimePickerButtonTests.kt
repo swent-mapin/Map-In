@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.components.addEvent
+package com.swent.mapin.ui.event.addEvent
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertTextContains

@@ -276,14 +276,16 @@ fun AddEventScreen(
   val error = titleError.value || title.value.isBlank() ||
           descriptionError.value || description.value.isBlank() ||
           locationError.value || location.value.isBlank() ||
-          timeError.value ||
-          dateError.value
+          timeError.value || time.value.isBlank() ||
+          dateError.value || date.value.isBlank() ||
+          tagError.value
 
   val showMissingFields = titleError.value ||
           descriptionError.value ||
           locationError.value ||
-    timeError.value ||
-            dateError.value
+          timeError.value ||
+          dateError.value ||
+          tagError.value
 
   val errorFields =
       listOfNotNull(
@@ -291,7 +293,7 @@ fun AddEventScreen(
           if (dateError.value) stringResource(R.string.date_field) else null,
           if (locationError.value) stringResource(R.string.location_field) else null,
           if (descriptionError.value) stringResource(R.string.description_field) else null,
-          if (tagError.value) stringResource(R.string.tag_text) else null,
+          if (tagError.value) stringResource(R.string.tag_field) else null,
           if (timeError.value) stringResource(R.string.time) else null)
 
   val isEventValid = !error && isLoggedIn.value

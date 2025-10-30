@@ -12,6 +12,7 @@
     <string name="location_field">Location</string>>
     <string name="description_field">Description</string>>
     <string name="tag_text">Tags (optional)</string>>
+    <string name="tag_field">Tags</string>>
     <string name="title_place_holder">Enter the name of your event:</string>>
     <string name="day_place_holder">DD</string>>
     <string name="month_place_holder">MM</string>>

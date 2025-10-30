@@ -1,7 +1,8 @@
-package com.swent.mapin.ui.components.addEvent
+package com.swent.mapin.ui.event.addEvent
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
@@ -55,10 +57,6 @@ class AddEventScreenTests {
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
-    composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
         .performScrollTo()
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
@@ -77,16 +75,20 @@ class AddEventScreenTests {
   }
 
   @Test
-  fun showsErrorMessageInitially() {
+  fun doesNotShowErrorMessageInitially() {
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
+        .assertIsNotDisplayed()
   }
 
   @Test
   fun nonEmptyTitleRemovesTitleError() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextClearance()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
         .performTextInput("This is a valid title")
@@ -100,6 +102,18 @@ class AddEventScreenTests {
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .assertIsDisplayed()
+    composeTestRule
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performTextInput("a")
+    composeTestRule
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+          .performTextClearance()
+    composeTestRule
+      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+      .performTextInput("a")
+    composeTestRule
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+          .performTextClearance()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid Description")
@@ -174,9 +188,17 @@ class AddEventScreenTests {
 
   @Test
   fun tagValidSpaceInputValidationWorks() {
+     composeTestRule
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+          .performTextInput("a")
+     composeTestRule
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+          .performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
-    tagNode.performTextInput("#ValidTag #ValidTag2")
     tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidTag")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("#ValidTag #ValidTag2")
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Tag", substring = true, ignoreCase = true))
@@ -184,9 +206,17 @@ class AddEventScreenTests {
 
   @Test
   fun tagValiCommaInputValidationWorks() {
+    composeTestRule
+      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+      .performTextInput("a")
+    composeTestRule
+      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+      .performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
-    tagNode.performTextInput("#ValidTag, #ValidTag2")
     tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidTag")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("#ValidTag, #ValidTag2")
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
         .assert(!hasText("Tag", substring = true, ignoreCase = true))
