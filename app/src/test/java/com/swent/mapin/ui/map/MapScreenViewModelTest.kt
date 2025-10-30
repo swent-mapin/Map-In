@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
@@ -45,6 +46,7 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
 
+  @Mock(lenient = true) private lateinit var mockUserProfileRepository: UserProfileRepository
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
   private var clearFocusCalled = false
@@ -76,7 +78,8 @@ class MapScreenViewModelTest {
             applicationContext = mockContext,
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
-            auth = mockAuth)
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepository)
   }
 
   @After

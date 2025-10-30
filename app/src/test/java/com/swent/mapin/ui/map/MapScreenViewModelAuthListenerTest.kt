@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.LocalEventRepository
@@ -17,9 +18,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
+import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
@@ -29,6 +32,7 @@ import org.mockito.kotlin.whenever
 // specifically loading/clearing saved and joined events on sign-in/sign-out.
 // Assisted by AI.
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(MockitoJUnitRunner::class)
 class MapScreenViewModelAuthListenerTest {
 
   @get:Rule val mainDispatcherRule = MainDispatcherRule()
@@ -38,6 +42,7 @@ class MapScreenViewModelAuthListenerTest {
   @Mock lateinit var mockUser: FirebaseUser
   @Mock lateinit var mockMemoryRepo: MemoryRepository
 
+  @Mock(lenient = true) lateinit var mockUserProfileRepository: UserProfileRepository
   // We'll store the captured listener here after setup
   private lateinit var authListener: FirebaseAuth.AuthStateListener
 
@@ -59,9 +64,6 @@ class MapScreenViewModelAuthListenerTest {
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
     }
 
-    // Never touch real Firebase in tests
-    whenever(mockMemoryRepo.getNewUid()).thenReturn("test-memory-id")
-
     // Build the ViewModel after Dispatchers.Main is provided by the rule
     vm =
         MapScreenViewModel(
@@ -73,9 +75,8 @@ class MapScreenViewModelAuthListenerTest {
             applicationContext = mock<Context>(),
             memoryRepository = mockMemoryRepo,
             eventRepository = mockRepo,
-            auth = mockAuth)
-
-    // Capture the auth state listener the VM registers
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepository)
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()
     verify(mockAuth).addAuthStateListener(captor.capture())
     authListener = captor.firstValue
