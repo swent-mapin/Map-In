@@ -273,14 +273,21 @@ fun AddEventScreen(
   }
   val locations by locationViewModel.locations.collectAsState()
 
-  val error = titleError.value || title.value.isBlank() ||
-          descriptionError.value || description.value.isBlank() ||
-          locationError.value || location.value.isBlank() ||
-          timeError.value || time.value.isBlank() ||
-          dateError.value || date.value.isBlank() ||
+  val error =
+      titleError.value ||
+          title.value.isBlank() ||
+          descriptionError.value ||
+          description.value.isBlank() ||
+          locationError.value ||
+          location.value.isBlank() ||
+          timeError.value ||
+          time.value.isBlank() ||
+          dateError.value ||
+          date.value.isBlank() ||
           tagError.value
 
-  val showMissingFields = titleError.value ||
+  val showMissingFields =
+      titleError.value ||
           descriptionError.value ||
           locationError.value ||
           timeError.value ||
@@ -364,7 +371,7 @@ fun AddEventScreen(
         modifier = Modifier.padding(bottom = 8.dp))
     AddEventTextField(
         title,
-        titleError ,
+        titleError,
         stringResource(R.string.title_place_holder),
         modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
         singleLine = true)
@@ -423,10 +430,10 @@ fun AddEventScreen(
     Spacer(modifier = Modifier.padding(10.dp))
     // Tag Field
     Text(
-      stringResource(R.string.tag_text),
-      style = MaterialTheme.typography.labelMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      modifier = Modifier.padding(bottom = 8.dp))
+        stringResource(R.string.tag_text),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp))
     AddEventTextField(
         tag,
         tagError,

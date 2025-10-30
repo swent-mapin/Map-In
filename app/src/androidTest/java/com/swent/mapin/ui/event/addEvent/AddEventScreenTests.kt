@@ -76,17 +76,21 @@ class AddEventScreenTests {
 
   @Test
   fun doesNotShowErrorMessageInitially() {
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .assertIsNotDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsNotDisplayed()
   }
 
   @Test
   fun nonEmptyTitleRemovesTitleError() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("a")
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextClearance()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextInput("a")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     composeTestRule
@@ -102,18 +106,14 @@ class AddEventScreenTests {
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("a")
     composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
-          .performTextClearance()
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-      .performTextInput("a")
-    composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
-          .performTextClearance()
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performTextClearance()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("This is a valid Description")
@@ -188,12 +188,8 @@ class AddEventScreenTests {
 
   @Test
   fun tagValidSpaceInputValidationWorks() {
-     composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
-          .performTextInput("a")
-     composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
-          .performTextClearance()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("InvalidTag")
@@ -206,12 +202,8 @@ class AddEventScreenTests {
 
   @Test
   fun tagValiCommaInputValidationWorks() {
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
-      .performTextInput("a")
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
-      .performTextClearance()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("InvalidTag")
