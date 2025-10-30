@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.friends
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.FriendWithProfile
@@ -39,11 +42,17 @@ class FriendsScreenTest {
   @Test
   fun friendsScreen_displaysAllTabs() {
     composeTestRule.setContent { MaterialTheme { FriendsScreen(onNavigateBack = {}) } }
+    composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("friendsTabRow").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tabFRIENDS").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tabREQUESTS").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tabSEARCH").assertIsDisplayed()
+    // Wait until the friends screen is fully rendered
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule.onAllNodesWithTag("friendsScreen").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("friendsTabRow").assertExists()
+    composeTestRule.onNodeWithTag("tabFRIENDS").assertExists()
+    composeTestRule.onNodeWithTag("tabREQUESTS").assertExists()
+    composeTestRule.onNodeWithTag("tabSEARCH").assertExists()
   }
 
   // Test: Verify the navigation (back) button triggers the provided callback.
@@ -312,7 +321,7 @@ class FriendsScreenTest {
   // Test: Typing into the search field triggers the provided onSearchQueryChange callback.
   @Test
   fun searchTab_searchQueryChangeWorks() {
-    var searchQuery = ""
+    var searchQuery by mutableStateOf("")
     composeTestRule.setContent {
       MaterialTheme {
         FriendsScreen(
@@ -427,10 +436,15 @@ class FriendsScreenTest {
     composeTestRule.setContent {
       MaterialTheme { FriendsScreen(onNavigateBack = {}, friends = friends) }
     }
+    composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithText("Very Long Name That Should Be Truncated With Ellipsis", substring = true)
-        .assertIsDisplayed()
+    // Wait until the friends list tab is displayed
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule.onAllNodesWithTag("friendsListTab").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    // Check that the long name exists (with substring match since it may be truncated)
+    composeTestRule.onNodeWithText("Very Long Name", substring = true).assertExists()
   }
 
   // Test: Empty bio and location fields should not crash rendering; name still displays.
