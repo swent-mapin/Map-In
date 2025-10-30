@@ -27,6 +27,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -99,6 +101,9 @@ fun MapScreen(
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
+
+  // Collect the reactive profile picture URL
+  val profilePictureUrl by viewModel.reactiveProfilePictureUrl.collectAsState()
 
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
@@ -260,6 +265,7 @@ fun MapScreen(
                               onTap = viewModel::onSearchTap,
                               onFocusHandled = viewModel::onSearchFocusHandled,
                               onClear = viewModel::onClearSearch),
+                      profilePictureUrl = profilePictureUrl,
                       searchResults = viewModel.searchResults,
                       isSearchMode = viewModel.isSearchMode,
                       showMemoryForm = viewModel.showMemoryForm,
