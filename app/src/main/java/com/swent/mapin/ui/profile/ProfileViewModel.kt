@@ -10,9 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
@@ -98,6 +96,13 @@ class ProfileViewModel(
 
   var hobbiesError by mutableStateOf<String?>(null)
     private set
+
+  // Expose the profile picture URL as a StateFlow
+  val profilePictureUrl: StateFlow<String?> =
+      _userProfile
+          .asStateFlow()
+          .map { it.avatarUrl }
+          .stateIn(viewModelScope, SharingStarted.Lazily, _userProfile.value.avatarUrl)
 
   init {
     loadUserProfile()
