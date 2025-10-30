@@ -41,6 +41,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -72,10 +73,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.profile.ProfileViewModel
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
-import com.swent.mapin.ui.map.FiltersSection
+import com.swent.mapin.ui.profile.ProfileViewModel
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -280,20 +280,21 @@ fun BottomSheetContent(
                             EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
                           }
                         }
-                        
-                      HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                      if (state != BottomSheetState.COLLAPSED) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                        filterSection.Render(
-                            Modifier.fillMaxWidth(),
-                            filterViewModel,
-                            locationViewModel,
-                            userProfile)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        if (state != BottomSheetState.COLLAPSED) {
+                          Spacer(modifier = Modifier.height(16.dp))
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                          filterSection.Render(
+                              Modifier.fillMaxWidth(),
+                              filterViewModel,
+                              locationViewModel,
+                              userProfile)
+                          Spacer(modifier = Modifier.height(16.dp))
+
+                          Spacer(modifier = Modifier.height(24.dp))
+                        }
                       }
                     }
                   }
