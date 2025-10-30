@@ -20,7 +20,7 @@ class TimePickerButtonTests {
     val time = mutableStateOf("")
     composeTestRule.setContent {
       TimePickerButton(
-          selectedTime = time, onTimeClick = { time.value = "12h15" } // simulate selection
+          selectedTime = time, onTimeClick = { time.value = "1215" } // simulate selection
           )
     }
   }
