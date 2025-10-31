@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.LocalEventRepository
@@ -37,6 +38,7 @@ class MapScreenViewModelAuthListenerTest {
   @Mock lateinit var mockAuth: FirebaseAuth
   @Mock lateinit var mockUser: FirebaseUser
   @Mock lateinit var mockMemoryRepo: MemoryRepository
+  @Mock lateinit var mockUserProfileRepo: UserProfileRepository
 
   // We'll store the captured listener here after setup
   private lateinit var authListener: FirebaseAuth.AuthStateListener
@@ -57,6 +59,7 @@ class MapScreenViewModelAuthListenerTest {
       whenever(mockRepo.getEventsByParticipant(any())).thenReturn(emptyList())
       whenever(mockRepo.getSavedEventIds(any())).thenReturn(emptySet())
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
     }
 
     // Never touch real Firebase in tests
@@ -73,7 +76,8 @@ class MapScreenViewModelAuthListenerTest {
             applicationContext = mock<Context>(),
             memoryRepository = mockMemoryRepo,
             eventRepository = mockRepo,
-            auth = mockAuth)
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepo)
 
     // Capture the auth state listener the VM registers
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()

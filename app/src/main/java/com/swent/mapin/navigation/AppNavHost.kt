@@ -38,7 +38,11 @@ fun AppNavHost(
 
     composable(Route.Profile.route) {
       ProfileScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          },
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
@@ -51,7 +55,11 @@ fun AppNavHost(
 
     composable(Route.Settings.route) {
       SettingsScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
               popUpTo(0) { inclusive = true }
@@ -61,7 +69,12 @@ fun AppNavHost(
     }
 
     composable(Route.Friends.route) {
-      FriendsScreen(onNavigateBack = { navController.popBackStack() })
+      FriendsScreen(
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          })
     }
   }
 }
