@@ -645,4 +645,87 @@ class BottomSheetContentTest {
     // Joined event title visible; saved no longer present
     rule.onNodeWithText(joined[0].title).assertIsDisplayed()
   }
+
+  @Test
+  fun profileButton_clickInvokesCallback() {
+    var clicked = false
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            avatarUrl = "http://example.com/avatar.jpg",
+            onProfileClick = { clicked = true })
+      }
+    }
+
+    rule.waitForIdle()
+
+    // The clickable semantics live on the inner Box; use unmerged tree to find the clickable node
+    rule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
+    rule.waitForIdle()
+
+    assertTrue(clicked)
+  }
+
+  @Test
+  fun profileButton_displaysDefaultIconWhenAvatarUrlIsNull() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            avatarUrl = null,
+            onProfileClick = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // The profileButton container should be present and visible
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+    // We can't easily test the specific icon content, but we can verify the button is there
+  }
+
+  @Test
+  fun profileButton_displaysIconWhenAvatarUrlIsNotHttp() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            avatarUrl = "person", // Non-HTTP URL should display icon
+            onProfileClick = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // The profileButton container should be present and visible
+    rule.onNodeWithTag("profileButton").assertIsDisplayed()
+  }
 }
