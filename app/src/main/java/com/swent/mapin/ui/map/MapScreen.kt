@@ -100,6 +100,9 @@ fun MapScreen(
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
 
+  // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
+  LaunchedEffect(Unit) { viewModel.loadUserProfile() }
+
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
@@ -283,6 +286,7 @@ fun MapScreen(
                       savedEvents = viewModel.savedEvents,
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
+                      avatarUrl = viewModel.avatarUrl,
                       onProfileClick = onNavigateToProfile)
                 }
               }
