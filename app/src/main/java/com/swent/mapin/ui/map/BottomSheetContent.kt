@@ -68,18 +68,23 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.profile.ProfileViewModel
 
-// Assisted by AI
+// --- Assisted by AI ---
 /** States for search bar interactions. */
 @Stable
 data class SearchBarState(
@@ -98,27 +103,13 @@ enum class BottomSheetScreen {
 }
 
 /**
- * Content for the bottom sheet
- * - Search bar (always visible)
- * - Quick actions
- * - Toggle between Recent Activities and Joined Events
- * - Memory creation form (when showMemoryForm is true)
- *
- * @param state Current bottom sheet state
- * @param fullEntryKey Increments each time we enter full mode - triggers scroll reset
- * @param searchBarState search bar state and callbacks
- * @param showMemoryForm Whether to show memory creation form
- * @param availableEvents List of events that can be linked to memories
- * @param joinedEvents List of events the user has joined
- * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
- * @param topTags List of top tags to display in the discover section
- * @param selectedTags Set of currently selected tags
- * @param onTagClick Callback when a tag is clicked
- * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
- * @param onMemorySave Callback when memory is saved
- * @param onMemoryCancel Callback when memory creation is cancelled
- * @param onTabChange Callback when tab is changed
- * @param onProfileClick Callback when the profile icon is tapped
+ * Unified BottomSheetContent combining features from both originals:
+ * - Search results mode vs main content
+ * - Quick actions (Create Memory / Event)
+ * - Tabs for Saved vs Joined events
+ * - Dynamic Tags "Discover" section
+ * - Filters section (time/place/price/tags...) using Filter view models
+ * - Profile shortcut with optional avatarUrl or preset icon
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -132,11 +123,10 @@ fun BottomSheetContent(
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
-    // Joined events
+    // Joined/Saved events
     joinedEvents: List<Event> = emptyList(),
-    // Saved events
     savedEvents: List<Event> = emptyList(),
-    // Tab and tags
+    // Tabs & tags
     selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
     topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
@@ -150,13 +140,19 @@ fun BottomSheetContent(
     onCreateEventDone: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onTabEventClick: (Event) -> Unit = {},
+    // Profile/Filters support
     avatarUrl: String? = null,
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    filterViewModel: FiltersSectionViewModel = viewModel(),
+    locationViewModel: LocationViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
+  val filterSection = remember { FiltersSection() }
+  val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
   LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
     if (isFull && searchBarState.shouldRequestFocus) {
@@ -165,7 +161,6 @@ fun BottomSheetContent(
     }
   }
 
-  // Animated transition between regular content and memory form
   AnimatedContent(
       targetState = currentScreen,
       transitionSpec = {
@@ -192,7 +187,6 @@ fun BottomSheetContent(
                 onDone = onCreateEventDone)
           }
           BottomSheetScreen.MAIN_CONTENT -> {
-            // Regular bottom sheet content
             Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
               SearchBar(
                   value = searchBarState.query,
@@ -203,7 +197,7 @@ fun BottomSheetContent(
                   focusRequester = focusRequester,
                   onSearchAction = { focusManager.clearFocus() },
                   onClear = searchBarState.onClear,
-                  avatarUrl = avatarUrl,
+                  avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
                   onProfileClick = onProfileClick)
 
               Spacer(modifier = Modifier.height(24.dp))
@@ -238,12 +232,10 @@ fun BottomSheetContent(
                             onCreateEventClick = onCreateEventClick)
 
                         Spacer(modifier = Modifier.height(16.dp))
-
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Tab selector
+                        // Tabs
                         TabRow(
                             selectedTabIndex =
                                 if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
@@ -268,7 +260,6 @@ fun BottomSheetContent(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Content based on selected tab
                         when (selectedTab) {
                           MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
                             EventsSection(events = savedEvents, onEventClick = onTabEventClick)
@@ -279,12 +270,21 @@ fun BottomSheetContent(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Dynamic tag selection
+                        // Filters section visible unless collapsed
+                        if (state != BottomSheetState.COLLAPSED) {
+                          filterSection.Render(
+                              Modifier.fillMaxWidth(),
+                              filterViewModel,
+                              locationViewModel,
+                              userProfile)
+
+                          Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        // Dynamic tag selection (Discover)
                         if (topTags.isNotEmpty()) {
                           TagsSection(
                               topTags = topTags,
@@ -396,7 +396,7 @@ private fun SearchResultItem(
       shape = RoundedCornerShape(16.dp),
       tonalElevation = 2.dp,
       modifier =
-          modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
+          modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${'$'}{event.uid}")) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -427,7 +427,7 @@ private fun SearchResultItem(
 
               if (event.participantIds.isNotEmpty()) {
                 Text(
-                    text = "${event.participantIds.size} attending",
+                    text = "${'$'}{event.participantIds.size} attending",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
@@ -435,7 +435,7 @@ private fun SearchResultItem(
       }
 }
 
-/** Search bar that triggers full mode when tapped. Modern, minimalist design. */
+/** Search bar that triggers full mode when tapped. Supports avatar image or preset icons. */
 @Composable
 private fun SearchBar(
     value: String,
@@ -451,7 +451,6 @@ private fun SearchBar(
     modifier: Modifier = Modifier
 ) {
   var isFocused by remember { mutableStateOf(false) }
-  // Keep the profile shortcut hidden whenever the search sheet is active
   val profileVisible = !isFocused && !isSearchMode
   val fieldHeight = TextFieldDefaults.MinHeight
 
@@ -464,9 +463,7 @@ private fun SearchBar(
             Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
                 focusState ->
               val nowFocused = focusState.isFocused
-              if (nowFocused && !isFocused) {
-                onTap()
-              }
+              if (nowFocused && !isFocused) onTap()
               isFocused = nowFocused
             },
         singleLine = true,
@@ -531,15 +528,12 @@ private fun SearchBar(
                           onProfileClick()
                         },
                     contentAlignment = Alignment.Center) {
-                      // Check if avatarUrl is an HTTP URL (uploaded image) or a preset icon ID
-                      if (avatarUrl != null && avatarUrl.startsWith("http")) {
-                        // Display user's uploaded profile picture in circular shape
+                      if (!avatarUrl.isNullOrEmpty() && avatarUrl.startsWith("http")) {
                         AsyncImage(
                             model = avatarUrl,
                             contentDescription = "Profile Picture",
                             modifier = Modifier.fillMaxSize())
                       } else {
-                        // Display preset icon (person, face, star, favorite) or default
                         Icon(
                             imageVector = getAvatarIcon(avatarUrl),
                             contentDescription = "Profile",
@@ -559,7 +553,6 @@ private fun QuickActionsSection(
     onCreateMemoryClick: () -> Unit,
     onCreateEventClick: () -> Unit
 ) {
-  val focusManager = LocalFocusManager.current
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -595,7 +588,7 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
       }
 }
 
-/** Section displaying dynamic tags - replaces the hardcoded discover section. */
+/** Dynamic tags (Discover). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagsSection(
@@ -649,7 +642,7 @@ private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
           onClick = { expanded = !expanded },
           modifier =
               Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
-            Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
+            Text(if (expanded) "Show less" else "Show more (${ '$' }{events.size - 3} more)")
           }
     }
   }
@@ -682,10 +675,9 @@ private fun TagItem(
       }
 }
 
-/** Get avatar icon from URL/ID, matching ProfileScreen logic */
-private fun getAvatarIcon(avatarUrl: String?): androidx.compose.ui.graphics.vector.ImageVector {
+/** Get avatar icon from URL/ID, matching ProfileScreen presets. */
+private fun getAvatarIcon(avatarUrl: String?): ImageVector {
   if (avatarUrl.isNullOrEmpty()) return Icons.Default.Person
-
   return when (avatarUrl) {
     "person" -> Icons.Default.Person
     "face" -> Icons.Default.Face
