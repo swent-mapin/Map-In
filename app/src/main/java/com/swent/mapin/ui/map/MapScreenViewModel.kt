@@ -21,6 +21,7 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
@@ -44,7 +45,8 @@ class MapScreenViewModel(
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -194,6 +196,11 @@ class MapScreenViewModel(
   val topTags: List<String>
     get() = _topTags
 
+  // User avatar URL for profile button (can be HTTP URL or preset icon ID)
+  private var _avatarUrl by mutableStateOf<String?>(null)
+  val avatarUrl: String?
+    get() = _avatarUrl
+
   init {
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
@@ -206,6 +213,7 @@ class MapScreenViewModel(
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
+    loadUserProfile()
 
     registerAuthStateListener()
   }
@@ -233,12 +241,14 @@ class MapScreenViewModel(
             _savedEvents = emptyList()
             _savedEventIds = emptySet()
             _joinedEvents = emptyList()
+            _avatarUrl = null
           } else {
             // Signed in → (re)load user-scoped data
             loadSavedEvents()
             loadSavedEventIds()
             loadJoinedEvents()
             loadParticipantEvents()
+            loadUserProfile()
           }
         }
     auth.addAuthStateListener(authListener!!)
@@ -469,6 +479,24 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Error loading events", e)
         _availableEvents = emptyList()
+      }
+    }
+  }
+
+  /** Loads the current user's avatar URL from their profile. */
+  fun loadUserProfile() {
+    val uid = auth.currentUser?.uid
+    if (uid == null) {
+      _avatarUrl = null
+      return
+    }
+    viewModelScope.launch {
+      try {
+        val userProfile = userProfileRepository.getUserProfile(uid)
+        _avatarUrl = userProfile?.avatarUrl
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Error loading user profile", e)
+        _avatarUrl = null
       }
     }
   }
