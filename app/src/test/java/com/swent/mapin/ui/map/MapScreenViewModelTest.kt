@@ -504,14 +504,6 @@ class MapScreenViewModelTest {
     assertTrue(geoJson.contains("10"))
   }
 
-  // Tests for tag filtering functionality
-  @Test
-  fun topTags_initiallyLoaded() {
-    assertNotNull(viewModel.topTags)
-    assertTrue(viewModel.topTags.isNotEmpty())
-    assertEquals(5, viewModel.topTags.size)
-  }
-
   @Test
   fun selectedTags_initiallyEmpty() {
     assertTrue(viewModel.selectedTags.isEmpty())
@@ -643,16 +635,6 @@ class MapScreenViewModelTest {
   fun events_initiallyContainsAllSampleEvents() {
     val sampleEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()
     assertEquals(sampleEvents.size, viewModel.events.size)
-  }
-
-  @Test
-  fun topTags_containsValidTags() {
-    viewModel.topTags.forEach { tag ->
-      assertTrue(tag.isNotEmpty())
-      // Verify tag exists in at least one event
-      val tagExists = viewModel.events.any { event -> event.tags.contains(tag) }
-      assertTrue("Tag $tag should exist in events", tagExists)
-    }
   }
 
   @Test

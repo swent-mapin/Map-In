@@ -190,10 +190,6 @@ class MapScreenViewModel(
   val selectedTags: Set<String>
     get() = _selectedTags
 
-  private var _topTags by mutableStateOf<List<String>>(emptyList())
-  val topTags: List<String>
-    get() = _topTags
-
   init {
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
@@ -202,7 +198,6 @@ class MapScreenViewModel(
     loadJoinedEvents()
     loadSavedEvents()
     loadSavedEventIds()
-    _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
     loadParticipantEvents()
@@ -248,18 +243,6 @@ class MapScreenViewModel(
   private fun loadInitialSamples() {
     _events = LocalEventRepository.defaultSampleEvents()
     _searchResults = _events
-  }
-
-  /** Returns the top 5 most frequent tags across all events. */
-  private fun getTopTags(count: Int = 5): List<String> {
-    val events = LocalEventRepository.defaultSampleEvents()
-    val tagCounts = mutableMapOf<String, Int>()
-
-    events.forEach { event ->
-      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
-    }
-
-    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
   }
 
   /** Loads primary events list for immediate UI usage with fallback to local samples. */

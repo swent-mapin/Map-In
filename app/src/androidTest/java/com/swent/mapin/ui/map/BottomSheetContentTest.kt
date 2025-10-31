@@ -16,8 +16,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.ui.profile.ProfileViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -255,213 +257,6 @@ class BottomSheetContentTest {
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, currentTab)
   }
 
-  // Tests for tag filtering functionality
-  @Composable
-  private fun TestContentWithTags(
-      state: BottomSheetState,
-      topTags: List<String> = listOf("Sports", "Music", "Food", "Tech", "Art"),
-      selectedTags: Set<String> = emptySet(),
-      onTagClick: (String) -> Unit = {}
-  ) {
-    MaterialTheme {
-      var query by remember { mutableStateOf("") }
-      var shouldRequestFocus by remember { mutableStateOf(false) }
-
-      BottomSheetContent(
-          state = state,
-          fullEntryKey = 0,
-          searchBarState =
-              SearchBarState(
-                  query = query,
-                  shouldRequestFocus = shouldRequestFocus,
-                  onQueryChange = { query = it },
-                  onTap = {},
-                  onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}),
-          topTags = topTags,
-          selectedTags = selectedTags,
-          onTagClick = onTagClick)
-    }
-  }
-
-  @Test
-  fun tagsSection_displaysTopTags() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food"))
-    }
-
-    rule.waitForIdle()
-
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_doesNotDisplayWhenNoTags() {
-    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = emptyList()) }
-
-    rule.waitForIdle()
-
-    // "Discover" title should still be visible from old section
-    rule.onNodeWithText("Discover").assertDoesNotExist()
-  }
-
-  @Test
-  fun tagsSection_allTagsAreClickable() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL, topTags = listOf("Sports", "Music", "Food", "Tech", "Art"))
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Sports").performScrollTo().assertHasClickAction()
-    rule.onNodeWithText("Music").performScrollTo().assertHasClickAction()
-    rule.onNodeWithText("Food").performScrollTo().assertHasClickAction()
-    rule.onNodeWithText("Tech").performScrollTo().assertHasClickAction()
-    rule.onNodeWithText("Art").performScrollTo().assertHasClickAction()
-  }
-
-  @Test
-  fun tagsSection_callsOnTagClickWhenClicked() {
-    var clickedTag = ""
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL,
-          topTags = listOf("Sports", "Music"),
-          onTagClick = { clickedTag = it })
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Sports").performScrollTo().performClick()
-    assertEquals("Sports", clickedTag)
-
-    rule.onNodeWithText("Music").performScrollTo().performClick()
-    assertEquals("Music", clickedTag)
-  }
-
-  @Test
-  fun tagsSection_handlesMultipleTagClicks() {
-    val clickedTags = mutableListOf<String>()
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL,
-          topTags = listOf("Sports", "Music", "Food"),
-          onTagClick = { clickedTags.add(it) })
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Sports").performScrollTo().performClick()
-    rule.onNodeWithText("Music").performScrollTo().performClick()
-    rule.onNodeWithText("Food").performScrollTo().performClick()
-
-    assertEquals(3, clickedTags.size)
-    assertTrue(clickedTags.contains("Sports"))
-    assertTrue(clickedTags.contains("Music"))
-    assertTrue(clickedTags.contains("Food"))
-  }
-
-  @Test
-  fun tagsSection_displaysCorrectNumberOfTags() {
-    val tags = listOf("Sports", "Music", "Food", "Tech", "Art")
-    rule.setContent { TestContentWithTags(state = BottomSheetState.FULL, topTags = tags) }
-
-    rule.waitForIdle()
-
-    tags.forEach { tag -> rule.onNodeWithText(tag).performScrollTo().assertIsDisplayed() }
-  }
-
-  @Test
-  fun tagsSection_visibleInFullStateOnly() {
-    // Test that tags are visible in FULL state
-    rule.setContent {
-      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
-    }
-
-    rule.waitForIdle()
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_handlesEmptySelectedTags() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL,
-          topTags = listOf("Sports", "Music"),
-          selectedTags = emptySet())
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_withSelectedTags_tagsStillDisplayed() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL,
-          topTags = listOf("Sports", "Music", "Food"),
-          selectedTags = setOf("Sports", "Music"))
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Food").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_displaysDiscoverTitle() {
-    rule.setContent {
-      TestContentWithTags(state = BottomSheetState.FULL, topTags = listOf("Sports", "Music"))
-    }
-
-    rule.waitForIdle()
-
-    // Should have "Discover" as section title - scroll to make it visible
-    rule.onNodeWithText("Discover").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_handlesLongTagNames() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL, topTags = listOf("VeryLongTagName", "AnotherLongTag"))
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("VeryLongTagName").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("AnotherLongTag").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun tagsSection_handlesSpecialCharacters() {
-    rule.setContent {
-      TestContentWithTags(
-          state = BottomSheetState.FULL, topTags = listOf("Art & Craft", "Tech-Conference"))
-    }
-
-    rule.waitForIdle()
-
-    // Scroll to make tags visible on smaller screens
-    rule.onNodeWithText("Art & Craft").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Tech-Conference").performScrollTo().assertIsDisplayed()
-  }
-
   @Composable
   private fun TestContentWithSearch(
       query: String = "",
@@ -527,6 +322,31 @@ class BottomSheetContentTest {
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
   }
 
+  @Composable
+  private fun TestContentWithFilters(
+      state: BottomSheetState,
+      filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
+      locationViewModel: LocationViewModel = LocationViewModel(),
+      profileViewModel: ProfileViewModel = ProfileViewModel()
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = state,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
+    }
+  }
+
   @Test
   fun savedEventsTab_displaysMultipleEventsWithAllData() {
     val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
@@ -541,6 +361,28 @@ class BottomSheetContentTest {
       // Location line is shown in SearchResultItem; use substring for safety
       rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
     }
+  }
+
+  @Test
+  fun filterSection_displaysInFullState() {
+    rule.setContent { TestContentWithFilters(BottomSheetState.FULL) }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TITLE).performScrollTo().assertIsDisplayed()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performScrollTo().assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performScrollTo().assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun filterSection_doesNotDisplayInCollapsedState() {
+    rule.setContent { TestContentWithFilters(state = BottomSheetState.COLLAPSED) }
+
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TITLE).assertDoesNotExist()
   }
 
   @Test
