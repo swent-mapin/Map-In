@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,7 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SearchBar
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -73,13 +75,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
-import com.swent.mapin.ui.profile.ProfileViewModel
 
 // Assisted by AI
 /** States for search bar interactions. */
@@ -113,6 +111,7 @@ enum class BottomSheetScreen {
  * @param availableEvents List of events that can be linked to memories
  * @param joinedEvents List of events the user has joined
  * @param selectedTab Currently selected tab (Recent Activities or Joined Events)
+ * @param topTags List of top tags to display in the discover section
  * @param selectedTags Set of currently selected tags
  * @param onTagClick Callback when a tag is clicked
  * @param onCreateMemoryClick Callback when "Create Memory" button is clicked
@@ -120,9 +119,6 @@ enum class BottomSheetScreen {
  * @param onMemoryCancel Callback when memory creation is cancelled
  * @param onTabChange Callback when tab is changed
  * @param onProfileClick Callback when the profile icon is tapped
- * @param filterViewModel ViewModel managing filter state (time, place, price, tags, etc.)
- * @param locationViewModel ViewModel for location search and autocomplete
- * @param profileViewModel ViewModel providing current user profile
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -142,6 +138,7 @@ fun BottomSheetContent(
     savedEvents: List<Event> = emptyList(),
     // Tab and tags
     selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+    topTags: List<String> = emptyList(),
     selectedTags: Set<String> = emptySet(),
     onTagClick: (String) -> Unit = {},
     // Callbacks
@@ -155,19 +152,11 @@ fun BottomSheetContent(
     onTabEventClick: (Event) -> Unit = {},
     avatarUrl: String? = null,
     onProfileClick: () -> Unit = {}
-    onJoinedEventClick: (Event) -> Unit = {},
-    onProfileClick: () -> Unit = {},
-    filterViewModel: FiltersSectionViewModel = viewModel(),
-    locationViewModel: LocationViewModel = viewModel(),
-    profileViewModel: ProfileViewModel = viewModel(),
-    onTabEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
   val focusRequester = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
-  val filterSection = remember { FiltersSection() }
-  val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
   LaunchedEffect(isFull, searchBarState.shouldRequestFocus) {
     if (isFull && searchBarState.shouldRequestFocus) {
@@ -289,20 +278,21 @@ fun BottomSheetContent(
                           }
                         }
 
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
 
-                        if (state != BottomSheetState.COLLAPSED) {
-                          Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                          filterSection.Render(
-                              Modifier.fillMaxWidth(),
-                              filterViewModel,
-                              locationViewModel,
-                              userProfile)
-                          Spacer(modifier = Modifier.height(16.dp))
-
-                          Spacer(modifier = Modifier.height(24.dp))
+                        // Dynamic tag selection
+                        if (topTags.isNotEmpty()) {
+                          TagsSection(
+                              topTags = topTags,
+                              selectedTags = selectedTags,
+                              onTagClick = onTagClick)
                         }
+
+                        Spacer(modifier = Modifier.height(24.dp))
                       }
                     }
                   }
@@ -603,6 +593,33 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
             softWrap = true,
             style = MaterialTheme.typography.labelLarge)
       }
+}
+
+/** Section displaying dynamic tags - replaces the hardcoded discover section. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagsSection(
+    topTags: List<String>,
+    selectedTags: Set<String>,
+    onTagClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Discover",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 8.dp))
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          topTags.forEach { tag ->
+            val isSelected = selectedTags.contains(tag)
+            TagItem(text = tag, isSelected = isSelected, onClick = { onTagClick(tag) })
+          }
+        }
+  }
 }
 
 @Composable

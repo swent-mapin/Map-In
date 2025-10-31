@@ -267,6 +267,7 @@ fun MapScreen(
                       isSearchMode = viewModel.isSearchMode,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
+                      topTags = viewModel.topTags,
                       selectedTags = viewModel.selectedTags,
                       onTagClick = viewModel::toggleTagSelection,
                       onEventClick = { event ->

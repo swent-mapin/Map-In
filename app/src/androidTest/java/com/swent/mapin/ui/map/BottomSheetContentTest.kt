@@ -340,10 +340,7 @@ class BottomSheetContentTest {
                   onQueryChange = {},
                   onTap = {},
                   onFocusHandled = {},
-                  onClear = {}),
-          filterViewModel = filterViewModel,
-          locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+                  onClear = {}))
     }
   }
 
@@ -560,7 +557,7 @@ class BottomSheetContentTest {
                     onTap = {},
                     onFocusHandled = {},
                     onClear = {}),
-            avatarUrl = "person", // Non-HTTP URL should display icon
+            avatarUrl = "person",
             onProfileClick = {})
       }
     }
