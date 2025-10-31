@@ -36,7 +36,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -71,6 +74,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
@@ -146,6 +150,7 @@ fun BottomSheetContent(
     onCreateEventDone: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onTabEventClick: (Event) -> Unit = {},
+    avatarUrl: String? = null,
     onProfileClick: () -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
@@ -198,6 +203,7 @@ fun BottomSheetContent(
                   focusRequester = focusRequester,
                   onSearchAction = { focusManager.clearFocus() },
                   onClear = searchBarState.onClear,
+                  avatarUrl = avatarUrl,
                   onProfileClick = onProfileClick)
 
               Spacer(modifier = Modifier.height(24.dp))
@@ -440,6 +446,7 @@ private fun SearchBar(
     focusRequester: FocusRequester,
     onSearchAction: () -> Unit,
     onClear: () -> Unit,
+    avatarUrl: String?,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -518,14 +525,27 @@ private fun SearchBar(
               modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
               color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
               shape = RoundedCornerShape(16.dp)) {
-                IconButton(
-                    onClick = onProfileClick,
-                    enabled = profileVisible,
-                    modifier = Modifier.fillMaxSize()) {
-                      Icon(
-                          imageVector = Icons.Outlined.AccountCircle,
-                          contentDescription = "Profile",
-                          tint = MaterialTheme.colorScheme.onSurface)
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize().clickable(enabled = profileVisible) {
+                          onProfileClick()
+                        },
+                    contentAlignment = Alignment.Center) {
+                      // Check if avatarUrl is an HTTP URL (uploaded image) or a preset icon ID
+                      if (avatarUrl != null && avatarUrl.startsWith("http")) {
+                        // Display user's uploaded profile picture in circular shape
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize())
+                      } else {
+                        // Display preset icon (person, face, star, favorite) or default
+                        Icon(
+                            imageVector = getAvatarIcon(avatarUrl),
+                            contentDescription = "Profile",
+                            modifier = Modifier.fillMaxSize(),
+                            tint = MaterialTheme.colorScheme.onSurface)
+                      }
                     }
               }
         }
@@ -660,4 +680,17 @@ private fun TagItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis)
       }
+}
+
+/** Get avatar icon from URL/ID, matching ProfileScreen logic */
+private fun getAvatarIcon(avatarUrl: String?): androidx.compose.ui.graphics.vector.ImageVector {
+  if (avatarUrl.isNullOrEmpty()) return Icons.Default.Person
+
+  return when (avatarUrl) {
+    "person" -> Icons.Default.Person
+    "face" -> Icons.Default.Face
+    "star" -> Icons.Default.Star
+    "favorite" -> Icons.Default.Favorite
+    else -> Icons.Default.Person
+  }
 }
