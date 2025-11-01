@@ -130,6 +130,7 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
           db.collection(USERS_COLLECTION_PATH)
               .document(userId)
               .collection(SAVED_SUBCOLLECTION)
+              .orderBy("savedAt")
               .get()
               .await()
       snap.documents.map { it.id }.toSet()
@@ -139,7 +140,7 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
     }
   }
 
-  /** Get the saved events for a user (sorted by date ascending). */
+  /** Get the saved events for a user. */
   override suspend fun getSavedEvents(userId: String): List<Event> {
     val ids = getSavedEventIds(userId).toList()
     if (ids.isEmpty()) return emptyList()
@@ -152,7 +153,8 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
           db.collection(EVENTS_COLLECTION_PATH).whereIn(FieldPath.documentId(), chunk).get().await()
       results += snap.documents.mapNotNull { documentToEvent(it) }
     }
-    return results.sortedBy { it.date } // sort in-memory by event date
+      val order = ids.withIndex().associate { (i, id) -> id to i }
+      return results.sortedBy { order[it.uid] ?: Int.MAX_VALUE }
   }
 
   /** Mark an event as saved for a user (idempotent). */
