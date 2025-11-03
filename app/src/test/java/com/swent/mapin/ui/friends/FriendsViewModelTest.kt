@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.friends
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.*
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +26,8 @@ import org.junit.Test
 class FriendsViewModelTest {
 
   private lateinit var repository: FriendRequestRepository
+  private lateinit var mockAuth: FirebaseAuth
+  private lateinit var mockUser: FirebaseUser
   private lateinit var viewModel: FriendsViewModel
   private val testDispatcher = StandardTestDispatcher()
   private val currentUserId = "user123"
@@ -32,7 +36,14 @@ class FriendsViewModelTest {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     repository = mockk(relaxed = true)
-    viewModel = FriendsViewModel(repository, currentUserId)
+    mockAuth = mockk(relaxed = true)
+    mockUser = mockk(relaxed = true)
+
+    // Mock FirebaseAuth to return the test user
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.uid } returns currentUserId
+
+    viewModel = FriendsViewModel(repository, mockAuth)
   }
 
   @After
