@@ -23,7 +23,6 @@ import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 // Tests for MapScreenViewModel's FirebaseAuth.AuthStateListener behavior
@@ -34,11 +33,12 @@ class MapScreenViewModelAuthListenerTest {
 
   @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
-  @Mock lateinit var mockRepo: EventRepository
-  @Mock lateinit var mockAuth: FirebaseAuth
-  @Mock lateinit var mockUser: FirebaseUser
-  @Mock lateinit var mockMemoryRepo: MemoryRepository
-  @Mock lateinit var mockUserProfileRepo: UserProfileRepository
+  @Mock(lenient = true) lateinit var mockRepo: EventRepository
+  @Mock(lenient = true) lateinit var mockAuth: FirebaseAuth
+  @Mock(lenient = true) lateinit var mockUser: FirebaseUser
+  @Mock(lenient = true) lateinit var mockMemoryRepo: MemoryRepository
+  @Mock(lenient = true) lateinit var mockUserProfileRepo: UserProfileRepository
+  @Mock(lenient = true) lateinit var mockContext: Context
 
   // We'll store the captured listener here after setup
   private lateinit var authListener: FirebaseAuth.AuthStateListener
@@ -52,6 +52,7 @@ class MapScreenViewModelAuthListenerTest {
     // Default auth stubs
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
+    whenever(mockContext.applicationContext).thenReturn(mockContext)
 
     // Stub all suspend repository calls inside a coroutine
     runBlocking {
@@ -73,7 +74,7 @@ class MapScreenViewModelAuthListenerTest {
                 BottomSheetConfig(
                     collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp),
             onClearFocus = {},
-            applicationContext = mock<Context>(),
+            applicationContext = mockContext,
             memoryRepository = mockMemoryRepo,
             eventRepository = mockRepo,
             auth = mockAuth,
@@ -90,6 +91,7 @@ class MapScreenViewModelAuthListenerTest {
     // Simulate sign-out
     whenever(mockAuth.currentUser).thenReturn(null)
     authListener.onAuthStateChanged(mockAuth)
+    advanceUntilIdle()
 
     // Saved list cleared
     assertEquals(emptyList<Event>(), vm.savedEvents)
@@ -111,12 +113,10 @@ class MapScreenViewModelAuthListenerTest {
     whenever(mockUser.uid).thenReturn("testUserId")
 
     // Update repo responses for this user
-    runBlocking {
-      whenever(mockRepo.getSavedEventIds("testUserId")).thenReturn(setOf(e.uid))
-      whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
-      // Joined events are derived from _allEvents + uid; not required for this assertion,
-      // but you could also stub getEventsByParticipant if your VM uses it here.
-    }
+    whenever(mockRepo.getSavedEventIds("testUserId")).thenReturn(setOf(e.uid))
+    whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
+    // Joined events are derived from _allEvents + uid; not required for this assertion,
+    // but you could also stub getEventsByParticipant if your VM uses it here.
 
     authListener.onAuthStateChanged(mockAuth)
     advanceUntilIdle()
