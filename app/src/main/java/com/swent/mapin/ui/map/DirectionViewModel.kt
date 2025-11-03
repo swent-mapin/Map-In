@@ -12,12 +12,12 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel responsible for managing direction display state on the map.
  *
- * This ViewModel handles the lifecycle and state transitions for showing routes between
- * the user's location and event destinations. It follows MVVM architecture principles,
- * exposing an observable state that the UI layer can react to.
+ * This ViewModel handles the lifecycle and state transitions for showing routes between the user's
+ * location and event destinations. It follows MVVM architecture principles, exposing an observable
+ * state that the UI layer can react to.
  *
- * Current implementation uses a mock straight-line route. Future integration with
- * Mapbox Directions API will provide real routing data along roads and paths.
+ * Current implementation uses a mock straight-line route. Future integration with Mapbox Directions
+ * API will provide real routing data along roads and paths.
  *
  * @see DirectionState for possible states
  */
@@ -25,10 +25,7 @@ class DirectionViewModel : ViewModel() {
 
   private var _directionState by mutableStateOf<DirectionState>(DirectionState.Cleared)
 
-  /**
-   * Current state of direction display.
-   * Observable by the UI to react to state changes.
-   */
+  /** Current state of direction display. Observable by the UI to react to state changes. */
   val directionState: DirectionState
     get() = _directionState
 
@@ -50,18 +47,13 @@ class DirectionViewModel : ViewModel() {
       delay(500)
 
       val routePoints = createStraightLineRoute(origin, destination)
-      _directionState = DirectionState.Displayed(
-        routePoints = routePoints,
-        origin = origin,
-        destination = destination
-      )
+      _directionState =
+          DirectionState.Displayed(
+              routePoints = routePoints, origin = origin, destination = destination)
     }
   }
 
-  /**
-   * Clears the currently displayed direction from the map.
-   * Resets the state to Cleared.
-   */
+  /** Clears the currently displayed direction from the map. Resets the state to Cleared. */
   fun clearDirection() {
     _directionState = DirectionState.Cleared
   }
@@ -69,16 +61,14 @@ class DirectionViewModel : ViewModel() {
   /**
    * Creates a straight line route between two geographic points.
    *
-   * This is a temporary implementation that generates 11 evenly-spaced points
-   * between the start and end locations. This provides smooth line rendering
-   * while maintaining simplicity.
+   * This is a temporary implementation that generates 11 evenly-spaced points between the start and
+   * end locations. This provides smooth line rendering while maintaining simplicity.
    *
    * @param start Starting geographic point
    * @param end Ending geographic point
    * @return List of 11 points forming a straight line from start to end
-   *
-   * @note This will be replaced with Mapbox Directions API integration that
-   * provides actual road-following routes.
+   * @note This will be replaced with Mapbox Directions API integration that provides actual
+   *   road-following routes.
    */
   private fun createStraightLineRoute(start: Point, end: Point): List<Point> {
     val points = mutableListOf<Point>()
@@ -94,4 +84,3 @@ class DirectionViewModel : ViewModel() {
     return points
   }
 }
-

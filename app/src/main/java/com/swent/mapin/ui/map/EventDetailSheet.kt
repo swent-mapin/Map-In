@@ -200,26 +200,27 @@ private fun MediumEventContent(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-      Text(
-          text = event.title,
-          style = MaterialTheme.typography.headlineSmall,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.weight(1f).testTag("eventTitleMedium"))
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = event.title,
+              style = MaterialTheme.typography.headlineSmall,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.weight(1f).testTag("eventTitleMedium"))
 
-      // Direction icon button
-      IconButton(
-          onClick = onGetDirections,
-          modifier = Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)
-      ) {
-        Icon(
-            imageVector = Icons.Default.Directions,
-            contentDescription = if (showDirections) "Clear Directions" else "Get Directions",
-            tint = if (showDirections) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-        )
-      }
-    }
+          // Direction icon button
+          IconButton(
+              onClick = onGetDirections,
+              modifier =
+                  Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
+                Icon(
+                    imageVector = Icons.Default.Directions,
+                    contentDescription =
+                        if (showDirections) "Clear Directions" else "Get Directions",
+                    tint =
+                        if (showDirections) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary)
+              }
+        }
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -269,7 +270,6 @@ private fun MediumEventContent(
     AttendeeInfo(event = event, testTagSuffix = "")
 
     Spacer(modifier = Modifier.height(16.dp))
-
 
     val joinButtonUi =
         remember(event.participantIds, event.capacity, isParticipating) {
@@ -353,26 +353,27 @@ private fun FullEventContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-              text = event.title,
-              style = MaterialTheme.typography.headlineMedium,
-              fontWeight = FontWeight.Bold,
-              modifier = Modifier.weight(1f).testTag("eventTitleFull"))
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  text = event.title,
+                  style = MaterialTheme.typography.headlineMedium,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.weight(1f).testTag("eventTitleFull"))
 
-          // Direction icon button
-          IconButton(
-              onClick = onGetDirections,
-              modifier = Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)
-          ) {
-            Icon(
-                imageVector = Icons.Default.Directions,
-                contentDescription = if (showDirections) "Clear Directions" else "Get Directions",
-                tint = if (showDirections) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            )
-          }
-        }
+              // Direction icon button
+              IconButton(
+                  onClick = onGetDirections,
+                  modifier =
+                      Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Directions,
+                        contentDescription =
+                            if (showDirections) "Clear Directions" else "Get Directions",
+                        tint =
+                            if (showDirections) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary)
+                  }
+            }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -440,7 +441,6 @@ private fun FullEventContent(
               modifier = Modifier.testTag("eventDescription"))
           Spacer(modifier = Modifier.height(16.dp))
         }
-
 
         val joinButtonUi =
             remember(event.participantIds, event.capacity, isParticipating) {

@@ -252,8 +252,8 @@ fun MapScreen(
                       onClose = { viewModel.closeEventDetail() },
                       onShare = { viewModel.showShareDialog() },
                       onGetDirections = { viewModel.toggleDirections(selectedEvent) },
-                      showDirections = viewModel.directionViewModel.directionState is DirectionState.Displayed
-                  )
+                      showDirections =
+                          viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
                   BottomSheetContent(
                       state = viewModel.bottomSheetState,

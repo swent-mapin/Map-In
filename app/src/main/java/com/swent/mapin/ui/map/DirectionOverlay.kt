@@ -21,38 +21,32 @@ import com.mapbox.maps.extension.compose.style.sources.generated.rememberGeoJson
  * - A shadow layer for depth effect
  * - White circular markers at start and end points with blue borders
  *
- * The visual style is designed to match Google Maps' direction lines while maintaining
- * consistency with modern map UI patterns.
+ * The visual style is designed to match Google Maps' direction lines while maintaining consistency
+ * with modern map UI patterns.
  *
- * @param routePoints Ordered list of geographic points forming the route path.
- *                    Must contain at least one point. First point is the origin,
- *                    last point is the destination.
- *
- * @note This uses Mapbox's MapboxDelicateApi for low-level layer management.
- *       Colors may be affected by map theme (dark/light mode) due to Mapbox
- *       Standard Style's global transformations.
+ * @param routePoints Ordered list of geographic points forming the route path. Must contain at
+ *   least one point. First point is the origin, last point is the destination.
+ * @note This uses Mapbox's MapboxDelicateApi for low-level layer management. Colors may be affected
+ *   by map theme (dark/light mode) due to Mapbox Standard Style's global transformations.
  */
 @OptIn(MapboxDelicateApi::class)
 @Composable
 fun DirectionOverlay(routePoints: List<Point>) {
   if (routePoints.isEmpty()) return
 
-  val lineString = remember(routePoints) {
-    LineString.fromLngLats(routePoints)
-  }
+  val lineString = remember(routePoints) { LineString.fromLngLats(routePoints) }
 
-  val directionSource = rememberGeoJsonSourceState(key = "direction-line-source") {
-    data = GeoJSONData(lineString)
-  }
+  val directionSource =
+      rememberGeoJsonSourceState(key = "direction-line-source") { data = GeoJSONData(lineString) }
 
-  val endpointsSource = rememberGeoJsonSourceState(key = "direction-endpoints-source") {
-    data = GeoJSONData(
-      listOf(
-        com.mapbox.geojson.Feature.fromGeometry(routePoints.first()),
-        com.mapbox.geojson.Feature.fromGeometry(routePoints.last())
-      )
-    )
-  }
+  val endpointsSource =
+      rememberGeoJsonSourceState(key = "direction-endpoints-source") {
+        data =
+            GeoJSONData(
+                listOf(
+                    com.mapbox.geojson.Feature.fromGeometry(routePoints.first()),
+                    com.mapbox.geojson.Feature.fromGeometry(routePoints.last())))
+      }
 
   val shadowBlue = Color(0xFF1A73E8)
   val mainBlue = Color(0xFF4285F4)

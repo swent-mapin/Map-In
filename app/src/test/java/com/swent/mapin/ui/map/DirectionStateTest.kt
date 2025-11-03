@@ -6,8 +6,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit tests for DirectionState sealed class and DirectionInfo data class.
- * Tests all possible states and data structures for direction display.
+ * Unit tests for DirectionState sealed class and DirectionInfo data class. Tests all possible
+ * states and data structures for direction display.
  */
 class DirectionStateTest {
 
@@ -19,12 +19,12 @@ class DirectionStateTest {
   fun setUp() {
     testOrigin = Point.fromLngLat(6.5668, 46.5197)
     testDestination = Point.fromLngLat(6.5700, 46.5220)
-    testRoutePoints = listOf(
-      Point.fromLngLat(6.5668, 46.5197),
-      Point.fromLngLat(6.5680, 46.5205),
-      Point.fromLngLat(6.5690, 46.5212),
-      Point.fromLngLat(6.5700, 46.5220)
-    )
+    testRoutePoints =
+        listOf(
+            Point.fromLngLat(6.5668, 46.5197),
+            Point.fromLngLat(6.5680, 46.5205),
+            Point.fromLngLat(6.5690, 46.5212),
+            Point.fromLngLat(6.5700, 46.5220))
   }
 
   @Test
@@ -43,11 +43,9 @@ class DirectionStateTest {
 
   @Test
   fun `DirectionState Displayed contains correct data`() {
-    val state = DirectionState.Displayed(
-      routePoints = testRoutePoints,
-      origin = testOrigin,
-      destination = testDestination
-    )
+    val state =
+        DirectionState.Displayed(
+            routePoints = testRoutePoints, origin = testOrigin, destination = testDestination)
 
     assertNotNull(state)
     assertTrue(state is DirectionState.Displayed)
@@ -58,11 +56,9 @@ class DirectionStateTest {
 
   @Test
   fun `DirectionState Displayed handles empty route points`() {
-    val state = DirectionState.Displayed(
-      routePoints = emptyList(),
-      origin = testOrigin,
-      destination = testDestination
-    )
+    val state =
+        DirectionState.Displayed(
+            routePoints = emptyList(), origin = testOrigin, destination = testDestination)
 
     assertNotNull(state)
     assertTrue(state.routePoints.isEmpty())
@@ -72,11 +68,9 @@ class DirectionStateTest {
 
   @Test
   fun `DirectionState Displayed route points are correctly ordered`() {
-    val state = DirectionState.Displayed(
-      routePoints = testRoutePoints,
-      origin = testOrigin,
-      destination = testDestination
-    )
+    val state =
+        DirectionState.Displayed(
+            routePoints = testRoutePoints, origin = testOrigin, destination = testDestination)
 
     assertEquals(testOrigin.longitude(), state.routePoints.first().longitude(), 0.0001)
     assertEquals(testOrigin.latitude(), state.routePoints.first().latitude(), 0.0001)
@@ -86,10 +80,7 @@ class DirectionStateTest {
 
   @Test
   fun `DirectionInfo contains correct origin and destination`() {
-    val directionInfo = DirectionInfo(
-      origin = testOrigin,
-      destination = testDestination
-    )
+    val directionInfo = DirectionInfo(origin = testOrigin, destination = testDestination)
 
     assertNotNull(directionInfo)
     assertEquals(testOrigin, directionInfo.origin)
@@ -120,14 +111,11 @@ class DirectionStateTest {
   @Test
   fun `DirectionState Displayed with single point route`() {
     val singlePoint = listOf(testOrigin)
-    val state = DirectionState.Displayed(
-      routePoints = singlePoint,
-      origin = testOrigin,
-      destination = testOrigin
-    )
+    val state =
+        DirectionState.Displayed(
+            routePoints = singlePoint, origin = testOrigin, destination = testOrigin)
 
     assertEquals(1, state.routePoints.size)
     assertEquals(state.origin, state.destination)
   }
 }
-

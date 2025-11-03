@@ -9,10 +9,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Unit tests for DirectionViewModel.
- * Tests direction request, clearing, and state transitions.
- */
+/** Unit tests for DirectionViewModel. Tests direction request, clearing, and state transitions. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DirectionViewModelTest {
 
@@ -210,4 +207,3 @@ class DirectionViewModelTest {
     assertEquals(11, state.routePoints.size)
   }
 }
-

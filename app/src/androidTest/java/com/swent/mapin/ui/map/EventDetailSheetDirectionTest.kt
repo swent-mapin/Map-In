@@ -6,32 +6,31 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
+import java.util.Date
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
-import java.util.Date
 
 /**
- * UI tests for the Get Directions button in EventDetailSheet.
- * Tests button visibility, functionality, and state changes.
+ * UI tests for the Get Directions button in EventDetailSheet. Tests button visibility,
+ * functionality, and state changes.
  */
 class EventDetailSheetDirectionTest {
 
-  @get:Rule
-  val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-  private val testEvent = Event(
-    uid = "test-event",
-    title = "Test Event",
-    description = "Test event description",
-    date = Timestamp(Date()),
-    location = Location("Test Location", 46.5220, 6.5700),
-    tags = listOf("Music", "Festival"),
-    public = true,
-    ownerId = "test-user",
-    capacity = 100,
-    participantIds = listOf("user1", "user2")
-  )
+  private val testEvent =
+      Event(
+          uid = "test-event",
+          title = "Test Event",
+          description = "Test event description",
+          date = Timestamp(Date()),
+          location = Location("Test Location", 46.5220, 6.5700),
+          tags = listOf("Music", "Festival"),
+          public = true,
+          ownerId = "test-user",
+          capacity = 100,
+          participantIds = listOf("user1", "user2"))
 
   @Test
   fun getDirectionsButton_isDisplayed_inMediumState() {
@@ -39,127 +38,120 @@ class EventDetailSheetDirectionTest {
 
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = { getDirectionsClicked = true },
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = { getDirectionsClicked = true },
+          showDirections = false)
     }
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertExists()
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
+        .assertExists()
+        .assertIsDisplayed()
   }
 
   @Test
   fun getDirectionsButton_isDisplayed_inFullState() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.FULL,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.FULL,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = false)
     }
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertExists()
-      .assertIsDisplayed()
+        .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
+        .assertExists()
+        .assertIsDisplayed()
   }
 
   @Test
   fun getDirectionsButton_isNotDisplayed_inCollapsedState() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.COLLAPSED,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.COLLAPSED,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = false)
     }
 
-    composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertDoesNotExist()
+    composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).assertDoesNotExist()
   }
 
   @Test
   fun getDirectionsButton_showsCorrectText_whenDirectionsNotShown() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = false)
     }
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertContentDescriptionEquals("Get Directions")
+        .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
+        .assertContentDescriptionEquals("Get Directions")
   }
 
   @Test
   fun getDirectionsButton_showsCorrectText_whenDirectionsShown() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = true
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = true)
     }
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertContentDescriptionEquals("Clear Directions")
+        .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
+        .assertContentDescriptionEquals("Clear Directions")
   }
 
   @Test
@@ -168,25 +160,22 @@ class EventDetailSheetDirectionTest {
 
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = { callbackTriggered = true },
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = { callbackTriggered = true },
+          showDirections = false)
     }
 
-    composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .performClick()
+    composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).performClick()
 
     assertTrue(callbackTriggered)
   }
@@ -195,50 +184,44 @@ class EventDetailSheetDirectionTest {
   fun getDirectionsButton_isClickable_whenDirectionsNotShown() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.FULL,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.FULL,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = false)
     }
 
-    composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertHasClickAction()
+    composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).assertHasClickAction()
   }
 
   @Test
   fun getDirectionsButton_isClickable_whenDirectionsShown() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.FULL,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = true
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.FULL,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = true)
     }
 
-    composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertHasClickAction()
+    composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).assertHasClickAction()
   }
 
   @Test
@@ -247,20 +230,19 @@ class EventDetailSheetDirectionTest {
 
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = { clickCount++ },
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = { clickCount++ },
+          showDirections = false)
     }
 
     val button = composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
@@ -279,29 +261,24 @@ class EventDetailSheetDirectionTest {
   fun getDirectionsButton_appearsBeforeJoinButton_inMediumState() {
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = {},
-        showDirections = false
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = {},
+          showDirections = false)
     }
 
-    composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertExists()
+    composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).assertExists()
 
-    composeTestRule
-      .onNodeWithTag("joinEventButton")
-      .assertExists()
+    composeTestRule.onNodeWithTag("joinEventButton").assertExists()
   }
 
   @Test
@@ -310,25 +287,23 @@ class EventDetailSheetDirectionTest {
 
     composeTestRule.setContent {
       EventDetailSheet(
-        event = testEvent,
-        sheetState = BottomSheetState.MEDIUM,
-        isParticipating = false,
-        isSaved = false,
-        organizerName = "Test Organizer",
-        onJoinEvent = {},
-        onUnregisterEvent = {},
-        onSaveForLater = {},
-        onUnsaveForLater = {},
-        onClose = {},
-        onShare = {},
-        onGetDirections = { showDirections = !showDirections },
-        showDirections = showDirections
-      )
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = { showDirections = !showDirections },
+          showDirections = showDirections)
     }
 
     composeTestRule
-      .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
-      .assertContentDescriptionEquals("Get Directions")
+        .onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
+        .assertContentDescriptionEquals("Get Directions")
   }
 }
-

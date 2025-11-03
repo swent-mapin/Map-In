@@ -5,18 +5,16 @@ import com.mapbox.geojson.Point
 /**
  * Sealed class representing the different states of direction display on the map.
  *
- * This class is used to manage the UI state for showing routes between the user's location
- * and event destinations. It supports three states: cleared, loading, and displayed.
+ * This class is used to manage the UI state for showing routes between the user's location and
+ * event destinations. It supports three states: cleared, loading, and displayed.
  */
 sealed class DirectionState {
-  /**
-   * Initial state when no direction is being displayed on the map.
-   */
+  /** Initial state when no direction is being displayed on the map. */
   object Cleared : DirectionState()
 
   /**
-   * Transient state while direction data is being fetched.
-   * Typically shown during API calls or route calculation.
+   * Transient state while direction data is being fetched. Typically shown during API calls or
+   * route calculation.
    */
   object Loading : DirectionState()
 
@@ -27,11 +25,8 @@ sealed class DirectionState {
    * @property origin Starting point of the route (typically user's location)
    * @property destination End point of the route (typically event location)
    */
-  data class Displayed(
-    val routePoints: List<Point>,
-    val origin: Point,
-    val destination: Point
-  ) : DirectionState()
+  data class Displayed(val routePoints: List<Point>, val origin: Point, val destination: Point) :
+      DirectionState()
 }
 
 /**
@@ -40,8 +35,4 @@ sealed class DirectionState {
  * @property origin Starting point of the direction
  * @property destination End point of the direction
  */
-data class DirectionInfo(
-  val origin: Point,
-  val destination: Point
-)
-
+data class DirectionInfo(val origin: Point, val destination: Point)

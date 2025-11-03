@@ -703,9 +703,8 @@ class MapScreenViewModel(
   }
 
   /**
-   * Toggle directions display for the given event.
-   * Uses a default user location (EPFL campus) for demo purposes.
-   * Next week: integrate with actual user location from GPS/profile.
+   * Toggle directions display for the given event. Uses a default user location (EPFL campus) for
+   * demo purposes. Next week: integrate with actual user location from GPS/profile.
    */
   fun toggleDirections(event: Event) {
     val currentState = directionViewModel.directionState
@@ -714,14 +713,9 @@ class MapScreenViewModel(
       directionViewModel.clearDirection()
     } else {
       // Default user location: EPFL (for demo purposes)
-      val userLocation = Point.fromLngLat(
-        MapConstants.DEFAULT_LONGITUDE,
-        MapConstants.DEFAULT_LATITUDE
-      )
-      val eventLocation = Point.fromLngLat(
-        event.location.longitude,
-        event.location.latitude
-      )
+      val userLocation =
+          Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+      val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
       directionViewModel.requestDirections(userLocation, eventLocation)
     }
