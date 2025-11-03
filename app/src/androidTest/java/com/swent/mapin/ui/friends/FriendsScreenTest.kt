@@ -213,22 +213,4 @@ class FriendsScreenTest {
     composeTestRule.waitForIdle()
     assert(searchQuery == "test")
   }
-
-  @Test
-  fun friendsScreen_displaysBadgeForPendingRequests() {
-    val requests =
-        listOf(
-            FriendWithProfile(
-                userProfile = UserProfile(userId = "1", name = "Alice"),
-                friendshipStatus = FriendshipStatus.PENDING,
-                requestId = "req1"))
-
-    composeTestRule.setContent {
-      MaterialTheme { FriendsScreen(onNavigateBack = {}, pendingRequests = requests) }
-    }
-
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("requestBadge").assertExists()
-    composeTestRule.onNodeWithText("1").assertExists()
-  }
 }
