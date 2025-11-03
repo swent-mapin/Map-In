@@ -2,125 +2,148 @@ package com.swent.mapin.ui.friends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.SearchResultWithStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// Assisted by AI
-
 /**
  * ViewModel for the Friends screen.
  *
- * Responsibilities:
- * - Expose UI state as StateFlow instances so composables can collect them.
- * - Provide intent-style functions to mutate state (selectTab, updateSearchQuery,
- *   accept/reject/remove/send actions).
- * - Perform any asynchronous work (e.g. searching, network calls) from the ViewModelScope to keep
- *   UI reactive.
+ * Manages the state and business logic for friend requests, friend lists, and user search
+ * functionality. Includes real-time updates via Firestore listeners.
  *
- * Notes for testing and usage:
- * - All public state is exposed as immutable StateFlow to prevent external mutation.
- * - Methods in this class should remain fast and non-blocking; longer operations should launch
- *   coroutines on viewModelScope and update the MutableStateFlow properties when results are ready.
+ * @property repo Repository for friend request operations.
+ * @property auth Firebase Auth instance for getting current user.
  */
-class FriendsViewModel : ViewModel() {
+class FriendsViewModel(
+    private val repo: FriendRequestRepository = FriendRequestRepository(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+) : ViewModel() {
 
-  // The currently selected tab. Exposed as StateFlow so the UI can react to changes.
-  // Default is FRIENDS tab.
+  private val currentUserId: String
+    get() = auth.currentUser?.uid ?: ""
+
   private val _selectedTab = MutableStateFlow(FriendsTab.FRIENDS)
+  /** Currently selected tab in the Friends screen. */
   val selectedTab: StateFlow<FriendsTab> = _selectedTab
 
-  // The list of friends with profile metadata used to render the friends list.
-  // Keep this as MutableStateFlow to allow updates; expose as immutable StateFlow.
   private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
+  /** List of the current user's friends. */
   val friends: StateFlow<List<FriendWithProfile>> = _friends
 
-  // Pending friend requests displayed in the Requests tab. Similar pattern as _friends.
   private val _pendingRequests = MutableStateFlow<List<FriendWithProfile>>(emptyList())
+  /** List of pending friend requests received by the current user. */
   val pendingRequests: StateFlow<List<FriendWithProfile>> = _pendingRequests
 
-  // Results produced by a search operation. Represents UserProfile items that can be added as
-  // friends.
-  private val _searchResults = MutableStateFlow<List<UserProfile>>(emptyList())
-  val searchResults: StateFlow<List<UserProfile>> = _searchResults
+  private val _searchResults = MutableStateFlow<List<SearchResultWithStatus>>(emptyList())
+  /** Search results for finding new friends. */
+  val searchResults: StateFlow<List<SearchResultWithStatus>> = _searchResults
 
-  // Current text query used for searching. UI writes to this via updateSearchQuery().
   private val _searchQuery = MutableStateFlow("")
+  /** Current search query text. */
   val searchQuery: StateFlow<String> = _searchQuery
 
+  init {
+    if (currentUserId.isNotEmpty()) {
+      startRealtimeObservers()
+    }
+  }
+
   /**
-   * Switch the currently selected tab. This is a simple synchronous state change and safe to call
-   * from the UI thread.
+   * Starts real-time Firestore listeners for friends and pending requests. Updates are pushed
+   * automatically when data changes in Firestore.
+   */
+  private fun startRealtimeObservers() {
+    // Observe friends in real-time
+    viewModelScope.launch {
+      repo.observeFriends(currentUserId).collect { friendsList -> _friends.value = friendsList }
+    }
+
+    // Observe pending requests in real-time
+    viewModelScope.launch {
+      repo.observePendingRequests(currentUserId).collect { requests ->
+        _pendingRequests.value = requests
+      }
+    }
+  }
+
+  /**
+   * Switches to the specified tab.
    *
-   * @param tab the FriendsTab to select
+   * @param tab The tab to select.
    */
   fun selectTab(tab: FriendsTab) {
     _selectedTab.value = tab
   }
 
+  /** Loads the current user's friends list from the repository. */
+  fun loadFriends() {
+    viewModelScope.launch { _friends.value = repo.getFriends(currentUserId) }
+  }
+
+  /** Loads pending friend requests from the repository. */
+  fun loadPendingRequests() {
+    viewModelScope.launch { _pendingRequests.value = repo.getPendingRequests(currentUserId) }
+  }
+
   /**
-   * Update the search query and trigger a search operation. Side effects:
-   * - sets _searchQuery immediately to reflect UI typing
-   * - launches a coroutine to perform the (potentially expensive) search and updates _searchResults
-   *   when complete.
+   * Updates the search query and triggers a new search.
    *
-   * Implementation detail:
-   * - performSearch is a suspend function; it runs on viewModelScope to keep UI responsive.
-   * - In a real app this would call a repository or network layer; here it calls performSearch()
-   *   which is a stub returning an empty list. Replace this with actual search logic as needed.
+   * @param query The search text entered by the user.
    */
   fun updateSearchQuery(query: String) {
     _searchQuery.value = query
-    // Simulate search logic
-    viewModelScope.launch { _searchResults.value = performSearch(query) }
+    viewModelScope.launch {
+      _searchResults.value = repo.searchUsersWithStatus(query, currentUserId)
+    }
   }
 
   /**
-   * Accept a pending friend request. Expected behavior (not implemented here):
-   * - call repository to accept the request on the backend
-   * - update local state (_pendingRequests and _friends) accordingly
+   * Accepts a pending friend request.
    *
-   * Keep this method lightweight; perform network or DB operations inside viewModelScope.
+   * @param requestId The ID of the request to accept.
    */
   fun acceptRequest(requestId: String) {
-    // Logic to accept a friend request
+    viewModelScope.launch {
+      if (repo.acceptFriendRequest(requestId)) {
+        loadFriends()
+        loadPendingRequests()
+      }
+    }
   }
 
   /**
-   * Reject a pending friend request. Expected behavior (not implemented here):
-   * - call repository to reject the request and remove it from _pendingRequests
+   * Rejects a pending friend request.
+   *
+   * @param requestId The ID of the request to reject.
    */
   fun rejectRequest(requestId: String) {
-    // Logic to reject a friend request
+    viewModelScope.launch { if (repo.rejectFriendRequest(requestId)) loadPendingRequests() }
   }
 
   /**
-   * Remove a user from the friends list. Expected behavior:
-   * - update backend via repository
-   * - update local _friends to remove the corresponding FriendWithProfile
+   * Removes a user from the friends list (bidirectional operation).
+   *
+   * @param userId The ID of the friend to remove.
    */
   fun removeFriend(userId: String) {
-    // Logic to remove a friend
+    viewModelScope.launch { if (repo.removeFriendship(currentUserId, userId)) loadFriends() }
   }
 
   /**
-   * Send a friend request to a user id. Expected behavior:
-   * - call send on repository/backend
-   * - optionally update UI state (e.g. reflect pending request or change button state)
+   * Sends a friend request to another user.
+   *
+   * @param userId The ID of the user to send a request to.
    */
   fun sendFriendRequest(userId: String) {
-    // Logic to send a friend request
-  }
-
-  /**
-   * Perform the actual search operation. This is a suspend function so it can perform I/O without
-   * blocking the main thread. Currently returns an empty list as a placeholder. Replace with
-   * repository call.
-   */
-  private suspend fun performSearch(query: String): List<UserProfile> {
-    // Simulate search results
-    return emptyList()
+    viewModelScope.launch {
+      if (repo.sendFriendRequest(currentUserId, userId)) {
+        _searchResults.value = repo.searchUsersWithStatus(_searchQuery.value, currentUserId)
+      }
+    }
   }
 }

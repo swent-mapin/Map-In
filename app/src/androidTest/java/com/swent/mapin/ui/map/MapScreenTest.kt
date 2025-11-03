@@ -351,14 +351,14 @@ class MapScreenTest {
         viewModel.onCenterCamera = { event, animate ->
           callbackExecuted = true
 
-          // Mark both branches as tested (we simulate both branches here)
+          // Simulate that both branches are exercised
           lowZoomBranchTested = true
           highZoomBranchTested = true
 
-          // Test: offset calculation - (screenHeightDpValue * 0.25) / 2
+          // Simulate offset calculation check
           offsetCalculated = true
 
-          // Test: location usage
+          // Verify the event location is used
           locationUsed = (event.location.longitude == testEvent.location.longitude)
 
           original(event, animate)
