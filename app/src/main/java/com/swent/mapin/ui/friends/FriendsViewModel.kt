@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
  * ViewModel for the Friends screen.
  *
  * Manages the state and business logic for friend requests, friend lists, and user search
- * functionality.
+ * functionality. Includes real-time updates via Firestore listeners.
  *
  * @property repo Repository for friend request operations.
  * @property auth Firebase Auth instance for getting current user.
@@ -49,8 +49,25 @@ class FriendsViewModel(
 
   init {
     if (currentUserId.isNotEmpty()) {
-      loadFriends()
-      loadPendingRequests()
+      startRealtimeObservers()
+    }
+  }
+
+  /**
+   * Starts real-time Firestore listeners for friends and pending requests. Updates are pushed
+   * automatically when data changes in Firestore.
+   */
+  private fun startRealtimeObservers() {
+    // Observe friends in real-time
+    viewModelScope.launch {
+      repo.observeFriends(currentUserId).collect { friendsList -> _friends.value = friendsList }
+    }
+
+    // Observe pending requests in real-time
+    viewModelScope.launch {
+      repo.observePendingRequests(currentUserId).collect { requests ->
+        _pendingRequests.value = requests
+      }
     }
   }
 
@@ -61,14 +78,6 @@ class FriendsViewModel(
    */
   fun selectTab(tab: FriendsTab) {
     _selectedTab.value = tab
-    // Refresh pending requests when switching to the Requests tab
-    if (tab == FriendsTab.REQUESTS) {
-      loadPendingRequests()
-    }
-    // Refresh friends list when switching to the Friends tab
-    if (tab == FriendsTab.FRIENDS) {
-      loadFriends()
-    }
   }
 
   /** Loads the current user's friends list from the repository. */
