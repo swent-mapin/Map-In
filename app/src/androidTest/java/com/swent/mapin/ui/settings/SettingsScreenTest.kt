@@ -112,7 +112,7 @@ class SettingsScreenTest {
   fun settingsScreen_displaysTransitLabelsToggle() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    composeTestRule.onNodeWithTag("streetNamesToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("streetNamesToggle").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Transit Labels").assertIsDisplayed()
     composeTestRule.onNodeWithText("Show transit and street labels").assertIsDisplayed()
   }
@@ -121,7 +121,7 @@ class SettingsScreenTest {
   fun settingsScreen_displays3DBuildingsToggle() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    composeTestRule.onNodeWithTag("threeDViewToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("threeDViewToggle").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("3D Buildings").assertIsDisplayed()
     composeTestRule.onNodeWithText("Enable 3D buildings on the map").assertIsDisplayed()
   }
@@ -132,7 +132,7 @@ class SettingsScreenTest {
   fun settingsScreen_displaysAccountSection() {
     composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
 
-    composeTestRule.onNodeWithText("Account").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Account").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -178,6 +178,7 @@ class SettingsScreenTest {
 
     composeTestRule
         .onNodeWithTag("streetNamesToggle_switch")
+        .performScrollTo()
         .assertIsDisplayed()
         .assertHasClickAction()
   }
@@ -188,6 +189,7 @@ class SettingsScreenTest {
 
     composeTestRule
         .onNodeWithTag("threeDViewToggle_switch")
+        .performScrollTo()
         .assertIsDisplayed()
         .assertHasClickAction()
   }
