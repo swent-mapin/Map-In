@@ -487,7 +487,6 @@ private fun MapLayers(
     CreateHeatmapLayer(heatmapSource)
   }
 
-  if (viewModel.showHeatmap) {
   // Disable clustering when a pin is selected to prevent it from being absorbed
   val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
 
