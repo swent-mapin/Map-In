@@ -27,6 +27,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -158,11 +160,34 @@ fun MapScreen(
   val isDarkTheme = isSystemInDarkTheme()
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
+  // Get map preferences from PreferencesRepository
+  val context = LocalContext.current
+  val preferencesRepository = remember {
+    com.swent.mapin.model.PreferencesRepositoryProvider.getInstance(context)
+  }
+  val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
+  val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
+  val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
+  val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = false)
+
   // Adjust POI labels alongside our custom annotations
   val standardStyleState = rememberStandardStyleState {
     configurationsState.apply {
       this.lightPreset = lightPreset
-      showPointOfInterestLabels = BooleanValue(true) // turn off if needed
+      showPointOfInterestLabels = BooleanValue(showPOIs)
+      showRoadLabels = BooleanValue(showRoadNumbers)
+      showTransitLabels = BooleanValue(showStreetNames)
+      show3dObjects = BooleanValue(enable3DView)
+    }
+  }
+
+  // Update style configuration when preferences change
+  LaunchedEffect(showPOIs, showRoadNumbers, showStreetNames, enable3DView) {
+    standardStyleState.configurationsState.apply {
+      showPointOfInterestLabels = BooleanValue(showPOIs)
+      showRoadLabels = BooleanValue(showRoadNumbers)
+      showTransitLabels = BooleanValue(showStreetNames)
+      show3dObjects = BooleanValue(enable3DView)
     }
   }
 

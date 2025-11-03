@@ -21,6 +21,7 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
+import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -31,6 +32,7 @@ import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import java.util.UUID
 import kotlin.math.abs
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -202,6 +204,9 @@ class MapScreenViewModel(
     get() = _avatarUrl
 
   init {
+    // Load map style preference
+    loadMapStylePreference()
+
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
     // Preload events so the form has immediate data
@@ -216,6 +221,25 @@ class MapScreenViewModel(
     loadUserProfile()
 
     registerAuthStateListener()
+  }
+
+  /** Load map style preference from DataStore */
+  private fun loadMapStylePreference() {
+    viewModelScope.launch {
+      try {
+        val preferencesRepository = PreferencesRepositoryProvider.getInstance(applicationContext)
+        // Use first() to get the initial value only, not continuously observe
+        val style = preferencesRepository.mapStyleFlow.first()
+        _mapStyle =
+            when (style.lowercase()) {
+              "satellite" -> MapStyle.SATELLITE
+              else -> MapStyle.STANDARD
+            }
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to load map style preference: ${e.message}")
+        _mapStyle = MapStyle.STANDARD
+      }
+    }
   }
 
   /**
@@ -398,6 +422,21 @@ class MapScreenViewModel(
 
   fun setMapStyle(style: MapStyle) {
     _mapStyle = style
+    // Persist the user's choice to DataStore
+    viewModelScope.launch {
+      try {
+        val preferencesRepository = PreferencesRepositoryProvider.getInstance(applicationContext)
+        val styleString =
+            when (style) {
+              MapStyle.SATELLITE -> "satellite"
+              MapStyle.STANDARD -> "standard"
+              MapStyle.HEATMAP -> "standard" // Heatmap is a temporary overlay, save as standard
+            }
+        preferencesRepository.setMapStyle(styleString)
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to save map style preference: ${e.message}")
+      }
+    }
   }
 
   fun clearError() {
