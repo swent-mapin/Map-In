@@ -2,6 +2,7 @@ package com.swent.mapin.ui.friends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.SearchResultWithStatus
@@ -16,12 +17,15 @@ import kotlinx.coroutines.launch
  * functionality.
  *
  * @property repo Repository for friend request operations.
- * @property currentUserId The current user's ID.
+ * @property auth Firebase Auth instance for getting current user.
  */
 class FriendsViewModel(
     private val repo: FriendRequestRepository = FriendRequestRepository(),
-    private val currentUserId: String = ""
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
+
+  private val currentUserId: String
+    get() = auth.currentUser?.uid ?: ""
 
   private val _selectedTab = MutableStateFlow(FriendsTab.FRIENDS)
   /** Currently selected tab in the Friends screen. */
@@ -57,6 +61,14 @@ class FriendsViewModel(
    */
   fun selectTab(tab: FriendsTab) {
     _selectedTab.value = tab
+    // Refresh pending requests when switching to the Requests tab
+    if (tab == FriendsTab.REQUESTS) {
+      loadPendingRequests()
+    }
+    // Refresh friends list when switching to the Friends tab
+    if (tab == FriendsTab.FRIENDS) {
+      loadFriends()
+    }
   }
 
   /** Loads the current user's friends list from the repository. */
