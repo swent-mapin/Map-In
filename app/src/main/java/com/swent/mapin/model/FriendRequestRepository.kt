@@ -1,6 +1,10 @@
 package com.swent.mapin.model
 
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -240,5 +244,97 @@ class FriendRequestRepository(
     } catch (_: Exception) {
       null
     }
+  }
+
+  /**
+   * Observes friends list in real-time using Firestore listeners. Automatically updates when
+   * friendships are added, removed, or modified.
+   *
+   * @param userId The user ID to observe friends for.
+   * @return Flow of friend lists that updates in real-time.
+   */
+  fun observeFriends(userId: String): Flow<List<FriendWithProfile>> = callbackFlow {
+    val listeners = mutableListOf<com.google.firebase.firestore.ListenerRegistration>()
+
+    // Helper function to fetch and send updated data
+    suspend fun refreshAndSend() {
+      try {
+        val friends = getFriends(userId)
+        trySend(friends)
+      } catch (e: Exception) {
+        close(e)
+      }
+    }
+
+    // Listen to sent friend requests (where user is fromUserId)
+    val sentListener =
+        firestore
+            .collection(COLLECTION)
+            .whereEqualTo("fromUserId", userId)
+            .whereEqualTo("status", FriendshipStatus.ACCEPTED.name)
+            .addSnapshotListener { _, error ->
+              if (error != null) {
+                close(error)
+                return@addSnapshotListener
+              }
+              // Trigger update when sent requests change
+              launch { refreshAndSend() }
+            }
+
+    // Listen to received friend requests (where user is toUserId)
+    val receivedListener =
+        firestore
+            .collection(COLLECTION)
+            .whereEqualTo("toUserId", userId)
+            .whereEqualTo("status", FriendshipStatus.ACCEPTED.name)
+            .addSnapshotListener { _, error ->
+              if (error != null) {
+                close(error)
+                return@addSnapshotListener
+              }
+              // Trigger update when received requests change
+              launch { refreshAndSend() }
+            }
+
+    listeners.add(sentListener)
+    listeners.add(receivedListener)
+
+    // Send initial data
+    refreshAndSend()
+
+    awaitClose { listeners.forEach { it.remove() } }
+  }
+
+  /**
+   * Observes pending friend requests in real-time using Firestore listeners. Automatically updates
+   * when requests are sent, accepted, or rejected.
+   *
+   * @param userId The user ID to observe pending requests for.
+   * @return Flow of pending request lists that updates in real-time.
+   */
+  fun observePendingRequests(userId: String): Flow<List<FriendWithProfile>> = callbackFlow {
+    val listener =
+        firestore
+            .collection(COLLECTION)
+            .whereEqualTo("toUserId", userId)
+            .whereEqualTo("status", FriendshipStatus.PENDING.name)
+            .addSnapshotListener { _, error ->
+              if (error != null) {
+                close(error)
+                return@addSnapshotListener
+              }
+
+              // Fetch updated data and send
+              launch {
+                try {
+                  val pendingRequests = getPendingRequests(userId)
+                  trySend(pendingRequests)
+                } catch (e: Exception) {
+                  close(e)
+                }
+              }
+            }
+
+    awaitClose { listener.remove() }
   }
 }
