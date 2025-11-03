@@ -15,7 +15,10 @@ graph TB
         D[MapScreen]
         E[ProfileScreen]
         F[MemoryFormScreen]
-        G[UI Components]
+        G[AddEventScreen]
+        H1[FriendsScreen]
+        I1[SettingsScreen]
+        J1[UI Components]
     end
 
     subgraph "ViewModel Layer"
@@ -24,6 +27,9 @@ graph TB
         J[ProfileViewModel]
         K[EventViewModel]
         L[LocationViewModel]
+        M1[FriendsViewModel]
+        N1[SettingsViewModel]
+        O1[FilterSectionViewModel]
     end
 
     subgraph "Model Layer - Repositories"
@@ -34,10 +40,10 @@ graph TB
     end
 
     subgraph "Repository Implementations"
-        M1[EventRepositoryFirestore]
-        M2[LocalEventRepository]
-        N1[MemoryRepositoryFirestore]
-        N2[LocalMemoryRepository]
+        M2[EventRepositoryFirestore]
+        M3[LocalEventRepository]
+        N2[MemoryRepositoryFirestore]
+        N3[LocalMemoryRepository]
         P1[NominatimLocationRepository]
     end
 
@@ -46,6 +52,7 @@ graph TB
         R[Memory]
         S[UserProfile]
         T[Location]
+        U1[FriendRequest]
     end
 
     subgraph "External Services"
@@ -68,8 +75,12 @@ graph TB
     C --> H
     D --> I
     D --> K
+    D --> O1
     E --> J
     F --> I
+    G --> K
+    H1 --> M1
+    I1 --> N1
 
     %% ViewModels to Repositories
     H --> U
@@ -79,17 +90,19 @@ graph TB
     J --> O
     K --> M
     L --> P
+    M1 --> O
+    N1 --> O
 
     %% Repositories to Implementations
-    M -.-> M1
     M -.-> M2
-    N -.-> N1
+    M -.-> M3
     N -.-> N2
+    N -.-> N3
     P -.-> P1
 
     %% Repository Implementations to External Services
-    M1 --> V
-    N1 --> V
+    M2 --> V
+    N2 --> V
     O --> V
     P1 --> Z
     P1 --> AC
@@ -121,6 +134,7 @@ graph TB
     I --> Q
     I --> R
     J --> S
+    M1 --> U1
 
     style A fill:#e1f5ff
     style B fill:#e1f5ff
@@ -129,22 +143,28 @@ graph TB
     style E fill:#e1f5ff
     style F fill:#e1f5ff
     style G fill:#e1f5ff
+    style H1 fill:#e1f5ff
+    style I1 fill:#e1f5ff
+    style J1 fill:#e1f5ff
     
     style H fill:#fff4e1
     style I fill:#fff4e1
     style J fill:#fff4e1
     style K fill:#fff4e1
     style L fill:#fff4e1
+    style M1 fill:#fff4e1
+    style N1 fill:#fff4e1
+    style O1 fill:#fff4e1
     
     style M fill:#e8f5e9
     style N fill:#e8f5e9
     style O fill:#e8f5e9
     style P fill:#e8f5e9
     
-    style M1 fill:#c8e6c9
     style M2 fill:#c8e6c9
-    style N1 fill:#c8e6c9
+    style M3 fill:#c8e6c9
     style N2 fill:#c8e6c9
+    style N3 fill:#c8e6c9
     style P1 fill:#c8e6c9
     
     style U fill:#ffebee
@@ -168,7 +188,10 @@ The UI layer is built with **Jetpack Compose** and follows Material 3 design gui
   - `MapScreen`: Main screen displaying the interactive map with events and memories
   - `ProfileScreen`: User profile management
   - `MemoryFormScreen`: Form to create and add memories to events
-- **UI Components**: Reusable composables like dialogs, bottom sheets, location dropdowns, etc.
+  - `AddEventScreen`: Dedicated screen for creating and editing events
+  - `FriendsScreen`: Social features for managing friends and friend requests
+  - `SettingsScreen`: App settings and preferences
+- **UI Components**: Reusable composables like dialogs, bottom sheets, location dropdowns, filters, etc.
 
 ### 2. ViewModel Layer
 ViewModels manage UI state and business logic, following the MVVM pattern.
@@ -183,6 +206,9 @@ ViewModels manage UI state and business logic, following the MVVM pattern.
 - **ProfileViewModel**: Manages user profile data and updates
 - **EventViewModel**: Handles event creation and editing
 - **LocationViewModel**: Manages location search and geocoding
+- **FriendsViewModel**: Manages friend list, friend requests, and social interactions
+- **SettingsViewModel**: Handles app settings and user preferences
+- **FilterSectionViewModel**: Manages event filtering on the map (tags, dates, etc.)
 
 ### 3. Model Layer - Repositories
 Repositories provide a clean API for data access and abstract the data source.
@@ -204,6 +230,7 @@ Plain Kotlin data classes representing domain entities:
 - **Memory**: Represents a memory/photo attached to an event
 - **UserProfile**: User information and preferences
 - **Location**: Geographic location with coordinates
+- **FriendRequest**: Represents friend requests between users (status: pending, accepted, rejected)
 
 ### 5. External Services
 

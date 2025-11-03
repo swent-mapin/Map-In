@@ -28,6 +28,8 @@ graph TB
             EVENT_DETAIL[EventDetailSheet.kt]
             BOTTOM_SHEET[BottomSheetContent.kt]
             MAP_STYLE[MapStyleSelector.kt]
+            FILTER_SEC[FilterSection.kt]
+            FILTER_VM[FilterSectionViewModel.kt]
             DIALOGS[UserPickerDialog.kt<br/>EventPickerDialog.kt<br/>ShareEventDialog.kt]
         end
         
@@ -36,11 +38,25 @@ graph TB
             PROF_VM[ProfileViewModel.kt]
         end
         
-        subgraph "ui/components/"
+        subgraph "ui/event/"
+            ADD_EVENT_SCREEN[AddEventScreen.kt]
             EVENT_VM[EventViewModel.kt]
-            ADD_EVENT[AddEventPopUp.kt]
             LOC_DROP[LocationDropDownMenu.kt]
-            COMP_UTILS[AddEventUtils.kt<br/>BottomSheet.kt]
+            EVENT_UTILS[AddEventUtils.kt]
+        end
+        
+        subgraph "ui/friends/"
+            FRIENDS_UI[FriendsScreen.kt]
+            FRIENDS_VM[FriendsViewModel.kt]
+        end
+        
+        subgraph "ui/settings/"
+            SETTINGS_UI[SettingsScreen.kt]
+            SETTINGS_VM[SettingsViewModel.kt]
+        end
+        
+        subgraph "ui/components/"
+            COMP_UTILS[BottomSheet.kt]
         end
         
         subgraph "model/event/"
@@ -62,6 +78,7 @@ graph TB
         subgraph "model/"
             USER_MODEL[UserProfile.kt<br/>Data Class]
             USER_REPO[UserProfileRepository.kt]
+            FRIEND_REQ[FriendRequest.kt<br/>Data Class]
             LOC_MODEL[Location.kt<br/>Data Class]
             LOC_REPO[LocationRepository.kt<br/>Interface]
             LOC_VM[LocationViewModel.kt]
@@ -106,6 +123,8 @@ graph TB
     NAV --> AUTH_UI
     NAV --> MAP_UI
     NAV --> PROF_UI
+    NAV --> FRIENDS_UI
+    NAV --> SETTINGS_UI
     
     %% Auth flows
     AUTH_UI --> AUTH_VM
@@ -117,9 +136,13 @@ graph TB
     MAP_UI --> EVENT_DETAIL
     MAP_UI --> BOTTOM_SHEET
     MAP_UI --> MAP_STYLE
+    MAP_UI --> FILTER_SEC
     MAP_UI --> DIALOGS
     MAP_UI --> MAPBOX
     MAP_UI --> GMAPS
+    
+    %% Filter flows
+    FILTER_SEC --> FILTER_VM
     
     %% MapScreenViewModel flows
     MAP_VM --> EVENT_REPO
@@ -132,13 +155,21 @@ graph TB
     PROF_VM --> USER_REPO
     PROF_VM --> FB_STOR
     
-    %% Event Component flows
-    MAP_UI --> ADD_EVENT
-    ADD_EVENT --> EVENT_VM
-    ADD_EVENT --> LOC_DROP
+    %% Event Screen flows
+    ADD_EVENT_SCREEN --> EVENT_VM
+    ADD_EVENT_SCREEN --> LOC_DROP
     EVENT_VM --> EVENT_REPO
     EVENT_VM --> FB_STOR
     EVENT_VM --> IMG_HELP
+    
+    %% Friends flows
+    FRIENDS_UI --> FRIENDS_VM
+    FRIENDS_VM --> USER_REPO
+    FRIENDS_VM --> FRIEND_REQ
+    
+    %% Settings flows
+    SETTINGS_UI --> SETTINGS_VM
+    SETTINGS_VM --> USER_REPO
     
     %% Location flows
     LOC_DROP --> LOC_VM
@@ -184,12 +215,18 @@ graph TB
     style MAP_UI fill:#e1f5ff,stroke:#01579b
     style PROF_UI fill:#e1f5ff,stroke:#01579b
     style MEMORY_FORM fill:#e1f5ff,stroke:#01579b
+    style ADD_EVENT_SCREEN fill:#e1f5ff,stroke:#01579b
+    style FRIENDS_UI fill:#e1f5ff,stroke:#01579b
+    style SETTINGS_UI fill:#e1f5ff,stroke:#01579b
     
     style AUTH_VM fill:#fff4e1,stroke:#e65100
     style MAP_VM fill:#fff4e1,stroke:#e65100
     style PROF_VM fill:#fff4e1,stroke:#e65100
     style EVENT_VM fill:#fff4e1,stroke:#e65100
     style LOC_VM fill:#fff4e1,stroke:#e65100
+    style FRIENDS_VM fill:#fff4e1,stroke:#e65100
+    style SETTINGS_VM fill:#fff4e1,stroke:#e65100
+    style FILTER_VM fill:#fff4e1,stroke:#e65100
     
     style EVENT_REPO fill:#e8f5e9,stroke:#1b5e20
     style MEM_REPO fill:#e8f5e9,stroke:#1b5e20
@@ -217,7 +254,7 @@ com.swent.mapin/
 ├── MainActivity.kt                      # App entry point
 ├── navigation/
 │   ├── AppNavHost.kt                    # Navigation controller
-│   └── Routes.kt                        # Navigation routes
+│   └── Routes.kt                        # Navigation routes (Auth, Map, Profile, Friends, Settings)
 ├── ui/
 │   ├── auth/
 │   │   ├── SignInScreen.kt              # Authentication UI
@@ -228,16 +265,26 @@ com.swent.mapin/
 │   │   ├── MemoryFormScreen.kt          # Memory creation form
 │   │   ├── EventDetailSheet.kt          # Event details display
 │   │   ├── BottomSheetContent.kt        # Bottom sheet UI
+│   │   ├── FilterSection.kt             # Event filtering UI
+│   │   ├── FilterSectionViewModel.kt    # Filter state management
 │   │   ├── MapStyleSelector.kt          # Map style chooser
 │   │   └── [Dialogs].kt                 # Various dialogs
 │   ├── profile/
 │   │   ├── ProfileScreen.kt             # User profile UI
 │   │   └── ProfileViewModel.kt          # Profile state management
-│   ├── components/
+│   ├── event/
+│   │   ├── AddEventScreen.kt            # Event creation/editing screen
 │   │   ├── EventViewModel.kt            # Event creation logic
-│   │   ├── AddEventPopUp.kt             # Event creation dialog
 │   │   ├── LocationDropDownMenu.kt      # Location search component
-│   │   └── [Utils].kt                   # Reusable components
+│   │   └── AddEventUtils.kt             # Event utilities
+│   ├── friends/
+│   │   ├── FriendsScreen.kt             # Friends list UI
+│   │   └── FriendsViewModel.kt          # Friends state management
+│   ├── settings/
+│   │   ├── SettingsScreen.kt            # Settings UI
+│   │   └── SettingsViewModel.kt         # Settings state management
+│   ├── components/
+│   │   └── BottomSheet.kt               # Reusable bottom sheet component
 │   └── theme/
 │       ├── Theme.kt                     # Material theme
 │       ├── Color.kt                     # Color palette
@@ -257,6 +304,7 @@ com.swent.mapin/
 │   │   └── MemoryRepositoryProvider.kt  # Repository provider
 │   ├── UserProfile.kt                   # User data class
 │   ├── UserProfileRepository.kt         # User data access
+│   ├── FriendRequest.kt                 # Friend request data class
 │   ├── Location.kt                      # Location data class
 │   ├── LocationRepository.kt            # Geocoding interface
 │   ├── LocationViewModel.kt             # Location search logic

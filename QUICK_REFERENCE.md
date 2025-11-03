@@ -36,16 +36,29 @@ app/src/main/java/com/swent/mapin/
 │   ├── map/                       # Map screens
 │   │   ├── MapScreen.kt           # Main map interface
 │   │   ├── MapScreenViewModel.kt
-│   │   └── MemoryFormScreen.kt    # Memory creation
+│   │   ├── MemoryFormScreen.kt    # Memory creation
+│   │   ├── FilterSection.kt       # Event filtering
+│   │   └── FilterSectionViewModel.kt
 │   │
 │   ├── profile/                   # Profile screens
 │   │   ├── ProfileScreen.kt
 │   │   └── ProfileViewModel.kt
 │   │
-│   ├── components/                # Reusable UI components
+│   ├── event/                     # Event screens
+│   │   ├── AddEventScreen.kt      # Create/edit events
 │   │   ├── EventViewModel.kt
-│   │   ├── AddEventPopUp.kt
 │   │   └── LocationDropDownMenu.kt
+│   │
+│   ├── friends/                   # Friends screens
+│   │   ├── FriendsScreen.kt       # Friends list
+│   │   └── FriendsViewModel.kt
+│   │
+│   ├── settings/                  # Settings screens
+│   │   ├── SettingsScreen.kt
+│   │   └── SettingsViewModel.kt
+│   │
+│   ├── components/                # Reusable UI components
+│   │   └── BottomSheet.kt
 │   │
 │   └── theme/                     # Material theme
 │       ├── Theme.kt
@@ -69,6 +82,7 @@ app/src/main/java/com/swent/mapin/
 │   │
 │   ├── UserProfile.kt             # User data class
 │   ├── UserProfileRepository.kt   # User repository
+│   ├── FriendRequest.kt           # Friend request data class
 │   ├── Location.kt                # Location data class
 │   ├── LocationRepository.kt      # Geocoding interface
 │   ├── LocationViewModel.kt       # Location search logic
@@ -90,6 +104,9 @@ app/src/main/java/com/swent/mapin/
 | `MapScreen` | Interactive map with events | `MapScreenViewModel` |
 | `ProfileScreen` | User profile management | `ProfileViewModel` |
 | `MemoryFormScreen` | Create memories for events | `MapScreenViewModel` |
+| `AddEventScreen` | Create and edit events | `EventViewModel` |
+| `FriendsScreen` | Manage friends and requests | `FriendsViewModel` |
+| `SettingsScreen` | App settings and preferences | `SettingsViewModel` |
 
 ### ViewModels (Business Logic)
 | ViewModel | Manages | Key Dependencies |
@@ -99,6 +116,9 @@ app/src/main/java/com/swent/mapin/
 | `ProfileViewModel` | User profile data | UserProfileRepository |
 | `EventViewModel` | Event creation | EventRepository |
 | `LocationViewModel` | Location search | LocationRepository |
+| `FriendsViewModel` | Friend list, requests | UserProfileRepository |
+| `SettingsViewModel` | Settings, preferences | UserProfileRepository |
+| `FilterSectionViewModel` | Event filters (tags, dates) | None (UI state) |
 
 ### Repositories (Data Access)
 | Repository | Interface | Implementations | Data Source |
@@ -114,6 +134,7 @@ app/src/main/java/com/swent/mapin/
 | `Event` | Event information | uid, title, location, date, participants |
 | `Memory` | User memories | uid, eventId, mediaUrls, taggedUsers |
 | `UserProfile` | User data | userId, name, bio, hobbies, events |
+| `FriendRequest` | Friend requests | senderId, receiverId, status |
 | `Location` | Geographic location | name, latitude, longitude |
 
 ## Data Flow
@@ -282,11 +303,29 @@ Launch App
   
 MapScreen
   ├─ Profile Button → ProfileScreen
+  │   ├─ Settings Button → SettingsScreen
+  │   ├─ Friends Button → FriendsScreen
   │   └─ Sign Out → SignInScreen
-  ├─ Long Press → AddEventPopUp
+  ├─ Add Event → AddEventScreen
   ├─ Marker Tap → EventDetailSheet
   │   └─ Add Memory → MemoryFormScreen
+  ├─ Filter Button → FilterSection
   └─ Search → LocationDropDown
+
+ProfileScreen
+  ├─ Settings → SettingsScreen
+  ├─ Friends → FriendsScreen
+  └─ Back → MapScreen
+
+FriendsScreen
+  ├─ Send Friend Request
+  ├─ Accept/Reject Requests
+  └─ Back → ProfileScreen
+
+SettingsScreen
+  ├─ Change Preferences
+  ├─ Manage Account
+  └─ Back → ProfileScreen
 ```
 
 ## State Management
