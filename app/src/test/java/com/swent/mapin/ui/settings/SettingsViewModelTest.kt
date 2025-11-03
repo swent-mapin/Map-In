@@ -1,27 +1,18 @@
 package com.swent.mapin.ui.settings
 
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
-import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.ListenerRegistration
+import com.swent.mapin.model.PreferencesRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -35,6 +26,7 @@ class SettingsViewModelTest {
   private lateinit var viewModel: SettingsViewModel
   private lateinit var mockAuth: FirebaseAuth
   private lateinit var mockFirestore: FirebaseFirestore
+  private lateinit var mockPreferencesRepository: PreferencesRepository
   private val testDispatcher = UnconfinedTestDispatcher()
 
   @Before
@@ -42,23 +34,30 @@ class SettingsViewModelTest {
     // Set the main dispatcher for coroutines
     Dispatchers.setMain(testDispatcher)
 
-    // Mock Firebase dependencies
+    // Mock dependencies
     mockAuth = mockk(relaxed = true)
     mockFirestore = mockk(relaxed = true)
+    mockPreferencesRepository = mockk(relaxed = true)
 
-    // Mock FirebaseAuth.getInstance()
-    mockkStatic(FirebaseAuth::class)
-    every { FirebaseAuth.getInstance() } returns mockAuth
-
-    // Mock auth.currentUser to return null (so loadMapPreferences doesn't try to access Firestore)
+    // Mock auth.currentUser to return null
     every { mockAuth.currentUser } returns null
 
-    // Mock FirebaseFirestore.getInstance()
-    mockkStatic(FirebaseFirestore::class)
-    every { FirebaseFirestore.getInstance() } returns mockFirestore
+    // Mock PreferencesRepository flows with default values
+    every { mockPreferencesRepository.themeModeFlow } returns flowOf("system")
+    every { mockPreferencesRepository.showPOIsFlow } returns flowOf(true)
+    every { mockPreferencesRepository.showRoadNumbersFlow } returns flowOf(true)
+    every { mockPreferencesRepository.showStreetNamesFlow } returns flowOf(true)
+    every { mockPreferencesRepository.enable3DViewFlow } returns flowOf(false)
+
+    // Mock suspend functions
+    coEvery { mockPreferencesRepository.setThemeMode(any()) } returns Unit
+    coEvery { mockPreferencesRepository.setShowPOIs(any()) } returns Unit
+    coEvery { mockPreferencesRepository.setShowRoadNumbers(any()) } returns Unit
+    coEvery { mockPreferencesRepository.setShowStreetNames(any()) } returns Unit
+    coEvery { mockPreferencesRepository.setEnable3DView(any()) } returns Unit
 
     // Create ViewModel with mocked dependencies
-    viewModel = SettingsViewModel(mockAuth, mockFirestore)
+    viewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
   }
 
   @After
@@ -175,7 +174,7 @@ class SettingsViewModelTest {
   @Test
   fun signOut_callsAuthSignOut() {
     viewModel.signOut()
-    io.mockk.verify { mockAuth.signOut() }
+    verify { mockAuth.signOut() }
   }
 
   @Test
@@ -346,19 +345,231 @@ class SettingsViewModelTest {
 
   @Test
   fun viewModelCreation_withMockedAuth_succeeds() {
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
+    val newViewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
     assertEquals(MapPreferences(), newViewModel.mapPreferences.value)
   }
 
   @Test
   fun multipleViewModels_haveIndependentState() {
-    val viewModel2 = SettingsViewModel(mockAuth, mockFirestore)
+    val viewModel2 = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
 
     viewModel.updateShowPOIs(false)
     viewModel2.updateShowPOIs(true)
 
     assertEquals(false, viewModel.mapPreferences.value.showPOIs)
     assertEquals(true, viewModel2.mapPreferences.value.showPOIs)
+  }
+
+  // ===== Theme Mode Tests =====
+
+  @Test
+  fun themeMode_initialValueIsSystem() {
+    assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
+  }
+
+  @Test
+  fun updateThemeMode_toLight_changesState() {
+    viewModel.updateThemeMode(ThemeMode.LIGHT)
+    assertEquals(ThemeMode.LIGHT, viewModel.themeMode.value)
+  }
+
+  @Test
+  fun updateThemeMode_toDark_changesState() {
+    viewModel.updateThemeMode(ThemeMode.DARK)
+    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
+  }
+
+  @Test
+  fun updateThemeMode_toSystem_changesState() {
+    viewModel.updateThemeMode(ThemeMode.LIGHT)
+    viewModel.updateThemeMode(ThemeMode.SYSTEM)
+    assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
+  }
+
+  @Test
+  fun updateThemeMode_callsPreferencesRepository() {
+    viewModel.updateThemeMode(ThemeMode.DARK)
+    coVerify { mockPreferencesRepository.setThemeMode("dark") }
+  }
+
+  @Test
+  fun updateThemeMode_multiple_eachCallsSave() {
+    viewModel.updateThemeMode(ThemeMode.LIGHT)
+    viewModel.updateThemeMode(ThemeMode.DARK)
+    viewModel.updateThemeMode(ThemeMode.SYSTEM)
+
+    coVerify { mockPreferencesRepository.setThemeMode("light") }
+    coVerify { mockPreferencesRepository.setThemeMode("dark") }
+    coVerify { mockPreferencesRepository.setThemeMode("system") }
+  }
+
+  // ===== ThemeMode Enum Tests =====
+
+  @Test
+  fun themeMode_fromString_light() {
+    assertEquals(ThemeMode.LIGHT, ThemeMode.fromString("light"))
+    assertEquals(ThemeMode.LIGHT, ThemeMode.fromString("Light"))
+    assertEquals(ThemeMode.LIGHT, ThemeMode.fromString("LIGHT"))
+  }
+
+  @Test
+  fun themeMode_fromString_dark() {
+    assertEquals(ThemeMode.DARK, ThemeMode.fromString("dark"))
+    assertEquals(ThemeMode.DARK, ThemeMode.fromString("Dark"))
+    assertEquals(ThemeMode.DARK, ThemeMode.fromString("DARK"))
+  }
+
+  @Test
+  fun themeMode_fromString_system() {
+    assertEquals(ThemeMode.SYSTEM, ThemeMode.fromString("system"))
+    assertEquals(ThemeMode.SYSTEM, ThemeMode.fromString("System"))
+    assertEquals(ThemeMode.SYSTEM, ThemeMode.fromString("anything"))
+  }
+
+  @Test
+  fun themeMode_toDisplayString() {
+    assertEquals("Light", ThemeMode.LIGHT.toDisplayString())
+    assertEquals("Dark", ThemeMode.DARK.toDisplayString())
+    assertEquals("System", ThemeMode.SYSTEM.toDisplayString())
+  }
+
+  @Test
+  fun themeMode_toStorageString() {
+    assertEquals("light", ThemeMode.LIGHT.toStorageString())
+    assertEquals("dark", ThemeMode.DARK.toStorageString())
+    assertEquals("system", ThemeMode.SYSTEM.toStorageString())
+  }
+
+  // ===== PreferencesRepository Integration Tests =====
+
+  @Test
+  fun updateShowPOIs_callsPreferencesRepository() {
+    viewModel.updateShowPOIs(false)
+    coVerify { mockPreferencesRepository.setShowPOIs(false) }
+  }
+
+  @Test
+  fun updateShowRoadNumbers_callsPreferencesRepository() {
+    viewModel.updateShowRoadNumbers(false)
+    coVerify { mockPreferencesRepository.setShowRoadNumbers(false) }
+  }
+
+  @Test
+  fun updateShowStreetNames_callsPreferencesRepository() {
+    viewModel.updateShowStreetNames(false)
+    coVerify { mockPreferencesRepository.setShowStreetNames(false) }
+  }
+
+  @Test
+  fun updateEnable3DView_callsPreferencesRepository() {
+    viewModel.updateEnable3DView(true)
+    coVerify { mockPreferencesRepository.setEnable3DView(true) }
+  }
+
+  // ===== Error Handling Tests =====
+
+  @Test
+  fun updateThemeMode_whenRepositoryThrows_handlesError() {
+    coEvery { mockPreferencesRepository.setThemeMode(any()) } throws Exception("Test error")
+
+    viewModel.updateThemeMode(ThemeMode.DARK)
+
+    // Should still update state despite error
+    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
+    // Error message should be set
+    assertEquals("Failed to update theme: Test error", viewModel.errorMessage.value)
+  }
+
+  @Test
+  fun updateShowPOIs_whenRepositoryThrows_handlesError() {
+    coEvery { mockPreferencesRepository.setShowPOIs(any()) } throws Exception("Test error")
+
+    viewModel.updateShowPOIs(false)
+
+    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
+    assertEquals("Failed to update POI setting: Test error", viewModel.errorMessage.value)
+  }
+
+  @Test
+  fun updateShowRoadNumbers_whenRepositoryThrows_handlesError() {
+    coEvery { mockPreferencesRepository.setShowRoadNumbers(any()) } throws Exception("Test error")
+
+    viewModel.updateShowRoadNumbers(false)
+
+    assertEquals(false, viewModel.mapPreferences.value.showRoadNumbers)
+    assertEquals("Failed to update road numbers setting: Test error", viewModel.errorMessage.value)
+  }
+
+  @Test
+  fun updateShowStreetNames_whenRepositoryThrows_handlesError() {
+    coEvery { mockPreferencesRepository.setShowStreetNames(any()) } throws Exception("Test error")
+
+    viewModel.updateShowStreetNames(false)
+
+    assertEquals(false, viewModel.mapPreferences.value.showStreetNames)
+    assertEquals("Failed to update street names setting: Test error", viewModel.errorMessage.value)
+  }
+
+  @Test
+  fun updateEnable3DView_whenRepositoryThrows_handlesError() {
+    coEvery { mockPreferencesRepository.setEnable3DView(any()) } throws Exception("Test error")
+
+    viewModel.updateEnable3DView(true)
+
+    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
+    assertEquals("Failed to update 3D view setting: Test error", viewModel.errorMessage.value)
+  }
+
+  // ===== Loading State from Flows Tests =====
+
+  @Test
+  fun initialization_loadsThemeModeFromFlow() {
+    every { mockPreferencesRepository.themeModeFlow } returns flowOf("dark")
+
+    val newViewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
+
+    assertEquals(ThemeMode.DARK, newViewModel.themeMode.value)
+  }
+
+  @Test
+  fun initialization_loadsMapPreferencesFromFlows() {
+    every { mockPreferencesRepository.showPOIsFlow } returns flowOf(false)
+    every { mockPreferencesRepository.showRoadNumbersFlow } returns flowOf(false)
+    every { mockPreferencesRepository.showStreetNamesFlow } returns flowOf(false)
+    every { mockPreferencesRepository.enable3DViewFlow } returns flowOf(true)
+
+    val newViewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
+
+    // Give flows time to emit
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(false, newViewModel.mapPreferences.value.showPOIs)
+    assertEquals(false, newViewModel.mapPreferences.value.showRoadNumbers)
+    assertEquals(false, newViewModel.mapPreferences.value.showStreetNames)
+    assertEquals(true, newViewModel.mapPreferences.value.enable3DView)
+  }
+
+  // ===== Combined State Tests =====
+
+  @Test
+  fun themeAndMapPreferences_canBeSetIndependently() {
+    viewModel.updateThemeMode(ThemeMode.DARK)
+    viewModel.updateShowPOIs(false)
+    viewModel.updateEnable3DView(true)
+
+    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
+    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
+    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
+  }
+
+  @Test
+  fun rapidThemeModeChanges_finalStateIsCorrect() {
+    viewModel.updateThemeMode(ThemeMode.LIGHT)
+    viewModel.updateThemeMode(ThemeMode.DARK)
+    viewModel.updateThemeMode(ThemeMode.SYSTEM)
+    viewModel.updateThemeMode(ThemeMode.LIGHT)
+
+    assertEquals(ThemeMode.LIGHT, viewModel.themeMode.value)
   }
 
   @Test
@@ -396,308 +607,5 @@ class SettingsViewModelTest {
         MapPreferences(
             showPOIs = true, showRoadNumbers = false, showStreetNames = true, enable3DView = false)
     assertEquals(prefs1.hashCode(), prefs2.hashCode())
-  }
-
-  @Test
-  fun saveMapPreferences_withAuthenticatedUser_callsFirestore() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockDocument = mockk<DocumentReference>(relaxed = true)
-    val mockTask = mockk<Task<Void>>(relaxed = true)
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockDocument
-    every { mockDocument.set(any()) } returns mockTask
-    every { mockTask.addOnFailureListener(any()) } returns mockTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.updateShowPOIs(false)
-
-    verify { mockDocument.set(any()) }
-  }
-
-  @Test
-  fun saveMapPreferences_onFailure_setsErrorMessage() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockDocument = mockk<DocumentReference>(relaxed = true)
-    val mockTask = mockk<Task<Void>>(relaxed = true)
-    val failureListenerSlot = slot<OnFailureListener>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockDocument
-    every { mockDocument.set(any()) } returns mockTask
-    every { mockTask.addOnFailureListener(capture(failureListenerSlot)) } returns mockTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.updateShowPOIs(false)
-
-    // Wait for the coroutine to execute and capture the listener
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Check if listener was captured before trying to use it
-    if (failureListenerSlot.isCaptured) {
-      // Simulate failure
-      failureListenerSlot.captured.onFailure(Exception("Firestore error"))
-
-      assertNotNull(newViewModel.errorMessage.value)
-      assert(newViewModel.errorMessage.value?.contains("Failed to save preferences") == true)
-    }
-  }
-
-  @Test
-  fun loadMapPreferences_withExistingDocument_loadsPreferences() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockDocument = mockk<DocumentReference>(relaxed = true)
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    val mockRegistration = mockk<ListenerRegistration>(relaxed = true)
-    val listenerSlot = slot<EventListener<DocumentSnapshot>>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockDocument
-    every { mockDocument.addSnapshotListener(capture(listenerSlot)) } returns mockRegistration
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.getBoolean("showPOIs") } returns false
-    every { mockSnapshot.getBoolean("showRoadNumbers") } returns true
-    every { mockSnapshot.getBoolean("showStreetNames") } returns false
-    every { mockSnapshot.getBoolean("enable3DView") } returns true
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    listenerSlot.captured.onEvent(mockSnapshot, null)
-
-    val prefs = newViewModel.mapPreferences.value
-    assertEquals(false, prefs.showPOIs)
-    assertEquals(true, prefs.showRoadNumbers)
-    assertEquals(false, prefs.showStreetNames)
-    assertEquals(true, prefs.enable3DView)
-  }
-
-  @Test
-  fun loadMapPreferences_withNonExistingDocument_usesDefaults() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockDocument = mockk<DocumentReference>(relaxed = true)
-    val mockSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    val mockRegistration = mockk<ListenerRegistration>(relaxed = true)
-    val listenerSlot = slot<EventListener<DocumentSnapshot>>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockDocument
-    every { mockDocument.addSnapshotListener(capture(listenerSlot)) } returns mockRegistration
-    every { mockSnapshot.exists() } returns false
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    listenerSlot.captured.onEvent(mockSnapshot, null)
-
-    val prefs = newViewModel.mapPreferences.value
-    assertEquals(true, prefs.showPOIs)
-    assertEquals(true, prefs.showRoadNumbers)
-    assertEquals(true, prefs.showStreetNames)
-    assertEquals(false, prefs.enable3DView)
-  }
-
-  @Test
-  fun loadMapPreferences_onError_setsErrorMessage() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockDocument = mockk<DocumentReference>(relaxed = true)
-    val mockRegistration = mockk<ListenerRegistration>(relaxed = true)
-    val listenerSlot = slot<EventListener<DocumentSnapshot>>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockDocument
-    every { mockDocument.addSnapshotListener(capture(listenerSlot)) } returns mockRegistration
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-
-    val error = mockk<FirebaseFirestoreException>(relaxed = true)
-    every { error.message } returns "Network error"
-    listenerSlot.captured.onEvent(null, error)
-
-    assertNotNull(newViewModel.errorMessage.value)
-    assert(newViewModel.errorMessage.value?.contains("Failed to load preferences") == true)
-  }
-
-  @Test
-  fun deleteAccount_settingsDeleteFailure_setsErrorMessage() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockSettingsDoc = mockk<DocumentReference>(relaxed = true)
-    val mockDeleteTask = mockk<Task<Void>>(relaxed = true)
-    val failureListenerSlot = slot<OnFailureListener>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockSettingsDoc
-    every { mockSettingsDoc.delete() } returns mockDeleteTask
-    every { mockDeleteTask.addOnSuccessListener(any()) } returns mockDeleteTask
-    every { mockDeleteTask.addOnFailureListener(capture(failureListenerSlot)) } returns
-        mockDeleteTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.deleteAccount()
-
-    failureListenerSlot.captured.onFailure(Exception("Delete failed"))
-
-    assertNotNull(newViewModel.errorMessage.value)
-    assert(newViewModel.errorMessage.value?.contains("Failed to delete settings") == true)
-    assertEquals(false, newViewModel.isLoading.value)
-  }
-
-  @Test
-  fun deleteAccount_usersDeleteFailure_setsErrorMessage() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockSettingsDoc = mockk<DocumentReference>(relaxed = true)
-    val mockUsersDoc = mockk<DocumentReference>(relaxed = true)
-    val mockDeleteSettingsTask = mockk<Task<Void>>(relaxed = true)
-    val mockDeleteUsersTask = mockk<Task<Void>>(relaxed = true)
-    val settingsSuccessSlot = slot<OnSuccessListener<Void>>()
-    val usersFailureSlot = slot<OnFailureListener>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockFirestore.collection("users") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockSettingsDoc andThen mockUsersDoc
-    every { mockSettingsDoc.delete() } returns mockDeleteSettingsTask
-    every { mockUsersDoc.delete() } returns mockDeleteUsersTask
-    every { mockDeleteSettingsTask.addOnSuccessListener(capture(settingsSuccessSlot)) } returns
-        mockDeleteSettingsTask
-    every { mockDeleteSettingsTask.addOnFailureListener(any()) } returns mockDeleteSettingsTask
-    every { mockDeleteUsersTask.addOnSuccessListener(any()) } returns mockDeleteUsersTask
-    every { mockDeleteUsersTask.addOnFailureListener(capture(usersFailureSlot)) } returns
-        mockDeleteUsersTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.deleteAccount()
-
-    // Wait for coroutines
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Check if both slots were captured
-    if (settingsSuccessSlot.isCaptured && usersFailureSlot.isCaptured) {
-      // Simulate settings delete success, then users delete failure
-      settingsSuccessSlot.captured.onSuccess(null)
-      usersFailureSlot.captured.onFailure(Exception("Delete users failed"))
-
-      assertNotNull(newViewModel.errorMessage.value)
-      assert(newViewModel.errorMessage.value?.contains("Failed to delete user profile") == true)
-      assertEquals(false, newViewModel.isLoading.value)
-    }
-  }
-
-  @Test
-  fun deleteAccount_authDeleteFailure_setsErrorMessage() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockSettingsDoc = mockk<DocumentReference>(relaxed = true)
-    val mockUsersDoc = mockk<DocumentReference>(relaxed = true)
-    val mockDeleteSettingsTask = mockk<Task<Void>>(relaxed = true)
-    val mockDeleteUsersTask = mockk<Task<Void>>(relaxed = true)
-    val mockDeleteAuthTask = mockk<Task<Void>>(relaxed = true)
-    val settingsSuccessSlot = slot<OnSuccessListener<Void>>()
-    val usersSuccessSlot = slot<OnSuccessListener<Void>>()
-    val authFailureSlot = slot<OnFailureListener>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockFirestore.collection("users") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockSettingsDoc andThen mockUsersDoc
-    every { mockSettingsDoc.delete() } returns mockDeleteSettingsTask
-    every { mockUsersDoc.delete() } returns mockDeleteUsersTask
-    every { mockUser.delete() } returns mockDeleteAuthTask
-    every { mockDeleteSettingsTask.addOnSuccessListener(capture(settingsSuccessSlot)) } returns
-        mockDeleteSettingsTask
-    every { mockDeleteSettingsTask.addOnFailureListener(any()) } returns mockDeleteSettingsTask
-    every { mockDeleteUsersTask.addOnSuccessListener(capture(usersSuccessSlot)) } returns
-        mockDeleteUsersTask
-    every { mockDeleteUsersTask.addOnFailureListener(any()) } returns mockDeleteUsersTask
-    every { mockDeleteAuthTask.addOnSuccessListener(any()) } returns mockDeleteAuthTask
-    every { mockDeleteAuthTask.addOnFailureListener(capture(authFailureSlot)) } returns
-        mockDeleteAuthTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.deleteAccount()
-
-    // Wait for coroutines
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Check if all slots were captured
-    if (settingsSuccessSlot.isCaptured &&
-        usersSuccessSlot.isCaptured &&
-        authFailureSlot.isCaptured) {
-      // Simulate cascade: settings success → users success → auth failure
-      settingsSuccessSlot.captured.onSuccess(null)
-      usersSuccessSlot.captured.onSuccess(null)
-      authFailureSlot.captured.onFailure(Exception("Auth delete failed"))
-
-      assertNotNull(newViewModel.errorMessage.value)
-      assert(newViewModel.errorMessage.value?.contains("Failed to delete auth account") == true)
-      assertEquals(false, newViewModel.isLoading.value)
-    }
-  }
-
-  @Test
-  fun deleteAccount_fullSuccess_setsLoadingToFalse() {
-    val mockUser = mockk<FirebaseUser>(relaxed = true)
-    val mockCollection = mockk<CollectionReference>(relaxed = true)
-    val mockSettingsDoc = mockk<DocumentReference>(relaxed = true)
-    val mockUsersDoc = mockk<DocumentReference>(relaxed = true)
-    val mockDeleteSettingsTask = mockk<Task<Void>>(relaxed = true)
-    val mockDeleteUsersTask = mockk<Task<Void>>(relaxed = true)
-    val mockDeleteAuthTask = mockk<Task<Void>>(relaxed = true)
-    val settingsSuccessSlot = slot<OnSuccessListener<Void>>()
-    val usersSuccessSlot = slot<OnSuccessListener<Void>>()
-    val authSuccessSlot = slot<OnSuccessListener<Void>>()
-
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.uid } returns "test-user-id"
-    every { mockFirestore.collection("settings") } returns mockCollection
-    every { mockFirestore.collection("users") } returns mockCollection
-    every { mockCollection.document("test-user-id") } returns mockSettingsDoc andThen mockUsersDoc
-    every { mockSettingsDoc.delete() } returns mockDeleteSettingsTask
-    every { mockUsersDoc.delete() } returns mockDeleteUsersTask
-    every { mockUser.delete() } returns mockDeleteAuthTask
-    every { mockDeleteSettingsTask.addOnSuccessListener(capture(settingsSuccessSlot)) } returns
-        mockDeleteSettingsTask
-    every { mockDeleteSettingsTask.addOnFailureListener(any()) } returns mockDeleteSettingsTask
-    every { mockDeleteUsersTask.addOnSuccessListener(capture(usersSuccessSlot)) } returns
-        mockDeleteUsersTask
-    every { mockDeleteUsersTask.addOnFailureListener(any()) } returns mockDeleteUsersTask
-    every { mockDeleteAuthTask.addOnSuccessListener(capture(authSuccessSlot)) } returns
-        mockDeleteAuthTask
-    every { mockDeleteAuthTask.addOnFailureListener(any()) } returns mockDeleteAuthTask
-
-    val newViewModel = SettingsViewModel(mockAuth, mockFirestore)
-    newViewModel.deleteAccount()
-
-    // Wait for coroutines
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    // Check if all slots were captured
-    if (settingsSuccessSlot.isCaptured &&
-        usersSuccessSlot.isCaptured &&
-        authSuccessSlot.isCaptured) {
-      // Simulate full success cascade
-      settingsSuccessSlot.captured.onSuccess(null)
-      usersSuccessSlot.captured.onSuccess(null)
-      authSuccessSlot.captured.onSuccess(null)
-
-      assertEquals(false, newViewModel.isLoading.value)
-    }
   }
 }
