@@ -250,7 +250,10 @@ fun MapScreen(
                       onSaveForLater = { viewModel.saveEventForLater() },
                       onUnsaveForLater = { viewModel.unsaveEventForLater() },
                       onClose = { viewModel.closeEventDetail() },
-                      onShare = { viewModel.showShareDialog() })
+                      onShare = { viewModel.showShareDialog() },
+                      onGetDirections = { viewModel.toggleDirections(selectedEvent) },
+                      showDirections = viewModel.directionViewModel.directionState is DirectionState.Displayed
+                  )
                 } else {
                   BottomSheetContent(
                       state = viewModel.bottomSheetState,
@@ -406,6 +409,12 @@ private fun MapLayers(
   // Render heatmap layer when enabled
   if (viewModel.showHeatmap) {
     CreateHeatmapLayer(heatmapSource)
+  }
+
+  // Render direction overlay if directions are displayed
+  val directionState = viewModel.directionViewModel.directionState
+  if (directionState is DirectionState.Displayed) {
+    DirectionOverlay(routePoints = directionState.routePoints)
   }
 
   // Disable clustering when a pin is selected to prevent it from being absorbed
