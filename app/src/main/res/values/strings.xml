@@ -26,4 +26,5 @@
     <string name="time">Time</string>
     <string name="public_event">Public</string>
     <string name="private_event">Private</string>
+    <string name="chats">Chats</string>
 </resources>
