@@ -6,6 +6,7 @@ import com.swent.mapin.model.*
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
@@ -32,6 +33,10 @@ class FriendsViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
   private val currentUserId = "user123"
 
+  // Use MutableStateFlows to simulate real-time updates
+  private lateinit var friendsFlow: MutableStateFlow<List<FriendWithProfile>>
+  private lateinit var pendingRequestsFlow: MutableStateFlow<List<FriendWithProfile>>
+
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
@@ -43,7 +48,16 @@ class FriendsViewModelTest {
     every { mockAuth.currentUser } returns mockUser
     every { mockUser.uid } returns currentUserId
 
+    // Initialize flows
+    friendsFlow = MutableStateFlow(emptyList())
+    pendingRequestsFlow = MutableStateFlow(emptyList())
+
+    // Mock the observeFriends and observePendingRequests to return our flows
+    coEvery { repository.observeFriends(any()) } returns friendsFlow
+    coEvery { repository.observePendingRequests(any()) } returns pendingRequestsFlow
+
     viewModel = FriendsViewModel(repository, mockAuth)
+    testDispatcher.scheduler.advanceUntilIdle()
   }
 
   @After
@@ -79,8 +93,8 @@ class FriendsViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     coVerify { repository.acceptFriendRequest(requestId) }
-    coVerify(atLeast = 2) { repository.getFriends(currentUserId) }
-    coVerify(atLeast = 2) { repository.getPendingRequests(currentUserId) }
+    coVerify { repository.getFriends(currentUserId) }
+    coVerify { repository.getPendingRequests(currentUserId) }
   }
 
   @Test
@@ -93,7 +107,7 @@ class FriendsViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     coVerify { repository.rejectFriendRequest(requestId) }
-    coVerify(atLeast = 2) { repository.getPendingRequests(currentUserId) }
+    coVerify { repository.getPendingRequests(currentUserId) }
   }
 
   @Test
@@ -106,7 +120,7 @@ class FriendsViewModelTest {
     testDispatcher.scheduler.advanceUntilIdle()
 
     coVerify { repository.removeFriendship(currentUserId, friendUserId) }
-    coVerify(atLeast = 2) { repository.getFriends(currentUserId) }
+    coVerify { repository.getFriends(currentUserId) }
   }
 
   // ==================== State Management Tests ====================
