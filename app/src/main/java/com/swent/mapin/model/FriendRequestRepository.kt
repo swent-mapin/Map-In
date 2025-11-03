@@ -29,7 +29,27 @@ class FriendRequestRepository(
    */
   suspend fun sendFriendRequest(fromUserId: String, toUserId: String): Boolean {
     return try {
-      if (getExistingRequest(fromUserId, toUserId) != null) return false
+      val existingRequest = getExistingRequest(fromUserId, toUserId)
+
+      // If there's an existing request
+      if (existingRequest != null) {
+        // If it's rejected, update it back to PENDING (allow re-requesting)
+        if (existingRequest.status == FriendshipStatus.REJECTED) {
+          firestore
+              .collection(COLLECTION)
+              .document(existingRequest.requestId)
+              .update(
+                  mapOf(
+                      "status" to FriendshipStatus.PENDING.name,
+                      "timestamp" to com.google.firebase.Timestamp.now()))
+              .await()
+          return true
+        }
+        // If it's already pending or accepted, don't create a new one
+        return false
+      }
+
+      // No existing request, create a new one
       val id = firestore.collection(COLLECTION).document().id
       firestore
           .collection(COLLECTION)
