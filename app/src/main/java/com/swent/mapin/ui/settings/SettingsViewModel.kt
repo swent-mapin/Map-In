@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.swent.mapin.model.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,19 +18,58 @@ data class MapPreferences(
     val enable3DView: Boolean = false
 )
 
+/** Enum for theme mode options */
+enum class ThemeMode {
+  LIGHT,
+  DARK,
+  SYSTEM;
+
+  companion object {
+    fun fromString(value: String): ThemeMode {
+      return when (value.lowercase()) {
+        "light" -> LIGHT
+        "dark" -> DARK
+        else -> SYSTEM
+      }
+    }
+  }
+
+  fun toDisplayString(): String {
+    return when (this) {
+      LIGHT -> "Light"
+      DARK -> "Dark"
+      SYSTEM -> "System"
+    }
+  }
+
+  fun toStorageString(): String {
+    return when (this) {
+      LIGHT -> "light"
+      DARK -> "dark"
+      SYSTEM -> "system"
+    }
+  }
+}
+
 /**
  * ViewModel for managing settings state and operations.
  *
  * Responsibilities:
+ * - Manage theme mode (light/dark/system)
  * - Manage map preferences/visibility toggles
  * - Handle logout
  * - Handle account deletion
- * - Persist settings to Firestore
+ * - Persist settings to DataStore
  */
 class SettingsViewModel(
+    private val preferencesRepository: PreferencesRepository,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
+
+  // Theme mode state
+  private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+  val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
   // Map preferences state
   private val _mapPreferences = MutableStateFlow(MapPreferences())
@@ -44,95 +84,97 @@ class SettingsViewModel(
   val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
   init {
-    // Load saved preferences from Firestore
-    loadMapPreferences()
+    // Load saved preferences from DataStore and Firestore
+    loadPreferences()
   }
 
-  /** Load map preferences from Firestore */
-  private fun loadMapPreferences() {
+  /** Load all preferences from DataStore */
+  private fun loadPreferences() {
+    viewModelScope.launch {
+      // Load theme mode
+      preferencesRepository.themeModeFlow.collect { mode ->
+        _themeMode.value = ThemeMode.fromString(mode)
+      }
+    }
+    viewModelScope.launch {
+      // Load map preferences
+      preferencesRepository.showPOIsFlow.collect { show ->
+        _mapPreferences.value = _mapPreferences.value.copy(showPOIs = show)
+      }
+    }
+    viewModelScope.launch {
+      preferencesRepository.showRoadNumbersFlow.collect { show ->
+        _mapPreferences.value = _mapPreferences.value.copy(showRoadNumbers = show)
+      }
+    }
+    viewModelScope.launch {
+      preferencesRepository.showStreetNamesFlow.collect { show ->
+        _mapPreferences.value = _mapPreferences.value.copy(showStreetNames = show)
+      }
+    }
+    viewModelScope.launch {
+      preferencesRepository.enable3DViewFlow.collect { enable ->
+        _mapPreferences.value = _mapPreferences.value.copy(enable3DView = enable)
+      }
+    }
+  }
+
+  /** Update theme mode */
+  fun updateThemeMode(mode: ThemeMode) {
     viewModelScope.launch {
       try {
-        val userId = auth.currentUser?.uid
-        if (userId != null) {
-          firestore.collection("settings").document(userId).addSnapshotListener { doc, error ->
-            if (error != null) {
-              _errorMessage.value = "Failed to load preferences: ${error.message}"
-              _mapPreferences.value = MapPreferences()
-              return@addSnapshotListener
-            }
-
-            if (doc != null && doc.exists()) {
-              try {
-                val prefs =
-                    MapPreferences(
-                        showPOIs = doc.getBoolean("showPOIs") ?: true,
-                        showRoadNumbers = doc.getBoolean("showRoadNumbers") ?: true,
-                        showStreetNames = doc.getBoolean("showStreetNames") ?: true,
-                        enable3DView = doc.getBoolean("enable3DView") ?: false)
-                _mapPreferences.value = prefs
-              } catch (e: Exception) {
-                _errorMessage.value = "Failed to parse preferences: ${e.message}"
-                _mapPreferences.value = MapPreferences()
-              }
-            } else {
-              _mapPreferences.value = MapPreferences()
-            }
-          }
-        } else {
-          _mapPreferences.value = MapPreferences()
-        }
+        _themeMode.value = mode
+        preferencesRepository.setThemeMode(mode.toStorageString())
       } catch (e: Exception) {
-        _errorMessage.value = "Failed to load preferences: ${e.message}"
-        _mapPreferences.value = MapPreferences()
+        _errorMessage.value = "Failed to update theme: ${e.message}"
       }
     }
   }
 
   /** Update POI visibility setting */
   fun updateShowPOIs(show: Boolean) {
-    _mapPreferences.value = _mapPreferences.value.copy(showPOIs = show)
-    saveMapPreferences()
+    viewModelScope.launch {
+      try {
+        _mapPreferences.value = _mapPreferences.value.copy(showPOIs = show)
+        preferencesRepository.setShowPOIs(show)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to update POI setting: ${e.message}"
+      }
+    }
   }
 
   /** Update road numbers visibility setting */
   fun updateShowRoadNumbers(show: Boolean) {
-    _mapPreferences.value = _mapPreferences.value.copy(showRoadNumbers = show)
-    saveMapPreferences()
+    viewModelScope.launch {
+      try {
+        _mapPreferences.value = _mapPreferences.value.copy(showRoadNumbers = show)
+        preferencesRepository.setShowRoadNumbers(show)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to update road numbers setting: ${e.message}"
+      }
+    }
   }
 
   /** Update street names visibility setting */
   fun updateShowStreetNames(show: Boolean) {
-    _mapPreferences.value = _mapPreferences.value.copy(showStreetNames = show)
-    saveMapPreferences()
+    viewModelScope.launch {
+      try {
+        _mapPreferences.value = _mapPreferences.value.copy(showStreetNames = show)
+        preferencesRepository.setShowStreetNames(show)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to update street names setting: ${e.message}"
+      }
+    }
   }
 
   /** Update 3D view setting */
   fun updateEnable3DView(enable: Boolean) {
-    _mapPreferences.value = _mapPreferences.value.copy(enable3DView = enable)
-    saveMapPreferences()
-  }
-
-  /** Save map preferences to Firestore */
-  private fun saveMapPreferences() {
     viewModelScope.launch {
       try {
-        val userId = auth.currentUser?.uid
-        if (userId != null) {
-          val prefsMap =
-              mapOf(
-                  "showPOIs" to mapPreferences.value.showPOIs,
-                  "showRoadNumbers" to mapPreferences.value.showRoadNumbers,
-                  "showStreetNames" to mapPreferences.value.showStreetNames,
-                  "enable3DView" to mapPreferences.value.enable3DView)
-          firestore.collection("settings").document(userId).set(prefsMap).addOnFailureListener { e
-            ->
-            _errorMessage.value = "Failed to save preferences: ${e.message}"
-            e.printStackTrace()
-          }
-        }
+        _mapPreferences.value = _mapPreferences.value.copy(enable3DView = enable)
+        preferencesRepository.setEnable3DView(enable)
       } catch (e: Exception) {
-        _errorMessage.value = "Failed to save preferences: ${e.message}"
-        e.printStackTrace()
+        _errorMessage.value = "Failed to update 3D view setting: ${e.message}"
       }
     }
   }

@@ -23,8 +23,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.Visibility
@@ -40,6 +42,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -58,15 +63,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.swent.mapin.model.PreferencesRepositoryProvider
 
 /**
- * Settings screen with map preferences and account management.
+ * Settings screen with theme, map style, map preferences and account management.
  *
  * Features:
+ * - Theme mode selection (Light/Dark/System)
+ * - Mapbox style selection (Standard/Satellite)
  * - Map element visibility toggles (POIs, road numbers, street names)
  * - Profile button (links to profile)
  * - Logout button
@@ -74,11 +82,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    onNavigateBack: () -> Unit,
-    onNavigateToSignIn: () -> Unit,
-    viewModel: SettingsViewModel = viewModel()
-) {
+fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
+  val context = LocalContext.current
+  val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
+  val viewModel = remember { SettingsViewModel(preferencesRepository) }
+  val themeMode by viewModel.themeMode.collectAsState()
   val mapPreferences by viewModel.mapPreferences.collectAsState()
   var showDeleteConfirmation by remember { mutableStateOf(false) }
   var showLogoutConfirmation by remember { mutableStateOf(false) }
@@ -116,6 +124,19 @@ fun SettingsScreen(
                               spring(
                                   dampingRatio = Spring.DampingRatioMediumBouncy,
                                   stiffness = Spring.StiffnessLow))) {
+                // Appearance Settings Section
+                SettingsSectionTitle(title = "Appearance", icon = Icons.Default.Palette)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Theme Mode Selection
+                ThemeModeSelector(
+                    currentMode = themeMode,
+                    onModeChanged = { viewModel.updateThemeMode(it) },
+                    testTag = "themeModeSelector")
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 // Map Settings Section
                 SettingsSectionTitle(title = "Map Settings", icon = Icons.Default.Map)
 
@@ -124,7 +145,7 @@ fun SettingsScreen(
                 // POIs Visibility Toggle
                 SettingsToggleItem(
                     title = "Points of Interest",
-                    subtitle = "Show POIs on the map",
+                    subtitle = "Show POI labels on the map",
                     icon = Icons.Default.Visibility,
                     isEnabled = mapPreferences.showPOIs,
                     onToggle = { viewModel.updateShowPOIs(it) },
@@ -134,8 +155,8 @@ fun SettingsScreen(
 
                 // Road Numbers Visibility Toggle
                 SettingsToggleItem(
-                    title = "Road Numbers",
-                    subtitle = "Display road and highway numbers",
+                    title = "Road Labels",
+                    subtitle = "Display road labels on the map",
                     icon = Icons.Default.Visibility,
                     isEnabled = mapPreferences.showRoadNumbers,
                     onToggle = { viewModel.updateShowRoadNumbers(it) },
@@ -145,8 +166,8 @@ fun SettingsScreen(
 
                 // Street Names Visibility Toggle
                 SettingsToggleItem(
-                    title = "Street Names",
-                    subtitle = "Show street names on the map",
+                    title = "Transit Labels",
+                    subtitle = "Show transit and street labels",
                     icon = Icons.Default.Visibility,
                     isEnabled = mapPreferences.showStreetNames,
                     onToggle = { viewModel.updateShowStreetNames(it) },
@@ -156,8 +177,8 @@ fun SettingsScreen(
 
                 // 3D View Toggle
                 SettingsToggleItem(
-                    title = "3D View",
-                    subtitle = "Enable 3D perspective on the map",
+                    title = "3D Buildings",
+                    subtitle = "Enable 3D buildings on the map",
                     icon = Icons.Default.ViewInAr,
                     isEnabled = mapPreferences.enable3DView,
                     onToggle = { viewModel.updateEnable3DView(it) },
@@ -226,6 +247,66 @@ fun SettingsScreen(
         },
         onDismiss = { showDeleteConfirmation = false })
   }
+}
+
+/** Theme mode selector with segmented buttons */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeModeSelector(
+    currentMode: ThemeMode,
+    onModeChanged: (ThemeMode) -> Unit,
+    testTag: String
+) {
+  Card(
+      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
+      shape = RoundedCornerShape(12.dp),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center) {
+                  Icon(
+                      imageVector = Icons.Default.DarkMode,
+                      contentDescription = "Theme",
+                      tint = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.size(20.dp))
+                }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+              Text(
+                  text = "Theme Mode",
+                  style = MaterialTheme.typography.labelLarge,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.onSurface)
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(
+                  text = "Choose your preferred theme",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+          }
+
+          Spacer(modifier = Modifier.height(16.dp))
+
+          SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ThemeMode.entries.forEachIndexed { index, mode ->
+              SegmentedButton(
+                  selected = currentMode == mode,
+                  onClick = { onModeChanged(mode) },
+                  shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
+                  modifier = Modifier.testTag("${testTag}_${mode.toStorageString()}")) {
+                    Text(mode.toDisplayString())
+                  }
+            }
+          }
+        }
+      }
 }
 
 /** Section title for grouping settings */
