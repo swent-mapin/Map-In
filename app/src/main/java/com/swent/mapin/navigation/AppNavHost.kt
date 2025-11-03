@@ -6,8 +6,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.ui.auth.SignInScreen
+import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
+import com.swent.mapin.ui.settings.SettingsScreen
 
 @Composable
 fun AppNavHost(
@@ -36,11 +38,41 @@ fun AppNavHost(
 
     composable(Route.Profile.route) {
       ProfileScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          },
+          onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
               popUpTo(0) { inclusive = true }
               launchSingleTop = true
+            }
+          },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
+    }
+
+    composable(Route.Settings.route) {
+      SettingsScreen(
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          },
+          onNavigateToSignIn = {
+            navController.navigate(Route.Auth.route) {
+              popUpTo(0) { inclusive = true }
+              launchSingleTop = true
+            }
+          })
+    }
+
+    composable(Route.Friends.route) {
+      FriendsScreen(
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
             }
           })
     }

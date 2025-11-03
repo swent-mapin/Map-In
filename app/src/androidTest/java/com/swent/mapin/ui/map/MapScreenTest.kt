@@ -47,7 +47,7 @@ class MapScreenTest {
   fun mapScreen_initialState_showsCollapsedSheet() {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertExists()
+    rule.onNodeWithText("Saved Events").assertExists()
   }
 
   @Test
@@ -261,7 +261,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -295,7 +295,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -321,7 +321,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -356,7 +356,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -370,7 +370,7 @@ class MapScreenTest {
     rule.runOnIdle {
       val original = viewModel.onCenterCamera
       if (original != null) {
-        viewModel.onCenterCamera = { event ->
+        viewModel.onCenterCamera = { event, animate ->
           callbackExecuted = true
 
           lowZoomBranchTested = true
@@ -380,7 +380,7 @@ class MapScreenTest {
 
           locationUsed = (event.location.longitude == testEvent.location.longitude)
 
-          original(event)
+          original(event, animate)
         }
         viewModel.onEventPinClicked(testEvent)
       }
@@ -403,7 +403,6 @@ class MapScreenTest {
     rule.waitForIdle()
 
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Recent Activities").assertExists()
   }
 
   @Test

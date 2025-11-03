@@ -1,28 +1,29 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.event
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SampleEventRepositoryTest {
+class LocalEventRepositoryTest {
 
   @Test
-  fun getSampleEvents_returnsNonEmptyList() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_returnsNonEmptyList() {
+    val events = LocalEventRepository.defaultSampleEvents()
     assertNotNull(events)
     assertTrue(events.isNotEmpty())
   }
 
   @Test
-  fun getSampleEvents_returnsExactly5Events() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_returnsExactly50Events() {
+    val events = LocalEventRepository.defaultSampleEvents()
     assertEquals(50, events.size)
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidIds() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidIds() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.uid)
       assertTrue(event.uid.isNotEmpty())
@@ -30,8 +31,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidTitles() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidTitles() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.title)
       assertTrue(event.title.isNotEmpty())
@@ -39,8 +40,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidDescriptions() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidDescriptions() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.description)
       assertTrue(event.description.isNotEmpty())
@@ -48,14 +49,14 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidDates() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidDates() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event -> assertNotNull(event.date) }
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidLocations() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidLocations() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.location.name)
       assertTrue(event.location.name.isNotEmpty())
@@ -64,8 +65,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveValidCoordinates() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveValidCoordinates() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertTrue(event.location.latitude >= -90.0 && event.location.latitude <= 90.0)
       assertTrue(event.location.longitude >= -180.0 && event.location.longitude <= 180.0)
@@ -73,14 +74,14 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsArePublic() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsArePublic() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event -> assertTrue(event.public) }
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveOwners() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveOwners() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.ownerId)
       assertTrue(event.ownerId.isNotEmpty())
@@ -88,8 +89,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveTags() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_allEventsHaveTags() {
+    val events = LocalEventRepository.defaultSampleEvents()
     events.forEach { event ->
       assertNotNull(event.tags)
       assertTrue(event.tags.isNotEmpty())
@@ -97,17 +98,8 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_allEventsHaveAttendeeCount() {
-    val events = SampleEventRepository.getSampleEvents()
-    events.forEach { event ->
-      assertNotNull(event.attendeeCount)
-      assertTrue(event.attendeeCount!! > 0)
-    }
-  }
-
-  @Test
-  fun getSampleEvents_containsMusicFestival() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsMusicFestival() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val musicFestival = events.find { it.title == "Music Festival" }
     assertNotNull(musicFestival)
     assertEquals("event1", musicFestival?.uid)
@@ -115,95 +107,89 @@ class SampleEventRepositoryTest {
   }
 
   @Test
-  fun getSampleEvents_containsBasketballGame() {
-    val events = SampleEventRepository.getSampleEvents()
+  fun defaultSampleEvents_containsBasketballGame() {
+    val events = LocalEventRepository.defaultSampleEvents()
     val basketballGame = events.find { it.title == "Basketball Game" }
     assertNotNull(basketballGame)
   }
 
-  // Tests for getTopTags functionality
+  // ==== Saved Events (LocalEventRepository) ====
+
   @Test
-  fun getTopTags_returnsCorrectNumberOfTags() {
-    val topTags = SampleEventRepository.getTopTags(5)
-    assertEquals(5, topTags.size)
+  fun `saved events initial state is empty`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
+    assertEquals(emptyList<com.swent.mapin.model.event.Event>(), repo.getSavedEvents(user))
   }
 
   @Test
-  fun getTopTags_returnsCustomNumberOfTags() {
-    val topTags = SampleEventRepository.getTopTags(3)
-    assertEquals(3, topTags.size)
+  fun `saveEventForUser adds id and getSavedEvents returns event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event1"
+
+    val ok = repo.saveEventForUser(user, id)
+    assertEquals(true, ok)
+    assertEquals(setOf(id), repo.getSavedEventIds(user))
+    assertEquals(listOf(id), repo.getSavedEvents(user).map { it.uid })
   }
 
   @Test
-  fun getTopTags_returnsTagsInDescendingOrder() {
-    val topTags = SampleEventRepository.getTopTags()
-    val events = SampleEventRepository.getSampleEvents()
-    val tagCounts = mutableMapOf<String, Int>()
+  fun `saveEventForUser is idempotent`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event2"
 
-    events.forEach { event ->
-      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
-    }
-
-    // Verify that returned tags are sorted by frequency
-    for (i in 0 until topTags.size - 1) {
-      val currentCount = tagCounts[topTags[i]] ?: 0
-      val nextCount = tagCounts[topTags[i + 1]] ?: 0
-      assertTrue("Tags should be sorted by frequency", currentCount >= nextCount)
-    }
+    repo.saveEventForUser(user, id)
+    repo.saveEventForUser(user, id) // no duplicate
+    assertEquals(setOf(id), repo.getSavedEventIds(user))
   }
 
   @Test
-  fun getTopTags_returnsNonEmptyTags() {
-    val topTags = SampleEventRepository.getTopTags()
-    assertTrue(topTags.isNotEmpty())
-    topTags.forEach { tag -> assertTrue(tag.isNotEmpty()) }
+  fun `unsaveEventForUser removes id`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val id = "event3"
+
+    repo.saveEventForUser(user, id)
+    val removed = repo.unsaveEventForUser(user, id)
+    assertEquals(true, removed)
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
+    assertEquals(emptyList<String>(), repo.getSavedEvents(user).map { it.uid })
   }
 
   @Test
-  fun getTopTags_containsMostFrequentTags() {
-    val topTags = SampleEventRepository.getTopTags()
-    val events = SampleEventRepository.getSampleEvents()
-    val tagCounts = mutableMapOf<String, Int>()
+  fun `per-user isolation for saved events`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val userA = "userA"
+    val userB = "userB"
 
-    events.forEach { event ->
-      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
-    }
+    repo.saveEventForUser(userA, "event1")
+    repo.saveEventForUser(userA, "event2")
 
-    // Sports appears in many events (Basketball, Volleyball, Running, Beach Volleyball, etc.)
-    assertTrue("Sports should be in top tags", topTags.contains("Sports"))
+    assertEquals(setOf("event1", "event2"), repo.getSavedEventIds(userA))
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(userB))
   }
 
   @Test
-  fun getTopTags_doesNotReturnDuplicates() {
-    val topTags = SampleEventRepository.getTopTags()
-    val uniqueTags = topTags.toSet()
-    assertEquals("No duplicate tags should be returned", topTags.size, uniqueTags.size)
+  fun `saveEventForUser returns false for missing event id`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
+    val ok = repo.saveEventForUser(user, "does-not-exist")
+    assertEquals(false, ok)
+    assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
   }
 
   @Test
-  fun getTopTags_handlesRequestForMoreTagsThanAvailable() {
-    val events = SampleEventRepository.getSampleEvents()
-    val allUniqueTags = events.flatMap { it.tags }.toSet()
-    val topTags = SampleEventRepository.getTopTags(allUniqueTags.size + 10)
+  fun `getSavedEvents preserves insertion order`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val user = "userA"
 
-    // Should return all available unique tags, not more
-    assertTrue(topTags.size <= allUniqueTags.size)
-  }
+    // Local repository keeps a LinkedHashSet under the hood
+    repo.saveEventForUser(user, "event2")
+    repo.saveEventForUser(user, "event1")
 
-  @Test
-  fun getTopTags_returnsEmptyListWhenCountIsZero() {
-    val topTags = SampleEventRepository.getTopTags(0)
-    assertTrue(topTags.isEmpty())
-  }
-
-  @Test
-  fun getTopTags_allReturnedTagsExistInEvents() {
-    val topTags = SampleEventRepository.getTopTags()
-    val events = SampleEventRepository.getSampleEvents()
-    val allEventTags = events.flatMap { it.tags }.toSet()
-
-    topTags.forEach { tag ->
-      assertTrue("Tag $tag should exist in events", allEventTags.contains(tag))
-    }
+    assertEquals(listOf("event2", "event1"), repo.getSavedEvents(user).map { it.uid })
   }
 }

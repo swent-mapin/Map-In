@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
@@ -30,7 +31,6 @@ class EventDetailSheetTest {
           date = Timestamp(Calendar.getInstance().apply { set(2025, 9, 20, 14, 30) }.time),
           ownerId = "owner123",
           participantIds = listOf("user1", "user2"),
-          attendeeCount = 2,
           capacity = 10,
           tags = listOf("Music", "Concert"),
           imageUrl = "https://example.com/image.jpg",
@@ -41,10 +41,12 @@ class EventDetailSheetTest {
       event: Event = testEvent,
       sheetState: BottomSheetState,
       isParticipating: Boolean = false,
+      isSaved: Boolean = false,
       organizerName: String = "Test Organizer",
       onJoinEvent: () -> Unit = {},
       onUnregisterEvent: () -> Unit = {},
       onSaveForLater: () -> Unit = {},
+      onUnsaveForLater: () -> Unit = {},
       onClose: () -> Unit = {},
       onShare: () -> Unit = {}
   ) {
@@ -53,10 +55,12 @@ class EventDetailSheetTest {
           event = event,
           sheetState = sheetState,
           isParticipating = isParticipating,
+          isSaved = isSaved,
           organizerName = organizerName,
           onJoinEvent = onJoinEvent,
           onUnregisterEvent = onUnregisterEvent,
           onSaveForLater = onSaveForLater,
+          onUnsaveForLater = onUnsaveForLater,
           onClose = onClose,
           onShare = onShare)
     }
@@ -97,7 +101,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("eventLocation").assertTextEquals("📍 Paris")
     composeTestRule.onNodeWithTag("eventDescriptionPreview").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfo").assertTextEquals("8 spots left")
   }
 
   @Test
@@ -120,7 +126,7 @@ class EventDetailSheetTest {
   @Test
   fun mediumState_eventAtCapacity_disablesJoinButton() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = 10, capacity = 10),
+        event = testEvent.copy(participantIds = List(10) { "user$it" }, capacity = 10),
         sheetState = BottomSheetState.MEDIUM,
         isParticipating = false)
 
@@ -176,13 +182,14 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun mediumState_nullCapacity_showsAttendeeCountWithZero() {
+  fun mediumState_nullCapacity_showsAttendeeCountOnly() {
     setEventDetailSheet(
-        event = testEvent.copy(capacity = null, attendeeCount = 5),
+        event = testEvent.copy(capacity = null, participantIds = List(5) { "user$it" }),
         sheetState = BottomSheetState.MEDIUM)
 
     composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 / 0 attendees")
+    composeTestRule.onNodeWithTag("attendeeCount").assertTextEquals("5 attending")
+    composeTestRule.onNodeWithTag("capacityInfo").assertDoesNotExist()
     composeTestRule.onNodeWithTag("joinEventButton").assertIsEnabled()
   }
 
@@ -200,7 +207,9 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("organizerName").assertTextEquals("John Doe")
     composeTestRule.onNodeWithTag("eventLocationFull").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("2 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("8 spots left")
     composeTestRule.onNodeWithTag("eventDescription").assertIsDisplayed()
   }
 
@@ -209,8 +218,9 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = false, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("joinEventButtonFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("saveForLaterButton").assertIsDisplayed()
+    // Scroll to make buttons visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("unregisterButtonFull").assertDoesNotExist()
   }
 
@@ -219,21 +229,9 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         sheetState = BottomSheetState.FULL, isParticipating = true, organizerName = "John Doe")
 
-    composeTestRule.onNodeWithTag("unregisterButtonFull").assertIsDisplayed()
+    // Scroll to make button visible on smaller screens (CI)
+    composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("joinEventButtonFull").assertDoesNotExist()
-  }
-
-  @Test
-  fun fullState_saveForLaterButton_triggersCallback() {
-    var saveCalled = false
-    setEventDetailSheet(
-        sheetState = BottomSheetState.FULL,
-        isParticipating = false,
-        organizerName = "John Doe",
-        onSaveForLater = { saveCalled = true })
-
-    composeTestRule.onNodeWithTag("saveForLaterButton").performClick()
-    assertTrue(saveCalled)
   }
 
   @Test
@@ -278,14 +276,16 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun fullState_nullAttendeeCount_displaysZero() {
+  fun fullState_emptyParticipants_displaysZero() {
     setEventDetailSheet(
-        event = testEvent.copy(attendeeCount = null, capacity = 10),
+        event = testEvent.copy(participantIds = emptyList(), capacity = 10),
         sheetState = BottomSheetState.FULL,
         organizerName = "John Doe")
 
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 / 10 attendees")
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 attending")
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertTextEquals("10 spots left")
   }
 
   // COMMON FUNCTIONALITY TESTS (applicable to all states)
@@ -311,5 +311,165 @@ class EventDetailSheetTest {
 
     composeTestRule.onNodeWithTag("closeButton").performClick()
     assertTrue(closeCalled)
+  }
+
+  // --- SAVE / UNSAVE in FULL state ---
+
+  @Test
+  fun fullState_notSaved_showsOnlySave_andInvokesOnSave() {
+    var saveCalled = false
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        isParticipating = false,
+        isSaved = false,
+        onSaveForLater = { saveCalled = true },
+        organizerName = "Org")
+
+    // Save button is visible, Unsave is not
+    composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("unsaveButtonFull").assertDoesNotExist()
+
+    // Click -> callback fired
+    composeTestRule.onNodeWithTag("saveButtonFull").performClick()
+    assertTrue(saveCalled)
+  }
+
+  @Test
+  fun fullState_saved_showsOnlyUnsave_andInvokesOnUnsave() {
+    var unsaveCalled = false
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        isParticipating = false,
+        isSaved = true,
+        onUnsaveForLater = { unsaveCalled = true },
+        organizerName = "Org")
+
+    // Unsave button is visible, Save is not
+    composeTestRule.onNodeWithTag("unsaveButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("saveButtonFull").assertDoesNotExist()
+
+    // Click -> callback fired
+    composeTestRule.onNodeWithTag("unsaveButtonFull").performClick()
+    assertTrue(unsaveCalled)
+  }
+
+  @Test
+  fun fullState_Save_haveCorrectLabels() {
+    // Not saved -> label "Save for later"
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, isSaved = false, organizerName = "Org")
+    composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Save for later").assertIsDisplayed()
+  }
+
+  @Test
+  fun fullState_Unsave_haveCorrectLabels() {
+    // Recompose with saved -> label "Unsave"
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, isSaved = true, organizerName = "Org")
+    composeTestRule.onNodeWithTag("unsaveButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Unsave").assertIsDisplayed()
+  }
+
+  // --- NEGATIVE: Save controls should NOT appear in MEDIUM ---
+
+  @Test
+  fun mediumState_noSaveControlsVisible_NotSaved() {
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, isSaved = false)
+    composeTestRule.onNodeWithTag("saveButtonFull").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("unsaveButtonFull").assertDoesNotExist()
+  }
+
+  @Test
+  fun mediumState_noSaveControlsVisible_Saved() {
+    // Even if hypothetically saved, still no save UI in MEDIUM
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, isSaved = true)
+    composeTestRule.onNodeWithTag("saveButtonFull").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("unsaveButtonFull").assertDoesNotExist()
+  }
+
+  // --- EDGE CASES for attendee/capacity UI (extra branches) ---
+
+  @Test
+  fun mediumState_eventExactlyAtCapacity_hidesCapacityInfo_andDisablesJoin() {
+    // participants == capacity
+    val e = testEvent.copy(participantIds = List(10) { "u$it" }, capacity = 10)
+    setEventDetailSheet(event = e, sheetState = BottomSheetState.MEDIUM, isParticipating = false)
+
+    composeTestRule.onNodeWithTag("attendeeCount").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfo").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("joinEventButton").assertIsNotEnabled()
+  }
+
+  @Test
+  fun fullState_eventExactlyAtCapacity_hidesCapacityInfo_andShowsUnregisterIfParticipating() {
+    // participants == capacity; user participating so we see Unregister
+    val e = testEvent.copy(participantIds = List(10) { "u$it" }, capacity = 10)
+    setEventDetailSheet(event = e, sheetState = BottomSheetState.FULL, isParticipating = true)
+
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun fullState_capacityNull_showsJoinAndNoCapacityInfo() {
+    val e = testEvent.copy(capacity = null, participantIds = listOf("a", "b", "c"))
+    setEventDetailSheet(event = e, sheetState = BottomSheetState.FULL, isParticipating = false)
+
+    composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("capacityInfoFull").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("joinEventButtonFull").assertIsEnabled()
+  }
+
+  // --- HEADER presence in COLLAPSED vs MEDIUM/FULL (defensive UI check) ---
+
+  @Test
+  fun collapsedState_hasTopShareAndCloseButtons() {
+    setEventDetailSheet(sheetState = BottomSheetState.COLLAPSED)
+    composeTestRule.onNodeWithTag("shareButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("closeButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun mediumState_hasHeaderButtonsOnce() {
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM)
+    composeTestRule.onNodeWithTag("shareButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("closeButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun fullState_hasHeaderButtonsOnce() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL)
+    composeTestRule.onNodeWithTag("shareButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("closeButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun resolveSaveButtonUi_branches() {
+    assertTrue(resolveSaveButtonUi(false).showSaveButton)
+    assertTrue(resolveSaveButtonUi(false).label.contains("Save", ignoreCase = true))
+    assertTrue(!resolveSaveButtonUi(true).showSaveButton)
+    assertTrue(resolveSaveButtonUi(true).label == "Unsave")
+  }
+
+  @Test
+  fun buildAttendeeInfoUi_variants() {
+    // Spots left > 0 -> shows capacity
+    val a = testEvent.copy(participantIds = listOf("a", "b"), capacity = 5)
+    val uiA = buildAttendeeInfoUi(a)
+    assertTrue(uiA.attendeeText == "2 attending")
+    assertTrue(uiA.capacityText == "3 spots left")
+
+    // Exactly full -> hides capacity
+    val b = testEvent.copy(participantIds = listOf("1", "2"), capacity = 2)
+    val uiB = buildAttendeeInfoUi(b)
+    assertTrue(uiB.attendeeText == "2 attending")
+    assertTrue(uiB.capacityText == null)
+
+    // No capacity -> hides capacity
+    val c = testEvent.copy(participantIds = listOf("1"), capacity = null)
+    val uiC = buildAttendeeInfoUi(c)
+    assertTrue(uiC.attendeeText == "1 attending")
+    assertTrue(uiC.capacityText == null)
   }
 }

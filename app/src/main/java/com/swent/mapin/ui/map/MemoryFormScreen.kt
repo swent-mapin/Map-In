@@ -318,6 +318,40 @@ private fun UserTaggingSection(
 }
 
 /**
+ * UI switch to toggle Public/Private
+ *
+ * @param isPublic boolean indicating the state of public (true) or privcate (false)
+ * @param onPublicChange callback for when the switch is toggled
+ */
+@Composable
+fun PublicSwitch(
+    isPublic: Boolean,
+    onPublicChange: (Boolean) -> Unit,
+    title: String,
+    subTitle: String,
+    modifier: Modifier = Modifier,
+    textTestTag: Modifier = Modifier,
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = textTestTag)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+              text = subTitle,
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Switch(checked = isPublic, onCheckedChange = onPublicChange, modifier = modifier)
+      }
+}
+
+/**
  * Memory creation form screen displayed in full mode bottom sheet. Allows users to create memories
  * with optional event association, title, description, photos/videos, friends, and visibility
  * settings.
@@ -482,26 +516,12 @@ fun MemoryFormScreen(
 
       Spacer(modifier = Modifier.height(24.dp))
 
-      Row(
-          modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-              Text(text = "Make this memory public", style = MaterialTheme.typography.bodyLarge)
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                  text = "Others can see this memory on the event page",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Switch(
-                checked = isPublic,
-                onCheckedChange = { isPublic = it },
-                modifier = Modifier.testTag("publicSwitch"))
-          }
+      PublicSwitch(
+          isPublic = isPublic,
+          onPublicChange = { isPublic = it },
+          "Make this memory public",
+          "Others can see this memory on the event page",
+          Modifier.testTag("publicSwitch"))
 
       Spacer(modifier = Modifier.height(32.dp))
     }

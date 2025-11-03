@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.components
+package com.swent.mapin.ui.event
 
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
@@ -94,8 +94,7 @@ fun saveEvent(
           public = isPublic,
           ownerId = uid,
           imageUrl = null,
-          capacity = null,
-          attendeeCount = ATTENDEES_DEFAULT)
+          capacity = null)
   viewModel.addEvent(newEvent)
   onDone()
 }

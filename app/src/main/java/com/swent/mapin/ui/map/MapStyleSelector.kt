@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Satellite
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -122,10 +121,7 @@ fun MapStyleSelector(
             }
 
         FloatingActionButton(
-            onClick = { isExpanded = !isExpanded },
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.testTag("mapStyleToggle")) {
+            onClick = { isExpanded = !isExpanded }, modifier = Modifier.testTag("mapStyleToggle")) {
               if (isExpanded) {
                 Icon(
                     imageVector = Icons.Default.Close,

@@ -12,6 +12,8 @@ package com.swent.mapin.model
  * @property avatarUrl URL to the user's avatar (optional)
  * @property bannerUrl URL to the user's banner image (optional)
  * @property hobbiesVisible Whether the hobbies are visible to others
+ * @property participatingEventIds List of event IDs the user is attending/participating in
+ * @property ownedEventIds List of event IDs the user has created/organizes
  */
 data class UserProfile(
     val userId: String = "",
@@ -22,5 +24,7 @@ data class UserProfile(
     val profilePictureUrl: String? = null,
     val avatarUrl: String? = null,
     val bannerUrl: String? = null,
-    val hobbiesVisible: Boolean = true
+    val hobbiesVisible: Boolean = true,
+    val participatingEventIds: List<String> = emptyList(),
+    val ownedEventIds: List<String> = emptyList()
 )

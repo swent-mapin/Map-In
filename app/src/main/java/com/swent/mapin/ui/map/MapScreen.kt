@@ -8,10 +8,15 @@ import android.graphics.Canvas
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -23,8 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,7 +47,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
@@ -128,6 +130,9 @@ fun MapScreen(
             }
           }
 
+  // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
+  LaunchedEffect(Unit) { viewModel.loadUserProfile() }
+
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
@@ -163,10 +168,18 @@ fun MapScreen(
   // Setup camera centering callback
   val screenHeightDpValue = screenHeightDp.value
   LaunchedEffect(Unit) {
-    viewModel.onCenterCamera = { event ->
+    viewModel.onCenterCamera = { event, forceZoom ->
       val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
       val currentZoom = mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-      val targetZoom = if (currentZoom < 14.0) 15.0 else currentZoom
+
+      // When forceZoom is true (from search), always zoom to 17 to ensure pins are visible
+      // Otherwise, use the existing logic
+      val targetZoom =
+          if (forceZoom) {
+            17.0
+          } else {
+            if (currentZoom < 14.0) 15.0 else currentZoom
+          }
 
       val offsetPixels = (screenHeightDpValue * 0.25) / 2
 
@@ -260,11 +273,6 @@ fun MapScreen(
     // Bloque les interactions de carte quand la feuille est pleine
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
-    // Bouton profil en haut à droite
-    Box(modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
-      ProfileButton(onClick = onNavigateToProfile)
-    }
-
     // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
     BottomSheet(
         config = sheetConfig,
@@ -274,51 +282,73 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
-
-          // Si un event est sélectionné montrer le détail, sinon le contenu standard
-          if (viewModel.selectedEvent != null) {
-            EventDetailSheet(
-                event = viewModel.selectedEvent!!,
-                sheetState = viewModel.bottomSheetState,
-                isParticipating = viewModel.isUserParticipating(),
-                organizerName = viewModel.organizerName,
-                onJoinEvent = { viewModel.joinEvent() },
-                onUnregisterEvent = { viewModel.unregisterFromEvent() },
-                onSaveForLater = { viewModel.saveEventForLater() },
-                onClose = { viewModel.closeEventDetail() },
-                onShare = { viewModel.showShareDialog() })
-          } else {
-            BottomSheetContent(
-                state = viewModel.bottomSheetState,
-                fullEntryKey = viewModel.fullEntryKey,
-                searchBarState =
-                    SearchBarState(
-                        query = viewModel.searchQuery,
-                        shouldRequestFocus = viewModel.shouldFocusSearch,
-                        onQueryChange = viewModel::onSearchQueryChange,
-                        onTap = viewModel::onSearchTap,
-                        onFocusHandled = viewModel::onSearchFocusHandled,
-                        onClear = viewModel::onClearSearch),
-                searchResults = viewModel.searchResults,
-                isSearchMode = viewModel.isSearchMode,
-                showMemoryForm = viewModel.showMemoryForm,
-                availableEvents = viewModel.availableEvents,
-                topTags = viewModel.topTags,
-                selectedTags = viewModel.selectedTags,
-                onTagClick = viewModel::toggleTagSelection,
-                onEventClick = { event ->
-                  // garder le comportement attendu côté BottomSheet item click
-                  viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-                  onEventClick(event)
-                },
-                onCreateMemoryClick = viewModel::showMemoryForm,
-                onMemorySave = viewModel::onMemorySave,
-                onMemoryCancel = viewModel::onMemoryCancel,
-                onTabChange = viewModel::setBottomSheetTab,
-                joinedEvents = viewModel.joinedEvents,
-                selectedTab = viewModel.selectedBottomSheetTab,
-                onJoinedEventClick = viewModel::onJoinedEventClicked)
-          }
+          AnimatedContent(
+              targetState = viewModel.selectedEvent,
+              transitionSpec = {
+                val direction = if (targetState != null) 1 else -1
+                (fadeIn(animationSpec = androidx.compose.animation.core.tween(260)) +
+                        slideInVertically(
+                            animationSpec = androidx.compose.animation.core.tween(260),
+                            initialOffsetY = { direction * it / 6 }))
+                    .togetherWith(
+                        fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                            slideOutVertically(
+                                animationSpec = androidx.compose.animation.core.tween(200),
+                                targetOffsetY = { -direction * it / 6 }))
+              },
+              label = "eventSheetTransition") { selectedEvent ->
+                if (selectedEvent != null) {
+                  EventDetailSheet(
+                      event = selectedEvent,
+                      sheetState = viewModel.bottomSheetState,
+                      isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      isSaved = viewModel.isEventSaved(selectedEvent),
+                      organizerName = viewModel.organizerName,
+                      onJoinEvent = { viewModel.joinEvent() },
+                      onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                      onSaveForLater = { viewModel.saveEventForLater() },
+                      onUnsaveForLater = { viewModel.unsaveEventForLater() },
+                      onClose = { viewModel.closeEventDetail() },
+                      onShare = { viewModel.showShareDialog() })
+                } else {
+                  BottomSheetContent(
+                      state = viewModel.bottomSheetState,
+                      fullEntryKey = viewModel.fullEntryKey,
+                      searchBarState =
+                          SearchBarState(
+                              query = viewModel.searchQuery,
+                              shouldRequestFocus = viewModel.shouldFocusSearch,
+                              onQueryChange = viewModel::onSearchQueryChange,
+                              onTap = viewModel::onSearchTap,
+                              onFocusHandled = viewModel::onSearchFocusHandled,
+                              onClear = viewModel::onClearSearch),
+                      searchResults = viewModel.searchResults,
+                      isSearchMode = viewModel.isSearchMode,
+                      currentScreen = viewModel.currentBottomSheetScreen,
+                      availableEvents = viewModel.availableEvents,
+                      topTags = viewModel.topTags,
+                      selectedTags = viewModel.selectedTags,
+                      onTagClick = viewModel::toggleTagSelection,
+                      onEventClick = { event ->
+                        // Handle event click from search - focus pin, show details, remember
+                        // search mode
+                        viewModel.onEventClickedFromSearch(event)
+                        onEventClick(event)
+                      },
+                      onCreateMemoryClick = viewModel::showMemoryForm,
+                      onCreateEventClick = viewModel::showAddEventForm,
+                      onMemorySave = viewModel::onMemorySave,
+                      onMemoryCancel = viewModel::onMemoryCancel,
+                      onCreateEventDone = viewModel::onAddEventCancel,
+                      onTabChange = viewModel::setBottomSheetTab,
+                      joinedEvents = viewModel.joinedEvents,
+                      savedEvents = viewModel.savedEvents,
+                      selectedTab = viewModel.selectedBottomSheetTab,
+                      onTabEventClick = viewModel::onTabEventClicked,
+                      avatarUrl = viewModel.avatarUrl,
+                      onProfileClick = onNavigateToProfile)
+                }
+              }
         }
 
     // Share dialog
@@ -447,8 +477,8 @@ private fun MapLayers(
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
   val annotations =
-      remember(viewModel.events, annotationStyle) {
-        createEventAnnotations(viewModel.events, annotationStyle)
+      remember(viewModel.events, annotationStyle, viewModel.selectedEvent) {
+        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -458,8 +488,18 @@ private fun MapLayers(
   }
 
   if (viewModel.showHeatmap) {
+  // Disable clustering when a pin is selected to prevent it from being absorbed
+  val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
+
+  // Render annotations (with or without clustering)
+  if (viewModel.showHeatmap || !shouldCluster) {
+    // No clustering: used for heatmap mode or when a pin is selected
     PointAnnotationGroup(annotations = annotations) {
       markerBitmap?.let { iconImage = IconImage(it) }
+      iconAllowOverlap = false // Enable collision detection
+      textAllowOverlap = false // Enable collision detection for text
+      iconIgnorePlacement = false // Respect other symbols
+      textIgnorePlacement = false // Respect other symbols
       interactionsState.onClicked { annotation ->
         findEventForAnnotation(annotation, viewModel.events)?.let { event ->
           onEventClick(event)
@@ -468,8 +508,13 @@ private fun MapLayers(
       }
     }
   } else {
+    // With clustering: default behavior when no pin is selected
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
       markerBitmap?.let { iconImage = IconImage(it) }
+      iconAllowOverlap = false // Enable collision detection
+      textAllowOverlap = false // Enable collision detection for text
+      iconIgnorePlacement = false // Respect other symbols
+      textIgnorePlacement = false // Respect other symbols
       interactionsState
           .onClicked { annotation ->
             findEventForAnnotation(annotation, viewModel.events)?.let { event ->
@@ -680,7 +725,8 @@ private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
  * @property haloColorInt Halo color for text outline (ARGB integer)
  * @property markerBitmap Optional bitmap for the marker icon
  */
-private data class AnnotationStyle(
+@VisibleForTesting
+internal data class AnnotationStyle(
     val textColorInt: Int,
     val haloColorInt: Int,
     val markerBitmap: Bitmap?
@@ -693,7 +739,8 @@ private data class AnnotationStyle(
  * @param markerBitmap Optional bitmap for marker icon
  * @return AnnotationStyle with theme-appropriate colors
  */
-private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
+@VisibleForTesting
+internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
   val textColor = if (isDarkTheme) Color.White else Color.Black
   val haloColor =
       if (isDarkTheme) {
@@ -708,6 +755,33 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
       markerBitmap = markerBitmap)
 }
 
+@VisibleForTesting
+internal data class AnnotationVisualParameters(
+    val iconSize: Double,
+    val textSize: Double,
+    val textOffset: List<Double>,
+    val textHaloWidth: Double,
+    val sortKey: Double
+)
+
+@VisibleForTesting
+internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationVisualParameters {
+  return if (isSelected) {
+    AnnotationVisualParameters(
+        iconSize = 1.5,
+        textSize = 15.0,
+        textOffset = listOf(0.0, 0.5),
+        textHaloWidth = 2.0,
+        sortKey = 0.0)
+  } else {
+    AnnotationVisualParameters(
+        iconSize = 1.0,
+        textSize = 12.0,
+        textOffset = listOf(0.0, 0.2),
+        textHaloWidth = 1.5,
+        sortKey = 100.0)
+  }
+}
 /**
  * Converts a list of events to Mapbox point annotation options.
  *
@@ -719,28 +793,30 @@ private fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): 
  * @param selectedEventId UID of the currently selected event (if any)
  * @return List of configured PointAnnotationOptions
  */
-private fun createEventAnnotations(
+@VisibleForTesting
+internal fun createEventAnnotations(
     events: List<Event>,
     style: AnnotationStyle,
     selectedEventId: String? = null
 ): List<PointAnnotationOptions> {
   return events.mapIndexed { index, event ->
     val isSelected = event.uid == selectedEventId
-    val iconSize = if (isSelected) 1.5 else 1.0 // 50% larger when selected
+    val visual = computeAnnotationVisualParameters(isSelected)
 
     PointAnnotationOptions()
         .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
         .apply { style.markerBitmap?.let { withIconImage(it) } }
-        .withIconSize(iconSize)
+        .withIconSize(visual.iconSize)
         .withIconAnchor(IconAnchor.BOTTOM)
         .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(listOf(0.0, 0.5))
-        .withTextSize(14.0)
+        .withTextOffset(visual.textOffset)
+        .withTextSize(visual.textSize)
         .withTextColor(style.textColorInt)
         .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(1.5)
+        .withTextHaloWidth(visual.textHaloWidth)
         .withTextField(event.title)
         .withData(JsonPrimitive(index))
+        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
   }
 }
 
@@ -751,7 +827,8 @@ private fun createEventAnnotations(
  *
  * @return AnnotationConfig with clustering enabled
  */
-private fun createClusterConfig(): AnnotationConfig {
+@VisibleForTesting
+internal fun createClusterConfig(): AnnotationConfig {
   val clusterColorLevels =
       listOf(
           0 to Color(0xFF64B5F6).toArgb(),
@@ -778,7 +855,8 @@ private fun createClusterConfig(): AnnotationConfig {
  * @param events List of all events
  * @return Matching Event or null if not found
  */
-private fun findEventForAnnotation(
+@VisibleForTesting
+internal fun findEventForAnnotation(
     annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
     events: List<Event>
 ): Event? {
@@ -859,18 +937,4 @@ private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
               }
             })
   }
-}
-
-/** Profile button for navigating to user profile screen. */
-@Composable
-private fun ProfileButton(onClick: () -> Unit) {
-  FloatingActionButton(
-      onClick = onClick,
-      modifier = Modifier.testTag("profileButton"),
-      containerColor = MaterialTheme.colorScheme.primaryContainer) {
-        Icon(
-            painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
-            contentDescription = "Profile",
-            tint = MaterialTheme.colorScheme.onPrimaryContainer)
-      }
 }

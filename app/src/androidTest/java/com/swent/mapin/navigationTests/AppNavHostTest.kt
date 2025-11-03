@@ -45,10 +45,28 @@ class AppNavHostTest {
     // Verify we're on the map screen
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
+
+    // Wait for profile screen to appear after navigation
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     // Verify we're on the profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
@@ -62,17 +80,62 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile from map
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
+    // Wait for profile screen to appear after fade transition
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify we're on profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
 
-    // Scroll to the logout button and click it
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
+    // Navigate to Settings
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Scroll to and click logout button in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Wait for dialog to appear (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Confirm in dialog - use index to get dialog button
+    composeTestRule.onAllNodesWithText("Logout", useUnmergedTree = true)[1].performClick()
 
     composeTestRule.waitForIdle()
 
@@ -90,18 +153,55 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Navigate to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
-    // Scroll to and click logout
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
+    // Navigate to Settings
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
-    // Verify we're on auth screen
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Scroll to and click logout button in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Wait for dialog to appear (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Confirm in dialog - click the button, not just any "Logout" text
+    composeTestRule.onAllNodesWithText("Logout", useUnmergedTree = true)[1].performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on auth screen
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
@@ -119,18 +219,63 @@ class AppNavHostTest {
 
     composeTestRule.waitForIdle()
 
+    // Expand to MEDIUM state to reveal profile button
+    // First click search bar to go to FULL
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    // Then click cancel to go to MEDIUM with QuickActions visible
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+
     // Go to profile
     composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
-    // Scroll to and click logout
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
+    // Wait for profile screen to appear after fade transition
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Navigate to Settings
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
-    // Verify we're on auth screen and map screen doesn't exist in the tree
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Scroll to and click logout in Settings
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Wait for dialog (increased timeout for CI)
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Confirm logout - use index to get dialog button
+    composeTestRule.onAllNodesWithText("Logout", useUnmergedTree = true)[1].performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on auth screen
     composeTestRule
         .onNodeWithTag(UiTestTags.AUTH_SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
@@ -139,5 +284,91 @@ class AppNavHostTest {
     composeTestRule
         .onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
         .assertDoesNotExist()
+  }
+
+  @Test
+  fun navigatesToSettings_fromProfile() {
+    composeTestRule.setContent {
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Navigate to profile
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on profile screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Scroll to settings button and click it
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("settingsScreen", useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun navigatesBackToProfile_fromSettings() {
+    composeTestRule.setContent {
+      AppNavHost(navController = rememberNavController(), isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Navigate to profile
+    composeTestRule.onNodeWithText("Search activities", useUnmergedTree = true).performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule
+        .onNodeWithContentDescription("Clear search", useUnmergedTree = true)
+        .performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("profileButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Navigate to settings
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're on settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Click back button
+    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on profile screen
+    composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
   }
 }

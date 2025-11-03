@@ -1,5 +1,8 @@
 package com.swent.mapin.ui.map
 
+import androidx.annotation.VisibleForTesting
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,10 +63,12 @@ fun EventDetailSheet(
     event: Event,
     sheetState: BottomSheetState,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     onClose: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -72,25 +78,7 @@ fun EventDetailSheet(
       BottomSheetState.COLLAPSED ->
           CollapsedEventContent(event = event, onShare = onShare, onClose = onClose)
       BottomSheetState.MEDIUM -> {
-        // Header with close and share buttons
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share event",
-                    tint = MaterialTheme.colorScheme.primary)
-              }
-
-              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
-            }
+        EventDetailHeader(onShare = onShare, onClose = onClose)
         MediumEventContent(
             event = event,
             isParticipating = isParticipating,
@@ -98,38 +86,46 @@ fun EventDetailSheet(
             onUnregisterEvent = onUnregisterEvent)
       }
       BottomSheetState.FULL -> {
-        // Header with close and share buttons
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share event",
-                    tint = MaterialTheme.colorScheme.primary)
-              }
-
-              IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
-            }
+        EventDetailHeader(onShare = onShare, onClose = onClose)
         FullEventContent(
             event = event,
             isParticipating = isParticipating,
+            isSaved = isSaved,
             organizerName = organizerName,
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
-            onSaveForLater = onSaveForLater)
+            onSaveForLater = onSaveForLater,
+            onUnsaveForLater = onUnsaveForLater)
       }
     }
   }
 }
 
+/** Header with share and close buttons used in MEDIUM and FULL states */
+@Composable
+private fun EventDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onShare, modifier = Modifier.testTag("shareButton")) {
+          Icon(
+              imageVector = Icons.Default.Share,
+              contentDescription = "Share event",
+              tint = MaterialTheme.colorScheme.primary)
+        }
+
+        IconButton(onClick = onClose, modifier = Modifier.testTag("closeButton")) {
+          Icon(
+              imageVector = Icons.Default.Close,
+              contentDescription = "Close",
+              tint = MaterialTheme.colorScheme.onSurface)
+        }
+      }
+}
+
 /** Collapsed state: Shows only title and category/tag */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CollapsedEventContent(
     event: Event,
@@ -157,8 +153,7 @@ private fun CollapsedEventContent(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("eventTitleCollapsed"))
+                    modifier = Modifier.basicMarquee().testTag("eventTitleCollapsed"))
 
                 if (event.tags.isNotEmpty()) {
                   Spacer(modifier = Modifier.height(4.dp))
@@ -242,19 +237,16 @@ private fun MediumEventContent(
     }
 
     // Attendee count and capacity
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      val attendees = event.attendeeCount ?: 0 // Utiliser attendeeCount
-      val capacity = event.capacity ?: 0
-      Text(
-          text = "$attendees / $capacity attendees",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.testTag("attendeeCount"))
-    }
+    AttendeeInfo(event = event, testTagSuffix = "")
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Join/Unregister button
-    if (isParticipating) {
+    val joinButtonUi =
+        remember(event.participantIds, event.capacity, isParticipating) {
+          resolveJoinButtonUi(event, isParticipating)
+        }
+
+    if (!joinButtonUi.showJoinButton) {
       OutlinedButton(
           onClick = onUnregisterEvent,
           modifier = Modifier.fillMaxWidth().testTag("unregisterButton"),
@@ -266,8 +258,8 @@ private fun MediumEventContent(
       Button(
           onClick = onJoinEvent,
           modifier = Modifier.fillMaxWidth().testTag("joinEventButton"),
-          enabled = event.capacity?.let { (event.attendeeCount ?: 0) < it } ?: true) {
-            Text("Join Event")
+          enabled = joinButtonUi.enabled) {
+            Text(joinButtonUi.label)
           }
     }
   }
@@ -281,10 +273,12 @@ private fun MediumEventContent(
 private fun FullEventContent(
     event: Event,
     isParticipating: Boolean,
+    isSaved: Boolean,
     organizerName: String,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
@@ -379,14 +373,7 @@ private fun FullEventContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Attendee count and capacity
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          val attendees = event.attendeeCount ?: 0 // Utiliser attendeeCount
-          val capacity = event.capacity ?: 0
-          Text(
-              text = "$attendees / $capacity attendees",
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.testTag("attendeeCountFull"))
-        }
+        AttendeeInfo(event = event, testTagSuffix = "Full")
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -404,8 +391,12 @@ private fun FullEventContent(
           Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Action buttons
-        if (isParticipating) {
+        val joinButtonUi =
+            remember(event.participantIds, event.capacity, isParticipating) {
+              resolveJoinButtonUi(event, isParticipating)
+            }
+
+        if (!joinButtonUi.showJoinButton) {
           OutlinedButton(
               onClick = onUnregisterEvent,
               modifier = Modifier.fillMaxWidth().testTag("unregisterButtonFull"),
@@ -418,18 +409,103 @@ private fun FullEventContent(
           Button(
               onClick = onJoinEvent,
               modifier = Modifier.fillMaxWidth().testTag("joinEventButtonFull"),
-              enabled = event.capacity?.let { (event.attendeeCount ?: 0) < it } ?: true) {
-                Text("Join Event")
+              enabled = joinButtonUi.enabled) {
+                Text(joinButtonUi.label)
               }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Save for later button
-        OutlinedButton(
-            onClick = onSaveForLater,
-            modifier = Modifier.fillMaxWidth().testTag("saveForLaterButton")) {
-              Text("Save for Later")
-            }
+        val saveButtonUi = remember(isSaved) { resolveSaveButtonUi(isSaved) }
+
+        if (!saveButtonUi.showSaveButton) {
+          OutlinedButton(
+              onClick = onUnsaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("unsaveButtonFull"),
+              colors =
+                  ButtonDefaults.outlinedButtonColors(
+                      contentColor = MaterialTheme.colorScheme.error)) {
+                Text(saveButtonUi.label)
+              }
+        } else {
+          Button(
+              onClick = onSaveForLater,
+              modifier = Modifier.fillMaxWidth().testTag("saveButtonFull")) {
+                Text(saveButtonUi.label)
+              }
+        }
       }
+}
+
+/**
+ * Data class representing the state of the save button.
+ *
+ * @param showSaveButton Whether the save button should be shown
+ * @param label The label to display on the button
+ */
+@VisibleForTesting internal data class SaveButtonUi(val showSaveButton: Boolean, val label: String)
+
+/**
+ * Resolves the UI state for the save button based on whether the event is already saved.
+ *
+ * @param isSaved Whether the event is already saved
+ * @return The UI state for the save button
+ */
+@VisibleForTesting
+internal fun resolveSaveButtonUi(isSaved: Boolean): SaveButtonUi {
+  return if (isSaved) {
+    SaveButtonUi(showSaveButton = false, label = "Unsave")
+  } else {
+    SaveButtonUi(showSaveButton = true, label = "Save for later")
+  }
+}
+
+@VisibleForTesting
+internal data class JoinButtonUi(
+    val showJoinButton: Boolean,
+    val label: String,
+    val enabled: Boolean
+)
+
+@VisibleForTesting
+internal fun resolveJoinButtonUi(event: Event, isParticipating: Boolean): JoinButtonUi {
+  if (isParticipating) {
+    return JoinButtonUi(showJoinButton = false, label = "", enabled = false)
+  }
+
+  val isFull = event.capacity?.let { capacity -> capacity <= event.participantIds.size } ?: false
+  val label = if (isFull) "Event is full" else "Join Event"
+  return JoinButtonUi(showJoinButton = true, label = label, enabled = !isFull)
+}
+
+@VisibleForTesting
+internal data class AttendeeInfoUi(val attendeeText: String, val capacityText: String?)
+
+@VisibleForTesting
+internal fun buildAttendeeInfoUi(event: Event): AttendeeInfoUi {
+  val attendees = event.participantIds.size
+  val spotsLeft = event.capacity?.let { capacity -> capacity - attendees }
+  val attendeeText = "$attendees attending"
+  val capacityText = spotsLeft?.takeIf { it > 0 }?.let { "$it spots left" }
+  return AttendeeInfoUi(attendeeText = attendeeText, capacityText = capacityText)
+}
+
+/** Reusable attendee count and capacity display */
+@Composable
+private fun AttendeeInfo(event: Event, testTagSuffix: String) {
+  val attendeeInfo = remember(event.participantIds, event.capacity) { buildAttendeeInfoUi(event) }
+
+  Column {
+    Text(
+        text = attendeeInfo.attendeeText,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
+
+    attendeeInfo.capacityText?.let {
+      Text(
+          text = it,
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
+    }
+  }
 }

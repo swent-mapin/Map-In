@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
@@ -25,6 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.clearInvocations
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
@@ -45,6 +47,7 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockEventRepository: EventRepository
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
+  @Mock(lenient = true) private lateinit var mockUserProfileRepository: UserProfileRepository
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -65,6 +68,9 @@ class MapScreenViewModelTest {
       whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
+      whenever(mockEventRepository.getSavedEventIds(any())).thenReturn(emptySet())
+      whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockUserProfileRepository.getUserProfile(any())).thenReturn(null)
     }
 
     viewModel =
@@ -75,7 +81,8 @@ class MapScreenViewModelTest {
             applicationContext = mockContext,
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
-            auth = mockAuth)
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepository)
   }
 
   @After
@@ -478,12 +485,12 @@ class MapScreenViewModelTest {
                 uid = "event1",
                 title = "Event 1",
                 location = com.swent.mapin.model.Location("Location 1", 46.5, 6.5),
-                attendeeCount = 10),
+                participantIds = List(10) { "user$it" }),
             com.swent.mapin.model.event.Event(
                 uid = "event2",
                 title = "Event 2",
                 location = com.swent.mapin.model.Location("Location 2", 47.0, 7.0),
-                attendeeCount = 25))
+                participantIds = List(25) { "user$it" }))
 
     val geoJson = eventsToGeoJson(events)
 
@@ -636,7 +643,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun events_initiallyContainsAllSampleEvents() {
-    val sampleEvents = com.swent.mapin.model.SampleEventRepository.getSampleEvents()
+    val sampleEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()
     assertEquals(sampleEvents.size, viewModel.events.size)
   }
 
@@ -652,9 +659,9 @@ class MapScreenViewModelTest {
 
   @Test
   fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { cameraCentered = true }
+    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
 
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
@@ -668,7 +675,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun closeEventDetail_clearsSelectedEventAndReturnsToCollapsed() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
@@ -693,14 +700,14 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.isUserParticipating())
 
     val notParticipatingEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
             participantIds = listOf("otherUser"))
     viewModel.onEventPinClicked(notParticipatingEvent)
     advanceUntilIdle()
     assertFalse(viewModel.isUserParticipating())
 
     val participatingEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
             participantIds = listOf("testUserId", "otherUser"))
     viewModel.onEventPinClicked(participatingEvent)
     advanceUntilIdle()
@@ -714,7 +721,7 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
 
     whenever(mockAuth.currentUser).thenReturn(null)
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
     viewModel.joinEvent()
@@ -724,7 +731,7 @@ class MapScreenViewModelTest {
     viewModel.clearError()
     whenever(mockAuth.currentUser).thenReturn(mockUser)
 
-    val fullEvent = testEvent.copy(attendeeCount = 10, capacity = 10)
+    val fullEvent = testEvent.copy(participantIds = List(10) { "user$it" }, capacity = 10)
     viewModel.onEventPinClicked(fullEvent)
     advanceUntilIdle()
     viewModel.joinEvent()
@@ -735,8 +742,8 @@ class MapScreenViewModelTest {
   @Test
   fun joinEvent_success_updatesEventAndList() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(), capacity = 10)
 
     viewModel.setEvents(listOf(testEvent))
     viewModel.onEventPinClicked(testEvent)
@@ -750,7 +757,7 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
     assertNotNull(viewModel.selectedEvent)
     assertTrue(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
-    assertEquals(1, viewModel.selectedEvent!!.attendeeCount)
+    assertEquals(1, viewModel.selectedEvent!!.participantIds.size)
     assertTrue(
         viewModel.events.find { it.uid == testEvent.uid }!!.participantIds.contains("testUserId"))
   }
@@ -758,8 +765,8 @@ class MapScreenViewModelTest {
   @Test
   fun unregisterFromEvent_success_updatesEventAndList() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf("testUserId"), attendeeCount = 1, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf("testUserId"), capacity = 10)
 
     viewModel.setEvents(listOf(testEvent))
     viewModel.onEventPinClicked(testEvent)
@@ -773,14 +780,14 @@ class MapScreenViewModelTest {
     assertNull(viewModel.errorMessage)
     assertNotNull(viewModel.selectedEvent)
     assertFalse(viewModel.selectedEvent!!.participantIds.contains("testUserId"))
-    assertEquals(0, viewModel.selectedEvent!!.attendeeCount)
+    assertEquals(0, viewModel.selectedEvent!!.participantIds.size)
   }
 
   @Test
   fun joinAndUnregisterEvent_withRepositoryError_setsErrorMessage() = runTest {
     val testEvent =
-        com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0].copy(
-            participantIds = listOf(), attendeeCount = 0, capacity = 10)
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(), capacity = 10)
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
@@ -802,28 +809,19 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun saveEventForLater_setsPlaceholderMessage() {
-    viewModel.saveEventForLater()
-    assertEquals("Save for later - Coming soon!", viewModel.errorMessage)
-    viewModel.clearError()
-    assertNull(viewModel.errorMessage)
-  }
-
-  @Test
   fun setBottomSheetTab_updatesSelectedTab() {
-    assertEquals(
-        MapScreenViewModel.BottomSheetTab.RECENT_ACTIVITIES, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
     viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
     assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
   }
 
   @Test
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
-    val testEvent = com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { cameraCentered = true }
+    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
 
-    viewModel.onJoinedEventClicked(testEvent)
+    viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
 
     assertEquals(testEvent, viewModel.selectedEvent)
@@ -835,8 +833,8 @@ class MapScreenViewModelTest {
   fun setEvents_updatesEventsList() {
     val newEvents =
         listOf(
-            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[0],
-            com.swent.mapin.model.SampleEventRepository.getSampleEvents()[1])
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0],
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[1])
 
     viewModel.setEvents(newEvents)
 
@@ -854,293 +852,173 @@ class MapScreenViewModelTest {
     assertEquals(0, viewModel.availableEvents.size)
   }
 
-  // ============================================================================
-  // Tests for Location Management
-  // ============================================================================
+  // === Save / Unsave tests ===
+  private fun sampleEvent() =
+      com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+          uid = "evt-1", participantIds = emptyList())
 
   @Test
-  fun startLocationUpdates_withoutPermission_setsPermissionToFalseAndReturns() {
-    // Create a mock LocationManager that denies permission
-    val mockLocationManager =
-        mock<LocationManager> { on { hasLocationPermission() } doReturn false }
-
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
-
-    // Inject the mock location manager through reflection
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    vmWithMockLocation.startLocationUpdates()
-
-    assertFalse(vmWithMockLocation.hasLocationPermission)
-  }
-
-  @Test
-  fun startLocationUpdates_withPermission_setsPermissionToTrue() = runTest {
-    val mockLocation = mock<android.location.Location>(lenient = true)
-    whenever(mockLocation.latitude).thenReturn(46.5)
-    whenever(mockLocation.longitude).thenReturn(6.5)
-    whenever(mockLocation.hasBearing()).thenReturn(false)
-
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { hasLocationPermission() } doReturn true
-          on { getLocationUpdates() } doReturn kotlinx.coroutines.flow.flowOf(mockLocation)
-        }
-
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
-
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    vmWithMockLocation.startLocationUpdates()
+  fun saveEventForLater_noUser_setsErrorMessage() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
     advanceUntilIdle()
 
-    assertTrue(vmWithMockLocation.hasLocationPermission)
-    assertNotNull(vmWithMockLocation.currentLocation)
-  }
+    // Sign out
+    whenever(mockAuth.currentUser).thenReturn(null)
 
-  @Test
-  fun startLocationUpdates_receivesLocationWithBearing_updatesBearing() = runTest {
-    val mockLocation = mock<android.location.Location>(lenient = true)
-    whenever(mockLocation.hasBearing()).thenReturn(true)
-    whenever(mockLocation.bearing).thenReturn(90.0f)
-
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { hasLocationPermission() } doReturn true
-          on { getLocationUpdates() } doReturn kotlinx.coroutines.flow.flowOf(mockLocation)
-        }
-
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
-
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    vmWithMockLocation.startLocationUpdates()
+    viewModel.saveEventForLater()
     advanceUntilIdle()
 
-    assertEquals(90.0f, vmWithMockLocation.locationBearing, 0.001f)
+    assertTrue(viewModel.errorMessage?.contains("signed in") == true)
   }
 
   @Test
-  fun startLocationUpdates_withError_setsErrorMessage() = runTest {
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { hasLocationPermission() } doReturn true
-          on { getLocationUpdates() } doReturn
-              kotlinx.coroutines.flow.flow<android.location.Location> {
-                throw RuntimeException("GPS error")
-              }
-        }
+  fun saveEventForLater_success_updatesIdsAndLoadsSavedList() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
+    clearInvocations(mockEventRepository)
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    vmWithMockLocation.startLocationUpdates()
+    viewModel.saveEventForLater()
     advanceUntilIdle()
 
-    assertEquals("Failed to get location updates", vmWithMockLocation.errorMessage)
+    assertTrue(viewModel.isEventSaved(e))
+    assertTrue(viewModel.savedEvents.any { it.uid == e.uid })
+
+    verify(mockEventRepository).saveEventForUser("testUserId", e.uid)
+    verify(mockEventRepository).getSavedEvents("testUserId")
   }
 
   @Test
-  fun getLastKnownLocation_withoutCentering_updatesLocationOnly() {
-    val mockLocation = mock<android.location.Location>(lenient = true)
-    whenever(mockLocation.latitude).thenReturn(47.0)
-    whenever(mockLocation.longitude).thenReturn(7.0)
+  fun saveEventForLater_alreadySaved_setsError() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
 
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { getLastKnownLocation(any(), any()) } doAnswer
-              { invocation ->
-                val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
-                onSuccess(mockLocation)
-              }
-        }
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(false)
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    var cameraCentered = false
-    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
-
-    vmWithMockLocation.getLastKnownLocation(centerCamera = false)
-
-    assertNotNull(vmWithMockLocation.currentLocation)
-    assertEquals(47.0, vmWithMockLocation.currentLocation!!.latitude, 0.001)
-    assertFalse(cameraCentered)
+    assertTrue(viewModel.errorMessage?.contains("already saved") == true)
   }
 
   @Test
-  fun getLastKnownLocation_withCentering_updatesLocationAndCentersCamera() {
-    val mockLocation = mock<android.location.Location>(lenient = true)
-    whenever(mockLocation.hasBearing()).thenReturn(true)
-    whenever(mockLocation.bearing).thenReturn(180.0f)
+  fun unsaveEventForLater_success_updatesIdsAndReloads() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
 
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { getLastKnownLocation(any(), any()) } doAnswer
-              { invocation ->
-                val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
-                onSuccess(mockLocation)
-              }
-        }
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+    assertTrue(viewModel.isEventSaved(e))
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    org.mockito.Mockito.clearInvocations(mockEventRepository)
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+    whenever(mockEventRepository.unsaveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(emptyList())
 
-    var cameraCentered = false
-    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
+    viewModel.unsaveEventForLater()
+    advanceUntilIdle()
 
-    vmWithMockLocation.getLastKnownLocation(centerCamera = true)
+    assertFalse(viewModel.isEventSaved(e))
+    assertTrue(viewModel.savedEvents.isEmpty())
 
-    assertNotNull(vmWithMockLocation.currentLocation)
-    assertEquals(180.0f, vmWithMockLocation.locationBearing, 0.001f)
-    assertTrue(cameraCentered)
+    verify(mockEventRepository).unsaveEventForUser("testUserId", e.uid)
+    verify(mockEventRepository).getSavedEvents("testUserId")
   }
 
   @Test
-  fun getLastKnownLocation_withError_doesNotUpdateLocation() {
-    val mockLocationManager =
-        mock<LocationManager> {
-          on { getLastKnownLocation(any(), any()) } doAnswer
-              { invocation ->
-                val onError = invocation.getArgument<() -> Unit>(1)
-                onError()
-              }
-        }
+  fun unsaveEventForLater_failure_setsError() = runTest {
+    val e = sampleEvent()
+    viewModel.setEvents(listOf(e))
+    viewModel.onEventPinClicked(e)
+    advanceUntilIdle()
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    // Pretend it was saved locally (save path)
+    whenever(mockEventRepository.saveEventForUser("testUserId", e.uid)).thenReturn(true)
+    whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(listOf(e))
+    viewModel.saveEventForLater()
+    advanceUntilIdle()
+    assertTrue(viewModel.isEventSaved(e))
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+    // Unsave fails
+    whenever(mockEventRepository.unsaveEventForUser("testUserId", e.uid)).thenReturn(false)
 
-    vmWithMockLocation.getLastKnownLocation(centerCamera = true)
+    viewModel.unsaveEventForLater()
+    advanceUntilIdle()
 
-    assertNull(vmWithMockLocation.currentLocation)
+    assertTrue(viewModel.errorMessage?.contains("was not saved") == true)
   }
 
   @Test
-  fun onLocationButtonClick_withPermission_centersOnUserLocation() {
-    val mockLocationManager = mock<LocationManager> { on { hasLocationPermission() } doReturn true }
+  fun `showMemoryForm sets state correctly`() {
+    val initialState = viewModel.bottomSheetState
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    viewModel.showMemoryForm()
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
-
-    var cameraCentered = false
-    vmWithMockLocation.onCenterOnUserLocation = { cameraCentered = true }
-
-    vmWithMockLocation.onLocationButtonClick()
-
-    assertTrue(cameraCentered)
-    assertTrue(vmWithMockLocation.isCenteredOnUser)
+    assertTrue(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.MEMORY_FORM, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
   }
 
   @Test
-  fun onLocationButtonClick_withoutPermission_requestsPermission() {
-    val mockLocationManager =
-        mock<LocationManager> { on { hasLocationPermission() } doReturn false }
+  fun `hideMemoryForm resets showMemoryForm and sets MAIN_CONTENT`() {
+    viewModel.showMemoryForm()
 
-    val vmWithMockLocation =
-        MapScreenViewModel(
-            initialSheetState = BottomSheetState.COLLAPSED,
-            sheetConfig = config,
-            onClearFocus = { clearFocusCalled = true },
-            applicationContext = mockContext,
-            memoryRepository = mockMemoryRepository,
-            eventRepository = mockEventRepository,
-            auth = mockAuth)
+    viewModel.hideMemoryForm()
 
-    val locationManagerField = MapScreenViewModel::class.java.getDeclaredField("locationManager")
-    locationManagerField.isAccessible = true
-    locationManagerField.set(vmWithMockLocation, mockLocationManager)
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
 
-    var permissionRequested = false
-    vmWithMockLocation.onRequestLocationPermission = { permissionRequested = true }
+  @Test
+  fun `showAddEventForm sets state correctly`() {
+    viewModel.showAddEventForm()
 
-    vmWithMockLocation.onLocationButtonClick()
+    assertFalse(viewModel.showMemoryForm) // legacy boolean remains false
+    assertEquals(BottomSheetScreen.ADD_EVENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
 
-    assertTrue(permissionRequested)
-    assertFalse(vmWithMockLocation.isCenteredOnUser)
+  @Test
+  fun `hideAddEventForm resets to MAIN_CONTENT`() {
+    viewModel.showAddEventForm()
+
+    viewModel.hideAddEventForm()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
+
+  @Test
+  fun `onAddEventCancel hides AddEvent form and returns to MAIN_CONTENT`() {
+    // Simulate showing AddEvent form
+    viewModel.showAddEventForm()
+
+    // Cancel
+    viewModel.onAddEventCancel()
+
+    // Validate public state
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun `showMemoryForm and showAddEventForm are mutually exclusive`() {
+    viewModel.showMemoryForm()
+
+    viewModel.showAddEventForm()
+
+    assertFalse(viewModel.showMemoryForm)
+    assertEquals(BottomSheetScreen.ADD_EVENT, viewModel.currentBottomSheetScreen)
   }
 }

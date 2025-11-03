@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
@@ -52,6 +53,14 @@ class EventRepositoryFirestoreTest {
   @Mock lateinit var document: DocumentReference
   @Mock lateinit var query: Query
 
+  @Mock lateinit var usersCollection: CollectionReference
+  @Mock lateinit var userDoc: DocumentReference
+  @Mock lateinit var savedCollection: CollectionReference
+  @Mock lateinit var savedDoc: DocumentReference
+
+  // For whereIn chunking
+  @Mock lateinit var queryChunk1: Query
+  @Mock lateinit var queryChunk2: Query
   private lateinit var repo: EventRepositoryFirestore
 
   @Before
@@ -61,6 +70,10 @@ class EventRepositoryFirestoreTest {
     whenever(db.collection(EVENTS_COLLECTION_PATH)).thenReturn(collection)
     whenever(collection.document()).thenReturn(document)
     whenever(collection.document(any<String>())).thenReturn(document)
+    whenever(db.collection("users")).thenReturn(usersCollection)
+    whenever(usersCollection.document(any())).thenReturn(userDoc)
+    whenever(userDoc.collection("savedEvents")).thenReturn(savedCollection)
+    whenever(savedCollection.document(any())).thenReturn(savedDoc)
   }
 
   // Helpers
@@ -80,6 +93,8 @@ class EventRepositoryFirestoreTest {
     whenever(snap.documents).thenReturn(docs.toList())
     return snap
   }
+
+  private fun <T> taskException(e: Exception): Task<T> = Tasks.forException(e)
 
   // --- Tests ---
 
@@ -104,8 +119,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 50,
-            attendeeCount = 0)
+            capacity = 50)
 
     val snap: DocumentSnapshot = mock()
     whenever(snap.id).thenReturn("E1")
@@ -140,8 +154,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "o",
             imageUrl = null,
-            capacity = 10,
-            attendeeCount = 1)
+            capacity = 10)
     val goodDoc = doc("GOOD", valid)
 
     // Simulate a doc that throws during toObject -> documentToEvent returns null
@@ -176,8 +189,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "a",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
     val e2 =
         Event(
             uid = "",
@@ -190,8 +202,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "b",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
     val e3 =
         Event(
             uid = "",
@@ -204,8 +215,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "c",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
 
     val snap = qs(doc("1", e1), doc("2", e2), doc("3", e3))
 
@@ -232,8 +242,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "o",
             imageUrl = null,
-            capacity = 1,
-            attendeeCount = 0)
+            capacity = 1)
 
     repo.addEvent(input)
 
@@ -260,8 +269,7 @@ class EventRepositoryFirestoreTest {
             public = false,
             ownerId = "o",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 2)
+            capacity = 5)
 
     repo.editEvent("E1", updated)
 
@@ -295,7 +303,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner1",
             imageUrl = null,
             capacity = 50,
-            attendeeCount = 2,
             participantIds = listOf("user1", "user2"))
 
     val e2 =
@@ -311,7 +318,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner2",
             imageUrl = null,
             capacity = 30,
-            attendeeCount = 1,
             participantIds = listOf("user1", "user3"))
 
     val snap = qs(doc("E1", e1), doc("E2", e2))
@@ -344,7 +350,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner123",
             imageUrl = null,
             capacity = 10,
-            attendeeCount = 0,
             participantIds = listOf("user1", "user2"))
 
     repo.addEvent(input)
@@ -376,7 +381,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner123",
             imageUrl = null,
             capacity = 10,
-            attendeeCount = 0,
             participantIds = listOf("user1", "owner123", "user2"))
 
     repo.addEvent(input)
@@ -402,8 +406,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 10,
-            attendeeCount = 1)
+            capacity = 10)
     val snap = qs(doc("E1", e))
     whenever(collection.orderBy("date")).thenReturn(query)
     whenever(query.get()).thenReturn(taskOf(snap))
@@ -430,8 +433,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 0)
+            capacity = 5)
     val snap = qs(doc("E1", e1))
 
     whenever(collection.whereGreaterThanOrEqualTo(eq("date"), eq(start))).thenReturn(query)
@@ -458,8 +460,7 @@ class EventRepositoryFirestoreTest {
             public = true,
             ownerId = "owner1",
             imageUrl = null,
-            capacity = 5,
-            attendeeCount = 0)
+            capacity = 5)
     val snap = qs(doc("E1", e1))
 
     whenever(collection.whereEqualTo(eq("ownerId"), eq("owner1"))).thenReturn(query)
@@ -469,5 +470,181 @@ class EventRepositoryFirestoreTest {
     val result = repo.getEventsByOwner("owner1")
     assertEquals(1, result.size)
     assertEquals("E1", result[0].uid)
+  }
+  // ======== Saved Events: getSavedEventIds ========
+
+  @Test
+  fun getSavedEventIds_returnsDocumentIds() = runTest {
+    val snap =
+        qs(
+            // Only the id matters for this call
+            doc("E1", null),
+            doc("E2", null))
+    whenever(savedCollection.get()).thenReturn(taskOf(snap))
+
+    val ids = repo.getSavedEventIds("user123")
+    assertEquals(setOf("E1", "E2"), ids)
+  }
+
+  @Test
+  fun getSavedEventIds_handlesFailure_returnsEmptySet() = runTest {
+    whenever(savedCollection.get())
+        .thenReturn(taskException<QuerySnapshot>(RuntimeException("boom")))
+    val ids = repo.getSavedEventIds("user123")
+    assertEquals(emptySet<String>(), ids)
+  }
+
+  // ======== Saved Events: save & unsave ========
+
+  @Test
+  fun saveEventForUser_writesDocAndReturnsTrue() = runTest {
+    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(Tasks.forResult(null))
+    val ok = repo.saveEventForUser("user123", "E1")
+    assertTrue(ok)
+    argumentCaptor<Map<String, Any?>>().apply {
+      verify(savedDoc).set(capture())
+      assertTrue(firstValue.containsKey("savedAt"))
+    }
+  }
+
+  @Test
+  fun saveEventForUser_failureReturnsFalse() = runTest {
+    whenever(savedDoc.set(any<Map<String, Any?>>()))
+        .thenReturn(taskException<Void>(RuntimeException("write failed")))
+    val ok = repo.saveEventForUser("user123", "E1")
+    assertFalse(ok)
+  }
+
+  @Test
+  fun unsaveEventForUser_deletesDocAndReturnsTrue() = runTest {
+    whenever(savedDoc.delete()).thenReturn(Tasks.forResult(null))
+    val ok = repo.unsaveEventForUser("user123", "E1")
+    assertTrue(ok)
+    verify(savedDoc).delete()
+  }
+
+  @Test
+  fun unsaveEventForUser_failureReturnsFalse() = runTest {
+    whenever(savedDoc.delete()).thenReturn(taskException<Void>(RuntimeException("delete failed")))
+    val ok = repo.unsaveEventForUser("user123", "E1")
+    assertFalse(ok)
+  }
+
+  // ======== Saved Events: getSavedEvents (no chunking) ========
+
+  @Test
+  fun getSavedEvents_emptyWhenNoIds() = runTest {
+    val emptySnap = qs() // no docs in savedEvents subcollection
+    whenever(savedCollection.get()).thenReturn(taskOf(emptySnap))
+
+    val out = repo.getSavedEvents("user123")
+    assertEquals(emptyList<Event>(), out)
+  }
+
+  @Test
+  fun getSavedEvents_fetchesByIds_andSortsByDateAscending() = runTest {
+    // saved ids: E2, E1
+    val savedIdsSnap = qs(doc("E2", null), doc("E1", null))
+    whenever(savedCollection.get()).thenReturn(taskOf(savedIdsSnap))
+
+    // events collection lookups (whereIn single chunk)
+    val e1 =
+        Event(
+            uid = "E1",
+            title = "T1",
+            url = "u",
+            description = "d",
+            date = Timestamp(100L, 0), // older
+            location = Location("X", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+    val e2 =
+        Event(
+            uid = "E2",
+            title = "T2",
+            url = "u",
+            description = "d",
+            date = Timestamp(200L, 0), // newer
+            location = Location("X", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+
+    val chunkDocs: Array<DocumentSnapshot> = arrayOf(doc("E2", e2), doc("E1", e1))
+    val chunkSnap = qs(*chunkDocs)
+
+    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(listOf("E2", "E1"))))
+        .thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(chunkSnap))
+
+    val out = repo.getSavedEvents("user123")
+    // Should be sorted ascending by date => E1, E2
+    assertEquals(listOf("E1", "E2"), out.map { it.uid })
+  }
+
+  // ======== Saved Events: getSavedEvents with chunking (LIMIT boundary) ========
+
+  @Test
+  fun getSavedEvents_chunksWhereInQueries_whenOverLimit() = runTest {
+    // Build LIMIT+1 ids to force two chunks
+    val limit = 10 // mirrors LIMIT in repo
+    val ids = (1..(limit + 1)).map { "E$it" }
+    val savedDocs: Array<DocumentSnapshot> = ids.map { id -> doc(id, null) }.toTypedArray()
+    val savedIdsSnapshot = qs(*savedDocs) // build the mocked snapshot first
+    whenever(savedCollection.get()).thenReturn(taskOf(savedIdsSnapshot))
+
+    // First chunk: E1..E10
+    val firstChunkIds = (1..limit).map { "E$it" }
+    val firstChunkEvents =
+        firstChunkIds.map { id ->
+          Event(
+              uid = id,
+              title = id,
+              url = "u",
+              description = "d",
+              date = Timestamp(100L + id.removePrefix("E").toLong(), 0),
+              location = Location("X", 0.0, 0.0),
+              tags = emptyList(),
+              public = true,
+              ownerId = "o",
+              imageUrl = null,
+              capacity = 1)
+        }
+    val firstDocs: Array<DocumentSnapshot> =
+        firstChunkEvents.map { ev -> doc(ev.uid, ev) }.toTypedArray()
+    val firstSnap = qs(*firstDocs)
+    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(firstChunkIds)))
+        .thenReturn(queryChunk1)
+    whenever(queryChunk1.get()).thenReturn(taskOf(firstSnap))
+
+    // Second chunk: E11
+    val secondChunkIds = listOf("E11")
+    val e11 =
+        Event(
+            uid = "E11",
+            title = "E11",
+            url = "u",
+            description = "d",
+            date = Timestamp(1000L, 0),
+            location = Location("X", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+    val secondSnap = qs(doc("E11", e11))
+    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(secondChunkIds)))
+        .thenReturn(queryChunk2)
+    whenever(queryChunk2.get()).thenReturn(taskOf(secondSnap))
+
+    val out = repo.getSavedEvents("user123")
+    // Should include all ids, sorted by date ascending
+    val expected = (firstChunkEvents + e11).sortedBy { it.date }.map { it.uid }
+    assertEquals(expected, out.map { it.uid })
   }
 }
