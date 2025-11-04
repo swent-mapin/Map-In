@@ -233,8 +233,11 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     testEvents.forEach { event ->
-      rule.onNodeWithText(event.title).assertIsDisplayed()
-      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+      rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
+      rule
+          .onNodeWithText(event.location.name, substring = true)
+          .performScrollTo()
+          .assertIsDisplayed()
     }
   }
 
@@ -391,9 +394,12 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Saved Events").assertIsDisplayed()
 
     testEvents.forEach { event ->
-      rule.onNodeWithText(event.title).assertIsDisplayed()
+      rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
       // Location line is shown in SearchResultItem; use substring for safety
-      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+      rule
+          .onNodeWithText(event.location.name, substring = true)
+          .performScrollTo()
+          .assertIsDisplayed()
     }
   }
 
