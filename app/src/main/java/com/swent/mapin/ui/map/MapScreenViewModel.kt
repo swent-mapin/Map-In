@@ -849,15 +849,32 @@ class MapScreenViewModel(
         return@launch
       }
       _errorMessage = null
+
+      // Optimistic add to UI
+      val previousSavedIds = _savedEventIds
+      val previousSavedList = _savedEvents
+      _savedEventIds = _savedEventIds + eventUid
+      // try to add event object from _events or selectedEvent
+      val eventToAdd = _events.find { it.uid == eventUid } ?: _selectedEvent
+      if (eventToAdd != null && _savedEvents.none { it.uid == eventUid }) {
+        _savedEvents = listOf(eventToAdd) + _savedEvents
+      }
+      // Force recomposition of selected event sheet so button updates immediately
+      _selectedEvent = _selectedEvent?.copy()
+
       try {
         val success = eventRepository.saveEventForUser(currentUserId, eventUid)
         if (success) {
-          _savedEventIds = _savedEventIds + eventUid
           loadSavedEvents()
         } else {
+          // revert optimistic change
+          _savedEventIds = previousSavedIds
+          _savedEvents = previousSavedList
           _errorMessage = "Event is already saved"
         }
       } catch (e: Exception) {
+        _savedEventIds = previousSavedIds
+        _savedEvents = previousSavedList
         _errorMessage = "Failed to save event: ${e.message}"
       }
     }
@@ -866,23 +883,36 @@ class MapScreenViewModel(
   /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
     val eventUid = _selectedEvent?.uid ?: return
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _errorMessage = "You must be signed in to unsave events"
+      return
+    }
+
+    // Optimistic UI update: remove immediately
+    _savedEventIds = _savedEventIds - eventUid
+    _savedEvents = _savedEvents.filter { it.uid != eventUid }
+    // Force recomposition of selected event sheet so button updates immediately
+    _selectedEvent = _selectedEvent?.copy()
+
     viewModelScope.launch {
-      val currentUserId = auth.currentUser?.uid
-      if (currentUserId == null) {
-        _errorMessage = "You must be signed in to unsave events"
-        return@launch
-      }
       _errorMessage = null
       try {
         val success = eventRepository.unsaveEventForUser(currentUserId, eventUid)
-        if (success) {
-          _savedEventIds = _savedEventIds - eventUid
+        if (!success) {
+          // Do not revert optimistic change to ensure offline UX — keep UI change but notify user
+          _errorMessage = "Could not remove saved status on server; action recorded locally."
+          // attempt to reload saved events from cache to ensure consistency
           loadSavedEvents()
         } else {
-          _errorMessage = "Event was not saved"
+          // remote ok, refresh from repository/cache
+          loadSavedEvents()
         }
-      } catch (e: Exception) {
-        _errorMessage = "Failed to unsave: ${e.message}"
+      } catch (_: Exception) {
+        // Network or unexpected error: keep optimistic UI change, notify user
+        _errorMessage = "Failed to unsave (offline). Change will sync when online."
+        // reload from cache to ensure local state is authoritative
+        loadSavedEvents()
       }
     }
   }
