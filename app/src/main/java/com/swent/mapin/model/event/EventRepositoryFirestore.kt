@@ -18,7 +18,10 @@ private const val USERS_COLLECTION_PATH = "users"
 private const val SAVED_SUBCOLLECTION = "savedEvents"
 private const val FIELD_SAVED_AT = "savedAt"
 
-class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventRepository {
+class EventRepositoryFirestore(
+    private val db: FirebaseFirestore,
+    private val localCache: EventLocalCache? = null
+) : EventRepository {
 
   override fun getNewUid(): String = db.collection(EVENTS_COLLECTION_PATH).document().id
 
@@ -135,57 +138,108 @@ class EventRepositoryFirestore(private val db: FirebaseFirestore) : EventReposit
               .await()
       snap.documents.map { it.id }.toSet()
     } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "getSavedEventIds failed", e)
-      emptySet()
+      Log.w("EventRepositoryFirestore", "getSavedEventIds failed, falling back to local cache", e)
+      try {
+        localCache?.getSavedEvents(userId)?.map { it.uid }?.toSet() ?: emptySet()
+      } catch (ex: Exception) {
+        Log.w("EventRepositoryFirestore", "local cache read failed", ex)
+        emptySet()
+      }
     }
   }
 
   /** Get the saved events for a user. */
   override suspend fun getSavedEvents(userId: String): List<Event> {
-    val ids = getSavedEventIds(userId).toList()
-    if (ids.isEmpty()) return emptyList()
+    try {
+      val ids = getSavedEventIds(userId).toList()
+      if (ids.isEmpty()) return emptyList()
 
-    // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
-    val chunks = ids.chunked(FIRESTORE_QUERY_LIMIT)
-    val results = mutableListOf<Event>()
-    for (chunk in chunks) {
-      val snap =
-          db.collection(EVENTS_COLLECTION_PATH).whereIn(FieldPath.documentId(), chunk).get().await()
-      results += snap.documents.mapNotNull { documentToEvent(it) }
-    }
+      // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
+      val chunks = ids.chunked(FIRESTORE_QUERY_LIMIT)
+      val results = mutableListOf<Event>()
+      for (chunk in chunks) {
+        val snap =
+            db.collection(EVENTS_COLLECTION_PATH).whereIn(FieldPath.documentId(), chunk).get().await()
+        results += snap.documents.mapNotNull { documentToEvent(it) }
+      }
       val order = ids.withIndex().associate { (i, id) -> id to i }
-      return results.sortedBy { order[it.uid] ?: Int.MAX_VALUE }
+      val sorted = results.sortedBy { order[it.uid] ?: Int.MAX_VALUE }
+
+      // update local cache for offline availability
+      try {
+        localCache?.cacheSavedEvents(userId, sorted)
+      } catch (e: Exception) {
+        Log.w("EventRepositoryFirestore", "failed to update local cache", e)
+      }
+
+      return sorted
+    } catch (e: Exception) {
+      Log.w("EventRepositoryFirestore", "getSavedEvents failed, falling back to local cache", e)
+      return try {
+        localCache?.getSavedEvents(userId) ?: emptyList()
+      } catch (ex: Exception) {
+        Log.w("EventRepositoryFirestore", "local cache read failed", ex)
+        emptyList()
+      }
+    }
   }
 
   /** Mark an event as saved for a user (idempotent). */
   override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-    return try {
+    var remoteOk = false
+    try {
       db.collection(USERS_COLLECTION_PATH)
           .document(userId)
           .collection(SAVED_SUBCOLLECTION)
           .document(eventId)
           .set(mapOf(FIELD_SAVED_AT to FieldValue.serverTimestamp()))
           .await()
-      true
+      remoteOk = true
     } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "saveEventForUser failed", e)
-      false
+      Log.w("EventRepositoryFirestore", "saveEventForUser remote failed", e)
     }
+
+    // Ensure local cache is updated so user can view saved events offline.
+    var localOk = false
+    try {
+      val event = try { getEvent(eventId) } catch (_: Exception) { null }
+      if (localCache != null) {
+        if (event != null) localCache.saveEventLocally(userId, event, Timestamp.now())
+        else localCache.saveEventLocally(userId, Event(uid = eventId), Timestamp.now())
+        localOk = true
+      }
+    } catch (_: Exception) {
+      Log.w("EventRepositoryFirestore", "saveEventForUser local cache update failed")
+    }
+
+    return remoteOk || localOk
   }
 
   /** Remove an event from a user's saved list (idempotent). */
   override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-    return try {
+    var remoteOk = false
+    try {
       db.collection(USERS_COLLECTION_PATH)
           .document(userId)
           .collection(SAVED_SUBCOLLECTION)
           .document(eventId)
           .delete()
           .await()
-      true
+      remoteOk = true
     } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "unsaveEventForUser failed", e)
-      false
+      Log.w("EventRepositoryFirestore", "unsaveEventForUser remote failed", e)
     }
+
+    var localOk = false
+    try {
+      if (localCache != null) {
+        localCache.unsaveEventLocally(userId, eventId)
+        localOk = true
+      }
+    } catch (e: Exception) {
+      Log.w("EventRepositoryFirestore", "unsaveEventForUser local cache update failed", e)
+    }
+
+    return remoteOk || localOk
   }
 }
