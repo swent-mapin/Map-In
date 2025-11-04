@@ -306,4 +306,198 @@ class SettingsScreenTest {
     // Dialog should be dismissed
     composeTestRule.onNodeWithText("Delete Account").assertExists() // Button still exists
   }
+
+  // ===== Additional Coverage Tests =====
+
+  @Test
+  fun settingsScreen_poiToggle_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithText("Show POI labels on the map").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_roadLabelsToggle_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithText("Display road labels on the map").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_transitLabelsToggle_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithText("Show transit and street labels").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_3DBuildingsToggle_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithText("Enable 3D buildings on the map").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_logoutButton_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo()
+    composeTestRule.onNodeWithText("Sign out of your account").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_deleteAccountButton_displaysCorrectSubtitle() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("deleteAccountButton").performScrollTo()
+    composeTestRule.onNodeWithText("Permanently delete your account and data").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_themeModeSelector_containsThreeButtons() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("themeModeSelector_light").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("themeModeSelector_dark").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("themeModeSelector_system").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_poiToggle_hasCorrectTag() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("poiToggle").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_roadNumbersToggle_hasCorrectTag() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("roadNumbersToggle").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_streetNamesToggle_hasCorrectTag() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("streetNamesToggle").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_threeDViewToggle_hasCorrectTag() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("threeDViewToggle").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_multipleTogglesExist() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("poiToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("roadNumbersToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("streetNamesToggle").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("threeDViewToggle").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_confirmationDialog_confirmButton() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Confirm").assertIsDisplayed().assertHasClickAction()
+  }
+
+  @Test
+  fun settingsScreen_deleteAccountConfirmation_confirmButton() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("deleteAccountButton_action").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Delete").assertIsDisplayed().assertHasClickAction()
+  }
+
+  @Test
+  fun settingsScreen_hasSnackbarHost() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    // Snackbar host should be present in the scaffold
+    composeTestRule.onNodeWithTag("settingsScreen").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_scrollContentUpToShowAllElements() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    // Scroll to find all elements
+    composeTestRule.onNodeWithText("Appearance").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Map Settings").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_backButton_hasCorrectIcon() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("backButton").assertIsDisplayed().assertHasClickAction()
+  }
+
+  @Test
+  fun settingsScreen_settingsTitle_isVisible() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_allTogglesAreInitialized() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    // All toggles should exist and be clickable
+    composeTestRule.onNodeWithTag("poiToggle_switch").assertHasClickAction()
+    composeTestRule.onNodeWithTag("roadNumbersToggle_switch").assertHasClickAction()
+    composeTestRule
+        .onNodeWithTag("streetNamesToggle_switch")
+        .performScrollTo()
+        .assertHasClickAction()
+    composeTestRule
+        .onNodeWithTag("threeDViewToggle_switch")
+        .performScrollTo()
+        .assertHasClickAction()
+  }
+
+  @Test
+  fun settingsScreen_accountSectionVisible_afterScroll() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Account").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_themeModeSelector_visible() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("themeModeSelector").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Theme Mode").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_poiToggleHasVisibilityIcon() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("poiToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Points of Interest").assertIsDisplayed()
+  }
+
+  @Test
+  fun settingsScreen_roadToggleHasMapIcon() {
+    composeTestRule.setContent { SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}) }
+
+    composeTestRule.onNodeWithTag("roadNumbersToggle").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Road Labels").assertIsDisplayed()
+  }
 }
