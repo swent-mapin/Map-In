@@ -33,7 +33,10 @@ class MainActivity : ComponentActivity() {
     EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
-      val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
+      // Cache the theme mode flow collection to prevent repeated DataStore reads
+      val themeModeString by
+          remember(preferencesRepository) { preferencesRepository.themeModeFlow }
+              .collectAsState(initial = "system")
       val themeMode = ThemeMode.fromString(themeModeString)
 
       val darkTheme =

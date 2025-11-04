@@ -45,12 +45,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
 
 /**
@@ -85,137 +88,165 @@ import com.swent.mapin.model.PreferencesRepositoryProvider
 fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
   val context = LocalContext.current
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
-  val viewModel = remember { SettingsViewModel(preferencesRepository) }
+  val viewModel: SettingsViewModel =
+      viewModel(factory = SettingsViewModel.Factory(preferencesRepository))
   val themeMode by viewModel.themeMode.collectAsState()
   val mapPreferences by viewModel.mapPreferences.collectAsState()
+  val errorMessage by viewModel.errorMessage.collectAsState()
   var showDeleteConfirmation by remember { mutableStateOf(false) }
   var showLogoutConfirmation by remember { mutableStateOf(false) }
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  // Display error messages in Snackbar
+  LaunchedEffect(errorMessage) {
+    errorMessage?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearErrorMessage()
+    }
+  }
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("settingsScreen"),
+      snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
       topBar = {
         TopAppBar(
             title = {
               Text(
                   "Settings",
                   style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold)
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface)
             },
             navigationIcon = {
               IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface)
               }
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary))
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
       }) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-          Column(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .verticalScroll(rememberScrollState())
-                      .padding(paddingValues)
-                      .padding(16.dp)
-                      .animateContentSize(
-                          animationSpec =
-                              spring(
-                                  dampingRatio = Spring.DampingRatioMediumBouncy,
-                                  stiffness = Spring.StiffnessLow))) {
-                // Appearance Settings Section
-                SettingsSectionTitle(title = "Appearance", icon = Icons.Default.Palette)
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        color =
+                            if (MaterialTheme.colorScheme.background ==
+                                MaterialTheme.colorScheme.surface) {
+                              // Light theme: use a slightly gray background
+                              MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            } else {
+                              // Dark theme: use a darker background
+                              MaterialTheme.colorScheme.background
+                            })) {
+              Column(
+                  modifier =
+                      Modifier.fillMaxSize()
+                          .verticalScroll(rememberScrollState())
+                          .padding(paddingValues)
+                          .padding(16.dp)
+                          .animateContentSize(
+                              animationSpec =
+                                  spring(
+                                      dampingRatio = Spring.DampingRatioMediumBouncy,
+                                      stiffness = Spring.StiffnessLow))) {
+                    // Appearance Settings Section
+                    SettingsSectionTitle(title = "Appearance", icon = Icons.Default.Palette)
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Theme Mode Selection
-                ThemeModeSelector(
-                    currentMode = themeMode,
-                    onModeChanged = { viewModel.updateThemeMode(it) },
-                    testTag = "themeModeSelector")
+                    // Theme Mode Selection
+                    ThemeModeSelector(
+                        currentMode = themeMode,
+                        onModeChanged = { viewModel.updateThemeMode(it) },
+                        testTag = "themeModeSelector")
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                // Map Settings Section
-                SettingsSectionTitle(title = "Map Settings", icon = Icons.Default.Map)
+                    // Map Settings Section
+                    SettingsSectionTitle(title = "Map Settings", icon = Icons.Default.Map)
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // POIs Visibility Toggle
-                SettingsToggleItem(
-                    title = "Points of Interest",
-                    subtitle = "Show POI labels on the map",
-                    icon = Icons.Default.Visibility,
-                    isEnabled = mapPreferences.showPOIs,
-                    onToggle = { viewModel.updateShowPOIs(it) },
-                    testTag = "poiToggle")
+                    // POIs Visibility Toggle
+                    SettingsToggleItem(
+                        title = "Points of Interest",
+                        subtitle = "Show POI labels on the map",
+                        icon = Icons.Default.Visibility,
+                        isEnabled = mapPreferences.showPOIs,
+                        onToggle = { viewModel.updateShowPOIs(it) },
+                        testTag = "poiToggle")
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Road Numbers Visibility Toggle
-                SettingsToggleItem(
-                    title = "Road Labels",
-                    subtitle = "Display road labels on the map",
-                    icon = Icons.Default.Visibility,
-                    isEnabled = mapPreferences.showRoadNumbers,
-                    onToggle = { viewModel.updateShowRoadNumbers(it) },
-                    testTag = "roadNumbersToggle")
+                    // Road Numbers Visibility Toggle
+                    SettingsToggleItem(
+                        title = "Road Labels",
+                        subtitle = "Display road labels on the map",
+                        icon = Icons.Default.Visibility,
+                        isEnabled = mapPreferences.showRoadNumbers,
+                        onToggle = { viewModel.updateShowRoadNumbers(it) },
+                        testTag = "roadNumbersToggle")
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Street Names Visibility Toggle
-                SettingsToggleItem(
-                    title = "Transit Labels",
-                    subtitle = "Show transit and street labels",
-                    icon = Icons.Default.Visibility,
-                    isEnabled = mapPreferences.showStreetNames,
-                    onToggle = { viewModel.updateShowStreetNames(it) },
-                    testTag = "streetNamesToggle")
+                    // Street Names Visibility Toggle
+                    SettingsToggleItem(
+                        title = "Transit Labels",
+                        subtitle = "Show transit and street labels",
+                        icon = Icons.Default.Visibility,
+                        isEnabled = mapPreferences.showStreetNames,
+                        onToggle = { viewModel.updateShowStreetNames(it) },
+                        testTag = "streetNamesToggle")
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // 3D View Toggle
-                SettingsToggleItem(
-                    title = "3D Buildings",
-                    subtitle = "Enable 3D buildings on the map",
-                    icon = Icons.Default.ViewInAr,
-                    isEnabled = mapPreferences.enable3DView,
-                    onToggle = { viewModel.updateEnable3DView(it) },
-                    testTag = "threeDViewToggle")
+                    // 3D View Toggle
+                    SettingsToggleItem(
+                        title = "3D Buildings",
+                        subtitle = "Enable 3D buildings on the map",
+                        icon = Icons.Default.ViewInAr,
+                        isEnabled = mapPreferences.enable3DView,
+                        onToggle = { viewModel.updateEnable3DView(it) },
+                        testTag = "threeDViewToggle")
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                // Account Settings Section
-                SettingsSectionTitle(title = "Account", icon = Icons.Default.Settings)
+                    // Account Settings Section
+                    SettingsSectionTitle(title = "Account", icon = Icons.Default.Settings)
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Logout Button
-                SettingsActionButton(
-                    label = "Logout",
-                    description = "Sign out of your account",
-                    icon = Icons.AutoMirrored.Filled.Logout,
-                    backgroundColor = Color(0xFF667eea),
-                    contentColor = Color.White,
-                    onAction = { showLogoutConfirmation = true },
-                    testTag = "logoutButton")
+                    // Logout Button
+                    SettingsActionButton(
+                        label = "Logout",
+                        description = "Sign out of your account",
+                        icon = Icons.AutoMirrored.Filled.Logout,
+                        backgroundColor = Color(0xFF667eea),
+                        contentColor = Color.White,
+                        onAction = { showLogoutConfirmation = true },
+                        testTag = "logoutButton")
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Delete Account Button
-                SettingsActionButton(
-                    label = "Delete Account",
-                    description = "Permanently delete your account and data",
-                    icon = Icons.Default.Delete,
-                    backgroundColor = Color(0xFFef5350),
-                    contentColor = Color.White,
-                    onAction = { showDeleteConfirmation = true },
-                    testTag = "deleteAccountButton")
+                    // Delete Account Button
+                    SettingsActionButton(
+                        label = "Delete Account",
+                        description = "Permanently delete your account and data",
+                        icon = Icons.Default.Delete,
+                        backgroundColor = Color(0xFFef5350),
+                        contentColor = Color.White,
+                        onAction = { showDeleteConfirmation = true },
+                        testTag = "deleteAccountButton")
 
-                Spacer(modifier = Modifier.height(32.dp))
-              }
-        }
+                    Spacer(modifier = Modifier.height(32.dp))
+                  }
+            }
       }
 
   // Logout Confirmation Dialog
@@ -258,10 +289,19 @@ private fun ThemeModeSelector(
     testTag: String
 ) {
   Card(
-      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
+      modifier = Modifier.fillMaxWidth().testTag(testTag),
       shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+      colors =
+          CardDefaults.cardColors(
+              containerColor =
+                  if (MaterialTheme.colorScheme.background == MaterialTheme.colorScheme.surface) {
+                    // Light theme: white/surface for elevated appearance
+                    MaterialTheme.colorScheme.surface
+                  } else {
+                    // Dark theme: lighter than background for elevation
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                  }),
+      elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -350,10 +390,19 @@ private fun SettingsToggleItem(
     testTag: String
 ) {
   Card(
-      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
+      modifier = Modifier.fillMaxWidth().testTag(testTag),
       shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+      colors =
+          CardDefaults.cardColors(
+              containerColor =
+                  if (MaterialTheme.colorScheme.background == MaterialTheme.colorScheme.surface) {
+                    // Light theme: white/surface for elevated appearance
+                    MaterialTheme.colorScheme.surface
+                  } else {
+                    // Dark theme: lighter than background for elevation
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                  }),
+      elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onToggle(!isEnabled) },
             verticalAlignment = Alignment.CenterVertically,
@@ -416,10 +465,17 @@ private fun SettingsActionButton(
     testTag: String
 ) {
   Card(
-      modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(12.dp)).testTag(testTag),
+      modifier = Modifier.fillMaxWidth().testTag(testTag),
       shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+      colors =
+          CardDefaults.cardColors(
+              containerColor =
+                  if (MaterialTheme.colorScheme.background == MaterialTheme.colorScheme.surface) {
+                    MaterialTheme.colorScheme.surface
+                  } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                  }),
+      elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()

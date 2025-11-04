@@ -223,10 +223,16 @@ class MapScreenViewModel(
     registerAuthStateListener()
   }
 
-  /** Load map style preference from DataStore */
+  /**
+   * Load map style preference from DataStore synchronously.
+   *
+   * Uses runBlocking to ensure the preference is loaded before map initialization, preventing the
+   * map from rendering with the wrong style initially. DataStore reads are fast (local storage), so
+   * blocking here is acceptable and prevents visual flickering.
+   */
   private fun loadMapStylePreference() {
-    viewModelScope.launch {
-      try {
+    try {
+      kotlinx.coroutines.runBlocking {
         val preferencesRepository = PreferencesRepositoryProvider.getInstance(applicationContext)
         // Use first() to get the initial value only, not continuously observe
         val style = preferencesRepository.mapStyleFlow.first()
@@ -235,10 +241,10 @@ class MapScreenViewModel(
               "satellite" -> MapStyle.SATELLITE
               else -> MapStyle.STANDARD
             }
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to load map style preference: ${e.message}")
-        _mapStyle = MapStyle.STANDARD
       }
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to load map style preference: ${e.message}")
+      _mapStyle = MapStyle.STANDARD
     }
   }
 

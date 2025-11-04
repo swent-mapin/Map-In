@@ -13,9 +13,15 @@ import kotlinx.coroutines.flow.map
 /**
  * Repository for managing app preferences using DataStore. Handles theme settings, map style
  * preferences, and map visibility options.
+ *
+ * WARNING: Do not instantiate this class directly with an Activity context to avoid memory leaks.
+ * Always use PreferencesRepositoryProvider.getRepository() which provides an instance backed by
+ * applicationContext.
  */
 class PreferencesRepository(private val context: Context) {
 
+  // WARNING: Extension property on Context - ensure only Application context is used
+  // to prevent memory leaks. Use PreferencesRepositoryProvider for proper instantiation.
   private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
   companion object {

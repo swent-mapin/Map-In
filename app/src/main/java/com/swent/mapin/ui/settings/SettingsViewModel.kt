@@ -1,13 +1,18 @@
 package com.swent.mapin.ui.settings
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Data class representing map preferences */
@@ -67,13 +72,36 @@ class SettingsViewModel(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
-  // Theme mode state
-  private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
-  val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+  // Theme mode state - cached from DataStore using stateIn() to prevent repeated reads
+  val themeMode: StateFlow<ThemeMode> =
+      preferencesRepository.themeModeFlow
+          .map { ThemeMode.fromString(it) }
+          .stateIn(
+              scope = viewModelScope,
+              started = SharingStarted.WhileSubscribed(5000),
+              initialValue = ThemeMode.SYSTEM)
 
-  // Map preferences state
-  private val _mapPreferences = MutableStateFlow(MapPreferences())
-  val mapPreferences: StateFlow<MapPreferences> = _mapPreferences.asStateFlow()
+  // Map preferences state - combined from multiple DataStore flows and cached
+  val mapPreferences: StateFlow<MapPreferences> =
+      combine(
+              preferencesRepository.showPOIsFlow,
+              preferencesRepository.showRoadNumbersFlow,
+              preferencesRepository.showStreetNamesFlow,
+              preferencesRepository.enable3DViewFlow) {
+                  showPOIs,
+                  showRoadNumbers,
+                  showStreetNames,
+                  enable3DView ->
+                MapPreferences(
+                    showPOIs = showPOIs,
+                    showRoadNumbers = showRoadNumbers,
+                    showStreetNames = showStreetNames,
+                    enable3DView = enable3DView)
+              }
+          .stateIn(
+              scope = viewModelScope,
+              started = SharingStarted.WhileSubscribed(5000),
+              initialValue = MapPreferences())
 
   // Loading state for async operations
   private val _isLoading = MutableStateFlow(false)
@@ -83,47 +111,16 @@ class SettingsViewModel(
   private val _errorMessage = MutableStateFlow<String?>(null)
   val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-  init {
-    // Load saved preferences from DataStore and Firestore
-    loadPreferences()
-  }
-
-  /** Load all preferences from DataStore */
-  private fun loadPreferences() {
-    viewModelScope.launch {
-      // Load theme mode
-      preferencesRepository.themeModeFlow.collect { mode ->
-        _themeMode.value = ThemeMode.fromString(mode)
-      }
-    }
-    viewModelScope.launch {
-      // Load map preferences
-      preferencesRepository.showPOIsFlow.collect { show ->
-        _mapPreferences.value = _mapPreferences.value.copy(showPOIs = show)
-      }
-    }
-    viewModelScope.launch {
-      preferencesRepository.showRoadNumbersFlow.collect { show ->
-        _mapPreferences.value = _mapPreferences.value.copy(showRoadNumbers = show)
-      }
-    }
-    viewModelScope.launch {
-      preferencesRepository.showStreetNamesFlow.collect { show ->
-        _mapPreferences.value = _mapPreferences.value.copy(showStreetNames = show)
-      }
-    }
-    viewModelScope.launch {
-      preferencesRepository.enable3DViewFlow.collect { enable ->
-        _mapPreferences.value = _mapPreferences.value.copy(enable3DView = enable)
-      }
-    }
+  /** Clear error message after it has been displayed to the user */
+  fun clearErrorMessage() {
+    _errorMessage.value = null
   }
 
   /** Update theme mode */
   fun updateThemeMode(mode: ThemeMode) {
     viewModelScope.launch {
       try {
-        _themeMode.value = mode
+        // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setThemeMode(mode.toStorageString())
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update theme: ${e.message}"
@@ -135,7 +132,7 @@ class SettingsViewModel(
   fun updateShowPOIs(show: Boolean) {
     viewModelScope.launch {
       try {
-        _mapPreferences.value = _mapPreferences.value.copy(showPOIs = show)
+        // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setShowPOIs(show)
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update POI setting: ${e.message}"
@@ -147,7 +144,7 @@ class SettingsViewModel(
   fun updateShowRoadNumbers(show: Boolean) {
     viewModelScope.launch {
       try {
-        _mapPreferences.value = _mapPreferences.value.copy(showRoadNumbers = show)
+        // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setShowRoadNumbers(show)
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update road numbers setting: ${e.message}"
@@ -159,7 +156,7 @@ class SettingsViewModel(
   fun updateShowStreetNames(show: Boolean) {
     viewModelScope.launch {
       try {
-        _mapPreferences.value = _mapPreferences.value.copy(showStreetNames = show)
+        // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setShowStreetNames(show)
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update street names setting: ${e.message}"
@@ -171,7 +168,7 @@ class SettingsViewModel(
   fun updateEnable3DView(enable: Boolean) {
     viewModelScope.launch {
       try {
-        _mapPreferences.value = _mapPreferences.value.copy(enable3DView = enable)
+        // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setEnable3DView(enable)
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update 3D view setting: ${e.message}"
@@ -241,5 +238,32 @@ class SettingsViewModel(
         _isLoading.value = false
       }
     }
+  }
+
+  companion object {
+    /**
+     * Factory for creating SettingsViewModel with proper dependency injection.
+     *
+     * Usage in Composable:
+     * ```
+     * val viewModel: SettingsViewModel = viewModel(
+     *   factory = SettingsViewModel.Factory(preferencesRepository)
+     * )
+     * ```
+     */
+    fun Factory(
+        preferencesRepository: PreferencesRepository,
+        auth: FirebaseAuth = FirebaseAuth.getInstance(),
+        firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    ): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+          @Suppress("UNCHECKED_CAST")
+          override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
+              return SettingsViewModel(preferencesRepository, auth, firestore) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+          }
+        }
   }
 }

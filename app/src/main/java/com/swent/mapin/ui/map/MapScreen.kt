@@ -170,18 +170,12 @@ fun MapScreen(
   val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
   val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = false)
 
-  // Adjust POI labels alongside our custom annotations
+  // Initialize standard style state with light preset only
   val standardStyleState = rememberStandardStyleState {
-    configurationsState.apply {
-      this.lightPreset = lightPreset
-      showPointOfInterestLabels = BooleanValue(showPOIs)
-      showRoadLabels = BooleanValue(showRoadNumbers)
-      showTransitLabels = BooleanValue(showStreetNames)
-      show3dObjects = BooleanValue(enable3DView)
-    }
+    configurationsState.apply { this.lightPreset = lightPreset }
   }
 
-  // Update style configuration when preferences change
+  // Update style configuration reactively when preferences change
   LaunchedEffect(showPOIs, showRoadNumbers, showStreetNames, enable3DView) {
     standardStyleState.configurationsState.apply {
       showPointOfInterestLabels = BooleanValue(showPOIs)
