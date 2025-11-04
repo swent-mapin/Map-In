@@ -224,6 +224,9 @@ dependencies {
     // ------------- Coroutines ------------------
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
+    // ------------- DataStore (for settings persistence) ------------------
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
     // ------------- Unit Tests (JVM) ------------------
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test:core:1.5.0")
