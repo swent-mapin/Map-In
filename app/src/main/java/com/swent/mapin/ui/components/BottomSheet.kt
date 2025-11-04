@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import com.swent.mapin.ui.map.MapConstants
 import kotlinx.coroutines.launch
 
 // Assisted by AI
@@ -129,10 +128,9 @@ fun <T> BottomSheet(
                     onVerticalDrag = { _, dragAmount ->
                       scope.launch {
                         val newHeight = (currentHeight.value - dragAmount / density.density)
-                        val minHeight =
-                            config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-                        val maxHeight =
-                            config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+                        // Small overscroll allowance for natural feel without scroll state bugs
+                        val minHeight = config.collapsedHeight.value - 8f
+                        val maxHeight = config.fullHeight.value + 8f
                         currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
                       }
                     })
@@ -183,8 +181,9 @@ fun <T> createBottomSheetNestedScrollConnection(
         // Always consume scroll to expand sheet when not full
         scope.launch {
           val newHeight = (currentHeightValue - delta / density.density)
-          val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-          val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+          // Small overscroll allowance for natural feel without scroll state bugs
+          val minHeight = config.collapsedHeight.value - 8f
+          val maxHeight = config.fullHeight.value + 8f
           currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
         }
         // Consume the scroll so content doesn't scroll
@@ -216,8 +215,9 @@ fun <T> createBottomSheetNestedScrollConnection(
       // If there's unconsumed scroll, apply it to the sheet
       scope.launch {
         val newHeight = (currentHeightValue - delta / density.density)
-        val minHeight = config.collapsedHeight.value - MapConstants.OVERSCROLL_ALLOWANCE_DP
-        val maxHeight = config.fullHeight.value + MapConstants.OVERSCROLL_ALLOWANCE_DP
+        // Small overscroll allowance for natural feel without scroll state bugs
+        val minHeight = config.collapsedHeight.value - 8f
+        val maxHeight = config.fullHeight.value + 8f
         currentHeight.snapTo(newHeight.coerceIn(minHeight, maxHeight))
       }
 
