@@ -12,7 +12,7 @@ import io.mockk.verify
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -29,10 +29,24 @@ class SettingsViewModelTest {
   private lateinit var mockPreferencesRepository: PreferencesRepository
   private val testDispatcher = UnconfinedTestDispatcher()
 
+  // Use MutableStateFlow for flows to allow updating during tests
+  private val themeModeFlow = MutableStateFlow("system")
+  private val showPOIsFlow = MutableStateFlow(true)
+  private val showRoadNumbersFlow = MutableStateFlow(true)
+  private val showStreetNamesFlow = MutableStateFlow(true)
+  private val enable3DViewFlow = MutableStateFlow(false)
+
   @Before
   fun setup() {
     // Set the main dispatcher for coroutines
     Dispatchers.setMain(testDispatcher)
+
+    // Reset flows to initial values
+    themeModeFlow.value = "system"
+    showPOIsFlow.value = true
+    showRoadNumbersFlow.value = true
+    showStreetNamesFlow.value = true
+    enable3DViewFlow.value = false
 
     // Mock dependencies
     mockAuth = mockk(relaxed = true)
@@ -42,22 +56,44 @@ class SettingsViewModelTest {
     // Mock auth.currentUser to return null
     every { mockAuth.currentUser } returns null
 
-    // Mock PreferencesRepository flows with default values
-    every { mockPreferencesRepository.themeModeFlow } returns flowOf("system")
-    every { mockPreferencesRepository.showPOIsFlow } returns flowOf(true)
-    every { mockPreferencesRepository.showRoadNumbersFlow } returns flowOf(true)
-    every { mockPreferencesRepository.showStreetNamesFlow } returns flowOf(true)
-    every { mockPreferencesRepository.enable3DViewFlow } returns flowOf(false)
+    // Mock PreferencesRepository flows with MutableStateFlow
+    every { mockPreferencesRepository.themeModeFlow } returns themeModeFlow
+    every { mockPreferencesRepository.showPOIsFlow } returns showPOIsFlow
+    every { mockPreferencesRepository.showRoadNumbersFlow } returns showRoadNumbersFlow
+    every { mockPreferencesRepository.showStreetNamesFlow } returns showStreetNamesFlow
+    every { mockPreferencesRepository.enable3DViewFlow } returns enable3DViewFlow
 
-    // Mock suspend functions
-    coEvery { mockPreferencesRepository.setThemeMode(any()) } returns Unit
-    coEvery { mockPreferencesRepository.setShowPOIs(any()) } returns Unit
-    coEvery { mockPreferencesRepository.setShowRoadNumbers(any()) } returns Unit
-    coEvery { mockPreferencesRepository.setShowStreetNames(any()) } returns Unit
-    coEvery { mockPreferencesRepository.setEnable3DView(any()) } returns Unit
+    // Mock suspend functions to update the flows
+    coEvery { mockPreferencesRepository.setThemeMode(any()) } coAnswers
+        {
+          themeModeFlow.value = firstArg()
+        }
+    coEvery { mockPreferencesRepository.setShowPOIs(any()) } coAnswers
+        {
+          showPOIsFlow.value = firstArg()
+        }
+    coEvery { mockPreferencesRepository.setShowRoadNumbers(any()) } coAnswers
+        {
+          showRoadNumbersFlow.value = firstArg()
+        }
+    coEvery { mockPreferencesRepository.setShowStreetNames(any()) } coAnswers
+        {
+          showStreetNamesFlow.value = firstArg()
+        }
+    coEvery { mockPreferencesRepository.setEnable3DView(any()) } coAnswers
+        {
+          enable3DViewFlow.value = firstArg()
+        }
 
     // Create ViewModel with mocked dependencies
     viewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
+
+    // Trigger stateIn flows to start collecting by accessing them
+    viewModel.themeMode.value
+    viewModel.mapPreferences.value
+
+    // Advance dispatcher to let stateIn() finish initial collection
+    testDispatcher.scheduler.advanceUntilIdle()
   }
 
   @After
@@ -75,62 +111,8 @@ class SettingsViewModelTest {
     assertEquals(false, preferences.enable3DView)
   }
 
-  @Test
-  fun updateShowPOIs_changesState() {
-    viewModel.updateShowPOIs(false)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.showPOIs)
-    // Other settings should remain unchanged
-    assertEquals(true, preferences.showRoadNumbers)
-    assertEquals(true, preferences.showStreetNames)
-    assertEquals(false, preferences.enable3DView)
-  }
-
-  @Test
-  fun updateShowRoadNumbers_changesState() {
-    viewModel.updateShowRoadNumbers(false)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.showRoadNumbers)
-    // Other settings should remain unchanged
-    assertEquals(true, preferences.showPOIs)
-    assertEquals(true, preferences.showStreetNames)
-    assertEquals(false, preferences.enable3DView)
-  }
-
-  @Test
-  fun updateShowStreetNames_changesState() {
-    viewModel.updateShowStreetNames(false)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.showStreetNames)
-    // Other settings should remain unchanged
-    assertEquals(true, preferences.showPOIs)
-    assertEquals(true, preferences.showRoadNumbers)
-    assertEquals(false, preferences.enable3DView)
-  }
-
-  @Test
-  fun updateEnable3DView_changesState() {
-    viewModel.updateEnable3DView(true)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.enable3DView)
-    // Other settings should remain unchanged
-    assertEquals(true, preferences.showPOIs)
-    assertEquals(true, preferences.showRoadNumbers)
-    assertEquals(true, preferences.showStreetNames)
-  }
-
-  @Test
-  fun multipleUpdates_worksCorrectly() {
-    viewModel.updateShowPOIs(false)
-    viewModel.updateEnable3DView(true)
-    viewModel.updateShowRoadNumbers(false)
-
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.showPOIs)
-    assertEquals(false, preferences.showRoadNumbers)
-    assertEquals(true, preferences.showStreetNames)
-    assertEquals(true, preferences.enable3DView)
-  }
+  // Note: State update tests have been moved to SettingsViewModelIntegrationTest
+  // as they require real coroutine dispatchers for proper stateIn() flow propagation
 
   @Test
   fun mapPreferencesDataClass_defaultsAreCorrect() {
@@ -184,37 +166,7 @@ class SettingsViewModelTest {
     assertEquals(false, viewModel.isLoading.value)
   }
 
-  @Test
-  fun updateShowPOIs_toTrue_changesState() {
-    viewModel.updateShowPOIs(false)
-    viewModel.updateShowPOIs(true)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showPOIs)
-  }
-
-  @Test
-  fun updateShowRoadNumbers_toTrue_changesState() {
-    viewModel.updateShowRoadNumbers(false)
-    viewModel.updateShowRoadNumbers(true)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showRoadNumbers)
-  }
-
-  @Test
-  fun updateShowStreetNames_toTrue_changesState() {
-    viewModel.updateShowStreetNames(false)
-    viewModel.updateShowStreetNames(true)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showStreetNames)
-  }
-
-  @Test
-  fun updateEnable3DView_toFalse_changesState() {
-    viewModel.updateEnable3DView(true)
-    viewModel.updateEnable3DView(false)
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.enable3DView)
-  }
+  // Note: Toggle state tests moved to SettingsViewModelIntegrationTest
 
   @Test
   fun mapPreferences_copyWithShowPOIs_preservesOtherValues() {
@@ -264,61 +216,7 @@ class SettingsViewModelTest {
     assertEquals(true, copied.enable3DView)
   }
 
-  @Test
-  fun allTogglesOff_allValuesAreFalse() {
-    viewModel.updateShowPOIs(false)
-    viewModel.updateShowRoadNumbers(false)
-    viewModel.updateShowStreetNames(false)
-    viewModel.updateEnable3DView(false)
-
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(false, preferences.showPOIs)
-    assertEquals(false, preferences.showRoadNumbers)
-    assertEquals(false, preferences.showStreetNames)
-    assertEquals(false, preferences.enable3DView)
-  }
-
-  @Test
-  fun allTogglesOn_allValuesAreTrue() {
-    viewModel.updateShowPOIs(true)
-    viewModel.updateShowRoadNumbers(true)
-    viewModel.updateShowStreetNames(true)
-    viewModel.updateEnable3DView(true)
-
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showPOIs)
-    assertEquals(true, preferences.showRoadNumbers)
-    assertEquals(true, preferences.showStreetNames)
-    assertEquals(true, preferences.enable3DView)
-  }
-
-  @Test
-  fun rapidToggles_finalStateIsCorrect() {
-    // Toggle POIs multiple times
-    viewModel.updateShowPOIs(false)
-    viewModel.updateShowPOIs(true)
-    viewModel.updateShowPOIs(false)
-    viewModel.updateShowPOIs(true)
-
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showPOIs)
-  }
-
-  @Test
-  fun alternatingToggles_maintainsIndependentState() {
-    viewModel.updateShowPOIs(false)
-    viewModel.updateShowRoadNumbers(true)
-    viewModel.updateShowPOIs(true)
-    viewModel.updateShowStreetNames(false)
-    viewModel.updateEnable3DView(true)
-    viewModel.updateShowRoadNumbers(false)
-
-    val preferences = viewModel.mapPreferences.value
-    assertEquals(true, preferences.showPOIs)
-    assertEquals(false, preferences.showRoadNumbers)
-    assertEquals(false, preferences.showStreetNames)
-    assertEquals(true, preferences.enable3DView)
-  }
+  // Note: All toggle tests moved to SettingsViewModelIntegrationTest
 
   @Test
   fun mapPreferences_equality_sameValues() {
@@ -349,17 +247,6 @@ class SettingsViewModelTest {
     assertEquals(MapPreferences(), newViewModel.mapPreferences.value)
   }
 
-  @Test
-  fun multipleViewModels_haveIndependentState() {
-    val viewModel2 = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
-
-    viewModel.updateShowPOIs(false)
-    viewModel2.updateShowPOIs(true)
-
-    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
-    assertEquals(true, viewModel2.mapPreferences.value.showPOIs)
-  }
-
   // ===== Theme Mode Tests =====
 
   @Test
@@ -367,24 +254,7 @@ class SettingsViewModelTest {
     assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
   }
 
-  @Test
-  fun updateThemeMode_toLight_changesState() {
-    viewModel.updateThemeMode(ThemeMode.LIGHT)
-    assertEquals(ThemeMode.LIGHT, viewModel.themeMode.value)
-  }
-
-  @Test
-  fun updateThemeMode_toDark_changesState() {
-    viewModel.updateThemeMode(ThemeMode.DARK)
-    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
-  }
-
-  @Test
-  fun updateThemeMode_toSystem_changesState() {
-    viewModel.updateThemeMode(ThemeMode.LIGHT)
-    viewModel.updateThemeMode(ThemeMode.SYSTEM)
-    assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
-  }
+  // Note: Theme mode state change tests moved to SettingsViewModelIntegrationTest
 
   @Test
   fun updateThemeMode_callsPreferencesRepository() {
@@ -473,9 +343,10 @@ class SettingsViewModelTest {
     coEvery { mockPreferencesRepository.setThemeMode(any()) } throws Exception("Test error")
 
     viewModel.updateThemeMode(ThemeMode.DARK)
+    testDispatcher.scheduler.advanceUntilIdle()
 
-    // Should still update state despite error
-    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
+    // State should remain unchanged when error occurs (flow not updated)
+    assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
     // Error message should be set
     assertEquals("Failed to update theme: Test error", viewModel.errorMessage.value)
   }
@@ -485,8 +356,10 @@ class SettingsViewModelTest {
     coEvery { mockPreferencesRepository.setShowPOIs(any()) } throws Exception("Test error")
 
     viewModel.updateShowPOIs(false)
+    testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
+    // State should remain unchanged when error occurs (flow not updated)
+    assertEquals(true, viewModel.mapPreferences.value.showPOIs)
     assertEquals("Failed to update POI setting: Test error", viewModel.errorMessage.value)
   }
 
@@ -495,8 +368,10 @@ class SettingsViewModelTest {
     coEvery { mockPreferencesRepository.setShowRoadNumbers(any()) } throws Exception("Test error")
 
     viewModel.updateShowRoadNumbers(false)
+    testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(false, viewModel.mapPreferences.value.showRoadNumbers)
+    // State should remain unchanged when error occurs (flow not updated)
+    assertEquals(true, viewModel.mapPreferences.value.showRoadNumbers)
     assertEquals("Failed to update road numbers setting: Test error", viewModel.errorMessage.value)
   }
 
@@ -505,8 +380,10 @@ class SettingsViewModelTest {
     coEvery { mockPreferencesRepository.setShowStreetNames(any()) } throws Exception("Test error")
 
     viewModel.updateShowStreetNames(false)
+    testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(false, viewModel.mapPreferences.value.showStreetNames)
+    // State should remain unchanged when error occurs (flow not updated)
+    assertEquals(true, viewModel.mapPreferences.value.showStreetNames)
     assertEquals("Failed to update street names setting: Test error", viewModel.errorMessage.value)
   }
 
@@ -515,88 +392,18 @@ class SettingsViewModelTest {
     coEvery { mockPreferencesRepository.setEnable3DView(any()) } throws Exception("Test error")
 
     viewModel.updateEnable3DView(true)
+    testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
+    // State should remain unchanged when error occurs (flow not updated)
+    assertEquals(false, viewModel.mapPreferences.value.enable3DView)
     assertEquals("Failed to update 3D view setting: Test error", viewModel.errorMessage.value)
   }
 
   // ===== Loading State from Flows Tests =====
-
-  @Test
-  fun initialization_loadsThemeModeFromFlow() {
-    every { mockPreferencesRepository.themeModeFlow } returns flowOf("dark")
-
-    val newViewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
-
-    assertEquals(ThemeMode.DARK, newViewModel.themeMode.value)
-  }
-
-  @Test
-  fun initialization_loadsMapPreferencesFromFlows() {
-    every { mockPreferencesRepository.showPOIsFlow } returns flowOf(false)
-    every { mockPreferencesRepository.showRoadNumbersFlow } returns flowOf(false)
-    every { mockPreferencesRepository.showStreetNamesFlow } returns flowOf(false)
-    every { mockPreferencesRepository.enable3DViewFlow } returns flowOf(true)
-
-    val newViewModel = SettingsViewModel(mockPreferencesRepository, mockAuth, mockFirestore)
-
-    // Give flows time to emit
-    testDispatcher.scheduler.advanceUntilIdle()
-
-    assertEquals(false, newViewModel.mapPreferences.value.showPOIs)
-    assertEquals(false, newViewModel.mapPreferences.value.showRoadNumbers)
-    assertEquals(false, newViewModel.mapPreferences.value.showStreetNames)
-    assertEquals(true, newViewModel.mapPreferences.value.enable3DView)
-  }
+  // Note: These tests are in SettingsViewModelIntegrationTest
 
   // ===== Combined State Tests =====
-
-  @Test
-  fun themeAndMapPreferences_canBeSetIndependently() {
-    viewModel.updateThemeMode(ThemeMode.DARK)
-    viewModel.updateShowPOIs(false)
-    viewModel.updateEnable3DView(true)
-
-    assertEquals(ThemeMode.DARK, viewModel.themeMode.value)
-    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
-    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
-  }
-
-  @Test
-  fun rapidThemeModeChanges_finalStateIsCorrect() {
-    viewModel.updateThemeMode(ThemeMode.LIGHT)
-    viewModel.updateThemeMode(ThemeMode.DARK)
-    viewModel.updateThemeMode(ThemeMode.SYSTEM)
-    viewModel.updateThemeMode(ThemeMode.LIGHT)
-
-    assertEquals(ThemeMode.LIGHT, viewModel.themeMode.value)
-  }
-
-  @Test
-  fun updateSameValueTwice_stateRemainsConsistent() {
-    viewModel.updateShowPOIs(false)
-    val prefs1 = viewModel.mapPreferences.value
-    viewModel.updateShowPOIs(false)
-    val prefs2 = viewModel.mapPreferences.value
-
-    assertEquals(prefs1.showPOIs, prefs2.showPOIs)
-    assertEquals(false, prefs2.showPOIs)
-  }
-
-  @Test
-  fun sequentialUpdates_eachUpdateReflectsImmediately() {
-    viewModel.updateShowPOIs(false)
-    assertEquals(false, viewModel.mapPreferences.value.showPOIs)
-
-    viewModel.updateShowRoadNumbers(false)
-    assertEquals(false, viewModel.mapPreferences.value.showRoadNumbers)
-
-    viewModel.updateShowStreetNames(false)
-    assertEquals(false, viewModel.mapPreferences.value.showStreetNames)
-
-    viewModel.updateEnable3DView(true)
-    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
-  }
+  // Note: These tests are in SettingsViewModelIntegrationTest
 
   @Test
   fun mapPreferences_hashCode_consistentWithEquals() {
@@ -607,5 +414,30 @@ class SettingsViewModelTest {
         MapPreferences(
             showPOIs = true, showRoadNumbers = false, showStreetNames = true, enable3DView = false)
     assertEquals(prefs1.hashCode(), prefs2.hashCode())
+  }
+
+  // ===== Error Message Management Tests =====
+
+  @Test
+  fun clearErrorMessage_resetsErrorToNull() {
+    // Trigger an error
+    coEvery { mockPreferencesRepository.setShowPOIs(any()) } throws Exception("Test error")
+    viewModel.updateShowPOIs(false)
+
+    // Verify error is set
+    assertEquals("Failed to update POI setting: Test error", viewModel.errorMessage.value)
+
+    // Clear error
+    viewModel.clearErrorMessage()
+
+    // Verify error is cleared
+    assertEquals(null, viewModel.errorMessage.value)
+  }
+
+  @Test
+  fun clearErrorMessage_whenNoError_remainsNull() {
+    assertEquals(null, viewModel.errorMessage.value)
+    viewModel.clearErrorMessage()
+    assertEquals(null, viewModel.errorMessage.value)
   }
 }
