@@ -108,11 +108,8 @@ class SettingsViewModelTest {
     assertEquals(true, preferences.showPOIs)
     assertEquals(true, preferences.showRoadNumbers)
     assertEquals(true, preferences.showStreetNames)
-    assertEquals(false, preferences.enable3DView)
+    assertEquals(true, preferences.enable3DView)
   }
-
-  // Note: State update tests have been moved to SettingsViewModelIntegrationTest
-  // as they require real coroutine dispatchers for proper stateIn() flow propagation
 
   @Test
   fun mapPreferencesDataClass_defaultsAreCorrect() {
@@ -120,7 +117,7 @@ class SettingsViewModelTest {
     assertEquals(true, prefs.showPOIs)
     assertEquals(true, prefs.showRoadNumbers)
     assertEquals(true, prefs.showStreetNames)
-    assertEquals(false, prefs.enable3DView)
+    assertEquals(true, prefs.enable3DView)
   }
 
   @Test
@@ -391,11 +388,11 @@ class SettingsViewModelTest {
   fun updateEnable3DView_whenRepositoryThrows_handlesError() {
     coEvery { mockPreferencesRepository.setEnable3DView(any()) } throws Exception("Test error")
 
-    viewModel.updateEnable3DView(true)
+    viewModel.updateEnable3DView(false)
     testDispatcher.scheduler.advanceUntilIdle()
 
     // State should remain unchanged when error occurs (flow not updated)
-    assertEquals(false, viewModel.mapPreferences.value.enable3DView)
+    assertEquals(true, viewModel.mapPreferences.value.enable3DView)
     assertEquals("Failed to update 3D view setting: Test error", viewModel.errorMessage.value)
   }
 
