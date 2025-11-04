@@ -20,7 +20,7 @@ data class MapPreferences(
     val showPOIs: Boolean = true,
     val showRoadNumbers: Boolean = true,
     val showStreetNames: Boolean = true,
-    val enable3DView: Boolean = false
+    val enable3DView: Boolean = true
 )
 
 /** Enum for theme mode options */

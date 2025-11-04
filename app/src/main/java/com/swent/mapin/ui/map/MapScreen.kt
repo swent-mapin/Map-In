@@ -157,27 +157,36 @@ fun MapScreen(
       rememberSheetInteractionMetrics(
           screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
-  val isDarkTheme = isSystemInDarkTheme()
-  val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
-
-  // Get map preferences from PreferencesRepository
+  // Get map preferences and theme from PreferencesRepository
   val context = LocalContext.current
   val preferencesRepository = remember {
     com.swent.mapin.model.PreferencesRepositoryProvider.getInstance(context)
   }
+  val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
   val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
   val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
   val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
-  val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = false)
+  val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = true)
+
+  // Determine if dark theme based on app setting
+  val isSystemInDark = isSystemInDarkTheme()
+  val isDarkTheme =
+      when (themeModeString.lowercase()) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDark // "system" or default
+      }
+  val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
   // Initialize standard style state with light preset only
   val standardStyleState = rememberStandardStyleState {
     configurationsState.apply { this.lightPreset = lightPreset }
   }
 
-  // Update style configuration reactively when preferences change
-  LaunchedEffect(showPOIs, showRoadNumbers, showStreetNames, enable3DView) {
+  // Update style configuration reactively when preferences change (including theme)
+  LaunchedEffect(themeModeString, showPOIs, showRoadNumbers, showStreetNames, enable3DView) {
     standardStyleState.configurationsState.apply {
+      this.lightPreset = lightPreset
       showPointOfInterestLabels = BooleanValue(showPOIs)
       showRoadLabels = BooleanValue(showRoadNumbers)
       showTransitLabels = BooleanValue(showStreetNames)

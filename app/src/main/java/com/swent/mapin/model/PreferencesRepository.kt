@@ -60,7 +60,7 @@ class PreferencesRepository(private val context: Context) {
 
   /** Flow for 3D view setting */
   val enable3DViewFlow: Flow<Boolean> =
-      context.dataStore.data.map { preferences -> preferences[ENABLE_3D_VIEW] ?: false }
+      context.dataStore.data.map { preferences -> preferences[ENABLE_3D_VIEW] ?: true }
 
   /** Update theme mode */
   suspend fun setThemeMode(mode: String) {
