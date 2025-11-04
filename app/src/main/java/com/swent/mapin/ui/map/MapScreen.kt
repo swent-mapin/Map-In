@@ -21,7 +21,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -87,7 +91,8 @@ import kotlinx.coroutines.flow.filterNotNull
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToChat: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -198,6 +203,17 @@ fun MapScreen(
 
     // Overlays et contrôles au-dessus de la carte
     TopGradient()
+
+    FloatingActionButton(
+      onClick = { onNavigateToChat() },
+      containerColor = MaterialTheme.colorScheme.primary,
+      contentColor = MaterialTheme.colorScheme.onPrimary,
+      modifier = Modifier
+          .align(Alignment.BottomStart)
+          .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
+    ) {
+      Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
+    }
 
     ScrimOverlay(
         currentHeightDp = viewModel.currentSheetHeight,

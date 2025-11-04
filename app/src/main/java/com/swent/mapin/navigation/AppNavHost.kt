@@ -6,6 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.ui.auth.SignInScreen
+import com.swent.mapin.ui.chat.ChatScreen
+import com.swent.mapin.ui.chat.NewConversationScreen
 import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
@@ -33,6 +35,7 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
+          onNavigateToChat = {navController.navigate(Route.Chat.route)},
           renderMap = renderMap)
     }
 
@@ -75,6 +78,23 @@ fun AppNavHost(
               navController.popBackStack()
             }
           })
+    }
+
+    composable(Route.Chat.route) {
+        ChatScreen(
+            onNavigateBack = { navController.navigate(Route.Map.route) },
+            onNewConversation = { navController.navigate(Route.NewConversation.route) },
+            onOpenConversation = { conversation -> /* open chat detail */ }
+        )
+    }
+
+    composable(Route.NewConversation.route) {
+        NewConversationScreen(
+            onNavigateBack = { navController.popBackStack() },
+            onConfirm = {
+                navController.navigate(Route.Chat.route)
+            }
+        )
     }
   }
 }
