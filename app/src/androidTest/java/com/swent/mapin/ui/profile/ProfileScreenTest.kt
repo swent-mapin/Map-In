@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.profile
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -385,7 +387,16 @@ class ProfileScreenTest {
     every { mockViewModel.hobbiesError } returns null
     every { mockViewModel.hobbiesVisible } returns true
 
-    composeTestRule.setContent { MaterialTheme { EditProfileContent(viewModel = mockViewModel) } }
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
 
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Delete Profile").performScrollTo().assertIsDisplayed()
@@ -404,7 +415,16 @@ class ProfileScreenTest {
     every { mockViewModel.hobbiesError } returns null
     every { mockViewModel.hobbiesVisible } returns true
 
-    composeTestRule.setContent { MaterialTheme { EditProfileContent(viewModel = mockViewModel) } }
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
 
     // Verify button exists and has click action
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertHasClickAction()
@@ -423,7 +443,16 @@ class ProfileScreenTest {
     every { mockViewModel.hobbiesError } returns null
     every { mockViewModel.hobbiesVisible } returns true
 
-    composeTestRule.setContent { MaterialTheme { EditProfileContent(viewModel = mockViewModel) } }
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
 
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().performClick()
     verify { mockViewModel.showDeleteDialog() }
@@ -442,7 +471,16 @@ class ProfileScreenTest {
     every { mockViewModel.hobbiesError } returns null
     every { mockViewModel.hobbiesVisible } returns true
 
-    composeTestRule.setContent { MaterialTheme { EditProfileContent(viewModel = mockViewModel) } }
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
 
     // Verify the delete icon is present in the button
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo()
