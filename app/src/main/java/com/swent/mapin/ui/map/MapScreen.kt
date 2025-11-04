@@ -271,7 +271,8 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.isUserParticipating(selectedEvent),
-                      isSaved = viewModel.isEventSaved(selectedEvent),
+                      // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
+                      isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
