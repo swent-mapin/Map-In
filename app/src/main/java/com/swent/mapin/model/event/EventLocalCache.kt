@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 /**
  * Local cache wrapper for saved events using Room.
  * Provides simple conversion between Room entities and the domain Event.
+ * Implemented with the help of AI.
  */
 class EventLocalCache(private val dao: SavedEventDao) {
 

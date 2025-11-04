@@ -148,7 +148,12 @@ class EventRepositoryFirestore(
     }
   }
 
-  /** Get the saved events for a user. */
+    /** Get the saved events for a user.
+     * Returns events sorted by the order in which they were saved.
+     * Updates local cache on success for offline availability.
+     * On failure, falls back to local cache if available.
+     * Implemented with the help of AI generated code.
+     */
   override suspend fun getSavedEvents(userId: String): List<Event> {
     try {
       val ids = getSavedEventIds(userId).toList()
@@ -184,7 +189,12 @@ class EventRepositoryFirestore(
     }
   }
 
-  /** Mark an event as saved for a user (idempotent). */
+    /** Mark an event as saved for a user (idempotent).
+     * Updates local cache on success for offline availability.
+     * Returns true if either remote or local operation succeeded.
+     * On failure, returns false.
+     * Implemented with the help of AI generated code.
+     */
   override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
     var remoteOk = false
     try {
@@ -215,7 +225,12 @@ class EventRepositoryFirestore(
     return remoteOk || localOk
   }
 
-  /** Remove an event from a user's saved list (idempotent). */
+    /** Remove an event from a user's saved list (idempotent).
+     * Updates local cache on success for offline availability.
+     * Returns true if either remote or local operation succeeded.
+     * On failure, returns false.
+     * Implemented with the help of AI generated code.
+     */
   override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
     var remoteOk = false
     try {

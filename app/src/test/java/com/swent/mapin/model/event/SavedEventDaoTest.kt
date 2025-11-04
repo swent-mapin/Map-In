@@ -11,6 +11,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+/** Unit tests for [SavedEventDao].
+ * Implemented with the help of AI.
+ */
+
+
 @RunWith(RobolectricTestRunner::class)
 class SavedEventDaoTest {
   private lateinit var db: EventsDatabase

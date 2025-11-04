@@ -12,6 +12,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+/** Unit tests for [EventLocalCache].
+ * Implemented with the help of AI.
+ */
+
 @RunWith(RobolectricTestRunner::class)
 class EventLocalCacheTest {
   private lateinit var db: EventsDatabase

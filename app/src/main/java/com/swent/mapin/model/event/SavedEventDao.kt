@@ -4,8 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Delete
 
+/** Data Access Object (DAO) for performing database operations on saved events.
+ * Provides methods to query, insert, and delete saved events associated with users.
+ * Implemented with the help of AI.
+ */
 @Dao
 interface SavedEventDao {
   @Query("SELECT * FROM saved_events WHERE user_id = :userId ORDER BY saved_at DESC")
