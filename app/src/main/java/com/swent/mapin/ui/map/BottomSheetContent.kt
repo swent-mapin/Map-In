@@ -314,26 +314,11 @@ private fun SearchResultsSection(
     return
   }
 
-  val heading = remember(query) { buildSearchHeading(query) }
+  LazyColumn(modifier = modifier.fillMaxWidth()) {
+    items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
 
-  LazyColumn(
-      modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-          Text(
-              text = heading,
-              style = MaterialTheme.typography.titleMedium,
-              modifier = Modifier.padding(horizontal = 16.dp))
-        }
-
-        items(results) { event ->
-          SearchResultItem(
-              event = event,
-              modifier = Modifier.padding(horizontal = 16.dp),
-              onClick = { onEventClick(event) })
-        }
-
-        item { Spacer(modifier = Modifier.height(8.dp)) }
-      }
+    item { Spacer(modifier = Modifier.height(8.dp)) }
+  }
 }
 
 @VisibleForTesting internal data class NoResultsCopy(val title: String, val subtitle: String)
@@ -341,7 +326,8 @@ private fun SearchResultsSection(
 @VisibleForTesting
 internal fun buildNoResultsCopy(query: String): NoResultsCopy {
   return if (query.isBlank()) {
-    NoResultsCopy(title = "No events available yet.", subtitle = "Try again once events are added.")
+    NoResultsCopy(
+        title = "Start typing to search", subtitle = "Search for events by name or location")
   } else {
     NoResultsCopy(
         title = "No results found", subtitle = "Try a different keyword or check the spelling.")
@@ -392,18 +378,16 @@ private fun SearchResultItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  Surface(
-      shape = RoundedCornerShape(16.dp),
-      tonalElevation = 2.dp,
+  Column(
       modifier =
           modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${'$'}{event.uid}")) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Text(
                   text = event.title,
-                  style = MaterialTheme.typography.titleMedium,
-                  maxLines = 2,
+                  style = MaterialTheme.typography.bodyLarge,
+                  maxLines = 1,
                   overflow = TextOverflow.Ellipsis)
 
               if (event.location.name.isNotBlank()) {
@@ -414,24 +398,11 @@ private fun SearchResultItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
               }
-
-              val tagsSummary = event.tags.take(3).joinToString(separator = " • ")
-              if (tagsSummary.isNotBlank()) {
-                Text(
-                    text = tagsSummary,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
-              }
-
-              if (event.participantIds.isNotEmpty()) {
-                Text(
-                    text = "${'$'}{event.participantIds.size} attending",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
             }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
       }
 }
 
