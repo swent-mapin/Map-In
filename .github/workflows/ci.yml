@@ -3,17 +3,30 @@ name: CI - Test Runner
 # Run the workflow when commits are pushed on main or when a PR is modified
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/pull_request_template.md'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/pull_request_template.md'
+      - 'LICENSE'
+      - '.gitignore'
     types:
       - opened
       - synchronize
       - reopened
 
 jobs:
-  ci:
-    name: CI
-    # Execute the CI on the course's runners
+  build-and-test:
+    name: Build & Unit Tests
     runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.changed-files.outputs.code_any_changed || steps.changed-files.outputs.build_any_changed || steps.changed-files.outputs.resources_any_changed }}
 
     steps:
       # First step : Checkout the repository on the runner
@@ -22,6 +35,23 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of Sonar analysis (if we use Sonar Later)
+
+      # Detect which files changed to run conditional steps
+      - name: Detect changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files_yaml: |
+            code:
+              - 'app/src/**/*.kt'
+              - 'app/src/**/*.java'
+            build:
+              - '**.gradle.kts'
+              - 'gradle/**'
+              - 'gradle.properties'
+            resources:
+              - 'app/src/**/res/**'
+              - 'app/google-services.json'
 
       - name: Restore shared debug keystore
         env:
@@ -79,7 +109,103 @@ jobs:
           EOF
 
 
-      # Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux. Enabling it allows the Android emulator to run faster.
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      # Caching is a very useful part of a CI, as a workflow is executed in a clean environment every time,
+      # this means that one would need to re-download and re-process gradle files for every run. Which is very time consuming.
+      #
+      # To avoid that, we cache the the gradle folder to reuse it later.
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: |
+          chmod +x ./gradlew
+
+      # Check formatting
+      - name: KTFmt Check
+        run: |
+          ./gradlew ktfmtCheck
+
+      # This step runs gradle commands to build the application
+      - name: Assemble
+        run: |
+          # To run the CI with debug information, add --info
+          ./gradlew assemble lint --parallel --build-cache 
+
+      # Run Unit tests
+      - name: Run Unit Tests
+        run: |
+          # To run the CI with debug information, add --info
+          ./gradlew check --parallel --build-cache
+
+  instrumentation-tests:
+    name: Instrumentation Tests (Shard ${{ matrix.shard }})
+    needs: build-and-test
+    if: needs.build-and-test.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore shared debug keystore
+        env:
+          TEAM_DEBUG_KEYSTORE_B64: ${{ secrets.TEAM_DEBUG_KEYSTORE_B64 }}
+          TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
+          TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TEAM_DEBUG_KEYSTORE_B64" ] || [ -z "$TEAM_DEBUG_STORE_PASSWORD" ] || [ -z "$TEAM_DEBUG_KEY_PASSWORD" ]; then
+            echo "Shared debug keystore secrets are not configured" >&2
+            exit 1
+          fi
+          mkdir -p android/keystores
+          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug.keystore
+          cat <<EOF > android/gradle.properties
+          TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
+          TEAM_DEBUG_STORE_PASSWORD=$TEAM_DEBUG_STORE_PASSWORD
+          TEAM_DEBUG_KEY_ALIAS=teamDebug
+          TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
+          EOF
+
+      - name: Restore google-services.json (from base64 secret)
+        env:
+          FIREBASE_SERVICE_JSON_B64: ${{ secrets.FIREBASE_SERVICE_JSON_B64 }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_JSON_B64" ]; then
+            echo "FIREBASE_SERVICE_JSON_B64 secret is not set" >&2
+            exit 1
+          fi
+          mkdir -p app
+          echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
+
+      - name: Restore Mapbox access token resource
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
+            echo "MAPBOX_ACCESS_TOKEN secret is not set" >&2
+            exit 1
+          fi
+          mkdir -p app/src/main/res/values
+          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
+          </resources>
+          EOF
+
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -95,14 +221,9 @@ jobs:
       - name: Install emulator dependencies
         run: sudo apt-get update && sudo apt-get install -y libx11-6 libx11-dev libvulkan1
 
-      # Caching is a very useful part of a CI, as a workflow is executed in a clean environment every time,
-      # this means that one would need to re-download and re-process gradle files for every run. Which is very time consuming.
-      #
-      # To avoid that, we cache the the gradle folder to reuse it later.
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
 
-      # Cache the Emulator, if the cache does not hit, create the emulator
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -125,28 +246,10 @@ jobs:
           script: echo "Generated AVD snapshot for caching."
 
       - name: Grant execute permission for gradlew
-        run: |
-          chmod +x ./gradlew
+        run: chmod +x ./gradlew
 
-      # Check formatting
-      - name: KTFmt Check
-        run: |
-          ./gradlew ktfmtCheck
-
-      # This step runs gradle commands to build the application
-      - name: Assemble
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew assemble lint --parallel --build-cache 
-
-      # Run Unit tests
-      - name: Run tests
-        run: |
-          # To run the CI with debug information, add --info
-          ./gradlew check --parallel --build-cache
-
-      # Run connected tests on the emulator
-      - name: run tests
+      # Run connected tests on the emulator with sharding
+      - name: Run Instrumentation Tests (Shard ${{ matrix.shard }})
         timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -156,14 +259,87 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew connectedCheck --parallel --build-cache
+          script: ./gradlew connectedCheck -Pandroid.testInstrumentationRunnerArguments.numShards=3 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} --parallel --build-cache
 
-      # This step generates the coverage report which will be uploaded to sonar
-      - name: Generate Coverage Report
+      # Upload test results for this shard
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-test-results-shard-${{ matrix.shard }}
+          path: app/build/reports/androidTests/
+
+  coverage-and-sonar:
+    name: Coverage & SonarCloud
+    needs: build-and-test
+    if: |
+      always() &&
+      needs.build-and-test.result == 'success' &&
+      needs.build-and-test.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore shared debug keystore
+        env:
+          TEAM_DEBUG_KEYSTORE_B64: ${{ secrets.TEAM_DEBUG_KEYSTORE_B64 }}
+          TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
+          TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
         run: |
-          ./gradlew jacocoTestReport
+          mkdir -p android/keystores
+          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug.keystore
+          cat <<EOF > android/gradle.properties
+          TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
+          TEAM_DEBUG_STORE_PASSWORD=$TEAM_DEBUG_STORE_PASSWORD
+          TEAM_DEBUG_KEY_ALIAS=teamDebug
+          TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
+          EOF
 
-      # Upload the various reports to sonar
+      - name: Restore google-services.json
+        env:
+          FIREBASE_SERVICE_JSON_B64: ${{ secrets.FIREBASE_SERVICE_JSON_B64 }}
+        run: |
+          mkdir -p app
+          echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
+
+      - name: Restore Mapbox access token
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: |
+          mkdir -p app/src/main/res/values
+          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
+          </resources>
+          EOF
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # Re-run tests to generate coverage (needed for jacoco)
+      - name: Run unit tests for coverage
+        run: ./gradlew testDebugUnitTest --parallel --build-cache
+
+      # Generate the coverage report
+      - name: Generate Coverage Report
+        run: ./gradlew jacocoTestReport
+
+      # Upload to SonarCloud
       - name: Upload report to SonarCloud
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

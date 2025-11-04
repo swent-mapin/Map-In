@@ -201,6 +201,8 @@ class MapScreenViewModel(
   val avatarUrl: String?
     get() = _avatarUrl
 
+  val directionViewModel = DirectionViewModel()
+
   init {
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
@@ -684,6 +686,9 @@ class MapScreenViewModel(
     _selectedEvent = null
     _organizerName = ""
 
+    // Clear directions when closing event detail
+    directionViewModel.clearDirection()
+
     if (_cameFromSearch) {
       // Return to search mode: full sheet with cleared search, no keyboard
       _cameFromSearch = false
@@ -694,6 +699,25 @@ class MapScreenViewModel(
       applyFilters()
     } else {
       setBottomSheetState(BottomSheetState.COLLAPSED)
+    }
+  }
+
+  /**
+   * Toggle directions display for the given event. Uses a default user location (EPFL campus) for
+   * demo purposes. Next week: integrate with actual user location from GPS/profile.
+   */
+  fun toggleDirections(event: Event) {
+    val currentState = directionViewModel.directionState
+
+    if (currentState is DirectionState.Displayed) {
+      directionViewModel.clearDirection()
+    } else {
+      // Default user location: EPFL (for demo purposes)
+      val userLocation =
+          Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+      val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
+
+      directionViewModel.requestDirections(userLocation, eventLocation)
     }
   }
 
