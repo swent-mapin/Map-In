@@ -99,6 +99,7 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").assertIsDisplayed()
     rule.onNodeWithText("Create Event").assertIsDisplayed()
+    rule.onNodeWithText("Friends").assertIsDisplayed()
   }
 
   @Test
@@ -152,6 +153,42 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Create Event").assertHasClickAction()
+    rule.onNodeWithText("Friends").assertHasClickAction()
+  }
+
+  @Test
+  fun friendsButton_isDisplayedInQuickActions() {
+    rule.setContent { TestContent(state = BottomSheetState.FULL) }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+    rule.onNodeWithText("Friends").assertIsDisplayed()
+  }
+
+  @Test
+  fun friendsButton_triggersNavigationCallback() {
+    var navigationTriggered = false
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            onNavigateToFriends = { navigationTriggered = true })
+      }
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Friends").performClick()
+    assertTrue(navigationTriggered)
   }
 
   @Test
