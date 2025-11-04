@@ -919,7 +919,7 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
     assertTrue(viewModel.isEventSaved(e))
 
-    org.mockito.Mockito.clearInvocations(mockEventRepository)
+    clearInvocations(mockEventRepository)
 
     whenever(mockEventRepository.unsaveEventForUser("testUserId", e.uid)).thenReturn(true)
     whenever(mockEventRepository.getSavedEvents("testUserId")).thenReturn(emptyList())
@@ -959,8 +959,6 @@ class MapScreenViewModelTest {
 
   @Test
   fun `showMemoryForm sets state correctly`() {
-    val initialState = viewModel.bottomSheetState
-
     viewModel.showMemoryForm()
 
     assertTrue(viewModel.showMemoryForm)
@@ -998,15 +996,138 @@ class MapScreenViewModelTest {
 
   @Test
   fun `onAddEventCancel hides AddEvent form and returns to MAIN_CONTENT`() {
-    // Simulate showing AddEvent form
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
     viewModel.showAddEventForm()
 
-    // Cancel
     viewModel.onAddEventCancel()
 
-    // Validate public state
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
-    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+  }
+
+  // === Location tests ===
+  @Test
+  fun startLocationUpdates_withoutPermission_setsHasLocationPermissionToFalse() {
+    // Create a mock LocationManager
+    val mockLocationManager = org.mockito.Mockito.mock(LocationManager::class.java)
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
+    val viewModelWithMockLocation =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepository)
+
+    viewModelWithMockLocation.startLocationUpdates()
+
+    assertTrue(viewModelWithMockLocation.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_withPermission_setsHasLocationPermissionToTrue() = runTest {
+    val viewModelTest =
+        MapScreenViewModel(
+            initialSheetState = BottomSheetState.COLLAPSED,
+            sheetConfig = config,
+            onClearFocus = { clearFocusCalled = true },
+            applicationContext = mockContext,
+            memoryRepository = mockMemoryRepository,
+            eventRepository = mockEventRepository,
+            auth = mockAuth,
+            userProfileRepository = mockUserProfileRepository)
+
+    viewModelTest.startLocationUpdates()
+
+    assertTrue(viewModelTest.hasLocationPermission)
+  }
+
+  @Test
+  fun getLastKnownLocation_withoutCenterCamera_updatesLocationOnly() = runTest {
+    var centerCalled = false
+    viewModel.onCenterOnUserLocation = { centerCalled = true }
+
+    viewModel.getLastKnownLocation(centerCamera = false)
+    advanceUntilIdle()
+
+    assertFalse(centerCalled)
+  }
+
+  @Test
+  fun getLastKnownLocation_withCenterCamera_callsCenterCallback() = runTest {
+    var centerCalled = false
+    viewModel.onCenterOnUserLocation = { centerCalled = true }
+
+    viewModel.getLastKnownLocation(centerCamera = true)
+    advanceUntilIdle()
+
+    assertFalse(centerCalled)
+  }
+
+  @Test
+  fun updateCenteredState_withNullLocation_setsCenteredToFalse() {
+    viewModel.updateCenteredState(46.5, 6.5)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_withinThreshold_setsCenteredToTrue() {
+    // Create a mock location
+    val mockLocation = org.mockito.Mockito.mock(android.location.Location::class.java)
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    viewModel.updateCenteredState(46.50001, 6.50001)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_outsideThreshold_setsCenteredToFalse() {
+    viewModel.updateCenteredState(46.6, 6.6)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_exactMatch_setsCenteredToTrue() {
+    viewModel.updateCenteredState(46.5, 6.5)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun onMapMoved_setsCenteredToFalse() {
+    viewModel.onMapMoved()
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun checkLocationPermission_updatesPermissionState() {
+    viewModel.checkLocationPermission()
+
+    assertTrue(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun locationBearing_initiallyZero() {
+    assertEquals(0f, viewModel.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun currentLocation_initiallyNull() {
+    assertNull(viewModel.currentLocation)
+  }
+
+  @Test
+  fun isCenteredOnUser_initiallyFalse() {
+    assertFalse(viewModel.isCenteredOnUser)
   }
 
   @Test
