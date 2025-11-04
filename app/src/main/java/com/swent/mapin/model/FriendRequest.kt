@@ -2,24 +2,22 @@ package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
 
-// Assisted by AI
-
 /** Represents the status of a friendship or friend request. */
 enum class FriendshipStatus {
-  PENDING, // Request sent but not yet accepted
-  ACCEPTED, // Request accepted, users are friends
-  REJECTED, // Request rejected
-  BLOCKED // User is blocked
+  PENDING,
+  ACCEPTED,
+  REJECTED,
+  BLOCKED
 }
 
 /**
- * Data class representing a friend request or friendship.
+ * Represents a friend request or friendship between two users.
  *
- * @property requestId Unique identifier for the request
- * @property fromUserId User ID of the person who sent the request
- * @property toUserId User ID of the person who received the request
- * @property status Current status of the request/friendship
- * @property timestamp When the request was created or last updated
+ * @property requestId Unique identifier for the request.
+ * @property fromUserId User ID of the person who sent the request.
+ * @property toUserId User ID of the person who received the request.
+ * @property status Current status of the friendship.
+ * @property timestamp When the request was created or last updated.
  */
 data class FriendRequest(
     val requestId: String = "",
@@ -30,15 +28,25 @@ data class FriendRequest(
 )
 
 /**
- * Data class representing a user with friendship information. Used for displaying friends in the
- * UI.
+ * Represents a friend with their profile information and friendship status.
  *
- * @property userProfile The user's profile information
- * @property friendshipStatus Current friendship status with this user
- * @property requestId ID of the friend request (if applicable)
+ * @property userProfile The user's profile information.
+ * @property friendshipStatus Current friendship status with this user.
+ * @property requestId ID of the friend request (if applicable).
  */
 data class FriendWithProfile(
     val userProfile: UserProfile,
     val friendshipStatus: FriendshipStatus = FriendshipStatus.PENDING,
     val requestId: String = ""
+)
+
+/**
+ * Represents a search result with request status information.
+ *
+ * @property userProfile The user's profile information.
+ * @property hasPendingRequest Whether there's a pending outgoing request to this user.
+ */
+data class SearchResultWithStatus(
+    val userProfile: UserProfile,
+    val hasPendingRequest: Boolean = false
 )
