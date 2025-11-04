@@ -839,8 +839,9 @@ class MapScreenViewModel(
     }
   }
 
-  /** Saves the selected event for later by the current user.
-   * Implemented with the help of AI generated code.
+  /**
+   * Saves the selected event for later by the current user. Implemented with the help of AI
+   * generated code.
    */
   fun saveEventForLater() {
     viewModelScope.launch {
@@ -882,8 +883,9 @@ class MapScreenViewModel(
     }
   }
 
-  /** Unsaves the selected event for later by the current user.
-   * Implemented with the help of AI generated code.
+  /**
+   * Unsaves the selected event for later by the current user. Implemented with the help of AI
+   * generated code.
    */
   fun unsaveEventForLater() {
     val eventUid = _selectedEvent?.uid ?: return

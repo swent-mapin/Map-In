@@ -4,11 +4,11 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** Local Room entity representing a saved event for a user.
- * Maps to the "saved_events" table in the local database.
- * Each instance represents one saved event associated with a specific user.
- * Fields correspond to the event's properties, with userId indicating which user saved it.
- * Implemented with the help of AI.
+/**
+ * Local Room entity representing a saved event for a user. Maps to the "saved_events" table in the
+ * local database. Each instance represents one saved event associated with a specific user. Fields
+ * correspond to the event's properties, with userId indicating which user saved it. Implemented
+ * with the help of AI.
  */
 @Entity(tableName = "saved_events")
 data class SavedEventEntity(

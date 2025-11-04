@@ -9,7 +9,10 @@ object EventRepositoryProvider {
   private var repository: EventRepository? = null
   private var appContext: Context? = null
 
-  /** Initialize the provider with an Application context (optional). Call from Application.onCreate(). */
+  /**
+   * Initialize the provider with an Application context (optional). Call from
+   * Application.onCreate().
+   */
   fun init(context: Context) {
     appContext = context.applicationContext
   }

@@ -11,11 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** Unit tests for [SavedEventDao].
- * Implemented with the help of AI.
- */
-
-
+/** Unit tests for [SavedEventDao]. Implemented with the help of AI. */
 @RunWith(RobolectricTestRunner::class)
 class SavedEventDaoTest {
   private lateinit var db: EventsDatabase
@@ -24,9 +20,10 @@ class SavedEventDaoTest {
   @Before
   fun setup() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    db = Room.inMemoryDatabaseBuilder(context, EventsDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
+    db =
+        Room.inMemoryDatabaseBuilder(context, EventsDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
     dao = db.savedEventDao()
   }
 
@@ -38,24 +35,24 @@ class SavedEventDaoTest {
   @Test
   fun insertAndQuerySavedEvents() = runTest {
     val userId = "user1"
-    val e1 = SavedEventEntity(
-        id = "e1",
-        userId = userId,
-        title = "T1",
-        description = "D1",
-        dateSeconds = 1000L,
-        dateNanoseconds = 0,
-        locationName = "L1",
-        locationLat = 1.0,
-        locationLng = 2.0,
-        tagsCsv = "tag1,tag2",
-        isPublic = true,
-        ownerId = "owner1",
-        imageUrl = null,
-        capacity = 10,
-        participantIdsCsv = "p1,p2",
-        savedAtSeconds = 2000L
-    )
+    val e1 =
+        SavedEventEntity(
+            id = "e1",
+            userId = userId,
+            title = "T1",
+            description = "D1",
+            dateSeconds = 1000L,
+            dateNanoseconds = 0,
+            locationName = "L1",
+            locationLat = 1.0,
+            locationLng = 2.0,
+            tagsCsv = "tag1,tag2",
+            isPublic = true,
+            ownerId = "owner1",
+            imageUrl = null,
+            capacity = 10,
+            participantIdsCsv = "p1,p2",
+            savedAtSeconds = 2000L)
     val e2 = e1.copy(id = "e2", title = "T2")
 
     dao.insertAll(listOf(e1, e2))
@@ -69,24 +66,24 @@ class SavedEventDaoTest {
   @Test
   fun deleteAndClearForUser() = runTest {
     val userId = "user_del"
-    val e1 = SavedEventEntity(
-        id = "d1",
-        userId = userId,
-        title = "TD",
-        description = "Desc",
-        dateSeconds = null,
-        dateNanoseconds = null,
-        locationName = "L",
-        locationLat = 0.0,
-        locationLng = 0.0,
-        tagsCsv = "",
-        isPublic = false,
-        ownerId = "o",
-        imageUrl = null,
-        capacity = null,
-        participantIdsCsv = "",
-        savedAtSeconds = null
-    )
+    val e1 =
+        SavedEventEntity(
+            id = "d1",
+            userId = userId,
+            title = "TD",
+            description = "Desc",
+            dateSeconds = null,
+            dateNanoseconds = null,
+            locationName = "L",
+            locationLat = 0.0,
+            locationLng = 0.0,
+            tagsCsv = "",
+            isPublic = false,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = null,
+            participantIdsCsv = "",
+            savedAtSeconds = null)
     dao.insert(e1)
     var r = dao.getSavedForUser(userId)
     assertEquals(1, r.size)

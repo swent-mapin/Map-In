@@ -4,9 +4,8 @@ import android.content.Context
 import com.google.firebase.Timestamp
 
 /**
- * Local cache wrapper for saved events using Room.
- * Provides simple conversion between Room entities and the domain Event.
- * Implemented with the help of AI.
+ * Local cache wrapper for saved events using Room. Provides simple conversion between Room entities
+ * and the domain Event. Implemented with the help of AI.
  */
 class EventLocalCache(private val dao: SavedEventDao) {
 
@@ -53,11 +52,15 @@ private fun SavedEventEntity.toEvent(): Event {
       ownerId = ownerId,
       imageUrl = imageUrl,
       capacity = capacity,
-      participantIds = if (participantIdsCsv.isBlank()) emptyList() else participantIdsCsv.split(",")
-  )
+      participantIds =
+          if (participantIdsCsv.isBlank()) emptyList() else participantIdsCsv.split(","))
 }
 
-private fun savedEventEntityFrom(event: Event, userId: String, savedAt: Timestamp? = null): SavedEventEntity =
+private fun savedEventEntityFrom(
+    event: Event,
+    userId: String,
+    savedAt: Timestamp? = null
+): SavedEventEntity =
     SavedEventEntity(
         id = event.uid,
         userId = userId,
@@ -74,5 +77,4 @@ private fun savedEventEntityFrom(event: Event, userId: String, savedAt: Timestam
         imageUrl = event.imageUrl,
         capacity = event.capacity,
         participantIdsCsv = event.participantIds.joinToString(","),
-        savedAtSeconds = savedAt?.seconds
-    )
+        savedAtSeconds = savedAt?.seconds)

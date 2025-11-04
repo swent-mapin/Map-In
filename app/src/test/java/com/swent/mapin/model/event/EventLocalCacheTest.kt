@@ -12,10 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** Unit tests for [EventLocalCache].
- * Implemented with the help of AI.
- */
-
+/** Unit tests for [EventLocalCache]. Implemented with the help of AI. */
 @RunWith(RobolectricTestRunner::class)
 class EventLocalCacheTest {
   private lateinit var db: EventsDatabase
@@ -25,9 +22,10 @@ class EventLocalCacheTest {
   @Before
   fun setup() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    db = Room.inMemoryDatabaseBuilder(context, EventsDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
+    db =
+        Room.inMemoryDatabaseBuilder(context, EventsDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
     dao = db.savedEventDao()
     cache = EventLocalCache(dao)
   }
@@ -40,19 +38,19 @@ class EventLocalCacheTest {
   @Test
   fun saveAndRetrieveSavedEvent() = runTest {
     val userId = "u1"
-    val event = Event(
-        uid = "ev1",
-        title = "Title",
-        description = "Desc",
-        date = Timestamp(1000, 0),
-        location = com.swent.mapin.model.Location("L", 1.0, 2.0),
-        tags = listOf("t1","t2"),
-        public = true,
-        ownerId = "owner",
-        imageUrl = null,
-        capacity = 5,
-        participantIds = listOf("p1")
-    )
+    val event =
+        Event(
+            uid = "ev1",
+            title = "Title",
+            description = "Desc",
+            date = Timestamp(1000, 0),
+            location = com.swent.mapin.model.Location("L", 1.0, 2.0),
+            tags = listOf("t1", "t2"),
+            public = true,
+            ownerId = "owner",
+            imageUrl = null,
+            capacity = 5,
+            participantIds = listOf("p1"))
 
     cache.saveEventLocally(userId, event, Timestamp.now())
 
@@ -65,10 +63,7 @@ class EventLocalCacheTest {
   @Test
   fun cacheSavedEventsAndClear() = runTest {
     val userId = "u2"
-    val events = listOf(
-        Event(uid = "a", title = "A"),
-        Event(uid = "b", title = "B")
-    )
+    val events = listOf(Event(uid = "a", title = "A"), Event(uid = "b", title = "B"))
     cache.cacheSavedEvents(userId, events)
     var saved = cache.getSavedEvents(userId)
     assertEquals(2, saved.size)

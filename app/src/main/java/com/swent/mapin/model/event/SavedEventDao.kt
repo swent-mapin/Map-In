@@ -5,9 +5,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
-/** Data Access Object (DAO) for performing database operations on saved events.
- * Provides methods to query, insert, and delete saved events associated with users.
- * Implemented with the help of AI.
+/**
+ * Data Access Object (DAO) for performing database operations on saved events. Provides methods to
+ * query, insert, and delete saved events associated with users. Implemented with the help of AI.
  */
 @Dao
 interface SavedEventDao {
@@ -17,8 +17,7 @@ interface SavedEventDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertAll(events: List<SavedEventEntity>)
 
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insert(event: SavedEventEntity)
+  @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(event: SavedEventEntity)
 
   @Query("DELETE FROM saved_events WHERE user_id = :userId")
   suspend fun clearForUser(userId: String)
@@ -26,4 +25,3 @@ interface SavedEventDao {
   @Query("DELETE FROM saved_events WHERE id = :eventId AND user_id = :userId")
   suspend fun delete(eventId: String, userId: String)
 }
-
