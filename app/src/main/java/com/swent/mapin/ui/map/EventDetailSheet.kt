@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +56,8 @@ import java.util.Locale
  * @param onSaveForLater Callback when user clicks "Save for later"
  * @param onClose Callback when user clicks the close button
  * @param onShare Callback when user clicks the share button
+ * @param onGetDirections Callback when user clicks "Get Directions"
+ * @param showDirections Whether directions are currently being shown
  */
 
 // Assisted by AI
@@ -71,6 +74,8 @@ fun EventDetailSheet(
     onUnsaveForLater: () -> Unit,
     onClose: () -> Unit,
     onShare: () -> Unit,
+    onGetDirections: () -> Unit = {},
+    showDirections: Boolean = false,
     modifier: Modifier = Modifier
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
@@ -83,7 +88,9 @@ fun EventDetailSheet(
             event = event,
             isParticipating = isParticipating,
             onJoinEvent = onJoinEvent,
-            onUnregisterEvent = onUnregisterEvent)
+            onUnregisterEvent = onUnregisterEvent,
+            onGetDirections = onGetDirections,
+            showDirections = showDirections)
       }
       BottomSheetState.FULL -> {
         EventDetailHeader(onShare = onShare, onClose = onClose)
@@ -95,7 +102,9 @@ fun EventDetailSheet(
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
             onSaveForLater = onSaveForLater,
-            onUnsaveForLater = onUnsaveForLater)
+            onUnsaveForLater = onUnsaveForLater,
+            onGetDirections = onGetDirections,
+            showDirections = showDirections)
       }
     }
   }
@@ -182,15 +191,36 @@ private fun MediumEventContent(
     isParticipating: Boolean,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
+    onGetDirections: () -> Unit = {},
+    showDirections: Boolean = false,
     modifier: Modifier = Modifier
 ) {
   Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
-    // Title
-    Text(
-        text = event.title,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.testTag("eventTitleMedium"))
+    // Title with direction icon
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = event.title,
+              style = MaterialTheme.typography.headlineSmall,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.weight(1f).testTag("eventTitleMedium"))
+
+          // Direction icon button
+          IconButton(
+              onClick = onGetDirections,
+              modifier =
+                  Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
+                Icon(
+                    imageVector = Icons.Default.Directions,
+                    contentDescription =
+                        if (showDirections) "Clear Directions" else "Get Directions",
+                    tint =
+                        if (showDirections) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary)
+              }
+        }
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -279,6 +309,8 @@ private fun FullEventContent(
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
     onUnsaveForLater: () -> Unit,
+    onGetDirections: () -> Unit = {},
+    showDirections: Boolean = false,
     modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
@@ -317,12 +349,31 @@ private fun FullEventContent(
             }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Title
-        Text(
-            text = event.title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.testTag("eventTitleFull"))
+        // Title with direction icon
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  text = event.title,
+                  style = MaterialTheme.typography.headlineMedium,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.weight(1f).testTag("eventTitleFull"))
+
+              // Direction icon button
+              IconButton(
+                  onClick = onGetDirections,
+                  modifier =
+                      Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Directions,
+                        contentDescription =
+                            if (showDirections) "Clear Directions" else "Get Directions",
+                        tint =
+                            if (showDirections) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary)
+                  }
+            }
 
         Spacer(modifier = Modifier.height(8.dp))
 
