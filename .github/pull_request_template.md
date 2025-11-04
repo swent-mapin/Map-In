@@ -37,3 +37,4 @@
 - [ ] Sufficient documentation and minimal inline comments
 - [ ] All tests passing
 - [ ] No new warnings
+- [ ] If related issue exists: issue has all labels, fields, and milestone filled
