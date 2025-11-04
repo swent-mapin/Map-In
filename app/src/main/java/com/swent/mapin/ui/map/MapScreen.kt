@@ -205,15 +205,14 @@ fun MapScreen(
     TopGradient()
 
     FloatingActionButton(
-      onClick = { onNavigateToChat() },
-      containerColor = MaterialTheme.colorScheme.primary,
-      contentColor = MaterialTheme.colorScheme.onPrimary,
-      modifier = Modifier
-          .align(Alignment.BottomStart)
-          .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
-    ) {
-      Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
-    }
+        onClick = { onNavigateToChat() },
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        modifier =
+            Modifier.align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)) {
+          Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
+        }
 
     ScrimOverlay(
         currentHeightDp = viewModel.currentSheetHeight,

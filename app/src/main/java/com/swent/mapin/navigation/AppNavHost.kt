@@ -35,7 +35,7 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
-          onNavigateToChat = {navController.navigate(Route.Chat.route)},
+          onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap)
     }
 
@@ -81,20 +81,16 @@ fun AppNavHost(
     }
 
     composable(Route.Chat.route) {
-        ChatScreen(
-            onNavigateBack = { navController.navigate(Route.Map.route) },
-            onNewConversation = { navController.navigate(Route.NewConversation.route) },
-            onOpenConversation = { conversation -> /* open chat detail */ }
-        )
+      ChatScreen(
+          onNavigateBack = { navController.navigate(Route.Map.route) },
+          onNewConversation = { navController.navigate(Route.NewConversation.route) },
+          onOpenConversation = { conversation -> /* open chat detail */ })
     }
 
     composable(Route.NewConversation.route) {
-        NewConversationScreen(
-            onNavigateBack = { navController.popBackStack() },
-            onConfirm = {
-                navController.navigate(Route.Chat.route)
-            }
-        )
+      NewConversationScreen(
+          onNavigateBack = { navController.popBackStack() },
+          onConfirm = { navController.navigate(Route.Chat.route) })
     }
   }
 }
