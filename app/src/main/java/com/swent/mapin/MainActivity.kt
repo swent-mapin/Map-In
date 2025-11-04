@@ -4,10 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
+import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
 import okhttp3.OkHttpClient
 
@@ -26,7 +32,21 @@ class MainActivity : ComponentActivity() {
     MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
     EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
     setContent {
-      MapInTheme {
+      val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
+      // Cache the theme mode flow collection to prevent repeated DataStore reads
+      val themeModeString by
+          remember(preferencesRepository) { preferencesRepository.themeModeFlow }
+              .collectAsState(initial = "system")
+      val themeMode = ThemeMode.fromString(themeModeString)
+
+      val darkTheme =
+          when (themeMode) {
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+          }
+
+      MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
         AppNavHost(isLoggedIn = isLoggedIn)
