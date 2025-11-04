@@ -623,7 +623,7 @@ private fun TagsSection(
         }
   }
 }
-
+// Events section for Saved/Joined tabs
 @Composable
 private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
