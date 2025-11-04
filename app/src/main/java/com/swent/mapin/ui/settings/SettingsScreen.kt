@@ -131,7 +131,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
       }) { paddingValues ->
-        Box(
+        Column(
             modifier =
                 Modifier.fillMaxSize()
                     .background(
@@ -143,12 +143,12 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
                             } else {
                               // Dark theme: use a darker background
                               MaterialTheme.colorScheme.background
-                            })) {
+                            })
+                    .padding(paddingValues)) {
               Column(
                   modifier =
                       Modifier.fillMaxSize()
                           .verticalScroll(rememberScrollState())
-                          .padding(paddingValues)
                           .padding(16.dp)
                           .animateContentSize(
                               animationSpec =
