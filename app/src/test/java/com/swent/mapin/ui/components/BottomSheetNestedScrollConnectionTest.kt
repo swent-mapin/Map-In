@@ -114,6 +114,47 @@ class BottomSheetNestedScrollConnectionTest {
   }
 
   @Test
+  fun onPostScroll_atFullHeight_withUpwardScroll_doesNotConsumeScroll() = runTest {
+    val animatable = Animatable(config.fullHeight.value)
+    val connection =
+        createBottomSheetNestedScrollConnection(
+            density = Density(1f),
+            config = config,
+            currentHeight = animatable,
+            scope = this,
+            calculateTargetState = { _, _, _, _ -> BottomSheetState.FULL },
+            stateToHeight = { config.fullHeight },
+            onStateChange = {})
+
+    // Upward scroll (negative delta)
+    val result =
+        connection.onPostScroll(Offset.Zero, Offset(0f, -10f), NestedScrollSource.UserInput)
+
+    // Should not consume upward scroll when at full height
+    assertEquals(Offset.Zero, result)
+  }
+
+  @Test
+  fun onPostScroll_atFullHeight_withDownwardScroll_consumesScroll() = runTest {
+    val animatable = Animatable(config.fullHeight.value)
+    val connection =
+        createBottomSheetNestedScrollConnection(
+            density = Density(1f),
+            config = config,
+            currentHeight = animatable,
+            scope = this,
+            calculateTargetState = { _, _, _, _ -> BottomSheetState.FULL },
+            stateToHeight = { config.fullHeight },
+            onStateChange = {})
+
+    // Downward scroll (positive delta)
+    val result = connection.onPostScroll(Offset.Zero, Offset(0f, 10f), NestedScrollSource.UserInput)
+
+    // Should consume downward scroll to allow collapsing
+    assertEquals(Offset(0f, 10f), result)
+  }
+
+  @Test
   fun onPreFling_weakVelocity_doesNotIntercept() = runTest {
     val animatable = Animatable(180f)
     val observedStates = mutableListOf<BottomSheetState>()
