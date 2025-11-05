@@ -111,6 +111,7 @@ class MapScreenViewModel(
   // Track programmatic zooms to prevent sheet collapse during camera animations
   private var isProgrammaticZoom by mutableStateOf(false)
   private var programmaticZoomJob: kotlinx.coroutines.Job? = null
+  private var clearSearchOnExitFull by mutableStateOf(false)
 
   enum class MapStyle {
     STANDARD,
@@ -398,10 +399,10 @@ class MapScreenViewModel(
     }
 
     isInMediumMode = target == BottomSheetState.MEDIUM
-    if (resetSearch &&
-        target == BottomSheetState.COLLAPSED &&
-        _bottomSheetState == BottomSheetState.FULL &&
-        !_showMemoryForm) {
+    val leavingFull = _bottomSheetState == BottomSheetState.FULL && target != BottomSheetState.FULL
+    val collapsingSheet = target == BottomSheetState.COLLAPSED
+    val shouldClear = clearSearchOnExitFull && (leavingFull || collapsingSheet)
+    if (resetSearch && shouldClear && !_showMemoryForm) {
       resetSearchState()
     }
 
@@ -415,6 +416,7 @@ class MapScreenViewModel(
     }
     isSearchActivated = true
     _searchQuery = query
+    clearSearchOnExitFull = true
     applyFilters()
   }
 
@@ -424,6 +426,7 @@ class MapScreenViewModel(
       setBottomSheetState(BottomSheetState.FULL)
     }
     isSearchActivated = true
+    clearSearchOnExitFull = true
   }
 
   fun onSearchFocusHandled() {
@@ -441,6 +444,7 @@ class MapScreenViewModel(
     }
 
     isSearchActivated = true
+    clearSearchOnExitFull = false
     saveRecentSearch(trimmedQuery)
     onClearFocus()
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
@@ -454,6 +458,7 @@ class MapScreenViewModel(
 
     _searchQuery = trimmedQuery
     isSearchActivated = true
+    clearSearchOnExitFull = false
     saveRecentSearch(trimmedQuery)
     applyFilters()
     onClearFocus()
@@ -482,6 +487,7 @@ class MapScreenViewModel(
     isSearchActivated = false
     _shouldFocusSearch = false
     onClearFocus()
+    clearSearchOnExitFull = false
     if (_searchQuery.isNotEmpty()) _searchQuery = ""
     applyFilters()
   }
@@ -904,6 +910,7 @@ class MapScreenViewModel(
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
     saveRecentEvent(event.uid, event.title)
+    clearSearchOnExitFull = false
     onEventPinClicked(event, forceZoom = true)
   }
 
@@ -912,6 +919,7 @@ class MapScreenViewModel(
     val event = _allEvents.find { it.uid == eventId }
     if (event != null) {
       _cameFromSearch = true
+      clearSearchOnExitFull = false
       onEventPinClicked(event, forceZoom = true)
     }
   }
