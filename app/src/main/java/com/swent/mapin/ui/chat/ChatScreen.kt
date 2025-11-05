@@ -1,8 +1,6 @@
 package com.swent.mapin.ui.chat
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -49,13 +46,14 @@ private val friend3 =
         UserProfile(name = "Zoe", bio = "Runner", hobbies = listOf("Music")),
         friendshipStatus = FriendshipStatus.ACCEPTED,
         "")
-private val friendList = listOf(friend1, friend2, friend3)
+
+val friendList = listOf(friend1, friend2, friend3)
 
 private val sampleConversations =
     listOf(
-        Conversation("c1", listOf(friend1), "Hey there!", true),
-        Conversation("c2", listOf(friend2), "Shared a photo", false),
-        Conversation("c3", listOf(friend3), "Let's meet up!", true))
+        Conversation("c1", "Nathan",listOf(friend1), "Hey there!", true),
+        Conversation("c2", "Alex" ,listOf(friend2), "Shared a photo", false),
+        Conversation("c3", "Zoe",listOf(friend3), "Let's meet up!", true))
 
 /**
  * Represents a chat conversation between one or more participants.
@@ -67,6 +65,7 @@ private val sampleConversations =
  */
 data class Conversation(
     val id: String,
+    val name: String,
     val participants: List<FriendWithProfile>,
     val lastMessage: String = "",
     val createdByCurrentUser: Boolean = false
@@ -180,9 +179,9 @@ fun ChatScreen(
               modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),
               horizontalAlignment = Alignment.CenterHorizontally,
               verticalArrangement = Arrangement.Center) {
-                Text("No conversations yet", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.empty_conversation), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                Text("Tap + to start chatting with a friend!", color = Color.Gray)
+                Text(stringResource(R.string.empty_conversation_button), color = Color.Gray)
               }
         } else {
           LazyColumn(modifier = Modifier.padding(paddingValues)) {
@@ -195,98 +194,3 @@ fun ChatScreen(
       }
 }
 
-/**
- * Screen allowing the user to select one or more friends to start a new conversation.
- * - Tapping a friend toggles selection.
- * - A checkmark button appears in the top-right corner once at least one friend is selected.
- * - Pressing the checkmark calls [onConfirm] with the selected friends.
- *
- * @param friends List of friends available for selection.
- * @param onNavigateBack Callback invoked when the back button is pressed.
- * @param onConfirm Callback invoked when the user confirms selection.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NewConversationScreen(
-    friends: List<FriendWithProfile> = friendList,
-    onNavigateBack: () -> Unit = {},
-    onConfirm: (List<FriendWithProfile>) -> Unit = {}
-) {
-  val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
-
-  Scaffold(
-      topBar = {
-        TopAppBar(
-            title = { Text("New Conversation") },
-            navigationIcon = {
-              IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
-            },
-            actions = {
-              if (selectedFriends.isNotEmpty()) {
-                IconButton(onClick = { onConfirm(selectedFriends) }) {
-                  Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
-                }
-              }
-            },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
-      }) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
-              items(friends) { friend ->
-                val isSelected = selectedFriends.contains(friend)
-                val backgroundColor =
-                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    else Color.Transparent
-
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .clickable {
-                              if (isSelected) selectedFriends.remove(friend)
-                              else selectedFriends.add(friend)
-                            }
-                            .background(backgroundColor)
-                            .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                      if (friend.userProfile.profilePictureUrl.isNullOrBlank()) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = null,
-                            tint =
-                                if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
-                            modifier = Modifier.size(48.dp).clip(CircleShape))
-                      } else {
-                        Image(
-                            painter =
-                                rememberAsyncImagePainter(friend.userProfile.profilePictureUrl),
-                            contentDescription = null,
-                            modifier =
-                                Modifier.size(48.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = if (isSelected) 2.dp else 0.dp,
-                                        color =
-                                            if (isSelected) MaterialTheme.colorScheme.primary
-                                            else Color.Transparent,
-                                        shape = CircleShape))
-                      }
-
-                      Spacer(Modifier.width(12.dp))
-                      Text(
-                          friend.userProfile.name,
-                          style = MaterialTheme.typography.titleMedium,
-                          color =
-                              if (isSelected) MaterialTheme.colorScheme.primary
-                              else MaterialTheme.colorScheme.onSurface)
-                    }
-              }
-            }
-      }
-}

@@ -27,4 +27,6 @@
     <string name="public_event">Public</string>
     <string name="private_event">Private</string>
     <string name="chats">Chats</string>
+    <string name="empty_conversation">No conversations yet</string>
+    <string name="empty_conversation_button">Tap + to start chatting with a friend!</string>
 </resources>
