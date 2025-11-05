@@ -89,7 +89,8 @@ import kotlinx.coroutines.flow.filterNotNull
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -310,6 +311,7 @@ fun MapScreen(
                       },
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
+                      onNavigateToFriends = onNavigateToFriends,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
                       onCreateEventDone = viewModel::onAddEventCancel,

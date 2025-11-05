@@ -135,6 +135,7 @@ fun BottomSheetContent(
     onEventClick: (Event) -> Unit = {},
     onCreateMemoryClick: () -> Unit = {},
     onCreateEventClick: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onCreateEventDone: () -> Unit = {},
@@ -229,7 +230,8 @@ fun BottomSheetContent(
                       Column(modifier = contentModifier) {
                         QuickActionsSection(
                             onCreateMemoryClick = onCreateMemoryClick,
-                            onCreateEventClick = onCreateEventClick)
+                            onCreateEventClick = onCreateEventClick,
+                            onNavigateToFriends = onNavigateToFriends)
 
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
@@ -546,12 +548,13 @@ private fun SearchBar(
   }
 }
 
-/** Row of quick action buttons (Create Memory, Create Event). */
+/** Row of quick action buttons (Create Memory, Create Event, Friends). */
 @Composable
 private fun QuickActionsSection(
     modifier: Modifier = Modifier,
     onCreateMemoryClick: () -> Unit,
-    onCreateEventClick: () -> Unit
+    onCreateEventClick: () -> Unit,
+    onNavigateToFriends: () -> Unit
 ) {
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
@@ -564,6 +567,13 @@ private fun QuickActionsSection(
           text = "Create Memory", modifier = Modifier.weight(1f), onClick = onCreateMemoryClick)
       QuickActionButton(
           text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      QuickActionButton(
+          text = "Friends", modifier = Modifier.weight(1f), onClick = onNavigateToFriends)
     }
   }
 }
@@ -583,7 +593,6 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
             text = text,
             textAlign = TextAlign.Center,
             maxLines = 2,
-            softWrap = true,
             style = MaterialTheme.typography.labelLarge)
       }
 }
@@ -614,7 +623,7 @@ private fun TagsSection(
         }
   }
 }
-
+// Events section for Saved/Joined tabs
 @Composable
 private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   if (events.isEmpty()) {
