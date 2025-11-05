@@ -220,7 +220,7 @@ class MapScreenViewModel(
   val topTags: List<String>
     get() = _topTags
 
-  // Recent search history (max 3 items - searches and clicked events)
+  // Recent search history (searches and clicked events)
   private var _recentItems by mutableStateOf<List<RecentItem>>(emptyList())
   val recentItems: List<RecentItem>
     get() = _recentItems
@@ -683,22 +683,20 @@ class MapScreenViewModel(
               ?: emptyList()
 
       _recentItems =
-          itemsData
-              .mapNotNull { data ->
-                when (data.type) {
-                  "search" -> RecentItem.Search(data.value)
-                  "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
-                  else -> null
-                }
-              }
-              .take(3)
+          itemsData.mapNotNull { data ->
+            when (data.type) {
+              "search" -> RecentItem.Search(data.value)
+              "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
+              else -> null
+            }
+          }
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to load recent items", e)
       _recentItems = emptyList()
     }
   }
 
-  /** Saves a search query to recent history (max 3 items). */
+  /** Saves a search query to recent history. */
   private fun saveRecentSearch(query: String) {
     val trimmed = query.trim()
     if (trimmed.isEmpty()) return
@@ -713,16 +711,15 @@ class MapScreenViewModel(
           is RecentItem.ClickedEvent -> updatedList.add(item)
         }
       }
-      val finalList = updatedList.take(3)
 
-      _recentItems = finalList
-      saveRecentItemsToPrefs(finalList)
+      _recentItems = updatedList
+      saveRecentItemsToPrefs(updatedList)
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to save recent search", e)
     }
   }
 
-  /** Saves a clicked event to recent history (max 3 items). */
+  /** Saves a clicked event to recent history. */
   private fun saveRecentEvent(eventId: String, eventTitle: String) {
     try {
       val newItem = RecentItem.ClickedEvent(eventId, eventTitle)
@@ -734,10 +731,9 @@ class MapScreenViewModel(
           is RecentItem.ClickedEvent -> if (item.eventId != eventId) updatedList.add(item)
         }
       }
-      val finalList = updatedList.take(3)
 
-      _recentItems = finalList
-      saveRecentItemsToPrefs(finalList)
+      _recentItems = updatedList
+      saveRecentItemsToPrefs(updatedList)
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to save recent event", e)
     }
