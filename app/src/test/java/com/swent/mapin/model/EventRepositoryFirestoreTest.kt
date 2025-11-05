@@ -12,6 +12,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.swent.mapin.model.event.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventLocalCache
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -500,6 +501,30 @@ class EventRepositoryFirestoreTest {
     assertEquals(emptySet<String>(), ids)
   }
 
+  @Test
+  fun getSavedEventIds_fallsBackToLocalCache_whenRemoteFails() = runTest {
+    // Simulate remote failure
+    whenever(query.get()).thenReturn(taskException<QuerySnapshot>(RuntimeException("remote fail")))
+
+    val localCache = mock<EventLocalCache>()
+    val cachedEvent =
+        Event(
+            uid = "L1",
+            title = "Local",
+            url = "",
+            description = "",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0))
+    whenever(localCache.getSavedEvents("user123")).thenReturn(listOf(cachedEvent))
+
+    // Recreate repo with local cache
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ids = repo.getSavedEventIds("user123")
+    assertEquals(setOf("L1"), ids)
+    verify(localCache, org.mockito.kotlin.atLeastOnce()).getSavedEvents("user123")
+  }
+
   // ======== Saved Events: save & unsave ========
 
   @Test
@@ -522,21 +547,133 @@ class EventRepositoryFirestoreTest {
   }
 
   @Test
-  fun unsaveEventForUser_deletesDocAndReturnsTrue() = runTest {
-    whenever(savedDoc.delete()).thenReturn(Tasks.forResult(null))
-    val ok = repo.unsaveEventForUser("user123", "E1")
+  fun saveEventForUser_remoteFails_butLocalCacheSaved_returnsTrue_and_usesPlaceholderIfGetEventFails() =
+      runTest {
+        // Remote write fails
+        whenever(savedDoc.set(any<Map<String, Any?>>()))
+            .thenReturn(taskException<Void>(RuntimeException("write failed")))
+
+        // Make getEvent throw (document.get returns exception)
+        whenever(document.get())
+            .thenReturn(taskException<DocumentSnapshot>(RuntimeException("not found")))
+
+        val localCache = mock<EventLocalCache>()
+        // local save should succeed (no exception)
+        whenever(localCache.saveEventLocally(eq("user123"), any(), any())).thenReturn(Unit)
+
+        repo = EventRepositoryFirestore(db, localCache)
+
+        val ok = repo.saveEventForUser("user123", "E-MISSING")
+        // remote failed, but local cache saved -> overall true
+        assertTrue(ok)
+
+        // Verify local cache was asked to save; event passed must have uid equal to the id we
+        // provided
+        argumentCaptor<Event>().apply {
+          verify(localCache).saveEventLocally(eq("user123"), capture(), any())
+          assertEquals("E-MISSING", firstValue.uid)
+        }
+      }
+
+  @Test
+  fun saveEventForUser_remoteSucceeds_updatesLocalCache_andReturnsTrue() = runTest {
+    // remote write succeeds
+    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(taskOf(null))
+
+    // getEvent returns a full event
+    val e =
+        Event(
+            uid = "E1",
+            title = "T",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+    val snap = doc("E1", e)
+    whenever(document.get()).thenReturn(taskOf(snap))
+
+    val localCache = mock<EventLocalCache>()
+    // local save should succeed
+    whenever(localCache.saveEventLocally(eq("user123"), any(), any())).thenReturn(Unit)
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ok = repo.saveEventForUser("user123", "E1")
     assertTrue(ok)
-    verify(savedDoc).delete()
+
+    argumentCaptor<Event>().apply {
+      verify(localCache).saveEventLocally(eq("user123"), capture(), any())
+      assertEquals("E1", firstValue.uid)
+      assertEquals("T", firstValue.title)
+    }
   }
 
   @Test
-  fun unsaveEventForUser_failureReturnsFalse() = runTest {
-    whenever(savedDoc.delete()).thenReturn(taskException<Void>(RuntimeException("delete failed")))
-    val ok = repo.unsaveEventForUser("user123", "E1")
-    assertFalse(ok)
+  fun saveEventForUser_remoteSucceeds_butLocalCacheThrows_stillReturnsTrue() = runTest {
+    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(taskOf(null))
+
+    val e =
+        Event(
+            uid = "E2",
+            title = "TT",
+            url = "u",
+            description = "d",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+    val snap = doc("E2", e)
+    whenever(document.get()).thenReturn(taskOf(snap))
+
+    val localCache = mock<EventLocalCache>()
+    whenever(localCache.saveEventLocally(eq("user123"), any(), any()))
+        .thenThrow(RuntimeException("local fail"))
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ok = repo.saveEventForUser("user123", "E2")
+    // remote succeeded, so overall true despite local cache failure
+    assertTrue(ok)
+    verify(localCache).saveEventLocally(eq("user123"), any(), any())
   }
 
-  // ======== Saved Events: getSavedEvents (no chunking) ========
+  @Test
+  fun unsaveEventForUser_remoteSucceeds_updatesLocalCache_andReturnsTrue() = runTest {
+    whenever(savedDoc.delete()).thenReturn(taskOf(null))
+
+    val localCache = mock<EventLocalCache>()
+    whenever(localCache.unsaveEventLocally("user123", "E1")).thenReturn(Unit)
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ok = repo.unsaveEventForUser("user123", "E1")
+    assertTrue(ok)
+    verify(localCache).unsaveEventLocally("user123", "E1")
+  }
+
+  @Test
+  fun unsaveEventForUser_remoteSucceeds_butLocalCacheThrows_stillReturnsTrue() = runTest {
+    whenever(savedDoc.delete()).thenReturn(taskOf(null))
+
+    val localCache = mock<EventLocalCache>()
+    whenever(localCache.unsaveEventLocally("user123", "E1"))
+        .thenThrow(RuntimeException("local fail"))
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ok = repo.unsaveEventForUser("user123", "E1")
+    // remote succeeded, so overall true even if local cache throws
+    assertTrue(ok)
+    verify(localCache).unsaveEventLocally("user123", "E1")
+  }
 
   @Test
   fun getSavedEvents_emptyWhenNoIds() = runTest {
@@ -663,5 +800,82 @@ class EventRepositoryFirestoreTest {
     // merged ids from both calls should equal the original ids set
     val merged = calls.flatten().toSet()
     assertEquals(ids.toSet(), merged)
+  }
+
+  @Test
+  fun getSavedEvents_fallsBackToLocalCache_whenRemoteFails() = runTest {
+    // Make getSavedEventIds throw (simulate remote failure path inside getSavedEvents)
+    whenever(query.get()).thenReturn(taskException<QuerySnapshot>(RuntimeException("boom")))
+
+    val localCache = mock<EventLocalCache>()
+    val cachedEvent =
+        Event(
+            uid = "LC1",
+            title = "LC",
+            url = "",
+            description = "",
+            date = Timestamp.now(),
+            location = Location("L", 0.0, 0.0))
+    whenever(localCache.getSavedEvents("user123")).thenReturn(listOf(cachedEvent))
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val out = repo.getSavedEvents("user123")
+    assertEquals(1, out.size)
+    assertEquals("LC1", out[0].uid)
+    verify(localCache, org.mockito.kotlin.atLeastOnce()).getSavedEvents("user123")
+  }
+
+  @Test
+  fun unsaveEventForUser_remoteFails_butLocalCacheUnsaved_returnsTrue() = runTest {
+    // Remote delete fails
+    whenever(savedDoc.delete()).thenReturn(taskException<Void>(RuntimeException("delete fail")))
+
+    val localCache = mock<EventLocalCache>()
+    whenever(localCache.unsaveEventLocally("user123", "E1")).thenReturn(Unit)
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val ok = repo.unsaveEventForUser("user123", "E1")
+    assertTrue(ok)
+    verify(localCache).unsaveEventLocally("user123", "E1")
+  }
+
+  @Test
+  fun getSavedEvents_handlesLocalCacheCacheSavedEventsThrowing_andStillReturnsResults() = runTest {
+    // Simulate normal remote behavior: saved ids present and whereIn returns docs
+    val savedIdsSnap = qs(doc("E1", null))
+    whenever(query.get()).thenReturn(taskOf(savedIdsSnap))
+
+    val e1 =
+        Event(
+            uid = "E1",
+            title = "T1",
+            url = "u",
+            description = "d",
+            date = Timestamp(100L, 0),
+            location = Location("X", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 1)
+    val chunkSnap = qs(doc("E1", e1))
+    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(listOf("E1"))))
+        .thenReturn(queryChunk1)
+    whenever(queryChunk1.get()).thenReturn(taskOf(chunkSnap))
+
+    // localCache.cacheSavedEvents throws
+    val localCache = mock<EventLocalCache>()
+    whenever(localCache.cacheSavedEvents(eq("user123"), any()))
+        .thenThrow(RuntimeException("cache fail"))
+
+    repo = EventRepositoryFirestore(db, localCache)
+
+    val out = repo.getSavedEvents("user123")
+    assertEquals(1, out.size)
+    assertEquals("E1", out[0].uid)
+    // ensure we attempted to update local cache
+    verify(localCache).cacheSavedEvents(eq("user123"), any())
   }
 }
