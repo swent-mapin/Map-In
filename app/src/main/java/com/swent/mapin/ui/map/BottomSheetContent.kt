@@ -195,128 +195,169 @@ fun BottomSheetContent(
                 onDone = onCreateEventDone)
           }
           BottomSheetScreen.MAIN_CONTENT -> {
-            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-              SearchBar(
-                  value = searchBarState.query,
-                  onValueChange = searchBarState.onQueryChange,
-                  isFull = isFull,
-                  isSearchMode = isSearchMode,
-                  onTap = searchBarState.onTap,
-                  focusRequester = focusRequester,
-                  onSearchAction = {
-                    searchBarState.onSubmit()
-                    focusManager.clearFocus()
-                  },
-                  onClear = searchBarState.onClear,
-                  avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
-                  onProfileClick = onProfileClick)
+            var showAllRecents by remember { mutableStateOf(false) }
 
-              Spacer(modifier = Modifier.height(24.dp))
+            AnimatedContent(
+                targetState = showAllRecents,
+                transitionSpec = {
+                  (fadeIn(animationSpec = tween(250)) +
+                          slideInVertically(
+                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                      .togetherWith(
+                          fadeOut(animationSpec = tween(200)) +
+                              slideOutVertically(
+                                  animationSpec = tween(200), targetOffsetY = { -it / 6 }))
+                },
+                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                label = "allRecentsPageTransition") { showAll ->
+                  if (showAll) {
+                    AllRecentItemsPage(
+                        recentItems = recentItems,
+                        onRecentSearchClick = { query ->
+                          showAllRecents = false
+                          onRecentSearchClick(query)
+                        },
+                        onRecentEventClick = { eventId ->
+                          showAllRecents = false
+                          onRecentEventClick(eventId)
+                        },
+                        onClearAll = {
+                          onClearRecentSearches()
+                          showAllRecents = false
+                        },
+                        onBack = { showAllRecents = false })
+                  } else {
+                    Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+                      SearchBar(
+                          value = searchBarState.query,
+                          onValueChange = searchBarState.onQueryChange,
+                          isFull = isFull,
+                          isSearchMode = isSearchMode,
+                          onTap = searchBarState.onTap,
+                          focusRequester = focusRequester,
+                          onSearchAction = {
+                            searchBarState.onSubmit()
+                            focusManager.clearFocus()
+                          },
+                          onClear = searchBarState.onClear,
+                          avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
+                          onProfileClick = onProfileClick)
 
-              AnimatedContent(
-                  targetState = isSearchMode,
-                  transitionSpec = {
-                    (fadeIn(animationSpec = tween(250)) +
-                            slideInVertically(
-                                animationSpec = tween(250), initialOffsetY = { it / 6 }))
-                        .togetherWith(
-                            fadeOut(animationSpec = tween(200)) +
-                                slideOutVertically(
-                                    animationSpec = tween(200), targetOffsetY = { it / 6 }))
-                  },
-                  modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
-                  label = "searchModeTransition") { searchActive ->
-                    if (searchActive) {
-                      SearchResultsSection(
-                          results = searchResults,
-                          query = searchBarState.query,
-                          recentItems = recentItems,
-                          onRecentSearchClick = onRecentSearchClick,
-                          onRecentEventClick = onRecentEventClick,
-                          onClearRecentSearches = onClearRecentSearches,
-                          topCategories = topTags,
-                          onCategoryClick = onCategoryClick,
-                          filterViewModel = filterViewModel,
-                          locationViewModel = locationViewModel,
-                          userProfile = userProfile,
-                          modifier = Modifier.fillMaxSize(),
-                          onEventClick = onEventClick)
-                    } else {
-                      val contentModifier =
-                          if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                          else Modifier.fillMaxWidth()
+                      Spacer(modifier = Modifier.height(24.dp))
 
-                      Column(modifier = contentModifier) {
-                        QuickActionsSection(
-                            onCreateMemoryClick = onCreateMemoryClick,
-                            onCreateEventClick = onCreateEventClick)
+                      AnimatedContent(
+                          targetState = isSearchMode,
+                          transitionSpec = {
+                            (fadeIn(animationSpec = tween(250)) +
+                                    slideInVertically(
+                                        animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                                .togetherWith(
+                                    fadeOut(animationSpec = tween(200)) +
+                                        slideOutVertically(
+                                            animationSpec = tween(200), targetOffsetY = { it / 6 }))
+                          },
+                          modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                          label = "searchModeTransition") { searchActive ->
+                            if (searchActive) {
+                              SearchResultsSection(
+                                  results = searchResults,
+                                  query = searchBarState.query,
+                                  recentItems = recentItems,
+                                  onRecentSearchClick = onRecentSearchClick,
+                                  onRecentEventClick = onRecentEventClick,
+                                  onShowAllRecents = { showAllRecents = true },
+                                  topCategories = topTags,
+                                  onCategoryClick = onCategoryClick,
+                                  filterViewModel = filterViewModel,
+                                  locationViewModel = locationViewModel,
+                                  userProfile = userProfile,
+                                  modifier = Modifier.fillMaxSize(),
+                                  onEventClick = onEventClick)
+                            } else {
+                              val contentModifier =
+                                  if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                                  else Modifier.fillMaxWidth()
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(modifier = Modifier.height(16.dp))
+                              Column(modifier = contentModifier) {
+                                QuickActionsSection(
+                                    onCreateMemoryClick = onCreateMemoryClick,
+                                    onCreateEventClick = onCreateEventClick)
 
-                        // Tabs
-                        TabRow(
-                            selectedTabIndex =
-                                if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
-                                else 1,
-                            modifier = Modifier.fillMaxWidth()) {
-                              Tab(
-                                  selected =
-                                      selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
-                                  onClick = {
-                                    onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                  },
-                                  text = { Text("Saved Events") })
-                              Tab(
-                                  selected =
-                                      selectedTab ==
-                                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                                  onClick = {
-                                    onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                                  },
-                                  text = { Text("Joined Events") })
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Tabs
+                                TabRow(
+                                    selectedTabIndex =
+                                        if (selectedTab ==
+                                            MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                            0
+                                        else 1,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                      Tab(
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                          onClick = {
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                          },
+                                          text = { Text("Saved Events") })
+                                      Tab(
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                          onClick = {
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                          },
+                                          text = { Text("Joined Events") })
+                                    }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                when (selectedTab) {
+                                  MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                                    EventsSection(
+                                        events = savedEvents, onEventClick = onTabEventClick)
+                                  }
+                                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                                    EventsSection(
+                                        events = joinedEvents, onEventClick = onTabEventClick)
+                                  }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Filters section visible unless collapsed
+                                if (state != BottomSheetState.COLLAPSED) {
+                                  filterSection.Render(
+                                      Modifier.fillMaxWidth(),
+                                      filterViewModel,
+                                      locationViewModel,
+                                      userProfile)
+
+                                  Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                // Dynamic tag selection (Discover)
+                                if (topTags.isNotEmpty()) {
+                                  TagsSection(
+                                      topTags = topTags,
+                                      selectedTags = selectedTags,
+                                      onTagClick = onTagClick)
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+                              }
                             }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        when (selectedTab) {
-                          MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
-                            EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                           }
-                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                            EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
-                          }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Filters section visible unless collapsed
-                        if (state != BottomSheetState.COLLAPSED) {
-                          filterSection.Render(
-                              Modifier.fillMaxWidth(),
-                              filterViewModel,
-                              locationViewModel,
-                              userProfile)
-
-                          Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        // Dynamic tag selection (Discover)
-                        if (topTags.isNotEmpty()) {
-                          TagsSection(
-                              topTags = topTags,
-                              selectedTags = selectedTags,
-                              onTagClick = onTagClick)
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-                      }
                     }
                   }
-            }
+                }
           }
         }
       }
@@ -329,7 +370,7 @@ private fun SearchResultsSection(
     recentItems: List<RecentItem> = emptyList(),
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
-    onClearRecentSearches: () -> Unit = {},
+    onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
     filterViewModel: FiltersSectionViewModel = viewModel(),
@@ -351,7 +392,7 @@ private fun SearchResultsSection(
                 recentItems = recentItems,
                 onRecentSearchClick = onRecentSearchClick,
                 onRecentEventClick = onRecentEventClick,
-                onClearAll = onClearRecentSearches)
+                onShowAll = onShowAllRecents)
             HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
           }
 
@@ -704,13 +745,72 @@ private fun TagItem(
       }
 }
 
-/** Recent items section with list of recent searches and events, plus clear button. */
+/** Full page showing all recent items with clear all button. */
+@Composable
+private fun AllRecentItemsPage(
+    recentItems: List<RecentItem>,
+    onRecentSearchClick: (String) -> Unit,
+    onRecentEventClick: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val scrollState = remember { ScrollState(0) }
+
+  Column(modifier = modifier.fillMaxSize().fillMaxHeight()) {
+    // Header with back button and clear all
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack, modifier = Modifier.testTag("backFromAllRecentsButton")) {
+              Icon(
+                  imageVector = Icons.Filled.Close,
+                  contentDescription = "Back",
+                  tint = MaterialTheme.colorScheme.onSurface)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "All Recent",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface)
+          }
+
+          TextButton(onClick = onClearAll, modifier = Modifier.testTag("clearAllRecentButton")) {
+            Text("Clear All", style = MaterialTheme.typography.bodyMedium)
+          }
+        }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // Scrollable content
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+      recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> {
+            RecentSearchItem(
+                searchQuery = item.query, onClick = { onRecentSearchClick(item.query) })
+          }
+          is RecentItem.ClickedEvent -> {
+            RecentEventItem(
+                eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+/** Recent items section with list of recent searches and events, plus Show All button. */
 @Composable
 private fun RecentItemsSection(
     recentItems: List<RecentItem>,
     onRecentSearchClick: (String) -> Unit,
     onRecentEventClick: (String) -> Unit,
-    onClearAll: () -> Unit,
+    onShowAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   Column(modifier = modifier.fillMaxWidth()) {
@@ -725,8 +825,8 @@ private fun RecentItemsSection(
 
           if (recentItems.isNotEmpty()) {
             TextButton(
-                onClick = onClearAll, modifier = Modifier.testTag("clearRecentSearchesButton")) {
-                  Text("Clear", style = MaterialTheme.typography.bodyMedium)
+                onClick = onShowAll, modifier = Modifier.testTag("showAllRecentSearchesButton")) {
+                  Text("Show All", style = MaterialTheme.typography.bodyMedium)
                 }
           }
         }
