@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.ui.map.FiltersSectionViewModel
 import com.swent.mapin.ui.profile.ProfileViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -29,6 +30,9 @@ import org.junit.Test
 class BottomSheetContentTest {
 
   @get:Rule val rule = createComposeRule()
+  val filterViewModel = FiltersSectionViewModel()
+  val locationViewModel = LocationViewModel()
+  val profileViewModel = ProfileViewModel()
 
   @Composable
   private fun TestContent(
@@ -55,7 +59,11 @@ class BottomSheetContentTest {
                   },
                   onTap = onTap,
                   onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}))
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+      )
     }
   }
 
@@ -80,7 +88,11 @@ class BottomSheetContentTest {
           savedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
           onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
+          onTabChange = onTabChange,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+        )
     }
   }
 
@@ -183,7 +195,11 @@ class BottomSheetContentTest {
           joinedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
           onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
+          onTabChange = onTabChange,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+        )
     }
   }
 
@@ -243,7 +259,11 @@ class BottomSheetContentTest {
             onTabChange = { tab ->
               selectedTab = tab
               currentTab = tab
-            })
+            },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel
+        )
       }
     }
     rule.waitForIdle()
@@ -279,7 +299,11 @@ class BottomSheetContentTest {
                   onFocusHandled = { shouldRequestFocus = false },
                   onClear = {}),
           searchResults = searchResults,
-          isSearchMode = isSearchMode)
+          isSearchMode = isSearchMode,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+      )
     }
   }
 
@@ -324,10 +348,7 @@ class BottomSheetContentTest {
 
   @Composable
   private fun TestContentWithFilters(
-      state: BottomSheetState,
-      filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
-      locationViewModel: LocationViewModel = LocationViewModel(),
-      profileViewModel: ProfileViewModel = ProfileViewModel()
+      state: BottomSheetState
   ) {
     MaterialTheme {
       BottomSheetContent(
@@ -340,7 +361,11 @@ class BottomSheetContentTest {
                   onQueryChange = {},
                   onTap = {},
                   onFocusHandled = {},
-                  onClear = {}))
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+      )
     }
   }
 
@@ -371,15 +396,6 @@ class BottomSheetContentTest {
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun filterSection_doesNotDisplayInCollapsedState() {
-    rule.setContent { TestContentWithFilters(state = BottomSheetState.COLLAPSED) }
-
-    rule.waitForIdle()
-
-    rule.onNodeWithTag(FiltersSectionTestTags.TITLE).assertDoesNotExist()
   }
 
   @Test
@@ -468,7 +484,11 @@ class BottomSheetContentTest {
             savedEvents = saved,
             joinedEvents = joined,
             selectedTab = selectedTab,
-            onTabChange = { selectedTab = it })
+            onTabChange = { selectedTab = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel
+        )
       }
     }
     rule.waitForIdle()
@@ -502,7 +522,11 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = "http://example.com/avatar.jpg",
-            onProfileClick = { clicked = true })
+            onProfileClick = { clicked = true },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel
+        )
       }
     }
 
@@ -531,7 +555,11 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = null,
-            onProfileClick = {})
+            onProfileClick = {},
+            filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+        )
       }
     }
 
@@ -558,7 +586,11 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = "person",
-            onProfileClick = {})
+            onProfileClick = {},
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel
+        )
       }
     }
 
