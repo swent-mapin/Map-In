@@ -113,6 +113,8 @@ class MapScreenViewModel(
   private var programmaticZoomJob: kotlinx.coroutines.Job? = null
   // Tracks whether leaving full sheet should clear the current query (active editing state)
   private var clearSearchOnExitFull by mutableStateOf(false)
+  // Saves the editing state before viewing an event, so we can restore it after closing
+  private var wasEditingBeforeEvent by mutableStateOf(false)
 
   private fun markSearchEditing() {
     isSearchActivated = true
@@ -412,7 +414,14 @@ class MapScreenViewModel(
     isInMediumMode = target == BottomSheetState.MEDIUM
     val leavingFull = _bottomSheetState == BottomSheetState.FULL && target != BottomSheetState.FULL
     val collapsingSheet = target == BottomSheetState.COLLAPSED
-    val shouldClear = clearSearchOnExitFull && (leavingFull || collapsingSheet)
+
+    // When leaving FULL, decide whether to clear search:
+    // - Always clear if user was editing and has no query (just tapped search bar)
+    // - Always clear if user was editing (typing but not submitted)
+    // - Keep results only if user has submitted a search query
+    val hasCommittedSearch = !clearSearchOnExitFull && _searchQuery.isNotEmpty()
+    val shouldClear = leavingFull && !hasCommittedSearch
+
     if (resetSearch && shouldClear && !_showMemoryForm) {
       resetSearchState()
     }
@@ -916,6 +925,8 @@ class MapScreenViewModel(
    */
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
+    // Save editing state before marking as committed, so we can restore it later
+    wasEditingBeforeEvent = clearSearchOnExitFull
     saveRecentEvent(event.uid, event.title)
     markSearchCommitted()
     onEventPinClicked(event, forceZoom = true)
@@ -926,6 +937,8 @@ class MapScreenViewModel(
     val event = _allEvents.find { it.uid == eventId }
     if (event != null) {
       _cameFromSearch = true
+      // Recent events are always committed searches (not editing)
+      wasEditingBeforeEvent = false
       markSearchCommitted()
       onEventPinClicked(event, forceZoom = true)
     }
@@ -942,9 +955,16 @@ class MapScreenViewModel(
       // Return to search mode without clearing the current query
       _cameFromSearch = false
       isSearchActivated = true
-      _shouldFocusSearch = false
+      // Restore the editing state from before viewing the event
+      if (wasEditingBeforeEvent) {
+        markSearchEditing()
+      }
+      // Restore focus if user was typing (editing), otherwise just show search results
+      _shouldFocusSearch = wasEditingBeforeEvent
+      wasEditingBeforeEvent = false // Reset for next time
       applyFilters()
-      setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
+      // Always return to FULL to show search interface
+      setBottomSheetState(BottomSheetState.FULL, resetSearch = false)
     } else {
       setBottomSheetState(BottomSheetState.COLLAPSED)
     }

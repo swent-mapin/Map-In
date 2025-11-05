@@ -523,11 +523,35 @@ private fun SearchBar(
   var isFocused by remember { mutableStateOf(false) }
   val profileVisible = !isFocused && !isSearchMode
   val fieldHeight = TextFieldDefaults.MinHeight
+  var textFieldValueState by remember {
+    mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(value))
+  }
+
+  // Update text field value when value changes, preserving cursor at end
+  LaunchedEffect(value) {
+    if (textFieldValueState.text != value) {
+      textFieldValueState =
+          androidx.compose.ui.text.input.TextFieldValue(
+              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
+    }
+  }
+
+  // When focus is gained and there's text, move cursor to end
+  LaunchedEffect(isFocused, value) {
+    if (isFocused && value.isNotEmpty() && textFieldValueState.selection.start == 0) {
+      textFieldValueState =
+          androidx.compose.ui.text.input.TextFieldValue(
+              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
+    }
+  }
 
   Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     TextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = textFieldValueState,
+        onValueChange = { newValue ->
+          textFieldValueState = newValue
+          onValueChange(newValue.text)
+        },
         placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
         modifier =
             Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
@@ -540,7 +564,7 @@ private fun SearchBar(
         textStyle = MaterialTheme.typography.bodyLarge,
         trailingIcon = {
           AnimatedVisibility(
-              visible = isFocused || value.isNotEmpty(),
+              visible = isSearchMode || value.isNotEmpty(),
               enter =
                   fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)),
               exit =
