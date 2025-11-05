@@ -127,6 +127,7 @@ fun BottomSheetContent(
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    onCategoryClick: (String) -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -233,6 +234,8 @@ fun BottomSheetContent(
                           onRecentSearchClick = onRecentSearchClick,
                           onRecentEventClick = onRecentEventClick,
                           onClearRecentSearches = onClearRecentSearches,
+                          topCategories = topTags,
+                          onCategoryClick = onCategoryClick,
                           filterViewModel = filterViewModel,
                           locationViewModel = locationViewModel,
                           userProfile = userProfile,
@@ -327,16 +330,17 @@ private fun SearchResultsSection(
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    topCategories: List<String> = emptyList(),
+    onCategoryClick: (String) -> Unit = {},
     filterViewModel: FiltersSectionViewModel = viewModel(),
     locationViewModel: LocationViewModel = viewModel(),
     userProfile: com.swent.mapin.model.UserProfile? = null,
     modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
 ) {
-  // When query is empty, show recent items and filters instead of results
+  // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
     val scrollState = remember { ScrollState(0) }
-    val filterSection = remember { FiltersSection() }
 
     Column(
         modifier = modifier.fillMaxWidth().verticalScroll(scrollState),
@@ -351,10 +355,9 @@ private fun SearchResultsSection(
             HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
           }
 
-          // Filters section
-          userProfile?.let { profile ->
-            filterSection.Render(
-                Modifier.fillMaxWidth(), filterViewModel, locationViewModel, profile)
+          // Top categories section
+          if (topCategories.isNotEmpty()) {
+            TopCategoriesSection(categories = topCategories, onCategoryClick = onCategoryClick)
           }
 
           Spacer(modifier = Modifier.height(24.dp))
@@ -798,6 +801,53 @@ private fun RecentEventItem(
 
         Text(
             text = eventTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Top categories section with list of popular event categories for quick search. */
+@Composable
+private fun TopCategoriesSection(
+    categories: List<String>,
+    onCategoryClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Top Categories",
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = 16.dp))
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    categories.forEach { category ->
+      TopCategoryItem(categoryName = category, onClick = { onCategoryClick(category) })
+    }
+  }
+}
+
+/** Individual category item with clickable text. */
+@Composable
+private fun TopCategoryItem(
+    categoryName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("topCategoryItem_$categoryName"),
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = categoryName,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,

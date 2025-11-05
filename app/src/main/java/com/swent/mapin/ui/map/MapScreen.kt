@@ -341,6 +341,7 @@ fun MapScreen(
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
+                      onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
                       topTags = viewModel.topTags,
