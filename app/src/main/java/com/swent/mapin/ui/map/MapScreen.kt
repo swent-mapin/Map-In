@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,11 +81,9 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
-import kotlin.math.cos
-import kotlin.math.ln
-import kotlin.math.min
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
@@ -109,6 +108,7 @@ fun MapScreen(
   val edgePaddingPx = with(density) { 24.dp.toPx() }
   val extraBottomMarginPx = with(density) { 32.dp.toPx() }
   val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
+  val coroutineScope = rememberCoroutineScope()
 
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
@@ -159,55 +159,32 @@ fun MapScreen(
   }
 
   LaunchedEffect(mapViewportState, bottomPaddingPx, edgePaddingPx) {
-    viewModel.onFitCameraToEvents = { events ->
-      if (events.isNotEmpty()) {
-        val animationOptions = MapAnimationOptions.Builder().duration(600L).build()
+    viewModel.onFitCameraToEvents = label@{ events ->
+      if (events.isEmpty()) return@label
 
-        val singleEvent = events.singleOrNull()
-        if (singleEvent != null) {
-          mapViewportState.easeTo(
-              cameraOptions {
-                center(
-                    Point.fromLngLat(singleEvent.location.longitude, singleEvent.location.latitude))
-                zoom(17.0)
-                padding(
-                    com.mapbox.maps.EdgeInsets(
-                        edgePaddingPx.toDouble(),
-                        edgePaddingPx.toDouble(),
-                        bottomPaddingPx.toDouble(),
-                        edgePaddingPx.toDouble()))
-              },
-              animationOptions = animationOptions)
-        } else {
-          val minLat = events.minOf { it.location.latitude }
-          val maxLat = events.maxOf { it.location.latitude }
-          val minLng = events.minOf { it.location.longitude }
-          val maxLng = events.maxOf { it.location.longitude }
+      coroutineScope.launch {
+        val points =
+            events.map { event ->
+              Point.fromLngLat(event.location.longitude, event.location.latitude)
+            }
 
-          val centerLat = (minLat + maxLat) / 2.0
-          val centerLng = (minLng + maxLng) / 2.0
+        val padding =
+            com.mapbox.maps.EdgeInsets(
+                edgePaddingPx.toDouble(),
+                edgePaddingPx.toDouble(),
+                bottomPaddingPx.toDouble(),
+                edgePaddingPx.toDouble())
 
-          val latSpan = (maxLat - minLat).coerceAtLeast(0.002)
-          val rawLngSpan = (maxLng - minLng).coerceAtLeast(0.002)
-          val cosLat = cos(Math.toRadians(centerLat)).coerceAtLeast(0.2)
-          val adjustedLngSpan = (rawLngSpan * cosLat).coerceAtLeast(0.002)
+        val camera =
+            mapViewportState.cameraForCoordinates(
+                coordinates = points,
+                camera = cameraOptions {},
+                coordinatesPadding = padding,
+                maxZoom = 17.0,
+                offset = null)
 
-          val latZoom = ln(360.0 / (latSpan * 1.4)) / ln(2.0)
-          val lngZoom = ln(360.0 / (adjustedLngSpan * 1.4)) / ln(2.0)
-          val targetZoom = min(latZoom, lngZoom).coerceIn(6.0, 17.0)
-
-          mapViewportState.easeTo(
-              cameraOptions {
-                center(Point.fromLngLat(centerLng, centerLat))
-                zoom(targetZoom)
-                padding(
-                    com.mapbox.maps.EdgeInsets(
-                        edgePaddingPx.toDouble(),
-                        edgePaddingPx.toDouble(),
-                        bottomPaddingPx.toDouble(),
-                        edgePaddingPx.toDouble()))
-              },
-              animationOptions = animationOptions)
+        camera?.let {
+          mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
         }
       }
     }
