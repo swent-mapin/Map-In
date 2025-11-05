@@ -939,13 +939,12 @@ class MapScreenViewModel(
     directionViewModel.clearDirection()
 
     if (_cameFromSearch) {
-      // Return to search mode: full sheet with cleared search, no keyboard
+      // Return to search mode without clearing the current query
       _cameFromSearch = false
-      _searchQuery = ""
       isSearchActivated = true
       _shouldFocusSearch = false
-      setBottomSheetState(BottomSheetState.FULL)
       applyFilters()
+      setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     } else {
       setBottomSheetState(BottomSheetState.COLLAPSED)
     }
