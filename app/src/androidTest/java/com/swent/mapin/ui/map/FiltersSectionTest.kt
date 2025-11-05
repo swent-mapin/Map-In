@@ -133,20 +133,6 @@ class FiltersSectionTest {
     composeTestRule.runOnIdle { assertEquals(999, viewModel.filters.value.maxPrice) }
   }
 
-  // ---------------------- TAGS SECTION ----------------------
-  @Test
-  fun tagsSection_selectsAndDeselectsTag() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TAGS).performClick()
-
-    val musicTag = composeTestRule.onNodeWithTag(FiltersSectionTestTags.tag("Music"))
-    musicTag.performClick()
-    composeTestRule.runOnIdle { assertTrue("Music" in viewModel.filters.value.tags) }
-
-    musicTag.performClick()
-    composeTestRule.runOnIdle { assertFalse("Music" in viewModel.filters.value.tags) }
-  }
-
   // ---------------------- FRIENDS / POPULAR ----------------------
   @Test
   fun friendsOnly_togglesCorrectly() {

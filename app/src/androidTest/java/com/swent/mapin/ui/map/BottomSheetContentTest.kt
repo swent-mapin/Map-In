@@ -19,7 +19,6 @@ import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventRepository
-import com.swent.mapin.ui.map.FiltersSectionViewModel
 import com.swent.mapin.ui.profile.ProfileViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -62,8 +61,7 @@ class BottomSheetContentTest {
                   onClear = {}),
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-      )
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -91,8 +89,7 @@ class BottomSheetContentTest {
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-        )
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -235,8 +232,7 @@ class BottomSheetContentTest {
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-        )
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -302,8 +298,7 @@ class BottomSheetContentTest {
             },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel
-        )
+            profileViewModel = profileViewModel)
       }
     }
     rule.waitForIdle()
@@ -342,8 +337,7 @@ class BottomSheetContentTest {
           isSearchMode = isSearchMode,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-      )
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -387,9 +381,7 @@ class BottomSheetContentTest {
   }
 
   @Composable
-  private fun TestContentWithFilters(
-      state: BottomSheetState
-  ) {
+  private fun TestContentWithFilters(state: BottomSheetState) {
     MaterialTheme {
       BottomSheetContent(
           state = state,
@@ -404,8 +396,7 @@ class BottomSheetContentTest {
                   onClear = {}),
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-      )
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -535,8 +526,7 @@ class BottomSheetContentTest {
             onTabChange = { selectedTab = it },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel
-        )
+            profileViewModel = profileViewModel)
       }
     }
     rule.waitForIdle()
@@ -573,8 +563,7 @@ class BottomSheetContentTest {
             onProfileClick = { clicked = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel
-        )
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -605,9 +594,8 @@ class BottomSheetContentTest {
             avatarUrl = null,
             onProfileClick = {},
             filterViewModel = filterViewModel,
-          locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-        )
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -635,10 +623,9 @@ class BottomSheetContentTest {
                     onClear = {}),
             avatarUrl = "person",
             onProfileClick = {},
-          filterViewModel = filterViewModel,
-          locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel
-        )
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
