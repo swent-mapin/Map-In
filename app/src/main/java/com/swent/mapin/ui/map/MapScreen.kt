@@ -80,6 +80,9 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.min
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -101,6 +104,11 @@ fun MapScreen(
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
+  val density = LocalDensity.current
+  val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
+  val edgePaddingPx = with(density) { 24.dp.toPx() }
+  val extraBottomMarginPx = with(density) { 32.dp.toPx() }
+  val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
 
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
@@ -147,6 +155,61 @@ fun MapScreen(
             padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
+    }
+  }
+
+  LaunchedEffect(mapViewportState, bottomPaddingPx, edgePaddingPx) {
+    viewModel.onFitCameraToEvents = { events ->
+      if (events.isNotEmpty()) {
+        val animationOptions = MapAnimationOptions.Builder().duration(600L).build()
+
+        val singleEvent = events.singleOrNull()
+        if (singleEvent != null) {
+          mapViewportState.easeTo(
+              cameraOptions {
+                center(
+                    Point.fromLngLat(singleEvent.location.longitude, singleEvent.location.latitude))
+                zoom(17.0)
+                padding(
+                    com.mapbox.maps.EdgeInsets(
+                        edgePaddingPx.toDouble(),
+                        edgePaddingPx.toDouble(),
+                        bottomPaddingPx.toDouble(),
+                        edgePaddingPx.toDouble()))
+              },
+              animationOptions = animationOptions)
+        } else {
+          val minLat = events.minOf { it.location.latitude }
+          val maxLat = events.maxOf { it.location.latitude }
+          val minLng = events.minOf { it.location.longitude }
+          val maxLng = events.maxOf { it.location.longitude }
+
+          val centerLat = (minLat + maxLat) / 2.0
+          val centerLng = (minLng + maxLng) / 2.0
+
+          val latSpan = (maxLat - minLat).coerceAtLeast(0.002)
+          val rawLngSpan = (maxLng - minLng).coerceAtLeast(0.002)
+          val cosLat = cos(Math.toRadians(centerLat)).coerceAtLeast(0.2)
+          val adjustedLngSpan = (rawLngSpan * cosLat).coerceAtLeast(0.002)
+
+          val latZoom = ln(360.0 / (latSpan * 1.4)) / ln(2.0)
+          val lngZoom = ln(360.0 / (adjustedLngSpan * 1.4)) / ln(2.0)
+          val targetZoom = min(latZoom, lngZoom).coerceIn(6.0, 17.0)
+
+          mapViewportState.easeTo(
+              cameraOptions {
+                center(Point.fromLngLat(centerLng, centerLat))
+                zoom(targetZoom)
+                padding(
+                    com.mapbox.maps.EdgeInsets(
+                        edgePaddingPx.toDouble(),
+                        edgePaddingPx.toDouble(),
+                        bottomPaddingPx.toDouble(),
+                        edgePaddingPx.toDouble()))
+              },
+              animationOptions = animationOptions)
+        }
+      }
     }
   }
 

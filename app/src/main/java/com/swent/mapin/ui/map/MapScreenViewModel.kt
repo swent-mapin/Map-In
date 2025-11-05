@@ -95,7 +95,7 @@ class MapScreenViewModel(
     get() = _searchResults
 
   val isSearchMode: Boolean
-    get() = isSearchActivated && _bottomSheetState == BottomSheetState.FULL && !showMemoryForm
+    get() = isSearchActivated && !showMemoryForm
 
   // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
@@ -192,6 +192,7 @@ class MapScreenViewModel(
     get() = _showShareDialog
 
   var onCenterCamera: ((Event, Boolean) -> Unit)? = null
+  var onFitCameraToEvents: ((List<Event>) -> Unit)? = null
 
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
@@ -391,13 +392,14 @@ class MapScreenViewModel(
     }
   }
 
-  fun setBottomSheetState(target: BottomSheetState) {
+  fun setBottomSheetState(target: BottomSheetState, resetSearch: Boolean = true) {
     if (target == BottomSheetState.FULL && _bottomSheetState != BottomSheetState.FULL) {
       _fullEntryKey += 1
     }
 
     isInMediumMode = target == BottomSheetState.MEDIUM
-    if (target != BottomSheetState.FULL &&
+    if (resetSearch &&
+        target == BottomSheetState.COLLAPSED &&
         _bottomSheetState == BottomSheetState.FULL &&
         !_showMemoryForm) {
       resetSearchState()
@@ -430,15 +432,50 @@ class MapScreenViewModel(
 
   /** Called when user submits a search (presses enter or search button). */
   fun onSearchSubmit() {
-    if (_searchQuery.isNotBlank()) {
-      saveRecentSearch(_searchQuery)
+    val trimmedQuery = _searchQuery.trim()
+    if (trimmedQuery.isEmpty()) return
+
+    if (trimmedQuery != _searchQuery) {
+      _searchQuery = trimmedQuery
+      applyFilters()
     }
+
+    isSearchActivated = true
+    saveRecentSearch(trimmedQuery)
+    onClearFocus()
+    setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
+    focusCameraOnSearchResults()
   }
 
   /** Applies a recent search query from history. */
   fun applyRecentSearch(query: String) {
-    _searchQuery = query
+    val trimmedQuery = query.trim()
+    if (trimmedQuery.isEmpty()) return
+
+    _searchQuery = trimmedQuery
+    isSearchActivated = true
+    saveRecentSearch(trimmedQuery)
     applyFilters()
+    onClearFocus()
+    setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
+    focusCameraOnSearchResults()
+  }
+
+  private fun focusCameraOnSearchResults() {
+    if (_searchQuery.isBlank()) return
+
+    val results = _searchResults
+    if (results.isEmpty()) return
+
+    isProgrammaticZoom = true
+    onFitCameraToEvents?.invoke(results)
+
+    programmaticZoomJob?.cancel()
+    programmaticZoomJob =
+        viewModelScope.launch {
+          kotlinx.coroutines.delay(1100)
+          isProgrammaticZoom = false
+        }
   }
 
   private fun resetSearchState() {
