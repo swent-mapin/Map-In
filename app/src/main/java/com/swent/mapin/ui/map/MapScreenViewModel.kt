@@ -36,6 +36,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/** Represents a recent item in search history - either a search query or a clicked event. */
+sealed class RecentItem {
+  data class Search(val query: String) : RecentItem()
+
+  data class ClickedEvent(val eventId: String, val eventTitle: String) : RecentItem()
+}
+
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
@@ -198,6 +205,11 @@ class MapScreenViewModel(
   val topTags: List<String>
     get() = _topTags
 
+  // Recent search history (max 3 items - searches and clicked events)
+  private var _recentItems by mutableStateOf<List<RecentItem>>(emptyList())
+  val recentItems: List<RecentItem>
+    get() = _recentItems
+
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
   val avatarUrl: String?
@@ -221,6 +233,7 @@ class MapScreenViewModel(
     loadAllEvents()
     loadParticipantEvents()
     loadUserProfile()
+    loadRecentSearches()
 
     registerAuthStateListener()
   }
@@ -415,6 +428,19 @@ class MapScreenViewModel(
     _shouldFocusSearch = false
   }
 
+  /** Called when user submits a search (presses enter or search button). */
+  fun onSearchSubmit() {
+    if (_searchQuery.isNotBlank()) {
+      saveRecentSearch(_searchQuery)
+    }
+  }
+
+  /** Applies a recent search query from history. */
+  fun applyRecentSearch(query: String) {
+    _searchQuery = query
+    applyFilters()
+  }
+
   private fun resetSearchState() {
     isSearchActivated = false
     _shouldFocusSearch = false
@@ -498,7 +524,9 @@ class MapScreenViewModel(
           filterEvents(_searchQuery, tagFiltered)
         }
 
-    _searchResults = if (_searchQuery.isBlank()) tagFiltered else finalList
+    // For search results: only show results when there's an active query
+    _searchResults = if (_searchQuery.isBlank()) emptyList() else finalList
+    // For map: show filtered results or all if no query
     _events = finalList
   }
 
@@ -575,6 +603,120 @@ class MapScreenViewModel(
       return
     }
     viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
+  }
+
+  /** Data class for serializing recent items. */
+  private data class RecentItemData(
+      val type: String,
+      val value: String,
+      val eventTitle: String? = null
+  )
+
+  /** Loads recent items (searches and events) from SharedPreferences. */
+  private fun loadRecentSearches() {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      val itemsJson = prefs.getString("recent_items", "[]")
+      val itemsData =
+          com.google.gson.Gson().fromJson(itemsJson, Array<RecentItemData>::class.java)?.toList()
+              ?: emptyList()
+
+      _recentItems =
+          itemsData
+              .mapNotNull { data ->
+                when (data.type) {
+                  "search" -> RecentItem.Search(data.value)
+                  "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
+                  else -> null
+                }
+              }
+              .take(3)
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to load recent items", e)
+      _recentItems = emptyList()
+    }
+  }
+
+  /** Saves a search query to recent history (max 3 items). */
+  private fun saveRecentSearch(query: String) {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return
+
+    try {
+      val newItem = RecentItem.Search(trimmed)
+      val updatedList = mutableListOf<RecentItem>(newItem)
+      // Remove duplicate searches but keep events
+      _recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> if (item.query != trimmed) updatedList.add(item)
+          is RecentItem.ClickedEvent -> updatedList.add(item)
+        }
+      }
+      val finalList = updatedList.take(3)
+
+      _recentItems = finalList
+      saveRecentItemsToPrefs(finalList)
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent search", e)
+    }
+  }
+
+  /** Saves a clicked event to recent history (max 3 items). */
+  private fun saveRecentEvent(eventId: String, eventTitle: String) {
+    try {
+      val newItem = RecentItem.ClickedEvent(eventId, eventTitle)
+      val updatedList = mutableListOf<RecentItem>(newItem)
+      // Remove duplicate events but keep searches
+      _recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> updatedList.add(item)
+          is RecentItem.ClickedEvent -> if (item.eventId != eventId) updatedList.add(item)
+        }
+      }
+      val finalList = updatedList.take(3)
+
+      _recentItems = finalList
+      saveRecentItemsToPrefs(finalList)
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent event", e)
+    }
+  }
+
+  /** Persists recent items to SharedPreferences. */
+  private fun saveRecentItemsToPrefs(items: List<RecentItem>) {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      val itemsData =
+          items.map { item ->
+            when (item) {
+              is RecentItem.Search -> RecentItemData("search", item.query)
+              is RecentItem.ClickedEvent -> RecentItemData("event", item.eventId, item.eventTitle)
+            }
+          }
+      val itemsJson = com.google.gson.Gson().toJson(itemsData)
+      prefs.edit().putString("recent_items", itemsJson).apply()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent items to prefs", e)
+    }
+  }
+
+  /** Clears all recent items history. */
+  fun clearRecentSearches() {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      prefs.edit().remove("recent_items").apply()
+      // Also remove old format for migration
+      prefs.edit().remove("recent_searches").apply()
+      _recentItems = emptyList()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to clear recent items", e)
+    }
   }
 
   fun showMemoryForm() {
@@ -724,7 +866,17 @@ class MapScreenViewModel(
    */
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
+    saveRecentEvent(event.uid, event.title)
     onEventPinClicked(event, forceZoom = true)
+  }
+
+  /** Handles event click from recent items by finding the event and showing details. */
+  fun onRecentEventClicked(eventId: String) {
+    val event = _allEvents.find { it.uid == eventId }
+    if (event != null) {
+      _cameFromSearch = true
+      onEventPinClicked(event, forceZoom = true)
+    }
   }
 
   fun closeEventDetail() {

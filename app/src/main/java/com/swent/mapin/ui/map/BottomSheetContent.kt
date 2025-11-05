@@ -38,7 +38,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,7 +95,8 @@ data class SearchBarState(
     val onQueryChange: (String) -> Unit,
     val onTap: () -> Unit,
     val onFocusHandled: () -> Unit,
-    val onClear: () -> Unit
+    val onClear: () -> Unit,
+    val onSubmit: () -> Unit = {}
 )
 
 enum class BottomSheetScreen {
@@ -120,6 +123,10 @@ fun BottomSheetContent(
     // Search results and mode
     searchResults: List<Event> = emptyList(),
     isSearchMode: Boolean = false,
+    recentItems: List<RecentItem> = emptyList(),
+    onRecentSearchClick: (String) -> Unit = {},
+    onRecentEventClick: (String) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -195,7 +202,10 @@ fun BottomSheetContent(
                   isSearchMode = isSearchMode,
                   onTap = searchBarState.onTap,
                   focusRequester = focusRequester,
-                  onSearchAction = { focusManager.clearFocus() },
+                  onSearchAction = {
+                    searchBarState.onSubmit()
+                    focusManager.clearFocus()
+                  },
                   onClear = searchBarState.onClear,
                   avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
                   onProfileClick = onProfileClick)
@@ -219,6 +229,13 @@ fun BottomSheetContent(
                       SearchResultsSection(
                           results = searchResults,
                           query = searchBarState.query,
+                          recentItems = recentItems,
+                          onRecentSearchClick = onRecentSearchClick,
+                          onRecentEventClick = onRecentEventClick,
+                          onClearRecentSearches = onClearRecentSearches,
+                          filterViewModel = filterViewModel,
+                          locationViewModel = locationViewModel,
+                          userProfile = userProfile,
                           modifier = Modifier.fillMaxSize(),
                           onEventClick = onEventClick)
                     } else {
@@ -306,14 +323,52 @@ fun BottomSheetContent(
 private fun SearchResultsSection(
     results: List<Event>,
     query: String,
+    recentItems: List<RecentItem> = emptyList(),
+    onRecentSearchClick: (String) -> Unit = {},
+    onRecentEventClick: (String) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
+    filterViewModel: FiltersSectionViewModel = viewModel(),
+    locationViewModel: LocationViewModel = viewModel(),
+    userProfile: com.swent.mapin.model.UserProfile? = null,
     modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
 ) {
+  // When query is empty, show recent items and filters instead of results
+  if (query.isBlank()) {
+    val scrollState = remember { ScrollState(0) }
+    val filterSection = remember { FiltersSection() }
+
+    Column(
+        modifier = modifier.fillMaxWidth().verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+          // Recent items section (searches and events)
+          if (recentItems.isNotEmpty()) {
+            RecentItemsSection(
+                recentItems = recentItems,
+                onRecentSearchClick = onRecentSearchClick,
+                onRecentEventClick = onRecentEventClick,
+                onClearAll = onClearRecentSearches)
+            HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+          }
+
+          // Filters section
+          userProfile?.let { profile ->
+            filterSection.Render(
+                Modifier.fillMaxWidth(), filterViewModel, locationViewModel, profile)
+          }
+
+          Spacer(modifier = Modifier.height(24.dp))
+        }
+    return
+  }
+
+  // When there's a query but no results
   if (results.isEmpty()) {
     NoResultsMessage(query = query, modifier = modifier)
     return
   }
 
+  // Show search results
   LazyColumn(modifier = modifier.fillMaxWidth()) {
     items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
 
@@ -643,6 +698,111 @@ private fun TagItem(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis)
+      }
+}
+
+/** Recent items section with list of recent searches and events, plus clear button. */
+@Composable
+private fun RecentItemsSection(
+    recentItems: List<RecentItem>,
+    onRecentSearchClick: (String) -> Unit,
+    onRecentEventClick: (String) -> Unit,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = "Recent",
+              style = MaterialTheme.typography.titleMedium,
+              color = MaterialTheme.colorScheme.onSurface)
+
+          if (recentItems.isNotEmpty()) {
+            TextButton(
+                onClick = onClearAll, modifier = Modifier.testTag("clearRecentSearchesButton")) {
+                  Text("Clear", style = MaterialTheme.typography.bodyMedium)
+                }
+          }
+        }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    recentItems.take(3).forEach { item ->
+      when (item) {
+        is RecentItem.Search -> {
+          RecentSearchItem(searchQuery = item.query, onClick = { onRecentSearchClick(item.query) })
+        }
+        is RecentItem.ClickedEvent -> {
+          RecentEventItem(
+              eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
+        }
+      }
+    }
+  }
+}
+
+/** Individual recent search item with search icon and clickable text. */
+@Composable
+private fun RecentSearchItem(
+    searchQuery: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("recentSearchItem_$searchQuery"),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = Icons.Filled.Search,
+            contentDescription = "Recent search",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Text(
+            text = searchQuery,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Individual recent event item with location icon and clickable text. */
+@Composable
+private fun RecentEventItem(
+    eventTitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("recentEventItem_$eventTitle"),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = Icons.Filled.LocationOn,
+            contentDescription = "Recent event",
+            tint = MaterialTheme.colorScheme.primary)
+
+        Text(
+            text = eventTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
       }
 }
 
