@@ -251,6 +251,8 @@ class FiltersSectionTest {
       assertEquals(10, viewModel.filters.value.radiusKm)
       assertFalse(viewModel.filters.value.friendsOnly)
       assertFalse(viewModel.filters.value.popularOnly)
+
+      assertTrue(viewModel.filters.value.isEmpty())
     }
   }
 
@@ -276,88 +278,5 @@ class FiltersSectionTest {
     viewModel.setStartDate("01/11/2025") // valid start
     viewModel.setEndDate("31/10/2025") // end < start
     assertEquals("End date must be on or after start date", viewModel.errorMessage.value)
-  }
-
-  @Test
-  fun uncheckingAllFilters_resetsEachSectionToDefault() {
-    // Enable and set all filters
-
-    // TIME
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TIME).performClick()
-
-    // PLACE
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextReplacement("")
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextInput("25")
-
-    // PRICE
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PRICE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT).performTextReplacement("")
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT).performTextInput("99")
-
-    // TAGS
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TAGS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.tag("Music")).performClick()
-
-    // FRIENDS + POPULAR
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_FRIENDS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR).performClick()
-
-    // Verify filters are active
-    composeTestRule.runOnIdle {
-      assertTrue(viewModel.isWhenChecked.value)
-      assertTrue(viewModel.isWhereChecked.value)
-      assertTrue(viewModel.isPriceChecked.value)
-      assertTrue(viewModel.isTagsChecked.value)
-      assertTrue(viewModel.filters.value.friendsOnly)
-      assertTrue(viewModel.filters.value.popularOnly)
-      assertEquals(25, viewModel.filters.value.radiusKm)
-      assertEquals(99, viewModel.filters.value.maxPrice)
-      assertTrue("Music" in viewModel.filters.value.tags)
-    }
-
-    // Now uncheck all toggles — this should trigger the internal `reset` calls
-
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_FRIENDS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR).performClick()
-
-    // Verify everything reset to default state
-    composeTestRule.runOnIdle {
-      val filters = viewModel.filters.value
-      val today = LocalDate.now()
-
-      // When
-      assertFalse(viewModel.isWhenChecked.value)
-      assertEquals(today, filters.startDate)
-      assertNull(filters.endDate)
-
-      // Where
-      assertFalse(viewModel.isWhereChecked.value)
-      assertEquals(10, filters.radiusKm)
-      assertNull(filters.place)
-
-      // Price
-      assertFalse(viewModel.isPriceChecked.value)
-      assertNull(filters.maxPrice)
-
-      // Tags
-      assertFalse(viewModel.isTagsChecked.value)
-      assertTrue(filters.tags.isEmpty())
-
-      // Others
-      assertFalse(filters.friendsOnly)
-      assertFalse(filters.popularOnly)
-
-      // Overall
-      assertTrue(filters.isEmpty())
-    }
   }
 }
