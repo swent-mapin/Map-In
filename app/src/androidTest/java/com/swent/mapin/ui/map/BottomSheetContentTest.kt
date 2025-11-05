@@ -191,7 +191,10 @@ class BottomSheetContentTest {
                     onTap = {},
                     onFocusHandled = {},
                     onClear = {}),
-            onNavigateToFriends = { navigationTriggered = true })
+            onNavigateToFriends = { navigationTriggered = true },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
     rule.waitForIdle()
