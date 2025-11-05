@@ -406,11 +406,16 @@ class BottomSheetContentTest {
     rule.setContent { SavedEventsContent(events = testEvents) }
     rule.waitForIdle()
 
-    // Initially only first 3 are visible (others exist but are off-screen/not visible)
-    testEvents.take(3).forEach { e ->
+    // EventsSection displays events in reversed order (latest first). Compute expected
+    // visible/hidden sets.
+    val visibleInitially = testEvents.reversed().take(3)
+    val hiddenInitially = testEvents.reversed().drop(3)
+
+    // Initially only the last 3 (reversed first 3) are visible; earlier ones are not yet shown
+    visibleInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
     }
-    testEvents.drop(3).forEach { e ->
+    hiddenInitially.forEach { e ->
       // We only assert not displayed; they might exist off-screen
       rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
     }
@@ -436,10 +441,10 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // Collapsed again: only first 3 visible
-    testEvents.take(3).forEach { e ->
+    visibleInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
     }
-    testEvents.drop(3).forEach { e ->
+    hiddenInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
     }
   }

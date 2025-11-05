@@ -621,9 +621,9 @@ private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
     NoResultsMessage(query = "", modifier = Modifier)
     return
   }
-
+  val invertedEvents = events.reversed()
   var expanded by remember { mutableStateOf(false) }
-  val visible = if (expanded) events else events.take(3)
+  val visible = if (expanded) invertedEvents else invertedEvents.take(3)
 
   Column(modifier = Modifier.fillMaxWidth()) {
     visible.forEach { event ->
@@ -642,7 +642,7 @@ private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
           onClick = { expanded = !expanded },
           modifier =
               Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
-            Text(if (expanded) "Show less" else "Show more (${ '$' }{events.size - 3} more)")
+            Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
           }
     }
   }
