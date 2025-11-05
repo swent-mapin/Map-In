@@ -11,7 +11,8 @@ object EventRepositoryProvider {
 
   /**
    * Initialize the provider with an Application context (optional). Call from
-   * Application.onCreate().
+   * Application.onCreate(). If not called, Firestore repository will be created without local cache
+   * support. Should only be called once.
    */
   fun init(context: Context) {
     appContext = context.applicationContext

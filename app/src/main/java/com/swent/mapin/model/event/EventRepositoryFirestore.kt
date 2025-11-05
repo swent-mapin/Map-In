@@ -18,6 +18,12 @@ private const val USERS_COLLECTION_PATH = "users"
 private const val SAVED_SUBCOLLECTION = "savedEvents"
 private const val FIELD_SAVED_AT = "savedAt"
 
+/**
+ * Firestore implementation of [EventRepository].
+ *
+ * @param db Firestore instance to use.
+ * @param localCache Optional local cache for saved events to support offline access.
+ */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val localCache: EventLocalCache? = null
