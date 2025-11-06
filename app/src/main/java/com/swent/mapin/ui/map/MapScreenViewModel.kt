@@ -210,6 +210,8 @@ class MapScreenViewModel(
 
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
+  // Track the sheet state before opening event to restore it correctly
+  private var _sheetStateBeforeEvent by mutableStateOf(BottomSheetState.COLLAPSED)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -897,6 +899,8 @@ class MapScreenViewModel(
 
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     viewModelScope.launch {
+      // Save current sheet state before opening event detail
+      _sheetStateBeforeEvent = _bottomSheetState
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
@@ -952,15 +956,18 @@ class MapScreenViewModel(
       _cameFromSearch = false
       isSearchActivated = true
       // Restore the editing state from before viewing the event
-      if (wasEditingBeforeEvent) {
+      val wasEditing = wasEditingBeforeEvent
+      if (wasEditing) {
         markSearchEditing()
       }
       // Restore focus if user was typing (editing), otherwise just show search results
-      _shouldFocusSearch = wasEditingBeforeEvent
+      _shouldFocusSearch = wasEditing
       wasEditingBeforeEvent = false // Reset for next time
       applyFilters()
-      // Always return to FULL to show search interface
-      setBottomSheetState(BottomSheetState.FULL, resetSearch = false)
+      // Return to FULL if user was editing, otherwise restore previous sheet state
+      // (FULL for recents, MEDIUM for search results)
+      val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
+      setBottomSheetState(targetState, resetSearch = false)
     } else {
       setBottomSheetState(BottomSheetState.COLLAPSED)
     }
