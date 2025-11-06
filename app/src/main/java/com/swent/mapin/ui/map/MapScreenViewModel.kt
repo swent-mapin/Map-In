@@ -13,7 +13,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -45,11 +48,13 @@ class MapScreenViewModel(
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
+    private val filterViewModel: FiltersSectionViewModel,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository()
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
+
   // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
@@ -119,8 +124,7 @@ class MapScreenViewModel(
   val useSatelliteStyle: Boolean
     get() = _mapStyle == MapStyle.SATELLITE
 
-  // State of the bottomsheet
-
+  // State of the bottom sheet
   private var _currentBottomSheetScreen by mutableStateOf(BottomSheetScreen.MAIN_CONTENT)
   val currentBottomSheetScreen: BottomSheetScreen
     get() = _currentBottomSheetScreen
@@ -187,15 +191,6 @@ class MapScreenViewModel(
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
 
-  // Tag filtering
-  private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
-  val selectedTags: Set<String>
-    get() = _selectedTags
-
-  private var _topTags by mutableStateOf<List<String>>(emptyList())
-  val topTags: List<String>
-    get() = _topTags
-
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
   val avatarUrl: String?
@@ -204,32 +199,45 @@ class MapScreenViewModel(
   init {
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
-    // Preload events so the form has immediate data
-    loadEvents()
+    // Preload events for searching and memory linking
+    loadAllEvents()
     loadJoinedEvents()
     loadSavedEvents()
     loadSavedEventIds()
-    _topTags = getTopTags()
-    // Preload events both for searching and memory linking
-    loadAllEvents()
-    loadParticipantEvents()
     loadUserProfile()
-
+    // Collect filter updates for real-time pin updates
+    observeFilters()
     registerAuthStateListener()
+  }
+
+  /** Collects filter updates from FiltersSectionViewModel to update map pins in real-time. */
+  private fun observeFilters() {
+    viewModelScope.launch {
+      filterViewModel.filters.collect { filters ->
+        try {
+          println("MapScreenViewModel: Applying filters: $filters")
+          val filteredEvents = eventRepository.getFilteredEvents(filters)
+          _events = filteredEvents
+          _searchResults = filteredEvents
+          println("MapScreenViewModel: Fetched ${filteredEvents.size} filtered events for $filters")
+        } catch (e: Exception) {
+          Log.e("MapScreenViewModel", "Error applying filters", e)
+          _errorMessage = "Failed to apply filters: ${e.message}"
+          println("MapScreenViewModel: Applying filters: $filters")
+          val localFilteredEvents = LocalEventRepository().getFilteredEvents(filters)
+          _events = localFilteredEvents
+          _searchResults = localFilteredEvents
+          println(
+              "MapScreenViewModel: Loaded ${localFilteredEvents.size} local filtered events as fallback")
+        }
+      }
+    }
   }
 
   /**
    * Reacts to Firebase auth transitions:
    * - On sign-out: clear user-scoped state (saved IDs/list, joined).
-   * - On sign-in: load saved IDs/list and joined/participant events. Keeps UI consistent when users
-   *   change auth state mid-session.
-   *
-   * Why the null-guard?
-   * - This ViewModel may be re-used across configuration changes or refactors that call this
-   *   registration method more than once. The guard ensures we never double-register the same
-   *   listener, which would cause duplicate loads and leaks.
-   * - The listener is explicitly removed in onCleared(), so the ViewModel lifecycle controls
-   *   cleanup; re-registration should only ever happen after a new instance is created.
+   * - On sign-in: load saved IDs/list and joined events.
    */
   private fun registerAuthStateListener() {
     if (authListener != null) return
@@ -237,17 +245,15 @@ class MapScreenViewModel(
         FirebaseAuth.AuthStateListener { firebaseAuth ->
           val uid = firebaseAuth.currentUser?.uid
           if (uid == null) {
-            // Signed out → clear user-scoped state immediately
             _savedEvents = emptyList()
             _savedEventIds = emptySet()
             _joinedEvents = emptyList()
+            _availableEvents = emptyList()
             _avatarUrl = null
           } else {
-            // Signed in → (re)load user-scoped data
             loadSavedEvents()
             loadSavedEventIds()
             loadJoinedEvents()
-            loadParticipantEvents()
             loadUserProfile()
           }
         }
@@ -258,31 +264,59 @@ class MapScreenViewModel(
   private fun loadInitialSamples() {
     _events = LocalEventRepository.defaultSampleEvents()
     _searchResults = _events
+    _availableEvents = _events
   }
 
-  /** Returns the top 5 most frequent tags across all events. */
-  private fun getTopTags(count: Int = 5): List<String> {
-    val events = LocalEventRepository.defaultSampleEvents()
-    val tagCounts = mutableMapOf<String, Int>()
-
-    events.forEach { event ->
-      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
-    }
-
-    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
-  }
-
-  /** Loads primary events list for immediate UI usage with fallback to local samples. */
-  private fun loadEvents() {
+  /** Loads all events for search and map display, falling back to local data on error. */
+  private fun loadAllEvents() {
     viewModelScope.launch {
       try {
         val events = eventRepository.getAllEvents()
-        _events = events
-        _searchResults = events
+        applyEventsDataset(events)
+        println("MapScreenViewModel: Successfully loaded ${events.size} events from repository")
+      } catch (primary: Exception) {
+        Log.e("MapScreenViewModel", "Error loading events from repository", primary)
+        try {
+          val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
+          applyEventsDataset(localEvents)
+          println("MapScreenViewModel: Loaded ${localEvents.size} local events as fallback")
+        } catch (fallback: Exception) {
+          Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
+          _allEvents = emptyList()
+          _events = LocalEventRepository().getAllEvents()
+          _searchResults = _events
+        }
+      }
+    }
+  }
+
+  private fun applyEventsDataset(events: List<Event>) {
+    _allEvents = events
+    _availableEvents = events
+    loadJoinedEvents()
+    // Do not call applyFilters to avoid overriding filtered events
+  }
+
+  private fun applyFilters() {
+    viewModelScope.launch {
+      try {
+        val finalList =
+            if (_searchQuery.isBlank()) {
+              println("MapScreenViewModel: Applying filters: ${filterViewModel.filters.value}")
+              eventRepository.getFilteredEvents(filterViewModel.filters.value)
+            } else {
+              eventRepository.getSearchedEvents(_searchQuery)
+            }
+        _searchResults = finalList
+        _events = finalList
+        println("MapScreenViewModel: Applied filters, got ${finalList.size} events")
       } catch (e: Exception) {
-        Log.w("MapScreenViewModel", "Failed to load events from repository, using samples", e)
-        _events = LocalEventRepository.defaultSampleEvents()
-        _searchResults = _events
+        Log.e("MapScreenViewModel", "Error applying search query or filters", e)
+        _errorMessage = "Failed to apply filters: ${e.message}"
+        println("MapScreenViewModel: Applying filters: ${filterViewModel.filters.value}")
+        val localFiltered = LocalEventRepository().getFilteredEvents(filterViewModel.filters.value)
+        _events = localFiltered
+        _searchResults = localFiltered
       }
     }
   }
@@ -309,7 +343,6 @@ class MapScreenViewModel(
 
   fun checkZoomInteraction(currentZoom: Float): Boolean {
     if (!isInMediumMode) return false
-    // Don't collapse during programmatic zooms (e.g., when centering on an event)
     if (isProgrammaticZoom) return false
 
     val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
@@ -404,82 +437,47 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
-  /** Loads all events for search and map display, falling back to local data on error. */
-  private fun loadAllEvents() {
-    viewModelScope.launch {
-      try {
-        val events = eventRepository.getAllEvents()
-        applyEventsDataset(events)
-      } catch (primary: Exception) {
-        Log.e("MapScreenViewModel", "Error loading events from repository", primary)
-        try {
-          val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
-          applyEventsDataset(localEvents)
-        } catch (fallback: Exception) {
-          Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
-          _allEvents = emptyList()
-          applyFilters()
-        }
-      }
-    }
-  }
-
-  private fun applyEventsDataset(events: List<Event>) {
-    _allEvents = events
-    loadJoinedEvents()
-    applyFilters()
-  }
-
-  private fun applyFilters() {
-    val base = _allEvents.ifEmpty { LocalEventRepository.defaultSampleEvents() }
-
-    val tagFiltered =
-        if (_selectedTags.isEmpty()) {
-          base
-        } else {
-          base.filter { event ->
-            event.tags.any { tag ->
-              _selectedTags.any { sel -> tag.equals(sel, ignoreCase = true) }
+  /** Loads joined events by filtering events where the current user is a participant. */
+  private fun loadJoinedEvents() {
+    val uid =
+        auth.currentUser?.uid
+            ?: run {
+              _joinedEvents = emptyList()
+              return
             }
-          }
-        }
-
-    val finalList =
-        if (_searchQuery.isBlank()) {
-          tagFiltered
-        } else {
-          filterEvents(_searchQuery, tagFiltered)
-        }
-
-    _searchResults = if (_searchQuery.isBlank()) tagFiltered else finalList
-    _events = finalList
-  }
-
-  private fun filterEvents(query: String, source: List<Event>): List<Event> {
-    val trimmed = query.trim()
-    if (trimmed.isEmpty()) return source
-
-    val normalized = trimmed.lowercase()
-    return source.filter { event ->
-      val titleMatch = event.title.lowercase().contains(normalized)
-      val descriptionMatch = event.description.lowercase().contains(normalized)
-      val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
-      val locationMatch = event.location.name.lowercase().contains(normalized)
-      titleMatch || descriptionMatch || tagsMatch || locationMatch
+    viewModelScope.launch {
+      try {
+        val base = _allEvents.ifEmpty { eventRepository.getSearchedEvents("") }
+        _joinedEvents = base.filter { uid in it.participantIds }
+        println("MapScreenViewModel: Loaded ${_joinedEvents.size} joined events")
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Error loading joined events", e)
+        _joinedEvents = emptyList()
+      }
     }
   }
 
-  private fun loadParticipantEvents() {
+  private fun loadSavedEvents() {
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _savedEvents = emptyList()
+      return
+    }
     viewModelScope.launch {
-      try {
-        val currentUserId = auth.currentUser?.uid
-        _availableEvents =
-            if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
-            else emptyList()
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Error loading events", e)
-        _availableEvents = emptyList()
-      }
+      _savedEvents = eventRepository.getSavedEvents(currentUserId)
+      println("MapScreenViewModel: Loaded ${_savedEvents.size} saved events")
+    }
+  }
+
+  private fun loadSavedEventIds() {
+    val currentUserId = auth.currentUser?.uid
+    if (currentUserId == null) {
+      _savedEventIds = emptySet()
+      return
+    }
+    viewModelScope.launch {
+      _savedEventIds = eventRepository.getSavedEventIds(currentUserId)
+      println("MapScreenViewModel: Loaded ${_savedEventIds.size} saved event IDs")
     }
   }
 
@@ -494,40 +492,12 @@ class MapScreenViewModel(
       try {
         val userProfile = userProfileRepository.getUserProfile(uid)
         _avatarUrl = userProfile?.avatarUrl
+        println("MapScreenViewModel: Loaded user profile with avatar URL: $_avatarUrl")
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Error loading user profile", e)
         _avatarUrl = null
       }
     }
-  }
-
-  private fun loadJoinedEvents() {
-    val uid =
-        auth.currentUser?.uid
-            ?: run {
-              _joinedEvents = emptyList()
-              return
-            }
-    val base = _allEvents.ifEmpty { _events }
-    _joinedEvents = base.filter { uid in it.participantIds }
-  }
-
-  private fun loadSavedEvents() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEvents = emptyList()
-      return
-    }
-    viewModelScope.launch { _savedEvents = eventRepository.getSavedEvents(currentUserId) }
-  }
-
-  private fun loadSavedEventIds() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEventIds = emptySet()
-      return
-    }
-    viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
   }
 
   fun showMemoryForm() {
@@ -642,11 +612,6 @@ class MapScreenViewModel(
     applyFilters()
   }
 
-  fun toggleTagSelection(tag: String) {
-    _selectedTags = if (_selectedTags.contains(tag)) _selectedTags - tag else _selectedTags + tag
-    applyFilters()
-  }
-
   fun setBottomSheetTab(tab: BottomSheetTab) {
     _selectedBottomSheetTab = tab
   }
@@ -671,10 +636,6 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Handles event clicks from search results. Focuses the pin, shows event details, and remembers
-   * we came from search mode. Forces zoom to ensure the pin is visible.
-   */
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
     onEventPinClicked(event, forceZoom = true)
@@ -685,7 +646,6 @@ class MapScreenViewModel(
     _organizerName = ""
 
     if (_cameFromSearch) {
-      // Return to search mode: full sheet with cleared search, no keyboard
       _cameFromSearch = false
       _searchQuery = ""
       isSearchActivated = true
@@ -770,7 +730,6 @@ class MapScreenViewModel(
     }
   }
 
-  /** Saves the selected event for later by the current user. */
   fun saveEventForLater() {
     viewModelScope.launch {
       val eventUid = _selectedEvent?.uid ?: return@launch
@@ -794,7 +753,6 @@ class MapScreenViewModel(
     }
   }
 
-  /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
     val eventUid = _selectedEvent?.uid ?: return
     viewModelScope.launch {
@@ -818,10 +776,6 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Called when the user taps an event from the "Joined events" or "Saved events" list. Reuses the
-   * existing onEventPinClicked behavior to select the event and center the camera.
-   */
   fun onTabEventClicked(event: Event) {
     onEventPinClicked(event)
   }
@@ -830,19 +784,34 @@ class MapScreenViewModel(
 @Composable
 fun rememberMapScreenViewModel(
     sheetConfig: BottomSheetConfig,
-    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED
+    initialSheetState: BottomSheetState = BottomSheetState.COLLAPSED,
+    viewModelStoreOwner: ViewModelStoreOwner =
+        LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
 ): MapScreenViewModel {
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
   val appContext = context.applicationContext
 
-  return viewModel {
-    MapScreenViewModel(
-        initialSheetState = initialSheetState,
-        sheetConfig = sheetConfig,
-        onClearFocus = { focusManager.clearFocus(force = true) },
-        applicationContext = appContext)
-  }
+  // Create FiltersSectionViewModel with the same ViewModelStoreOwner
+  val filterViewModel: FiltersSectionViewModel =
+      viewModel(viewModelStoreOwner = viewModelStoreOwner, key = "FiltersSectionViewModel")
+
+  return viewModel(
+      viewModelStoreOwner = viewModelStoreOwner,
+      key = "MapScreenViewModel",
+      factory =
+          object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+              return MapScreenViewModel(
+                  initialSheetState = initialSheetState,
+                  sheetConfig = sheetConfig,
+                  onClearFocus = { focusManager.clearFocus(force = true) },
+                  applicationContext = appContext,
+                  filterViewModel = filterViewModel)
+                  as T
+            }
+          })
 }
 
 fun eventsToGeoJson(events: List<Event>): String {
