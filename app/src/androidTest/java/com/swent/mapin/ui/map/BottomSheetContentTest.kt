@@ -666,7 +666,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             isSearchMode = true,
-            recentItems = recentSearches)
+            recentItems = recentSearches,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -702,7 +705,10 @@ class BottomSheetContentTest {
                     onClear = {}),
             isSearchMode = true,
             recentItems = recentSearches,
-            onRecentSearchClick = { clickedQuery = it })
+            onRecentSearchClick = { clickedQuery = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -734,7 +740,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             isSearchMode = true,
-            recentItems = recentSearches)
+            recentItems = recentSearches,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -762,7 +771,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             isSearchMode = true,
-            topTags = topCategories)
+            topCategories = topCategories,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -796,8 +808,11 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             isSearchMode = true,
-            topTags = topCategories,
-            onCategoryClick = { clickedCategory = it })
+            topCategories = topCategories,
+            onCategoryClick = { clickedCategory = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -831,7 +846,10 @@ class BottomSheetContentTest {
                     onClear = {}),
             isSearchMode = true,
             recentItems = recentSearches,
-            topTags = topCategories)
+            topCategories = topCategories,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -860,7 +878,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             isSearchMode = true,
-            searchResults = testEvents)
+            searchResults = testEvents,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -892,7 +913,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {},
                     onSubmit = { submitCalled = true }),
-            isSearchMode = true)
+            isSearchMode = true,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
