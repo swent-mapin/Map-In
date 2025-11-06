@@ -285,7 +285,7 @@ fun BottomSheetContent(
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
                                   onShowAllRecents = { showAllRecents = true },
-                                  topCategories = topTags,
+                                  topCategories = emptyList(),
                                   onCategoryClick = onCategoryClick,
                                   filterViewModel = filterViewModel,
                                   locationViewModel = locationViewModel,
@@ -363,14 +363,6 @@ fun BottomSheetContent(
                                   Spacer(modifier = Modifier.height(16.dp))
                                 }
 
-                                // Dynamic tag selection (Discover)
-                                if (topTags.isNotEmpty()) {
-                                  TagsSection(
-                                      topTags = topTags,
-                                      selectedTags = selectedTags,
-                                      onTagClick = onTagClick)
-                                }
-
                                 Spacer(modifier = Modifier.height(24.dp))
                               }
                             }
@@ -393,8 +385,8 @@ private fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    filterViewModel: FiltersSectionViewModel = viewModel(),
-    locationViewModel: LocationViewModel = viewModel(),
+    filterViewModel: FiltersSectionViewModel,
+    locationViewModel: LocationViewModel,
     userProfile: com.swent.mapin.model.UserProfile? = null,
     modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
