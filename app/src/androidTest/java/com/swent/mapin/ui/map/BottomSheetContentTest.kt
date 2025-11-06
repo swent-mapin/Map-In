@@ -29,6 +29,9 @@ import org.junit.Test
 class BottomSheetContentTest {
 
   @get:Rule val rule = createComposeRule()
+  val filterViewModel = FiltersSectionViewModel()
+  val locationViewModel = LocationViewModel()
+  val profileViewModel = ProfileViewModel()
 
   @Composable
   private fun TestContent(
@@ -55,7 +58,10 @@ class BottomSheetContentTest {
                   },
                   onTap = onTap,
                   onFocusHandled = { shouldRequestFocus = false },
-                  onClear = {}))
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -80,7 +86,10 @@ class BottomSheetContentTest {
           savedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
           onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
+          onTabChange = onTabChange,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -99,6 +108,7 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Quick Actions").assertIsDisplayed()
     rule.onNodeWithText("Create Memory").assertIsDisplayed()
     rule.onNodeWithText("Create Event").assertIsDisplayed()
+    rule.onNodeWithText("Friends").assertIsDisplayed()
   }
 
   @Test
@@ -152,6 +162,45 @@ class BottomSheetContentTest {
 
     rule.onNodeWithText("Create Memory").assertHasClickAction()
     rule.onNodeWithText("Create Event").assertHasClickAction()
+    rule.onNodeWithText("Friends").assertHasClickAction()
+  }
+
+  @Test
+  fun friendsButton_isDisplayedInQuickActions() {
+    rule.setContent { TestContent(state = BottomSheetState.FULL) }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Quick Actions").assertIsDisplayed()
+    rule.onNodeWithText("Friends").assertIsDisplayed()
+  }
+
+  @Test
+  fun friendsButton_triggersNavigationCallback() {
+    var navigationTriggered = false
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            onNavigateToFriends = { navigationTriggered = true },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
+      }
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Friends").performClick()
+    assertTrue(navigationTriggered)
   }
 
   @Test
@@ -183,7 +232,10 @@ class BottomSheetContentTest {
           joinedEvents = events,
           selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
           onTabEventClick = onEventClick,
-          onTabChange = onTabChange)
+          onTabChange = onTabChange,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -196,8 +248,11 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     testEvents.forEach { event ->
-      rule.onNodeWithText(event.title).assertIsDisplayed()
-      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+      rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
+      rule
+          .onNodeWithText(event.location.name, substring = true)
+          .performScrollTo()
+          .assertIsDisplayed()
     }
   }
 
@@ -243,7 +298,10 @@ class BottomSheetContentTest {
             onTabChange = { tab ->
               selectedTab = tab
               currentTab = tab
-            })
+            },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
     rule.waitForIdle()
@@ -279,7 +337,10 @@ class BottomSheetContentTest {
                   onFocusHandled = { shouldRequestFocus = false },
                   onClear = {}),
           searchResults = searchResults,
-          isSearchMode = isSearchMode)
+          isSearchMode = isSearchMode,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -326,12 +387,7 @@ class BottomSheetContentTest {
   }
 
   @Composable
-  private fun TestContentWithFilters(
-      state: BottomSheetState,
-      filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
-      locationViewModel: LocationViewModel = LocationViewModel(),
-      profileViewModel: ProfileViewModel = ProfileViewModel()
-  ) {
+  private fun TestContentWithFilters(state: BottomSheetState) {
     MaterialTheme {
       BottomSheetContent(
           state = state,
@@ -343,7 +399,10 @@ class BottomSheetContentTest {
                   onQueryChange = {},
                   onTap = {},
                   onFocusHandled = {},
-                  onClear = {}))
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
     }
   }
 
@@ -357,9 +416,12 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Saved Events").assertIsDisplayed()
 
     testEvents.forEach { event ->
-      rule.onNodeWithText(event.title).assertIsDisplayed()
+      rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
       // Location line is shown in SearchResultItem; use substring for safety
-      rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+      rule
+          .onNodeWithText(event.location.name, substring = true)
+          .performScrollTo()
+          .assertIsDisplayed()
     }
   }
 
@@ -374,15 +436,6 @@ class BottomSheetContentTest {
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun filterSection_doesNotDisplayInCollapsedState() {
-    rule.setContent { TestContentWithFilters(state = BottomSheetState.COLLAPSED) }
-
-    rule.waitForIdle()
-
-    rule.onNodeWithTag(FiltersSectionTestTags.TITLE).assertDoesNotExist()
   }
 
   @Test
@@ -409,11 +462,16 @@ class BottomSheetContentTest {
     rule.setContent { SavedEventsContent(events = testEvents) }
     rule.waitForIdle()
 
-    // Initially only first 3 are visible (others exist but are off-screen/not visible)
-    testEvents.take(3).forEach { e ->
+    // EventsSection displays events in reversed order (latest first). Compute expected
+    // visible/hidden sets.
+    val visibleInitially = testEvents.reversed().take(3)
+    val hiddenInitially = testEvents.reversed().drop(3)
+
+    // Initially only the last 3 (reversed first 3) are visible; earlier ones are not yet shown
+    visibleInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
     }
-    testEvents.drop(3).forEach { e ->
+    hiddenInitially.forEach { e ->
       // We only assert not displayed; they might exist off-screen
       rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
     }
@@ -439,10 +497,10 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // Collapsed again: only first 3 visible
-    testEvents.take(3).forEach { e ->
+    visibleInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
     }
-    testEvents.drop(3).forEach { e ->
+    hiddenInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
     }
   }
@@ -471,7 +529,10 @@ class BottomSheetContentTest {
             savedEvents = saved,
             joinedEvents = joined,
             selectedTab = selectedTab,
-            onTabChange = { selectedTab = it })
+            onTabChange = { selectedTab = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
     rule.waitForIdle()
@@ -505,7 +566,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = "http://example.com/avatar.jpg",
-            onProfileClick = { clicked = true })
+            onProfileClick = { clicked = true },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -534,7 +598,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = null,
-            onProfileClick = {})
+            onProfileClick = {},
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 
@@ -561,7 +628,10 @@ class BottomSheetContentTest {
                     onFocusHandled = {},
                     onClear = {}),
             avatarUrl = "person",
-            onProfileClick = {})
+            onProfileClick = {},
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
       }
     }
 

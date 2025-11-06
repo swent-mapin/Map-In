@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
@@ -77,10 +79,12 @@ import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -91,7 +95,8 @@ import kotlinx.coroutines.launch
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -311,7 +316,8 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.isUserParticipating(selectedEvent),
-                      isSaved = viewModel.isEventSaved(selectedEvent),
+                      // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
+                      isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
@@ -323,6 +329,10 @@ fun MapScreen(
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
+                  val owner =
+                      LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
+                  val filterViewModel: FiltersSectionViewModel =
+                      viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
                       state = viewModel.bottomSheetState,
                       fullEntryKey = viewModel.fullEntryKey,
@@ -344,9 +354,6 @@ fun MapScreen(
                       onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
-                      topTags = viewModel.topTags,
-                      selectedTags = viewModel.selectedTags,
-                      onTagClick = viewModel::toggleTagSelection,
                       onEventClick = { event ->
                         // Handle event click from search - focus pin, show details, remember
                         // search mode
@@ -355,6 +362,7 @@ fun MapScreen(
                       },
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
+                      onNavigateToFriends = onNavigateToFriends,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
                       onCreateEventDone = viewModel::onAddEventCancel,
@@ -364,7 +372,10 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
-                      onProfileClick = onNavigateToProfile)
+                      onProfileClick = onNavigateToProfile,
+                      filterViewModel = filterViewModel,
+                      locationViewModel = remember { LocationViewModel() },
+                      profileViewModel = remember { ProfileViewModel() })
                 }
               }
         }

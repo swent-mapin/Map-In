@@ -30,7 +30,14 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
+
+    // Initialize EventRepositoryFirestore (uncomment to use Firestore backend)
+    // EventRepositoryProvider.init(this)
+    // EventRepositoryProvider.setRepository(EventRepositoryProvider.getRepository())
+
+    // Initialize LocalEventRepository
     EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
+
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
       // Cache the theme mode flow collection to prevent repeated DataStore reads
