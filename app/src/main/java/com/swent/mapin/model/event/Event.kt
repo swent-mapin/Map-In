@@ -28,5 +28,6 @@ data class Event(
     val ownerId: String = "",
     val imageUrl: String? = null,
     val capacity: Int? = null,
-    val participantIds: List<String> = emptyList()
+    val participantIds: List<String> = emptyList(),
+    val price: Double = 0.0
 )
