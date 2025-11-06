@@ -33,6 +33,7 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           renderMap = renderMap)
     }
 

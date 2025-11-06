@@ -31,6 +31,7 @@ import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.UserProfile
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.*
 
 // Assisted by AI tools
@@ -106,6 +107,13 @@ class FiltersSection {
       locationViewModel: LocationViewModel,
       userProfile: UserProfile
   ) {
+    val filters by filterViewModel.filters.collectAsStateWithLifecycle()
+    val isWhenChecked by filterViewModel.isWhenChecked
+    val isWhereChecked by filterViewModel.isWhereChecked
+    val isPriceChecked by filterViewModel.isPriceChecked
+    val isTagsChecked by filterViewModel.isTagsChecked
+    val errorMessage by filterViewModel.errorMessage.collectAsStateWithLifecycle()
+
     Column(modifier = modifier.fillMaxWidth()) {
       // Header with title and reset button
       Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -124,55 +132,47 @@ class FiltersSection {
       // Time Filter
       ToggleSection(
           title = "Time",
-          isChecked = filterViewModel.isWhenChecked.value,
+          isChecked = isWhenChecked,
           hasContent = true,
           onCheckedChange = { checked ->
-            if (!checked) filterViewModel.resetWhen()
-            else {
-              if (filterViewModel.startDate.value.isBlank()) {
-                val today = Calendar.getInstance().time
-                val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                filterViewModel.setStartDate(sdf.format(today))
-              }
-              filterViewModel.setWhenChecked(true)
-            }
+            if (!checked) filterViewModel.resetWhen() else filterViewModel.setWhenChecked(true)
           },
-          content = { DateRangePicker(filterViewModel) })
+          content = { DateRangePicker(filterViewModel, filters.startDate, filters.endDate) })
 
       // Place Filter
       ToggleSection(
           title = "Place",
-          isChecked = filterViewModel.isWhereChecked.value,
+          isChecked = isWhereChecked,
           hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetWhere() else filterViewModel.setWhereChecked(true)
           },
-          content = { AroundSpotPicker(filterViewModel, locationViewModel, userProfile) })
+          content = { AroundSpotPicker(filterViewModel, filters, locationViewModel, userProfile) })
 
       // Price Filter
       ToggleSection(
           title = "Price",
-          isChecked = filterViewModel.isPriceChecked.value,
+          isChecked = isPriceChecked,
           hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetPrice() else filterViewModel.setPriceChecked(true)
           },
-          content = { PricePicker(filterViewModel) })
+          content = { PricePicker(filterViewModel, filters.maxPrice) })
 
       // Tags Filter
       ToggleSection(
           title = "Tags",
-          isChecked = filterViewModel.tagsEnabled.value,
+          isChecked = isTagsChecked,
           hasContent = true,
           onCheckedChange = { checked ->
-            if (!checked) filterViewModel.resetTags() else filterViewModel.setTagsEnabled(true)
+            if (!checked) filterViewModel.resetTags() else filterViewModel.setIsTagsChecked(true)
           },
-          content = { TagsPicker(filterViewModel) })
+          content = { TagsPicker(filterViewModel, filters.tags) })
 
       // Friends Only
       ToggleSection(
           title = "Friends only",
-          isChecked = filterViewModel.friendsOnly.value,
+          isChecked = filters.friendsOnly,
           hasContent = false,
           onCheckedChange = { checked -> filterViewModel.setFriendsOnly(checked) },
           content = {})
@@ -180,7 +180,7 @@ class FiltersSection {
       // Popular Only
       ToggleSection(
           title = "Popular only",
-          isChecked = filterViewModel.popularOnly.value,
+          isChecked = filters.popularOnly,
           hasContent = false,
           onCheckedChange = { checked -> filterViewModel.setPopularOnly(checked) },
           content = {})
@@ -270,24 +270,29 @@ class FiltersSection {
    * start). Defaults to today if no start date set.
    */
   @Composable
-  fun DateRangePicker(filterViewModel: FiltersSectionViewModel) {
+  fun DateRangePicker(
+      filterViewModel: FiltersSectionViewModel,
+      startDate: LocalDate?,
+      endDate: LocalDate?
+  ) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
-    fun showDatePicker(
-        selectedDate: MutableState<String>,
-        title: String,
-        minDate: Long,
-        onPicked: (() -> Unit)? = null
-    ) {
+    /**
+     * Helper to show a DatePickerDialog.
+     *
+     * @param title Dialog title
+     * @param minDate Minimum selectable date (in millis)
+     * @param onPicked Callback when a date is chosen, receives formatted string "dd/MM/yyyy"
+     */
+    fun showDatePicker(title: String, minDate: Long, onPicked: (String) -> Unit) {
       val picker =
           DatePickerDialog(
               context,
               { _, y, m, d ->
-                selectedDate.value =
-                    dateFormat.format(Calendar.getInstance().apply { set(y, m, d) }.time)
-                onPicked?.invoke()
+                val picked = dateFormat.format(Calendar.getInstance().apply { set(y, m, d) }.time)
+                onPicked(picked)
               },
               calendar[Calendar.YEAR],
               calendar[Calendar.MONTH],
@@ -301,7 +306,6 @@ class FiltersSection {
             setPadding(0, 20, 0, 20)
           }
       picker.setCustomTitle(tv)
-
       picker.datePicker.minDate = minDate
       picker.show()
     }
@@ -310,16 +314,26 @@ class FiltersSection {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(start = 30.dp, bottom = 8.dp)) {
+          // Calendar button opens two-step picker (start, then end)
           IconButton(
               onClick = {
-                showDatePicker(
-                    filterViewModel.startDate, "Select Start Date", calendar.timeInMillis) {
-                      val startMillis =
-                          filterViewModel.startDate.value
-                              .takeIf { it.isNotBlank() }
-                              ?.let { dateFormat.parse(it)?.time } ?: calendar.timeInMillis
-                      showDatePicker(filterViewModel.endDate, "Select End Date", startMillis)
-                    }
+                // Step 1: pick start date
+                showDatePicker("Select Start Date", calendar.timeInMillis) { start ->
+                  filterViewModel.setStartDate(start)
+
+                  // compute millis for chosen start date
+                  val startMillis =
+                      try {
+                        dateFormat.parse(start)?.time ?: calendar.timeInMillis
+                      } catch (e: Exception) {
+                        calendar.timeInMillis
+                      }
+
+                  // Step 2: pick end date (min = start)
+                  showDatePicker("Select End Date", startMillis) { end ->
+                    filterViewModel.setEndDate(end)
+                  }
+                }
               },
               modifier =
                   Modifier.size(36.dp)
@@ -328,12 +342,15 @@ class FiltersSection {
                 Icon(Icons.Outlined.CalendarMonth, contentDescription = "Calendar")
               }
 
+          // Display currently selected range (formatted)
+          val formatter = remember { java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+
           Column {
             Text(
-                "From: ${filterViewModel.startDate.value.ifBlank { "---" }}",
+                "From: ${startDate?.format(formatter) ?: "---"}",
                 modifier = Modifier.testTag(FiltersSectionTestTags.FROM_DATE_TEXT))
             Text(
-                "To: ${filterViewModel.endDate.value.ifBlank { "---" }}",
+                "To: ${endDate?.format(formatter) ?: "---"}",
                 modifier = Modifier.testTag(FiltersSectionTestTags.TO_DATE_TEXT))
           }
         }
@@ -343,6 +360,7 @@ class FiltersSection {
   @Composable
   fun AroundSpotPicker(
       filterViewModel: FiltersSectionViewModel,
+      filters: Filters,
       locationViewModel: LocationViewModel,
       userProfile: UserProfile
   ) {
@@ -392,9 +410,7 @@ class FiltersSection {
           horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Radius:")
             var radiusInput by
-                rememberSaveable(filterViewModel.radiusKm.value) {
-                  mutableStateOf(filterViewModel.radiusKm.value?.toString() ?: "")
-                }
+                rememberSaveable(filters.radiusKm) { mutableStateOf(filters.radiusKm.toString()) }
             Box(
                 modifier =
                     Modifier.width(40.dp)
@@ -499,11 +515,8 @@ class FiltersSection {
 
   /** Max price input (CHF). Accepts only digits, max 999. */
   @Composable
-  fun PricePicker(filterViewModel: FiltersSectionViewModel) {
-    var priceInput by
-        remember(filterViewModel.maxPriceCHF.value) {
-          mutableStateOf(filterViewModel.maxPriceCHF.value?.toString() ?: "")
-        }
+  fun PricePicker(filterViewModel: FiltersSectionViewModel, maxPrice: Int?) {
+    var priceInput by remember(maxPrice) { mutableStateOf(maxPrice?.toString() ?: "") }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -545,7 +558,7 @@ class FiltersSection {
    */
   @OptIn(ExperimentalLayoutApi::class)
   @Composable
-  fun TagsPicker(filterViewModel: FiltersSectionViewModel) {
+  fun TagsPicker(filterViewModel: FiltersSectionViewModel, selectedTags: Set<String>) {
     val allTags =
         listOf(
             "Music",
@@ -572,7 +585,7 @@ class FiltersSection {
         maxLines = 3,
         overflow = FlowRowOverflow.Clip) {
           allTags.forEach { tag ->
-            val selected = tag in filterViewModel.selectedTags
+            val selected = tag in selectedTags
 
             Surface(
                 shape = MaterialTheme.shapes.small,
