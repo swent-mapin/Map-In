@@ -926,4 +926,217 @@ class BottomSheetContentTest {
     // Note: Triggering IME action in tests can be tricky, but we verify the callback is wired
     assertTrue(submitCalled || !submitCalled) // Placeholder - actual IME testing is complex
   }
+
+  @Test
+  fun searchResultsSection_withResults_displaysEventsAndHandlesClick() {
+    var clickedEvent: Event? = null
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "test",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            isSearchMode = true,
+            searchResults = testEvents,
+            onEventClick = { clickedEvent = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify events are displayed
+    testEvents.forEach { event -> rule.onNodeWithText(event.title).assertIsDisplayed() }
+
+    // Click on first event
+    rule.onNodeWithText(testEvents[0].title).performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertEquals(testEvents[0], clickedEvent)
+  }
+
+  @Test
+  fun recentItemsSection_withClickedEvent_displaysAndHandlesClick() {
+    var clickedEventId = ""
+    val testEvent = LocalEventRepository.defaultSampleEvents()[0]
+    val recentItems = listOf(RecentItem.ClickedEvent(testEvent.uid, testEvent.title))
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            isSearchMode = true,
+            recentItems = recentItems,
+            onRecentEventClick = { clickedEventId = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify event is displayed
+    rule.onNodeWithText(testEvent.title).assertIsDisplayed()
+
+    // Click on event
+    rule.onNodeWithText(testEvent.title).performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertEquals(testEvent.uid, clickedEventId)
+  }
+
+  @Test
+  fun allRecentItemsPage_displaysCorrectly() {
+    val recentItems =
+        listOf(
+            RecentItem.Search("coffee"),
+            RecentItem.ClickedEvent("event1", "Concert"),
+            RecentItem.Search("basketball"))
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = recentItems,
+            onRecentSearchClick = {},
+            onRecentEventClick = {},
+            onClearAll = {},
+            onBack = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify AllRecentItemsPage is displayed
+    rule.onNodeWithText("Recent searches").assertIsDisplayed()
+    rule.onNodeWithTag("backFromAllRecentsButton").assertIsDisplayed()
+    rule.onNodeWithTag("clearAllRecentButton").assertIsDisplayed()
+
+    // Verify all items are displayed
+    rule.onNodeWithText("coffee").assertIsDisplayed()
+    rule.onNodeWithText("Concert").assertIsDisplayed()
+    rule.onNodeWithText("basketball").assertIsDisplayed()
+  }
+
+  @Test
+  fun allRecentItemsPage_backButton_triggersCallback() {
+    var backCalled = false
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = listOf(RecentItem.Search("test")),
+            onRecentSearchClick = {},
+            onRecentEventClick = {},
+            onClearAll = {},
+            onBack = { backCalled = true })
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Click back button
+    rule.onNodeWithTag("backFromAllRecentsButton").performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertTrue(backCalled)
+  }
+
+  @Test
+  fun allRecentItemsPage_clearAllButton_triggersCallback() {
+    var clearAllCalled = false
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = listOf(RecentItem.Search("test")),
+            onRecentSearchClick = {},
+            onRecentEventClick = {},
+            onClearAll = { clearAllCalled = true },
+            onBack = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Click clear all button
+    rule.onNodeWithTag("clearAllRecentButton").performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertTrue(clearAllCalled)
+  }
+
+  @Test
+  fun allRecentItemsPage_clickRecentSearch_triggersCallback() {
+    var clickedQuery = ""
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = listOf(RecentItem.Search("coffee")),
+            onRecentSearchClick = { clickedQuery = it },
+            onRecentEventClick = {},
+            onClearAll = {},
+            onBack = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Click on recent search
+    rule.onNodeWithTag("recentSearchItem_coffee").performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertEquals("coffee", clickedQuery)
+  }
+
+  @Test
+  fun allRecentItemsPage_clickRecentEvent_triggersCallback() {
+    var clickedEventId = ""
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = listOf(RecentItem.ClickedEvent("event123", "Concert")),
+            onRecentSearchClick = {},
+            onRecentEventClick = { clickedEventId = it },
+            onClearAll = {},
+            onBack = {})
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Click on recent event
+    rule.onNodeWithTag("recentEventItem_Concert").performClick()
+    rule.waitForIdle()
+
+    // Verify callback was triggered
+    assertEquals("event123", clickedEventId)
+  }
 }

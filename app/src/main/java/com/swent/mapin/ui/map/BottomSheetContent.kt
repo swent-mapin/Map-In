@@ -736,8 +736,9 @@ private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
 }
 
 /** Full page showing all recent items with clear all button. */
+@VisibleForTesting
 @Composable
-private fun AllRecentItemsPage(
+internal fun AllRecentItemsPage(
     recentItems: List<RecentItem>,
     onRecentSearchClick: (String) -> Unit,
     onRecentEventClick: (String) -> Unit,
