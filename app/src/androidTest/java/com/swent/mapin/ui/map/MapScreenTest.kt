@@ -13,6 +13,7 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheetConfig
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -395,5 +396,12 @@ class MapScreenTest {
     rule.waitForIdle()
 
     rule.onNodeWithText("Basketball Game").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatButton_is_displayed() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+
+    rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).assertIsDisplayed()
   }
 }

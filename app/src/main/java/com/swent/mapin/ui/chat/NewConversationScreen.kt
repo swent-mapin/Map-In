@@ -39,7 +39,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.swent.mapin.model.FriendWithProfile
 
 /**
- * Screen allowing the user to select one or more friends to start a new conversation.
+ * Assisted by AI Screen allowing the user to select one or more friends to start a new
+ * conversation.
  * - Tapping a friend toggles selection.
  * - A checkmark button appears in the top-right corner once at least one friend is selected.
  * - Pressing the checkmark calls [onConfirm] with the selected friends.
@@ -55,34 +56,37 @@ fun NewConversationScreen(
     onNavigateBack: () -> Unit = {},
     onConfirm: (List<FriendWithProfile>) -> Unit = {}
 ) {
-    val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
+  val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("New Conversation") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+  Scaffold(
+      topBar = {
+        TopAppBar(
+            title = { Text("New Conversation") },
+            navigationIcon = {
+              IconButton(onClick = onNavigateBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
+            },
+            actions = {
+              if (selectedFriends.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                      onConfirm(selectedFriends)
+                    }) { // TODO Add logic to type in a group name if number of selected friends >=2
+                      Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
                     }
-                },
-                actions = {
-                    if (selectedFriends.isNotEmpty()) {
-                        IconButton(onClick = { onConfirm(selectedFriends) }) { //TODO Add logic to type in a group name if number of selected friends >=2
-                            Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
-                        }
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
-        }) { paddingValues ->
+              }
+            },
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
+      }) { paddingValues ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
-            items(friends) { friend ->
+              items(friends) { friend ->
                 val isSelected = selectedFriends.contains(friend)
                 val backgroundColor =
                     if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
@@ -92,20 +96,20 @@ fun NewConversationScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .clickable {
-                                if (isSelected) selectedFriends.remove(friend)
-                                else selectedFriends.add(friend)
+                              if (isSelected) selectedFriends.remove(friend)
+                              else selectedFriends.add(friend)
                             }
                             .background(backgroundColor)
                             .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    if (friend.userProfile.profilePictureUrl.isNullOrBlank()) {
+                      if (friend.userProfile.profilePictureUrl.isNullOrBlank()) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
                             contentDescription = null,
                             tint =
                                 if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
                             modifier = Modifier.size(48.dp).clip(CircleShape))
-                    } else {
+                      } else {
                         Image(
                             painter =
                                 rememberAsyncImagePainter(friend.userProfile.profilePictureUrl),
@@ -119,18 +123,18 @@ fun NewConversationScreen(
                                             if (isSelected) MaterialTheme.colorScheme.primary
                                             else Color.Transparent,
                                         shape = CircleShape))
-                    }
+                      }
 
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        friend.userProfile.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color =
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface)
-                }
+                      Spacer(Modifier.width(12.dp))
+                      Text(
+                          friend.userProfile.name,
+                          style = MaterialTheme.typography.titleMedium,
+                          color =
+                              if (isSelected) MaterialTheme.colorScheme.primary
+                              else MaterialTheme.colorScheme.onSurface)
+                    }
                 HorizontalDivider()
+              }
             }
-        }
-    }
+      }
 }

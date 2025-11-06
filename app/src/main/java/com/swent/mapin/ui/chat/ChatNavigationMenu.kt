@@ -22,25 +22,34 @@ sealed class ChatTab(
     val testTag: String
 ) {
   object Chats :
-      ChatTab("Chats", Icons.Outlined.ChatBubbleOutline, Route.Map, ChatScreenTestTags.CHAT_SCREEN)
+      ChatTab("Chats", Icons.Outlined.ChatBubbleOutline, Route.Map, ChatScreenTestTags.CHAT_TAB)
 }
 
 private val tabs = listOf(ChatTab.Chats)
 
+/**
+ * Composable for the bottom UI bar of ChatScreen used for navigation
+ *
+ * @param selectedTab The current selected ChatTab
+ * @param onTabSelected Callback invoked when another Tab is
+ * @param modifier Modifier for the composable
+ */
 @Composable
 fun ChatBottomBar(
     selectedTab: ChatTab,
     onTabSelected: (ChatTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-  NavigationBar(modifier = modifier) {
+  NavigationBar(modifier = modifier.testTag(ChatScreenTestTags.CHAT_BOTTOM_BAR)) {
     tabs.forEach { tab ->
       NavigationBarItem(
           icon = { Icon(tab.icon, contentDescription = null) },
           label = { Text(tab.name) },
           selected = tab == selectedTab,
           onClick = { onTabSelected(tab) },
-          modifier = Modifier.clip(RoundedCornerShape(50.dp)).testTag(tab.testTag))
+          modifier =
+              Modifier.clip(RoundedCornerShape(50.dp))
+                  .testTag("${ChatScreenTestTags.CHAT_BOTTOM_BAR_ITEM}_${tab.name}"))
     }
   }
 }

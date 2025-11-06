@@ -80,6 +80,7 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -210,7 +211,8 @@ fun MapScreen(
         contentColor = MaterialTheme.colorScheme.onPrimary,
         modifier =
             Modifier.align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)) {
+                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
+                .testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)) {
           Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
         }
 

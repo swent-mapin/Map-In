@@ -87,30 +87,30 @@ fun AppNavHost(
           onNavigateBack = { navController.navigate(Route.Map.route) },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
-              val encodedName = Uri.encode(conversation.name)
-              navController.navigate("conversation/${conversation.id}/${encodedName}")
-          }
-      )
+            val encodedName = Uri.encode(conversation.name)
+            navController.navigate("conversation/${conversation.id}/${encodedName}")
+          },
+          onTabSelected = { chatTab -> navController.navigate(chatTab.destination) })
     }
 
     composable(Route.NewConversation.route) {
       NewConversationScreen(
           onNavigateBack = { navController.popBackStack() },
-          onConfirm = { selectedFriends -> //TODO Add Logic to navigate to a potential add group name page
-              navController.navigate(Route.Chat.route)
-          }
-      )
+          onConfirm = { selectedFriends
+            -> // TODO Add Logic to navigate to a potential add group name page
+            navController.navigate(Route.Chat.route)
+          })
     }
-      composable("conversation/{conversationId}/{name}") { backStackEntry ->
-          val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
-          val encodedName = backStackEntry.arguments?.getString("name") ?: ""
-          val name = Uri.decode(encodedName)
+    composable("conversation/{conversationId}/{name}") { backStackEntry ->
+      val conversationId =
+          backStackEntry.arguments?.getString("conversationId") ?: return@composable
+      val encodedName = backStackEntry.arguments?.getString("name") ?: ""
+      val name = Uri.decode(encodedName)
 
-          ConversationScreen(
-              conversationId = conversationId,
-              conversationName = name,
-              onNavigateBack = { navController.navigate(Route.Chat.route) }
-          )
-      }
+      ConversationScreen(
+          conversationId = conversationId,
+          conversationName = name,
+          onNavigateBack = { navController.navigate(Route.Chat.route) })
+    }
   }
 }

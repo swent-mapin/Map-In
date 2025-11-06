@@ -29,6 +29,14 @@ import com.swent.mapin.model.UserProfile
 
 object ChatScreenTestTags {
   const val CHAT_SCREEN = "Chats"
+  const val CHAT_TAB = "ChatsTab"
+  const val CHAT_BOTTOM_BAR_ITEM = "ChatBottomBarItem"
+  const val CHAT_BOTTOM_BAR = "ChatBottomBar"
+  const val CHAT_TOP_BAR = "ChatTopBar"
+  const val CHAT_NAVIGATE_BUTTON = "ChatsNavigationButton"
+  const val NEW_CONVERSATION_BUTTON = "NewConversationButton"
+  const val CONVERSATION_ITEM = "ConversationItem"
+  const val CHAT_EMPTY_TEXT = "ChatEmptyText"
 }
 
 private val friend1 =
@@ -51,9 +59,9 @@ val friendList = listOf(friend1, friend2, friend3)
 
 private val sampleConversations =
     listOf(
-        Conversation("c1", "Nathan",listOf(friend1), "Hey there!", true),
-        Conversation("c2", "Alex" ,listOf(friend2), "Shared a photo", false),
-        Conversation("c3", "Zoe",listOf(friend3), "Let's meet up!", true))
+        Conversation("c1", "Nathan", listOf(friend1), "Hey there!", true),
+        Conversation("c2", "Alex", listOf(friend2), "Shared a photo", false),
+        Conversation("c3", "Zoe", listOf(friend3), "Let's meet up!", true))
 
 /**
  * Represents a chat conversation between one or more participants.
@@ -93,7 +101,8 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
           TopAppBarDefaults.topAppBarColors(
               containerColor = MaterialTheme.colorScheme.primaryContainer,
               titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
+              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+      modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 
 /**
@@ -103,11 +112,15 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
  * @param onClick Action invoked when the conversation item is clicked.
  */
 @Composable
-fun ConversationItem(conversation: Conversation, onClick: () -> Unit = {}) {
+fun ConversationItem(
+    conversation: Conversation,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
   val primaryParticipant = conversation.participants.firstOrNull()
 
   Row(
-      modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(12.dp),
+      modifier = modifier.fillMaxWidth().clickable { onClick() }.padding(12.dp),
       verticalAlignment = Alignment.CenterVertically) {
         if (primaryParticipant?.userProfile?.profilePictureUrl.isNullOrBlank()) {
           Icon(
@@ -160,6 +173,7 @@ fun ChatScreen(
     onNavigateBack: () -> Unit = {},
     onNewConversation: () -> Unit = {},
     onOpenConversation: (Conversation) -> Unit = {},
+    onTabSelected: (ChatTab) -> Unit = {}
 ) {
   val createdConversations = allConversations.filter { it.createdByCurrentUser }
 
@@ -167,30 +181,47 @@ fun ChatScreen(
       topBar = {
         ChatTopBar(title = stringResource(R.string.chats), onNavigateBack = onNavigateBack)
       },
-      bottomBar = { ChatBottomBar(ChatTab.Chats, onTabSelected = {}, modifier = Modifier) },
-      floatingActionButton = {
-        FloatingActionButton(onClick = { onNewConversation() }) {
-          Icon(Icons.Default.Add, contentDescription = "New Conversation")
-        }
+      bottomBar = {
+        ChatBottomBar(ChatTab.Chats, onTabSelected = onTabSelected, modifier = Modifier)
       },
-      floatingActionButtonPosition = FabPosition.End) { paddingValues ->
-        if (createdConversations.isEmpty()) {
-          Column(
-              modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center) {
-                Text(stringResource(R.string.empty_conversation), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.empty_conversation_button), color = Color.Gray)
-              }
-        } else {
-          LazyColumn(modifier = Modifier.padding(paddingValues)) {
+      floatingActionButton = {
+        FloatingActionButton(
+            onClick = { onNewConversation() },
+            modifier = Modifier.testTag(ChatScreenTestTags.NEW_CONVERSATION_BUTTON)) {
+              Icon(Icons.Default.Add, contentDescription = "New Conversation")
+            }
+      },
+      floatingActionButtonPosition = FabPosition.End,
+  ) { paddingValues ->
+    if (createdConversations.isEmpty()) {
+      Column(
+          modifier =
+              Modifier.fillMaxSize()
+                  .padding(paddingValues)
+                  .padding(24.dp)
+                  .testTag(ChatScreenTestTags.CHAT_SCREEN),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.Center) {
+            Text(
+                stringResource(R.string.empty_conversation),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag(ChatScreenTestTags.CHAT_EMPTY_TEXT))
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.empty_conversation_button), color = Color.Gray)
+          }
+    } else {
+      LazyColumn(
+          modifier = Modifier.padding(paddingValues).testTag(ChatScreenTestTags.CHAT_SCREEN)) {
             items(createdConversations) { conversation ->
-              ConversationItem(conversation, onClick = { onOpenConversation(conversation) })
+              ConversationItem(
+                  conversation,
+                  onClick = { onOpenConversation(conversation) },
+                  modifier =
+                      Modifier.testTag(
+                          "${ChatScreenTestTags.CONVERSATION_ITEM}_${conversation.id}"))
               HorizontalDivider()
             }
           }
-        }
-      }
+    }
+  }
 }
-
