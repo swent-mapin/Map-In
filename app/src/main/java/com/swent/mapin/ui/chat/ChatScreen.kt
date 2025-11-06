@@ -93,9 +93,11 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
       title = { Text(title) },
       navigationIcon = {
         if (onNavigateBack != null) {
-          IconButton(onClick = onNavigateBack, modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
+          IconButton(
+              onClick = onNavigateBack,
+              modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
         }
       },
       colors =

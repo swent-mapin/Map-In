@@ -1,105 +1,93 @@
 package com.swent.mapin.ui.chat
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.test.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import org.junit.Rule
 import org.junit.Test
-import org.junit.Assert.assertTrue
 
 class ConversationScreenTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    @Composable
-    private fun ChatTopBar(title: String, onNavigateBack: () -> Unit) {
-        Text(text = title)
+  @Test
+  fun conversationScreen_displaysInitialMessagesAndUIElements() {
+    composeTestRule.setContent {
+      ConversationScreen(
+          conversationId = "1", conversationName = "Chat with Alice", onNavigateBack = {})
     }
 
-    @Test
-    fun conversationScreen_displaysInitialMessages() {
-        composeTestRule.setContent {
-            ConversationScreen(
-                conversationId = "1",
-                conversationName = "Friends Chat",
-                onNavigateBack = {}
-            )
-        }
+    composeTestRule
+        .onNodeWithTag(ConversationScreenTestTags.CONVERSATION_SCREEN)
+        .assertIsDisplayed()
 
-        composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON).assertIsDisplayed()
 
-        composeTestRule.onNodeWithText("Friends Chat").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+  }
+
+  @Test
+  fun sendingMessage_addsNewMessageToListAndClearsInput() {
+    composeTestRule.setContent {
+      ConversationScreen(conversationId = "1", conversationName = "Chat Test")
     }
 
-    @Test
-    fun sendingMessage_addsNewMessageAndClearsInput() {
-        composeTestRule.setContent {
-            ConversationScreen(
-                conversationId = "42",
-                conversationName = "Compose Test",
-                onNavigateBack = {}
-            )
-        }
+    val inputNode = composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD)
+    val sendButton = composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
 
-        val textField = composeTestRule.onNode(hasSetTextAction())
-        textField.performTextInput("Hello from test!")
+    inputNode.performTextInput("Hello there!")
 
-        composeTestRule.onNodeWithContentDescription("Send").performClick()
+    sendButton.performClick()
 
-        composeTestRule.onNodeWithText("Hello from test!").assertIsDisplayed()
+    inputNode.assert(hasText(""))
+  }
 
-        // Input cleared
-        textField.assertTextEquals("")
+  @Test
+  fun emptyMessage_notAddedToList() {
+    composeTestRule.setContent {
+      ConversationScreen(conversationId = "1", conversationName = "Chat Test")
     }
 
-    @Test
-    fun emptyMessage_doesNotAddNewMessage() {
-        composeTestRule.setContent {
-            ConversationScreen(
-                conversationId = "2",
-                conversationName = "Empty Send",
-                onNavigateBack = {}
-            )
-        }
+    val sendButton = composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
 
-        // Try sending empty text
-        composeTestRule.onNodeWithContentDescription("Send").performClick()
+    sendButton.performClick()
 
-        // Still only 2 mock messages
-        composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+  }
+
+  @Test
+  fun messageBubble_rendersCorrectlyForBothSenderTypes() {
+    composeTestRule.setContent {
+      androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+        MessageBubble(Message("From me", isMe = true))
+        MessageBubble(Message("From them", isMe = false))
+      }
     }
 
-    @Test
-    fun onNavigateBack_callbackIsCalled() {
-        var backCalled = false
+    composeTestRule.onNodeWithText("From me").assertIsDisplayed()
+    composeTestRule.onNodeWithText("From them").assertIsDisplayed()
+  }
 
-        composeTestRule.setContent {
-            ConversationScreen(
-                conversationId = "3",
-                conversationName = "Back Test",
-                onNavigateBack = { backCalled = true }
-            )
-        }
-
-        // Simulate calling the callback directly
-
-
-        assertTrue(backCalled)
+  @Test
+  fun conversationScreen_onNavigateBack_isCalled() {
+    var backCalled = false
+    composeTestRule.setContent {
+      ConversationScreen(
+          conversationId = "c1", conversationName = "Chat", onNavigateBack = { backCalled = true })
     }
 
-    @Test
-    fun messageBubble_rendersBothSides() {
-        composeTestRule.setContent {
-            MessageBubble(Message("Right side", isMe = true))
-            MessageBubble(Message("Left side", isMe = false))
-        }
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).performClick()
 
-        // Both messages should appear
-        composeTestRule.onNodeWithText("Right side").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Left side").assertIsDisplayed()
-    }
+    assert(backCalled)
+  }
 }

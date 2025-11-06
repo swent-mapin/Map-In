@@ -34,9 +34,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.swent.mapin.model.FriendWithProfile
+
+object NewConversationScreenTestTags {
+  const val NEW_CONVERSATION_SCREEN = "newConversationScreen"
+  const val CONFIRM_BUTTON = "confirmButton"
+  const val BACK_BUTTON = "backButton"
+  const val FRIEND_ITEM = "friend"
+}
 
 /**
  * Assisted by AI Screen allowing the user to select one or more friends to start a new
@@ -63,16 +71,20 @@ fun NewConversationScreen(
         TopAppBar(
             title = { Text("New Conversation") },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
+              IconButton(
+                  onClick = onNavigateBack,
+                  modifier = Modifier.testTag(NewConversationScreenTestTags.BACK_BUTTON)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  }
             },
             actions = {
               if (selectedFriends.isNotEmpty()) {
                 IconButton(
                     onClick = {
                       onConfirm(selectedFriends)
-                    }) { // TODO Add logic to type in a group name if number of selected friends >=2
+                      // TODO Add logic to type in a group name if number of selected friends >=2
+                    },
+                    modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
                       Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
                     }
               }
@@ -83,7 +95,9 @@ fun NewConversationScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
-      }) { paddingValues ->
+      },
+      modifier = Modifier.testTag(NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN)) {
+          paddingValues ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
               items(friends) { friend ->
@@ -100,7 +114,9 @@ fun NewConversationScreen(
                               else selectedFriends.add(friend)
                             }
                             .background(backgroundColor)
-                            .padding(12.dp),
+                            .padding(12.dp)
+                            .testTag(
+                                "${NewConversationScreenTestTags.FRIEND_ITEM}_${friend.userProfile.name}"),
                     verticalAlignment = Alignment.CenterVertically) {
                       if (friend.userProfile.profilePictureUrl.isNullOrBlank()) {
                         Icon(

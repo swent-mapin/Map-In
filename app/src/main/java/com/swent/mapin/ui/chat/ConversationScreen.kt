@@ -25,14 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
 object ConversationScreenTestTags {
-    const val CONVERSATION_SCREEN = "conversationScreen"
-    const val SEND_BUTTON = "sendButton"
-    const val INPUT_TEXT_FIELD = "inputTextField"
-    const val MESSAGES = "messages"
+  const val CONVERSATION_SCREEN = "conversationScreen"
+  const val SEND_BUTTON = "sendButton"
+  const val INPUT_TEXT_FIELD = "inputTextField"
 }
 
 // Data class for messages
@@ -50,6 +50,7 @@ data class Message(val text: String, val isMe: Boolean)
 fun ConversationScreen(
     conversationId: String,
     conversationName: String,
+    modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit = {}
 ) {
   var messageText by remember { mutableStateOf(TextFieldValue("")) }
@@ -74,7 +75,8 @@ fun ConversationScreen(
               TextField(
                   value = messageText,
                   onValueChange = { messageText = it },
-                  modifier = Modifier.weight(1f),
+                  modifier =
+                      Modifier.weight(1f).testTag(ConversationScreenTestTags.INPUT_TEXT_FIELD),
                   placeholder = { Text("Type a message...") },
                   singleLine = true,
                   shape = MaterialTheme.shapes.large)
@@ -84,25 +86,26 @@ fun ConversationScreen(
                       messages = messages + Message(messageText.text, isMe = true)
                       messageText = TextFieldValue("")
                     }
-                  }) {
+                  },
+                  modifier = Modifier.testTag(ConversationScreenTestTags.SEND_BUTTON)) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                   }
             }
-      }) { padding ->
+      },
+      modifier = modifier.testTag(ConversationScreenTestTags.CONVERSATION_SCREEN)) { padding ->
         // Message list
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            reverseLayout = true
-            ) {
+            reverseLayout = true) {
               items(messages.reversed()) { message -> MessageBubble(message) }
             }
       }
 }
 
 /**
- * Assisted by AI
- * Basic UI for messages as bubbles
+ * Assisted by AI Basic UI for messages as bubbles
+ *
  * @param message The message sent or was sent
  */
 @Composable
