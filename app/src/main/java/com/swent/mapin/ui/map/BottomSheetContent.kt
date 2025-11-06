@@ -783,28 +783,31 @@ private fun AllRecentItemsPage(
 
   Column(modifier = modifier.fillMaxSize().fillMaxHeight()) {
     // Header with back button and clear all
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.testTag("backFromAllRecentsButton")) {
-              Icon(
-                  imageVector = Icons.Filled.Close,
-                  contentDescription = "Back",
-                  tint = MaterialTheme.colorScheme.onSurface)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "All Recent",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface)
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+      // Left: Close button
+      IconButton(
+          onClick = onBack,
+          modifier = Modifier.align(Alignment.CenterStart).testTag("backFromAllRecentsButton")) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.onSurface)
           }
 
-          TextButton(onClick = onClearAll, modifier = Modifier.testTag("clearAllRecentButton")) {
+      // Center: Title
+      Text(
+          text = "Recent searches",
+          style = MaterialTheme.typography.titleLarge,
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.align(Alignment.Center))
+
+      // Right: Clear All button
+      TextButton(
+          onClick = onClearAll,
+          modifier = Modifier.align(Alignment.CenterEnd).testTag("clearAllRecentButton")) {
             Text("Clear All", style = MaterialTheme.typography.bodyMedium)
           }
-        }
+    }
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -843,14 +846,14 @@ private fun RecentItemsSection(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
           Text(
-              text = "Recent",
+              text = "Recents",
               style = MaterialTheme.typography.titleMedium,
               color = MaterialTheme.colorScheme.onSurface)
 
           if (recentItems.isNotEmpty()) {
             TextButton(
                 onClick = onShowAll, modifier = Modifier.testTag("showAllRecentSearchesButton")) {
-                  Text("Show All", style = MaterialTheme.typography.bodyMedium)
+                  Text("Show all", style = MaterialTheme.typography.bodyMedium)
                 }
           }
         }
