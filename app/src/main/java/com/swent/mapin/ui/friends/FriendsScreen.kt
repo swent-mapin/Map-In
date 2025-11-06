@@ -11,7 +11,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,25 +22,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.UserProfile
-
-// Assisted by AI
+import com.swent.mapin.model.SearchResultWithStatus
 
 /**
- * Friends screen and related UI components.
+ * Main Friends screen composable.
  *
- * Overview:
- * - This file contains the FriendsScreen composable and small presentation components used by it.
- * - The UI is driven by a FriendsViewModel in production but accepts optional parameters to
- *   override ViewModel state and callbacks for testing.
- * - Testability: many elements expose testTag identifiers used by instrumentation tests.
+ * Displays three tabs: Friends list, pending requests, and user search. Supports optional parameter
+ * injection for testing purposes.
  *
- * Design notes:
- * - The top-level FriendsScreen prefers to be a thin presentation layer: it resolves the effective
- *   data and callbacks (either from provided params or the ViewModel) and passes plain data and
- *   lambda callbacks to child composables. This keeps child composables easy to unit test and
- *   review.
- * - Child composables are pure/presentation-focused and do not access the ViewModel directly.
+ * @param onNavigateBack Callback invoked when the back button is pressed.
+ * @param modifier Optional modifier for the screen.
+ * @param viewModel ViewModel managing the screen state and business logic.
+ * @param friends Optional override for friends list (used in tests).
+ * @param pendingRequests Optional override for pending requests (used in tests).
+ * @param searchResults Optional override for search results (used in tests).
+ * @param searchQuery Optional override for search query (used in tests).
+ * @param onRemoveFriend Optional callback override for removing friends (used in tests).
+ * @param onAcceptRequest Optional callback override for accepting requests (used in tests).
+ * @param onRejectRequest Optional callback override for rejecting requests (used in tests).
+ * @param onSendFriendRequest Optional callback override for sending friend requests (used in
+ *   tests).
+ * @param onSearchQueryChange Optional callback override for search query changes (used in tests).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,10 +50,9 @@ fun FriendsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FriendsViewModel = viewModel(),
-    // Optional overrides for testing
     friends: List<FriendWithProfile>? = null,
     pendingRequests: List<FriendWithProfile>? = null,
-    searchResults: List<UserProfile>? = null,
+    searchResults: List<SearchResultWithStatus>? = null,
     searchQuery: String? = null,
     onRemoveFriend: ((String) -> Unit)? = null,
     onAcceptRequest: ((String) -> Unit)? = null,
@@ -60,31 +60,12 @@ fun FriendsScreen(
     onSendFriendRequest: ((String) -> Unit)? = null,
     onSearchQueryChange: ((String) -> Unit)? = null
 ) {
-  // --- State collection -------------------------------------------------
-  // The primary production state is stored in the ViewModel and collected here using
-  // collectAsState. Tests can provide concrete values via the optional params above which
-  // override the ViewModel values when non-null.
   val selectedTab by viewModel.selectedTab.collectAsState()
-  val vmFriends by viewModel.friends.collectAsState()
-  val vmPending by viewModel.pendingRequests.collectAsState()
-  val vmSearchResults by viewModel.searchResults.collectAsState()
-  val vmSearchQuery by viewModel.searchQuery.collectAsState()
+  val friendsList = friends ?: viewModel.friends.collectAsState().value
+  val pendingList = pendingRequests ?: viewModel.pendingRequests.collectAsState().value
+  val searchList = searchResults ?: viewModel.searchResults.collectAsState().value
+  val searchQ = searchQuery ?: viewModel.searchQuery.collectAsState().value
 
-  // Resolve effective values: prefer explicit test overrides if provided.
-  val friendsList = friends ?: vmFriends
-  val pendingList = pendingRequests ?: vmPending
-  val searchList = searchResults ?: vmSearchResults
-  val searchQ = searchQuery ?: vmSearchQuery
-
-  // Resolve callbacks so tests can inject behaviour; otherwise fall back to ViewModel methods.
-  val removeCb = onRemoveFriend ?: viewModel::removeFriend
-  val acceptCb = onAcceptRequest ?: viewModel::acceptRequest
-  val rejectCb = onRejectRequest ?: viewModel::rejectRequest
-  val sendCb = onSendFriendRequest ?: viewModel::sendFriendRequest
-  val searchChangeCb = onSearchQueryChange ?: viewModel::updateSearchQuery
-
-  // --- UI layout --------------------------------------------------------
-  // Scaffold provides the top app bar and content area. A root testTag is added for tests.
   Scaffold(
       modifier = modifier.fillMaxSize().testTag("friendsScreen"),
       topBar = {
@@ -96,9 +77,8 @@ fun FriendsScreen(
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
-              // Navigation icon calls the onNavigateBack callback passed in by the caller.
               IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
               }
             },
             colors =
@@ -106,11 +86,8 @@ fun FriendsScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
-      }) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-          // --- Tabs -------------------------------------------------------
-          // TabRow is driven by the selectedTab from the ViewModel. Each Tab exposes a testTag
-          // so tests can interact with it directly.
+      }) { pad ->
+        Column(Modifier.fillMaxSize().padding(pad)) {
           TabRow(
               selectedTabIndex = selectedTab.ordinal,
               modifier = Modifier.fillMaxWidth().testTag("friendsTabRow")) {
@@ -124,9 +101,8 @@ fun FriendsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center) {
                               Text(tab.title)
-                              // Show a badge when there are pending requests (Requests tab only)
                               if (tab == FriendsTab.REQUESTS && pendingList.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Badge(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.testTag("requestBadge")) {
@@ -139,174 +115,162 @@ fun FriendsScreen(
                       })
                 }
               }
-
-          // --- Tab content ------------------------------------------------
-          // The content area switches on the selectedTab. Child composables receive plain data
-          // and callbacks, making them easy to test in isolation.
-          Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+          Box(Modifier.fillMaxSize().padding(16.dp)) {
             when (selectedTab) {
-              FriendsTab.FRIENDS -> {
-                FriendsListTab(
-                    friends = friendsList,
-                    onRemoveFriend = removeCb,
-                    modifier = Modifier.testTag("friendsListTab"))
-              }
-              FriendsTab.REQUESTS -> {
-                RequestsTab(
-                    requests = pendingList,
-                    onAcceptRequest = acceptCb,
-                    onRejectRequest = rejectCb,
-                    modifier = Modifier.testTag("requestsTab"))
-              }
-              FriendsTab.SEARCH -> {
-                SearchTab(
-                    searchQuery = searchQ,
-                    onSearchQueryChange = searchChangeCb,
-                    searchResults = searchList,
-                    onSendRequest = sendCb,
-                    modifier = Modifier.testTag("searchTab"))
-              }
+              FriendsTab.FRIENDS ->
+                  FriendsListTab(
+                      friendsList,
+                      onRemoveFriend ?: viewModel::removeFriend,
+                      Modifier.testTag("friendsListTab"))
+              FriendsTab.REQUESTS ->
+                  RequestsTab(
+                      pendingList,
+                      onAcceptRequest ?: viewModel::acceptRequest,
+                      onRejectRequest ?: viewModel::rejectRequest,
+                      Modifier.testTag("requestsTab"))
+              FriendsTab.SEARCH ->
+                  SearchTab(
+                      searchQ,
+                      onSearchQueryChange ?: viewModel::updateSearchQuery,
+                      searchList,
+                      onSendFriendRequest ?: viewModel::sendFriendRequest,
+                      Modifier.testTag("searchTab"))
             }
           }
         }
       }
 }
 
-/** Logical representation of screen tabs. The title is used for the Tab label. */
+/** Enum representing the three tabs in the Friends screen. */
 enum class FriendsTab(val title: String) {
   FRIENDS("Friends"),
   REQUESTS("Requests"),
   SEARCH("Search")
 }
 
-// --------------------------- Child components ----------------------------
-
 /**
- * FriendsListTab
+ * Displays the Friends list tab.
  *
- * Pure presentation component that renders a list of FriendWithProfile items.
- * - Shows a reusable EmptyStateMessage when the list is empty.
- * - Calls onRemoveFriend with the user's id when removal is requested.
+ * @param friends List of friends to display.
+ * @param onRemove Callback invoked when a friend is removed.
+ * @param modifier Optional modifier for the composable.
  */
 @Composable
 private fun FriendsListTab(
     friends: List<FriendWithProfile>,
-    onRemoveFriend: (String) -> Unit,
+    onRemove: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
   if (friends.isEmpty()) {
-    EmptyStateMessage(
-        icon = Icons.Default.Person,
-        message = "No friends yet",
-        subtitle = "Search for friends to add them",
-        modifier = modifier)
+    EmptyState(Icons.Default.Person, "No friends yet", "Search for friends to add them", modifier)
   } else {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          items(friends, key = { it.userProfile.userId }) { friendWithProfile ->
-            FriendCard(
-                friend = friendWithProfile,
-                onRemove = { onRemoveFriend(friendWithProfile.userProfile.userId) },
-                modifier = Modifier.testTag("friendCard_${friendWithProfile.userProfile.userId}"))
-          }
-        }
-  }
-}
-
-/**
- * RequestsTab
- *
- * Renders pending friend requests and exposes accept/reject callbacks.
- */
-@Composable
-private fun RequestsTab(
-    requests: List<FriendWithProfile>,
-    onAcceptRequest: (String) -> Unit,
-    onRejectRequest: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-  if (requests.isEmpty()) {
-    EmptyStateMessage(
-        icon = Icons.Default.Notifications,
-        message = "No pending requests",
-        subtitle = "Friend requests will appear here",
-        modifier = modifier)
-  } else {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          items(requests, key = { it.requestId }) { request ->
-            FriendRequestCard(
-                request = request,
-                onAccept = { onAcceptRequest(request.requestId) },
-                onReject = { onRejectRequest(request.requestId) },
-                modifier = Modifier.testTag("requestCard_${request.requestId}"))
-          }
-        }
-  }
-}
-
-/**
- * SearchTab
- *
- * Presents a search input and a list of search results. Behaviour is driven by the provided
- * searchQuery and searchResults; callbacks notify the parent of changes or actions.
- */
-@Composable
-private fun SearchTab(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    searchResults: List<UserProfile>,
-    onSendRequest: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-  Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-    OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChange,
-        modifier = Modifier.fillMaxWidth().testTag("searchTextField"),
-        placeholder = { Text("Search by name or email...") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-        trailingIcon = {
-          if (searchQuery.isNotEmpty()) {
-            IconButton(onClick = { onSearchQueryChange("") }) {
-              Icon(Icons.Default.Close, contentDescription = "Clear")
-            }
-          }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp))
-
-    when {
-      searchQuery.isEmpty() ->
-          EmptyStateMessage(
-              icon = Icons.Default.Search,
-              message = "Search for friends",
-              subtitle = "Enter a name or email to find friends",
-              modifier = Modifier.fillMaxSize())
-      searchResults.isEmpty() ->
-          EmptyStateMessage(
-              icon = Icons.Default.SearchOff,
-              message = "No results found",
-              subtitle = "Try a different search term",
-              modifier = Modifier.fillMaxSize())
-      else ->
-          LazyColumn(
-              modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(searchResults, key = { it.userId }) { user ->
-                  SearchResultCard(
-                      user = user,
-                      onSendRequest = { onSendRequest(user.userId) },
-                      modifier = Modifier.testTag("searchResultCard_${user.userId}"))
-                }
-              }
+    LazyColumn(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      items(friends, key = { it.userProfile.userId }) { friend ->
+        FriendCard(
+            friend,
+            { onRemove(friend.userProfile.userId) },
+            Modifier.testTag("friendCard_${friend.userProfile.userId}"))
+      }
     }
   }
 }
 
 /**
- * FriendCard
+ * Displays the Requests tab showing pending friend requests.
  *
- * Displays a single friend and manages a local confirmation dialog for removal.
+ * @param requests List of pending requests to display.
+ * @param onAccept Callback invoked when a request is accepted.
+ * @param onReject Callback invoked when a request is rejected.
+ * @param modifier Optional modifier for the composable.
+ */
+@Composable
+private fun RequestsTab(
+    requests: List<FriendWithProfile>,
+    onAccept: (String) -> Unit,
+    onReject: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  if (requests.isEmpty()) {
+    EmptyState(
+        Icons.Default.Notifications,
+        "No pending requests",
+        "Friend requests will appear here",
+        modifier)
+  } else {
+    LazyColumn(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      items(requests, key = { it.requestId }) { req ->
+        RequestCard(
+            req,
+            { onAccept(req.requestId) },
+            { onReject(req.requestId) },
+            Modifier.testTag("requestCard_${req.requestId}"))
+      }
+    }
+  }
+}
+
+/**
+ * Displays the Search tab for finding new friends.
+ *
+ * @param query Current search query text.
+ * @param onChange Callback invoked when the search query changes.
+ * @param results List of search results to display.
+ * @param onSend Callback invoked when a friend request is sent.
+ * @param modifier Optional modifier for the composable.
+ */
+@Composable
+private fun SearchTab(
+    query: String,
+    onChange: (String) -> Unit,
+    results: List<SearchResultWithStatus>,
+    onSend: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        modifier = Modifier.fillMaxWidth().testTag("searchTextField"),
+        placeholder = { Text("Search by name or email...") },
+        leadingIcon = { Icon(Icons.Default.Search, "Search") },
+        trailingIcon = {
+          if (query.isNotEmpty())
+              IconButton(onClick = { onChange("") }) { Icon(Icons.Default.Close, "Clear") }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp))
+    when {
+      query.isEmpty() ->
+          EmptyState(
+              Icons.Default.Search,
+              "Search for friends",
+              "Enter a name or email to find friends",
+              Modifier.fillMaxSize())
+      results.isEmpty() ->
+          EmptyState(
+              Icons.Default.SearchOff,
+              "No results found",
+              "Try a different search term",
+              Modifier.fillMaxSize())
+      else ->
+          LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(results, key = { it.userProfile.userId }) { res ->
+              SearchCard(
+                  res,
+                  { onSend(res.userProfile.userId) },
+                  Modifier.testTag("searchResultCard_${res.userProfile.userId}"))
+            }
+          }
+    }
+  }
+}
+
+/**
+ * Card displaying a friend's information with a remove button.
+ *
+ * @param friend The friend to display.
+ * @param onRemove Callback invoked when the remove button is clicked.
+ * @param modifier Optional modifier for the card.
  */
 @Composable
 private fun FriendCard(
@@ -314,24 +278,20 @@ private fun FriendCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-  var showRemoveDialog by remember { mutableStateOf(false) }
-
+  var showDialog by remember { mutableStateOf(false) }
   Card(
-      modifier = modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+      modifier.fillMaxWidth(),
+      RoundedCornerShape(12.dp),
+      CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+      CardDefaults.cardElevation(2.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              UserAvatar(
-                  avatarUrl = friend.userProfile.avatarUrl,
-                  name = friend.userProfile.name,
-                  modifier = Modifier.size(48.dp))
-              Spacer(modifier = Modifier.width(12.dp))
-              Column(modifier = Modifier.weight(1f)) {
+              Avatar(friend.userProfile.avatarUrl, friend.userProfile.name, Modifier.size(48.dp))
+              Spacer(Modifier.width(12.dp))
+              Column(Modifier.weight(1f)) {
                 Text(
-                    text = friend.userProfile.name,
+                    friend.userProfile.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -340,12 +300,12 @@ private fun FriendCard(
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
+                        null,
+                        Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = friend.userProfile.location,
+                        friend.userProfile.location,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -353,74 +313,70 @@ private fun FriendCard(
                   }
                 }
               }
-              IconButton(
-                  onClick = { showRemoveDialog = true },
-                  modifier = Modifier.testTag("removeFriendButton")) {
-                    Icon(
-                        Icons.Default.PersonRemove,
-                        contentDescription = "Remove friend",
-                        tint = MaterialTheme.colorScheme.error)
-                  }
+              IconButton({ showDialog = true }, Modifier.testTag("removeFriendButton")) {
+                Icon(
+                    Icons.Default.PersonRemove,
+                    "Remove friend",
+                    tint = MaterialTheme.colorScheme.error)
+              }
             }
       }
-
-  if (showRemoveDialog) {
+  if (showDialog) {
     AlertDialog(
-        onDismissRequest = { showRemoveDialog = false },
-        icon = { Icon(Icons.Default.Warning, contentDescription = null) },
+        onDismissRequest = { showDialog = false },
+        icon = { Icon(Icons.Default.Warning, null) },
         title = { Text("Remove Friend") },
         text = {
           Text("Are you sure you want to remove ${friend.userProfile.name} from your friends?")
         },
         confirmButton = {
           Button(
-              onClick = {
+              {
                 onRemove()
-                showRemoveDialog = false
+                showDialog = false
               },
-              colors =
-                  ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+              colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) {
                 Text("Remove")
               }
         },
-        dismissButton = { TextButton(onClick = { showRemoveDialog = false }) { Text("Cancel") } })
+        dismissButton = { TextButton({ showDialog = false }) { Text("Cancel") } })
   }
 }
 
 /**
- * FriendRequestCard
+ * Card displaying a pending friend request with accept/reject buttons.
  *
- * Presents a pending request with accept and reject actions.
+ * @param req The friend request to display.
+ * @param onAccept Callback invoked when the accept button is clicked.
+ * @param onReject Callback invoked when the reject button is clicked.
+ * @param modifier Optional modifier for the card.
  */
 @Composable
-private fun FriendRequestCard(
-    request: FriendWithProfile,
+private fun RequestCard(
+    req: FriendWithProfile,
     onAccept: () -> Unit,
     onReject: () -> Unit,
     modifier: Modifier = Modifier
 ) {
   Card(
-      modifier = modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+      modifier.fillMaxWidth(),
+      RoundedCornerShape(12.dp),
+      CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+      CardDefaults.cardElevation(2.dp)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            UserAvatar(
-                avatarUrl = request.userProfile.avatarUrl,
-                name = request.userProfile.name,
-                modifier = Modifier.size(48.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Avatar(req.userProfile.avatarUrl, req.userProfile.name, Modifier.size(48.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
               Text(
-                  text = request.userProfile.name,
+                  req.userProfile.name,
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.SemiBold,
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis)
-              if (request.userProfile.bio.isNotEmpty()) {
+              if (req.userProfile.bio.isNotEmpty()) {
                 Text(
-                    text = request.userProfile.bio,
+                    req.userProfile.bio,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -428,105 +384,82 @@ private fun FriendRequestCard(
               }
             }
           }
-
-          Spacer(modifier = Modifier.height(12.dp))
-
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onReject,
-                    modifier = Modifier.weight(1f).testTag("rejectButton"),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error)) {
-                      Icon(
-                          Icons.Default.Close,
-                          contentDescription = null,
-                          modifier = Modifier.size(18.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
-                      Text("Decline")
-                    }
-
-                Button(onClick = onAccept, modifier = Modifier.weight(1f).testTag("acceptButton")) {
-                  Icon(
-                      Icons.Default.Check,
-                      contentDescription = null,
-                      modifier = Modifier.size(18.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Accept")
+          Spacer(Modifier.height(12.dp))
+          Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onReject,
+                Modifier.weight(1f).testTag("rejectButton"),
+                colors = ButtonDefaults.outlinedButtonColors(MaterialTheme.colorScheme.error)) {
+                  Icon(Icons.Default.Close, null, Modifier.size(18.dp))
+                  Spacer(Modifier.width(4.dp))
+                  Text("Decline")
                 }
-              }
+            Button(onAccept, Modifier.weight(1f).testTag("acceptButton")) {
+              Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+              Spacer(Modifier.width(4.dp))
+              Text("Accept")
+            }
+          }
         }
       }
 }
 
 /**
- * SearchResultCard
+ * Card displaying a search result with an add friend button.
  *
- * Displays a search result and a button to send a friend request. Tracks a small local UI state to
- * represent the 'Sent' visual state after the user taps the button.
+ * @param result The search result to display.
+ * @param onSend Callback invoked when the add friend button is clicked.
+ * @param modifier Optional modifier for the card.
  */
 @Composable
-private fun SearchResultCard(
-    user: UserProfile,
-    onSendRequest: () -> Unit,
+private fun SearchCard(
+    result: SearchResultWithStatus,
+    onSend: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-  var requestSent by remember { mutableStateOf(false) }
-
+  var sent by remember { mutableStateOf(false) }
   Card(
-      modifier = modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+      modifier.fillMaxWidth(),
+      RoundedCornerShape(12.dp),
+      CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+      CardDefaults.cardElevation(2.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              UserAvatar(
-                  avatarUrl = user.avatarUrl, name = user.name, modifier = Modifier.size(48.dp))
-              Spacer(modifier = Modifier.width(12.dp))
-              Column(modifier = Modifier.weight(1f)) {
+              Avatar(result.userProfile.avatarUrl, result.userProfile.name, Modifier.size(48.dp))
+              Spacer(Modifier.width(12.dp))
+              Column(Modifier.weight(1f)) {
                 Text(
-                    text = user.name,
+                    result.userProfile.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
-                if (user.bio.isNotEmpty()) {
+                if (result.userProfile.bio.isNotEmpty()) {
                   Text(
-                      text = user.bio,
+                      result.userProfile.bio,
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
                       maxLines = 1,
                       overflow = TextOverflow.Ellipsis)
                 }
               }
-
-              if (requestSent) {
+              if (sent || result.hasPendingRequest) {
                 OutlinedButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier.testTag("requestSentButton")) {
-                      Icon(
-                          Icons.Default.Check,
-                          contentDescription = null,
-                          modifier = Modifier.size(18.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
+                    {}, enabled = false, modifier = Modifier.testTag("requestSentButton")) {
+                      Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                      Spacer(Modifier.width(4.dp))
                       Text("Sent")
                     }
               } else {
                 Button(
-                    onClick = {
-                      onSendRequest()
-                      requestSent = true
+                    {
+                      onSend()
+                      sent = true
                     },
-                    modifier = Modifier.testTag("sendRequestButton")) {
-                      Icon(
-                          Icons.Default.PersonAdd,
-                          contentDescription = null,
-                          modifier = Modifier.size(18.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
+                    Modifier.testTag("sendRequestButton")) {
+                      Icon(Icons.Default.PersonAdd, null, Modifier.size(18.dp))
+                      Spacer(Modifier.width(4.dp))
                       Text("Add")
                     }
               }
@@ -535,63 +468,61 @@ private fun SearchResultCard(
 }
 
 /**
- * UserAvatar
+ * Displays a user avatar (first letter of name or default icon).
  *
- * Lightweight avatar component that shows the first letter of the user's name when no URL is
- * present. Keeps the UI deterministic for tests and previews.
+ * @param url Optional avatar URL (currently not used for images).
+ * @param name User's name (first letter is displayed).
+ * @param modifier Optional modifier for the avatar.
  */
 @Composable
-private fun UserAvatar(avatarUrl: String?, name: String, modifier: Modifier = Modifier) {
+private fun Avatar(url: String?, name: String, modifier: Modifier = Modifier) {
   Box(
-      modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-      contentAlignment = Alignment.Center) {
-        if (avatarUrl.isNullOrEmpty() || avatarUrl == "person") {
+      modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+      Alignment.Center) {
+        if (url.isNullOrEmpty() || url == "person") {
           Text(
-              text = name.firstOrNull()?.uppercase() ?: "?",
+              name.firstOrNull()?.uppercase() ?: "?",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.Bold,
               color = MaterialTheme.colorScheme.onPrimaryContainer)
         } else {
           Icon(
               Icons.Default.Person,
-              contentDescription = null,
-              modifier = Modifier.size(32.dp),
+              null,
+              Modifier.size(32.dp),
               tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
       }
 }
 
 /**
- * EmptyStateMessage
+ * Displays an empty state message with an icon, title, and subtitle.
  *
- * Reusable component to show an icon, a primary message and a subtitle centered in the available
- * container. Used across tabs to show empty states.
+ * @param icon Icon to display.
+ * @param msg Main message text.
+ * @param sub Subtitle text.
+ * @param modifier Optional modifier for the empty state.
  */
 @Composable
-private fun EmptyStateMessage(
-    icon: ImageVector,
-    message: String,
-    subtitle: String,
-    modifier: Modifier = Modifier
-) {
-  Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun EmptyState(icon: ImageVector, msg: String, sub: String, modifier: Modifier = Modifier) {
+  Box(modifier.fillMaxSize(), Alignment.Center) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Icon(
               icon,
-              contentDescription = null,
-              modifier = Modifier.size(64.dp),
-              tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+              null,
+              Modifier.size(64.dp),
+              tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f))
           Text(
-              text = message,
+              msg,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.SemiBold,
               color = MaterialTheme.colorScheme.onSurfaceVariant)
           Text(
-              text = subtitle,
+              sub,
               style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+              color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f),
               textAlign = TextAlign.Center)
         }
   }

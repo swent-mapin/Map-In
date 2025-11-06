@@ -31,6 +31,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -47,6 +49,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
@@ -78,11 +82,13 @@ import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -93,7 +99,8 @@ fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {}
+    onNavigateToChat: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -161,14 +168,40 @@ fun MapScreen(
       rememberSheetInteractionMetrics(
           screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
-  val isDarkTheme = isSystemInDarkTheme()
+  // Get map preferences and theme from PreferencesRepository
+  val context = LocalContext.current
+  val preferencesRepository = remember {
+    com.swent.mapin.model.PreferencesRepositoryProvider.getInstance(context)
+  }
+  val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
+  val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
+  val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
+  val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
+  val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = true)
+
+  // Determine if dark theme based on app setting
+  val isSystemInDark = isSystemInDarkTheme()
+  val isDarkTheme =
+      when (themeModeString.lowercase()) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDark // "system" or default
+      }
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
 
-  // Adjust POI labels alongside our custom annotations
+  // Initialize standard style state with light preset only
   val standardStyleState = rememberStandardStyleState {
-    configurationsState.apply {
+    configurationsState.apply { this.lightPreset = lightPreset }
+  }
+
+  // Update style configuration reactively when preferences change (including theme)
+  LaunchedEffect(themeModeString, showPOIs, showRoadNumbers, showStreetNames, enable3DView) {
+    standardStyleState.configurationsState.apply {
       this.lightPreset = lightPreset
-      showPointOfInterestLabels = BooleanValue(true) // turn off if needed
+      showPointOfInterestLabels = BooleanValue(showPOIs)
+      showRoadLabels = BooleanValue(showRoadNumbers)
+      showTransitLabels = BooleanValue(showStreetNames)
+      show3dObjects = BooleanValue(enable3DView)
     }
   }
 
@@ -260,15 +293,23 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.isUserParticipating(selectedEvent),
-                      isSaved = viewModel.isEventSaved(selectedEvent),
+                      // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
+                      isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },
                       onUnsaveForLater = { viewModel.unsaveEventForLater() },
                       onClose = { viewModel.closeEventDetail() },
-                      onShare = { viewModel.showShareDialog() })
+                      onShare = { viewModel.showShareDialog() },
+                      onGetDirections = { viewModel.toggleDirections(selectedEvent) },
+                      showDirections =
+                          viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
+                  val owner =
+                      LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
+                  val filterViewModel: FiltersSectionViewModel =
+                      viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
                       state = viewModel.bottomSheetState,
                       fullEntryKey = viewModel.fullEntryKey,
@@ -284,9 +325,6 @@ fun MapScreen(
                       isSearchMode = viewModel.isSearchMode,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
-                      topTags = viewModel.topTags,
-                      selectedTags = viewModel.selectedTags,
-                      onTagClick = viewModel::toggleTagSelection,
                       onEventClick = { event ->
                         // Handle event click from search - focus pin, show details, remember
                         // search mode
@@ -295,6 +333,7 @@ fun MapScreen(
                       },
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
+                      onNavigateToFriends = onNavigateToFriends,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
                       onCreateEventDone = viewModel::onAddEventCancel,
@@ -304,7 +343,10 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
-                      onProfileClick = onNavigateToProfile)
+                      onProfileClick = onNavigateToProfile,
+                      filterViewModel = filterViewModel,
+                      locationViewModel = remember { LocationViewModel() },
+                      profileViewModel = remember { ProfileViewModel() })
                 }
               }
         }
@@ -423,6 +465,12 @@ private fun MapLayers(
   // Render heatmap layer when enabled
   if (viewModel.showHeatmap) {
     CreateHeatmapLayer(heatmapSource)
+  }
+
+  // Render direction overlay if directions are displayed
+  val directionState = viewModel.directionViewModel.directionState
+  if (directionState is DirectionState.Displayed) {
+    DirectionOverlay(routePoints = directionState.routePoints)
   }
 
   // Disable clustering when a pin is selected to prevent it from being absorbed

@@ -1,6 +1,11 @@
 package com.swent.mapin.ui.profile
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.UserProfile
@@ -367,6 +372,181 @@ class ProfileScreenTest {
 
     composeTestRule.onNodeWithTag("cancelButton").performClick()
     verify { mockViewModel.cancelEditing() }
+  }
+
+  @Test
+  fun editProfileContent_displaysDeleteProfileButton() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.editName } returns "John"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
+
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Delete Profile").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun editProfileContent_deleteProfileButton_hasCorrectStyling() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.editName } returns "John"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
+
+    // Verify button exists and has click action
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertHasClickAction()
+  }
+
+  @Test
+  fun editProfileContent_deleteProfileButton_triggersShowDeleteDialog() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.editName } returns "John"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
+
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().performClick()
+    verify { mockViewModel.showDeleteDialog() }
+  }
+
+  @Test
+  fun editProfileContent_deleteProfileButton_displaysDeleteIcon() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.editName } returns "John"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        androidx.compose.foundation.layout.Column(
+            modifier =
+                androidx.compose.ui.Modifier.verticalScroll(
+                    androidx.compose.foundation.rememberScrollState())) {
+              EditProfileContent(viewModel = mockViewModel)
+            }
+      }
+    }
+
+    // Verify the delete icon is present in the button
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo()
+    composeTestRule.onNodeWithText("Delete Profile").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileScreen_inEditMode_showsDeleteProfileButton() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.userProfile } returns
+        MutableStateFlow(UserProfile(name = "Test User", userId = "123"))
+    every { mockViewModel.isLoading } returns MutableStateFlow(false)
+    every { mockViewModel.isEditMode } returns true
+    every { mockViewModel.showAvatarSelector } returns false
+    every { mockViewModel.showBannerSelector } returns false
+    every { mockViewModel.showDeleteConfirmation } returns false
+    every { mockViewModel.editName } returns "Test User"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun profileScreen_clickDeleteProfileButton_showsDeleteConfirmationDialog() {
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+    every { mockViewModel.userProfile } returns
+        MutableStateFlow(UserProfile(name = "Test User", userId = "123"))
+    every { mockViewModel.isLoading } returns MutableStateFlow(false)
+    every { mockViewModel.isEditMode } returns true
+    every { mockViewModel.showAvatarSelector } returns false
+    every { mockViewModel.showBannerSelector } returns false
+    var showDeleteDialog by mutableStateOf(false)
+    every { mockViewModel.showDeleteConfirmation } answers { showDeleteDialog }
+    every { mockViewModel.editName } returns "Test User"
+    every { mockViewModel.editBio } returns ""
+    every { mockViewModel.editLocation } returns ""
+    every { mockViewModel.editHobbies } returns ""
+    every { mockViewModel.nameError } returns null
+    every { mockViewModel.bioError } returns null
+    every { mockViewModel.locationError } returns null
+    every { mockViewModel.hobbiesError } returns null
+    every { mockViewModel.hobbiesVisible } returns true
+    every { mockViewModel.showDeleteDialog() } answers { showDeleteDialog = true }
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().performClick()
+
+    verify { mockViewModel.showDeleteDialog() }
   }
 
   @Test

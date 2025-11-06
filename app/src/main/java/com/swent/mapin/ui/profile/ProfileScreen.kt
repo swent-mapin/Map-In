@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -184,64 +183,9 @@ fun ProfileScreen(
                       } else {
                         ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
 
-                        // Friends button
+                        // Logout button
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        Button(
-                            onClick = onNavigateToFriends,
-                            modifier =
-                                Modifier.fillMaxWidth().height(50.dp).testTag("friendsButton"),
-                            shape = RoundedCornerShape(12.dp),
-                            colors =
-                                ButtonDefaults.buttonColors(containerColor = Color(0xFF667eea))) {
-                              Row(
-                                  verticalAlignment = Alignment.CenterVertically,
-                                  horizontalArrangement = Arrangement.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Group,
-                                        contentDescription = "Friends",
-                                        modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Friends",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodyLarge)
-                                  }
-                            }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Delete Profile Button
-                        OutlinedButton(
-                            onClick = { viewModel.showDeleteDialog() },
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("deleteProfileButton"),
-                            shape = RoundedCornerShape(12.dp),
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = Color(0xFFef5350)),
-                            border =
-                                androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))) {
-                              Row(
-                                  horizontalArrangement = Arrangement.Center,
-                                  verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Profile",
-                                        modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "Delete Profile",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold)
-                                  }
-                            }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Logout button
                         OutlinedButton(
                             onClick = onNavigateToSettings,
                             modifier =
@@ -845,6 +789,30 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                                       color = Color.White)
                                 }
                           }
+                    }
+              }
+
+          Spacer(modifier = Modifier.height(16.dp))
+
+          // Delete Profile Button
+          OutlinedButton(
+              onClick = { viewModel.showDeleteDialog() },
+              modifier = Modifier.fillMaxWidth().height(48.dp).testTag("deleteProfileButton"),
+              shape = RoundedCornerShape(12.dp),
+              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350)),
+              border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                          imageVector = Icons.Default.Delete,
+                          contentDescription = "Delete Profile",
+                          modifier = Modifier.size(20.dp))
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text(
+                          "Delete Profile",
+                          style = MaterialTheme.typography.bodyLarge,
+                          fontWeight = FontWeight.Bold)
                     }
               }
         }

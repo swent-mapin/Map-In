@@ -37,6 +37,7 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
+          onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap)
     }
