@@ -37,6 +37,7 @@ object ChatScreenTestTags {
   const val NEW_CONVERSATION_BUTTON = "NewConversationButton"
   const val CONVERSATION_ITEM = "ConversationItem"
   const val CHAT_EMPTY_TEXT = "ChatEmptyText"
+  const val BACK_BUTTON = "backButton"
 }
 
 private val friend1 =
@@ -92,7 +93,7 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
       title = { Text(title) },
       navigationIcon = {
         if (onNavigateBack != null) {
-          IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
+          IconButton(onClick = onNavigateBack, modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
           }
         }

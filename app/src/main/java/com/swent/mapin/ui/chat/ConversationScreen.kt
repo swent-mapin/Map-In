@@ -28,6 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
+object ConversationScreenTestTags {
+    const val CONVERSATION_SCREEN = "conversationScreen"
+    const val SEND_BUTTON = "sendButton"
+    const val INPUT_TEXT_FIELD = "inputTextField"
+    const val MESSAGES = "messages"
+}
+
 // Data class for messages
 data class Message(val text: String, val isMe: Boolean)
 
@@ -86,7 +93,7 @@ fun ConversationScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            reverseLayout = true // new messages appear at bottom
+            reverseLayout = true
             ) {
               items(messages.reversed()) { message -> MessageBubble(message) }
             }
@@ -94,8 +101,8 @@ fun ConversationScreen(
 }
 
 /**
- * Assisted by AI Basic UI for messages as bubbles
- *
+ * Assisted by AI
+ * Basic UI for messages as bubbles
  * @param message The message sent or was sent
  */
 @Composable
