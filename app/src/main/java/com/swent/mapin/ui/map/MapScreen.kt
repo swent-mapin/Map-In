@@ -45,6 +45,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
@@ -76,10 +78,12 @@ import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
 import com.mapbox.maps.plugin.annotation.ClusterOptions
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
+import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -285,6 +289,10 @@ fun MapScreen(
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
+                  val owner =
+                      LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
+                  val filterViewModel: FiltersSectionViewModel =
+                      viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
                       state = viewModel.bottomSheetState,
                       fullEntryKey = viewModel.fullEntryKey,
@@ -300,9 +308,6 @@ fun MapScreen(
                       isSearchMode = viewModel.isSearchMode,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
-                      topTags = viewModel.topTags,
-                      selectedTags = viewModel.selectedTags,
-                      onTagClick = viewModel::toggleTagSelection,
                       onEventClick = { event ->
                         // Handle event click from search - focus pin, show details, remember
                         // search mode
@@ -321,7 +326,10 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
-                      onProfileClick = onNavigateToProfile)
+                      onProfileClick = onNavigateToProfile,
+                      filterViewModel = filterViewModel,
+                      locationViewModel = remember { LocationViewModel() },
+                      profileViewModel = remember { ProfileViewModel() })
                 }
               }
         }
