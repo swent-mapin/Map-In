@@ -1,6 +1,5 @@
 package com.swent.mapin.ui.map
 
-import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -12,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -29,18 +27,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,10 +46,6 @@ import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportS
 import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
 import com.mapbox.maps.extension.compose.style.BooleanValue
-import com.mapbox.maps.extension.compose.style.ColorValue
-import com.mapbox.maps.extension.compose.style.DoubleValue
-import com.mapbox.maps.extension.compose.style.LongValue
-import com.mapbox.maps.extension.compose.style.layers.generated.HeatmapLayer
 import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
 import com.mapbox.maps.extension.compose.style.sources.generated.GeoJsonSourceState
 import com.mapbox.maps.extension.compose.style.sources.generated.rememberGeoJsonSourceState
@@ -65,7 +54,6 @@ import com.mapbox.maps.extension.compose.style.standard.MapboxStandardSatelliteS
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.StandardStyleState
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
-import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
@@ -75,14 +63,21 @@ import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
+import com.swent.mapin.ui.map.components.ConditionalMapBlocker
+import com.swent.mapin.ui.map.components.CreateHeatmapLayer
+import com.swent.mapin.ui.map.components.ObserveSheetStateForZoomUpdate
+import com.swent.mapin.ui.map.components.ObserveZoomForSheetCollapse
+import com.swent.mapin.ui.map.components.ScrimOverlay
+import com.swent.mapin.ui.map.components.SheetInteractionMetrics
+import com.swent.mapin.ui.map.components.TopGradient
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
 import com.swent.mapin.ui.map.components.createEventAnnotations
 import com.swent.mapin.ui.map.components.drawableToBitmap
 import com.swent.mapin.ui.map.components.findEventForAnnotation
+import com.swent.mapin.ui.map.components.mapPointerInput
+import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.profile.ProfileViewModel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 // Maximum zoom level when fitting camera to search results
@@ -565,222 +560,5 @@ private fun MapLayers(
             true
           }
     }
-  }
-}
-
-/** Top gradient overlay for better visibility of status bar icons on map */
-@Composable
-private fun TopGradient() {
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(100.dp)
-              .background(
-                  brush =
-                      Brush.verticalGradient(
-                          colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent))))
-}
-
-/** Scrim that fades in once the sheet passes MEDIUM, dimming the map underneath. */
-@Composable
-private fun ScrimOverlay(currentHeightDp: Dp, mediumHeightDp: Dp, fullHeightDp: Dp) {
-  val opacity =
-      if (currentHeightDp >= mediumHeightDp) {
-        val progress =
-            ((currentHeightDp - mediumHeightDp) / (fullHeightDp - mediumHeightDp)).coerceIn(0f, 1f)
-        progress * MapConstants.MAX_SCRIM_ALPHA
-      } else {
-        0f
-      }
-
-  Box(
-      modifier =
-          Modifier.fillMaxSize()
-              .testTag("scrimOverlay")
-              .background(Color.Black.copy(alpha = opacity)))
-}
-
-/** Transparent overlay that consumes all map gestures while the sheet is fully expanded. */
-@SuppressLint("ReturnFromAwaitPointerEventScope")
-@Composable
-private fun MapInteractionBlocker() {
-  Box(
-      modifier =
-          Modifier.fillMaxSize().testTag("mapInteractionBlocker").pointerInput(Unit) {
-            awaitPointerEventScope {
-              while (true) {
-                val event = awaitPointerEvent()
-                event.changes.forEach { pointerInputChange -> pointerInputChange.consume() }
-              }
-            }
-          })
-}
-
-/**
- * Data class holding metrics for sheet interaction calculations.
- *
- * @property densityDpi Screen density in DPI for touch proximity calculations
- * @property sheetTopPx Current top position of the bottom sheet in pixels
- */
-private data class SheetInteractionMetrics(val densityDpi: Int, val sheetTopPx: Float)
-
-/**
- * Calculates and remembers sheet interaction metrics based on screen dimensions.
- *
- * Converts dp values to pixels and computes the sheet's top position for touch detection.
- */
-@Composable
-private fun rememberSheetInteractionMetrics(
-    screenHeightDp: Dp,
-    currentSheetHeight: Dp
-): SheetInteractionMetrics {
-  val density = LocalDensity.current
-  val densityFactor = density.density
-  val densityDpi = remember(densityFactor) { (densityFactor * 160).toInt() }
-  val screenHeightPx =
-      remember(screenHeightDp, densityFactor) { screenHeightDp.value * densityFactor }
-  val sheetTopPx =
-      remember(screenHeightPx, currentSheetHeight, densityFactor) {
-        screenHeightPx - (currentSheetHeight.value * densityFactor)
-      }
-  return remember(densityDpi, sheetTopPx) { SheetInteractionMetrics(densityDpi, sheetTopPx) }
-}
-
-/** Pointer modifier that collapses the sheet when touches originate near its top edge. */
-private fun Modifier.mapPointerInput(
-    bottomSheetState: BottomSheetState,
-    sheetMetrics: SheetInteractionMetrics,
-    onCollapseSheet: () -> Unit,
-    checkTouchProximity: (Float, Float, Int) -> Boolean
-) =
-    this.pointerInput(bottomSheetState, sheetMetrics) {
-      awaitPointerEventScope {
-        while (true) {
-          val event = awaitPointerEvent()
-          if (event.type == PointerEventType.Move) {
-            event.changes.firstOrNull()?.let { change ->
-              val touchY = change.position.y
-              if (checkTouchProximity(touchY, sheetMetrics.sheetTopPx, sheetMetrics.densityDpi)) {
-                onCollapseSheet()
-              }
-            }
-          }
-        }
-      }
-    }
-
-/** Updates the zoom baseline whenever the sheet settles in MEDIUM. */
-@Composable
-private fun ObserveSheetStateForZoomUpdate(
-    viewModel: MapScreenViewModel,
-    mapViewportState: MapViewportState
-) {
-  LaunchedEffect(viewModel.bottomSheetState, mapViewportState) {
-    if (viewModel.bottomSheetState == BottomSheetState.MEDIUM) {
-      mapViewportState.cameraState?.let { viewModel.updateMediumReferenceZoom(it.zoom.toFloat()) }
-    }
-  }
-}
-
-/** Collapses the sheet after zoom interactions and keeps zoom state in sync. */
-@Composable
-private fun ObserveZoomForSheetCollapse(
-    viewModel: MapScreenViewModel,
-    mapViewportState: MapViewportState
-) {
-  LaunchedEffect(mapViewportState) {
-    snapshotFlow { mapViewportState.cameraState?.zoom?.toFloat() ?: 0f }
-        .filterNotNull()
-        .distinctUntilChanged()
-        .collect { z ->
-          viewModel.onZoomChange(z)
-
-          if (viewModel.checkZoomInteraction(z)) {
-            viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-          }
-        }
-  }
-}
-
-/**
- * Conditionally renders a map interaction blocker when the sheet is fully expanded.
- *
- * Prevents map gestures from interfering with sheet content interaction.
- */
-@Composable
-private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
-  if (bottomSheetState == BottomSheetState.FULL) {
-    MapInteractionBlocker()
-  }
-}
-
-/**
- * Renders a heatmap layer showing location density.
- *
- * Uses interpolated colors, radius, and weight based on zoom level and location data.
- *
- * @param heatmapSource GeoJSON source containing location data
- */
-@Composable
-private fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
-  HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
-    maxZoom = LongValue(18L)
-    heatmapOpacity = DoubleValue(0.65)
-    heatmapRadius =
-        DoubleValue(
-            interpolate {
-              linear()
-              zoom()
-              stop {
-                literal(0.0)
-                literal(18.0)
-              }
-              stop {
-                literal(14.0)
-                literal(32.0)
-              }
-              stop {
-                literal(22.0)
-                literal(48.0)
-              }
-            })
-    heatmapWeight =
-        DoubleValue(
-            interpolate {
-              linear()
-              get { literal("weight") }
-              stop {
-                literal(0.0)
-                literal(0.0)
-              }
-              stop {
-                literal(5.0)
-                literal(0.4)
-              }
-              stop {
-                literal(25.0)
-                literal(0.8)
-              }
-              stop {
-                literal(100.0)
-                literal(1.0)
-              }
-            })
-    heatmapColor =
-        ColorValue(
-            interpolate {
-              linear()
-              heatmapDensity()
-              MapConstants.HeatmapColors.COLOR_STOPS.forEach { (position, color) ->
-                stop {
-                  literal(position)
-                  if (color.a == 0.0) {
-                    rgba(color.r, color.g, color.b, color.a)
-                  } else {
-                    rgb(color.r, color.g, color.b)
-                  }
-                }
-              }
-            })
   }
 }
