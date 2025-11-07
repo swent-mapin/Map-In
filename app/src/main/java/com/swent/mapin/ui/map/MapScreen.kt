@@ -1,12 +1,6 @@
 package com.swent.mapin.ui.map
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import androidx.annotation.DrawableRes
-import androidx.annotation.VisibleForTesting
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -40,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -49,10 +42,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.createBitmap
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
@@ -75,13 +66,7 @@ import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.StandardStyleState
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.extension.style.expressions.dsl.generated.interpolate
-import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
-import com.mapbox.maps.extension.style.layers.properties.generated.TextAnchor
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
-import com.mapbox.maps.plugin.annotation.AnnotationConfig
-import com.mapbox.maps.plugin.annotation.AnnotationSourceOptions
-import com.mapbox.maps.plugin.annotation.ClusterOptions
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
@@ -90,6 +75,11 @@ import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
+import com.swent.mapin.ui.map.components.createAnnotationStyle
+import com.swent.mapin.ui.map.components.createClusterConfig
+import com.swent.mapin.ui.map.components.createEventAnnotations
+import com.swent.mapin.ui.map.components.drawableToBitmap
+import com.swent.mapin.ui.map.components.findEventForAnnotation
 import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -722,173 +712,6 @@ private fun ConditionalMapBlocker(bottomSheetState: BottomSheetState) {
   if (bottomSheetState == BottomSheetState.FULL) {
     MapInteractionBlocker()
   }
-}
-
-/**
- * Converts a drawable resource to a Bitmap for use in map annotations.
- *
- * @param drawableResId Resource ID of the drawable to convert
- * @return Bitmap representation of the drawable, or null if conversion fails
- */
-private fun Context.drawableToBitmap(@DrawableRes drawableResId: Int): Bitmap? {
-  val drawable = AppCompatResources.getDrawable(this, drawableResId) ?: return null
-  val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 1
-  val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 1
-  val bitmap = createBitmap(width, height)
-  val canvas = Canvas(bitmap)
-  drawable.setBounds(0, 0, canvas.width, canvas.height)
-  drawable.draw(canvas)
-  return bitmap
-}
-
-/**
- * Holds styling information for map annotations.
- *
- * @property textColorInt Text color for annotation labels (ARGB integer)
- * @property haloColorInt Halo color for text outline (ARGB integer)
- * @property markerBitmap Optional bitmap for the marker icon
- */
-@VisibleForTesting
-internal data class AnnotationStyle(
-    val textColorInt: Int,
-    val haloColorInt: Int,
-    val markerBitmap: Bitmap?
-)
-
-/**
- * Creates annotation styling based on current theme.
- *
- * @param isDarkTheme Whether dark theme is active
- * @param markerBitmap Optional bitmap for marker icon
- * @return AnnotationStyle with theme-appropriate colors
- */
-@VisibleForTesting
-internal fun createAnnotationStyle(isDarkTheme: Boolean, markerBitmap: Bitmap?): AnnotationStyle {
-  val textColor = if (isDarkTheme) Color.White else Color.Black
-  val haloColor =
-      if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.8f)
-      } else {
-        Color.White.copy(alpha = 0.85f)
-      }
-
-  return AnnotationStyle(
-      textColorInt = textColor.toArgb(),
-      haloColorInt = haloColor.toArgb(),
-      markerBitmap = markerBitmap)
-}
-
-@VisibleForTesting
-internal data class AnnotationVisualParameters(
-    val iconSize: Double,
-    val textSize: Double,
-    val textOffset: List<Double>,
-    val textHaloWidth: Double,
-    val sortKey: Double
-)
-
-@VisibleForTesting
-internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationVisualParameters {
-  return if (isSelected) {
-    AnnotationVisualParameters(
-        iconSize = 1.5,
-        textSize = 15.0,
-        textOffset = listOf(0.0, 0.5),
-        textHaloWidth = 2.0,
-        sortKey = 0.0)
-  } else {
-    AnnotationVisualParameters(
-        iconSize = 1.0,
-        textSize = 12.0,
-        textOffset = listOf(0.0, 0.2),
-        textHaloWidth = 1.5,
-        sortKey = 100.0)
-  }
-}
-/**
- * Converts a list of events to Mapbox point annotation options.
- *
- * Each annotation includes position, icon, label, and custom styling. The index is stored as data
- * for later retrieval. Selected event pins are enlarged.
- *
- * @param events List of events to convert
- * @param style Styling to apply to annotations
- * @param selectedEventId UID of the currently selected event (if any)
- * @return List of configured PointAnnotationOptions
- */
-@VisibleForTesting
-internal fun createEventAnnotations(
-    events: List<Event>,
-    style: AnnotationStyle,
-    selectedEventId: String? = null
-): List<PointAnnotationOptions> {
-  return events.mapIndexed { index, event ->
-    val isSelected = event.uid == selectedEventId
-    val visual = computeAnnotationVisualParameters(isSelected)
-
-    PointAnnotationOptions()
-        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
-        .apply { style.markerBitmap?.let { withIconImage(it) } }
-        .withIconSize(visual.iconSize)
-        .withIconAnchor(IconAnchor.BOTTOM)
-        .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(visual.textOffset)
-        .withTextSize(visual.textSize)
-        .withTextColor(style.textColorInt)
-        .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(visual.textHaloWidth)
-        .withTextField(event.title)
-        .withData(JsonPrimitive(index))
-        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
-  }
-}
-
-/**
- * Creates clustering configuration for location annotations.
- *
- * Uses blue gradient colors for cluster sizes and enables touch interaction.
- *
- * @return AnnotationConfig with clustering enabled
- */
-@VisibleForTesting
-internal fun createClusterConfig(): AnnotationConfig {
-  val clusterColorLevels =
-      listOf(
-          0 to Color(0xFF64B5F6).toArgb(),
-          25 to Color(0xFF1E88E5).toArgb(),
-          50 to Color(0xFF0D47A1).toArgb())
-
-  return AnnotationConfig(
-      annotationSourceOptions =
-          AnnotationSourceOptions(
-              clusterOptions =
-                  ClusterOptions(
-                      clusterRadius = 60L,
-                      colorLevels = clusterColorLevels,
-                      textColor = Color.White.toArgb(),
-                      textSize = 12.0)))
-}
-
-/**
- * Finds the Event associated with a clicked annotation.
- *
- * First tries to match by stored index data, then falls back to coordinate comparison.
- *
- * @param annotation The clicked point annotation
- * @param events List of all events
- * @return Matching Event or null if not found
- */
-@VisibleForTesting
-internal fun findEventForAnnotation(
-    annotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation,
-    events: List<Event>
-): Event? {
-  val index = annotation.getData()?.takeIf { it.isJsonPrimitive }?.asInt
-  return index?.let { events.getOrNull(it) }
-      ?: events.firstOrNull { event ->
-        val point = annotation.point
-        event.location.latitude == point.latitude() && event.location.longitude == point.longitude()
-      }
 }
 
 /**
