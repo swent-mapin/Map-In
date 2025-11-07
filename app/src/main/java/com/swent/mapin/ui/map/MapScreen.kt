@@ -286,8 +286,7 @@ fun MapScreen(
                       onClose = { viewModel.closeEventDetail() },
                       onShare = { viewModel.showShareDialog() },
                       onGetDirections = { viewModel.toggleDirections(selectedEvent) },
-                      showDirections =
-                          viewModel.directionViewModel.directionState is DirectionState.Displayed)
+                      showDirections = viewModel.directionState is DirectionState.Displayed)
                 } else {
                   val owner =
                       LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
@@ -451,7 +450,7 @@ private fun MapLayers(
   }
 
   // Render direction overlay if directions are displayed
-  val directionState = viewModel.directionViewModel.directionState
+  val directionState = viewModel.directionState
   if (directionState is DirectionState.Displayed) {
     DirectionOverlay(routePoints = directionState.routePoints)
   }

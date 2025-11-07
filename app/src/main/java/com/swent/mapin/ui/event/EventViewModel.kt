@@ -193,7 +193,7 @@ class EventViewModel(
           _savedEventIds.value = _savedEventIds.value - eventId
           getSavedEvents(userId)
         } else {
-          _error.value = "Event was not saved"
+          _error.value = "Failed to unsave"
         }
       } catch (e: Exception) {
         _error.value = e.message

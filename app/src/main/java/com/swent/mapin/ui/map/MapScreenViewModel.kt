@@ -68,7 +68,8 @@ class MapScreenViewModel(
         MemoryRepositoryProvider.getRepository(),
     private val filterViewModel: FiltersSectionViewModel,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
+    private val directionViewModel: DirectionViewModel = DirectionViewModel()
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -214,7 +215,8 @@ class MapScreenViewModel(
   val avatarUrl: String?
     get() = _avatarUrl
 
-  val directionViewModel = DirectionViewModel()
+  val directionState: DirectionState
+    get() = directionViewModel.directionState
 
   init {
     loadMapStylePreference()
@@ -383,7 +385,11 @@ class MapScreenViewModel(
       return
     }
     _errorMessage = null
-    eventViewModel.unsaveEventForUser(currentUserId, eventUid)
+    try {
+      eventViewModel.unsaveEventForUser(currentUserId, eventUid)
+    } catch (e: Exception) {
+      _errorMessage = "Failed to unsave event: ${e.message}"
+    }
   }
 
   /**
@@ -757,7 +763,7 @@ class MapScreenViewModel(
    * Cleans up resources when the ViewModel is cleared, canceling coroutines and removing the auth
    * listener.
    */
-  override fun onCleared() {
+  public override fun onCleared() {
     super.onCleared()
     hideScaleBarJob?.cancel()
     programmaticZoomJob?.cancel()
