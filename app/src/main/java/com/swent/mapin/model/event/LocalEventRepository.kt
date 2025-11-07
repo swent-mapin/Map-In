@@ -1,7 +1,11 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.GeoPoint
 import com.swent.mapin.model.Location
+import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.util.EventUtils.calculateHaversineDistance
+import java.time.ZoneId
 import java.util.Date
 import java.util.UUID
 
@@ -36,41 +40,75 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
 
   override suspend fun getAllEvents(): List<Event> = events.values.sortedBy { it.date }
 
-  override suspend fun getEvent(eventID: String): Event {
-    return events[eventID]
-        ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventID)")
+  override suspend fun getEvent(eventId: String): Event {
+    return events[eventId]
+        ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
   }
 
-  override suspend fun getEventsByTags(tags: List<String>): List<Event> {
-    if (tags.isEmpty()) return getAllEvents()
-    val tagSet = tags.map { it.trim().lowercase() }.toSet()
-    return events.values
-        .filter { event -> event.tags.any { tag -> tag.trim().lowercase() in tagSet } }
-        .sortedBy { it.date }
+  override suspend fun getFilteredEvents(filters: Filters): List<Event> {
+    var result = events.values.toList()
+
+    // Apply startDate filter
+    val startTimestamp =
+        Timestamp(filters.startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+    result =
+        result.filter { event -> event.date?.let { it.seconds >= startTimestamp.seconds } ?: false }
+
+    // Apply endDate filter only if provided
+    if (filters.endDate != null) {
+      val endTimestamp =
+          Timestamp(
+              filters.endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
+      result =
+          result.filter { event -> event.date?.let { it.seconds <= endTimestamp.seconds } ?: false }
+    }
+
+    // Apply tags filter
+    if (filters.tags.isNotEmpty()) {
+      val limitedTags =
+          if (filters.tags.size > 10) {
+            filters.tags.take(10)
+          } else {
+            filters.tags
+          }
+      result = result.filter { event -> event.tags.any { it in limitedTags } }
+    }
+
+    // Apply popularOnly filter
+    if (filters.popularOnly) {
+      result = result.filter { event -> event.participantIds.size > 10 }
+    }
+
+    // Apply friendsOnly filter (placeholder)
+    if (filters.friendsOnly) {
+      val userId = "user1" // Placeholder: assumes a logged-in user
+      result = result.filter { event -> userId in event.participantIds }
+    }
+
+    // Apply maxPrice filter
+    if (filters.maxPrice != null) {
+      result = result.filter { event -> event.price <= filters.maxPrice.toDouble() }
+    }
+
+    // Apply place and radius filter
+    if (filters.place != null) {
+      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
+      result =
+          result.filter { event ->
+            val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
+            val distance = calculateHaversineDistance(eventGeoPoint, placeGeoPoint)
+            distance <= filters.radiusKm
+          }
+    }
+
+    return result.sortedBy { it.date }
   }
 
-  override suspend fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp): List<Event> {
-    return events.values
-        .filter { event ->
-          event.date?.let { timestamp -> timestamp >= dayStart && timestamp < dayEnd } ?: false
-        }
-        .sortedBy { it.date }
-  }
-
-  override suspend fun getEventsByOwner(ownerId: String): List<Event> {
-    val trimmed = ownerId.trim()
-    return events.values.filter { it.ownerId == trimmed }.sortedBy { it.date }
-  }
-
-  override suspend fun getEventsByTitle(title: String): List<Event> {
+  override suspend fun getSearchedEvents(title: String, filters: Filters): List<Event> {
     val normalized = title.trim().lowercase()
-    return events.values.filter { it.title.trim().lowercase() == normalized }.sortedBy { it.date }
-  }
-
-  override suspend fun getEventsByParticipant(userId: String): List<Event> {
-    val trimmed = userId.trim()
-    return events.values
-        .filter { event -> event.participantIds.contains(trimmed) }
+    val filteredEvents = getFilteredEvents(filters)
+    return filteredEvents
+        .filter { it.title.trim().lowercase().contains(normalized) }
         .sortedBy { it.date }
   }
 
@@ -86,24 +124,22 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     events[id] = eventToStore
   }
 
-  override suspend fun editEvent(eventID: String, newValue: Event) {
-    if (!events.containsKey(eventID)) {
-      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventID)")
+  override suspend fun editEvent(eventId: String, newValue: Event) {
+    if (!events.containsKey(eventId)) {
+      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     }
-
     val participants =
         if (newValue.ownerId.isNotBlank() && !newValue.participantIds.contains(newValue.ownerId)) {
           newValue.participantIds + newValue.ownerId
         } else {
           newValue.participantIds
         }
-
-    events[eventID] = newValue.copy(uid = eventID, participantIds = participants)
+    events[eventId] = newValue.copy(uid = eventId, participantIds = participants)
   }
 
-  override suspend fun deleteEvent(eventID: String) {
-    if (events.remove(eventID) == null) {
-      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventID)")
+  override suspend fun deleteEvent(eventId: String) {
+    if (events.remove(eventId) == null) {
+      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     }
   }
 
@@ -127,19 +163,25 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return bucket(userId).remove(eventId)
   }
 
+  private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
+    return try {
+      if (place == null) return null
+      GeoPoint(place.latitude, place.longitude)
+    } catch (e: Exception) {
+      null
+    }
+  }
+
   companion object {
-    /** Helper function to generate a list of participant IDs with a specific count */
     private fun generateParticipants(ownerId: String, additionalCount: Int): List<String> {
       return listOf(ownerId) +
           (1..additionalCount).map { "user${ownerId.removePrefix("user").toIntOrNull() ?: 0}_$it" }
     }
 
-    /** Returns a deterministic list of sample events positioned around the EPFL campus. */
     fun defaultSampleEvents(): List<Event> {
       val now = Timestamp(Date())
 
       return listOf(
-          // High attendance cluster near Rolex Learning Center
           Event(
               uid = "event1",
               title = "Music Festival",
@@ -150,7 +192,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user1",
               capacity = null,
-              participantIds = generateParticipants("user1", 450)), // Huge event, no capacity limit
+              participantIds = generateParticipants("user1", 450),
+              price = 50.0),
           Event(
               uid = "event2",
               title = "Tech Conference",
@@ -161,7 +204,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user2",
               capacity = 500,
-              participantIds = generateParticipants("user2", 385)), // Very popular, near full
+              participantIds = generateParticipants("user2", 385),
+              price = 100.0),
           Event(
               uid = "event3",
               title = "Food Festival",
@@ -172,9 +216,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user3",
               capacity = 400,
-              participantIds = generateParticipants("user3", 320)), // Popular hotspot
-
-          // Moderate attendance around Sports Center
+              participantIds = generateParticipants("user3", 320),
+              price = 30.0),
           Event(
               uid = "event4",
               title = "Basketball Game",
@@ -185,7 +228,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user4",
               capacity = 200,
-              participantIds = generateParticipants("user4", 145)),
+              participantIds = generateParticipants("user4", 145),
+              price = 10.0),
           Event(
               uid = "event5",
               title = "Volleyball Tournament",
@@ -196,7 +240,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user5",
               capacity = 150,
-              participantIds = generateParticipants("user5", 98)),
+              participantIds = generateParticipants("user5", 98),
+              price = 15.0),
           Event(
               uid = "event6",
               title = "Running Club",
@@ -207,9 +252,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user6",
               capacity = 80,
-              participantIds = generateParticipants("user6", 52)),
-
-          // Low attendance cultural events near ArtLab
+              participantIds = generateParticipants("user6", 52),
+              price = 0.0),
           Event(
               uid = "event7",
               title = "Art Exhibition",
@@ -220,7 +264,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user7",
               capacity = 100,
-              participantIds = generateParticipants("user7", 35)),
+              participantIds = generateParticipants("user7", 35),
+              price = 20.0),
           Event(
               uid = "event8",
               title = "Photography Workshop",
@@ -231,9 +276,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user8",
               capacity = 40,
-              participantIds = generateParticipants("user8", 18)),
-
-          // Very small attendance study groups scattered around
+              participantIds = generateParticipants("user8", 18),
+              price = 25.0),
           Event(
               uid = "event9",
               title = "Study Group - Math",
@@ -244,7 +288,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user9",
               capacity = 20,
-              participantIds = generateParticipants("user9", 7)),
+              participantIds = generateParticipants("user9", 7),
+              price = 0.0),
           Event(
               uid = "event10",
               title = "Coding Meetup",
@@ -255,7 +300,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user10",
               capacity = 30,
-              participantIds = generateParticipants("user10", 12)),
+              participantIds = generateParticipants("user10", 12),
+              price = 10.0),
           Event(
               uid = "event11",
               title = "Language Exchange",
@@ -266,9 +312,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user11",
               capacity = 35,
-              participantIds = generateParticipants("user11", 15)),
-
-          // Medium attendance around Esplanade
+              participantIds = generateParticipants("user11", 15),
+              price = 5.0),
           Event(
               uid = "event12",
               title = "Food Market",
@@ -279,7 +324,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user12",
               capacity = 250,
-              participantIds = generateParticipants("user12", 180)),
+              participantIds = generateParticipants("user12", 180),
+              price = 15.0),
           Event(
               uid = "event13",
               title = "Farmers Market",
@@ -290,9 +336,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user13",
               capacity = 300,
-              participantIds = generateParticipants("user13", 225)),
-
-          // Very high attendance hotspot - special events
+              participantIds = generateParticipants("user13", 225),
+              price = 20.0),
           Event(
               uid = "event14",
               title = "Science Expo",
@@ -303,7 +348,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user14",
               capacity = 600,
-              participantIds = generateParticipants("user14", 520)),
+              participantIds = generateParticipants("user14", 520),
+              price = 40.0),
           Event(
               uid = "event15",
               title = "Startup Fair",
@@ -314,9 +360,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user15",
               capacity = 700,
-              participantIds = generateParticipants("user15", 650)), // Nearly full, very hot
-
-          // Workshops and classes
+              participantIds = generateParticipants("user15", 650),
+              price = 30.0),
           Event(
               uid = "event16",
               title = "Yoga Class",
@@ -327,7 +372,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user16",
               capacity = 60,
-              participantIds = generateParticipants("user16", 42)),
+              participantIds = generateParticipants("user16", 42),
+              price = 15.0),
           Event(
               uid = "event17",
               title = "Cooking Workshop",
@@ -338,7 +384,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user17",
               capacity = 45,
-              participantIds = generateParticipants("user17", 28)),
+              participantIds = generateParticipants("user17", 28),
+              price = 35.0),
           Event(
               uid = "event18",
               title = "Photography Class",
@@ -349,9 +396,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user18",
               capacity = 50,
-              participantIds = generateParticipants("user18", 31)),
-
-          // Student clubs
+              participantIds = generateParticipants("user18", 31),
+              price = 25.0),
           Event(
               uid = "event19",
               title = "Chess Club",
@@ -362,7 +408,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user19",
               capacity = 30,
-              participantIds = generateParticipants("user19", 14)),
+              participantIds = generateParticipants("user19", 14),
+              price = 5.0),
           Event(
               uid = "event20",
               title = "Board Game Night",
@@ -373,7 +420,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user20",
               capacity = 100,
-              participantIds = generateParticipants("user20", 75)),
+              participantIds = generateParticipants("user20", 75),
+              price = 10.0),
           Event(
               uid = "event21",
               title = "Robotics Workshop",
@@ -384,7 +432,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user21",
               capacity = 80,
-              participantIds = generateParticipants("user21", 58)),
+              participantIds = generateParticipants("user21", 58),
+              price = 50.0),
           Event(
               uid = "event22",
               title = "Biology Lecture",
@@ -395,9 +444,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user22",
               capacity = 120,
-              participantIds = generateParticipants("user22", 88)),
-
-          // Music performances - varying attendance
+              participantIds = generateParticipants("user22", 88),
+              price = 0.0),
           Event(
               uid = "event23",
               title = "Jazz Concert",
@@ -408,7 +456,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user23",
               capacity = 300,
-              participantIds = generateParticipants("user23", 245)),
+              participantIds = generateParticipants("user23", 245),
+              price = 20.0),
           Event(
               uid = "event24",
               title = "Open Mic Night",
@@ -419,7 +468,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user24",
               capacity = 150,
-              participantIds = generateParticipants("user24", 112)),
+              participantIds = generateParticipants("user24", 112),
+              price = 10.0),
           Event(
               uid = "event25",
               title = "Classical Concert",
@@ -430,9 +480,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user25",
               capacity = 200,
-              participantIds = generateParticipants("user25", 165)),
-
-          // Extended area - North of EPFL
+              participantIds = generateParticipants("user25", 165),
+              price = 30.0),
           Event(
               uid = "event26",
               title = "Startup Pitch Night",
@@ -443,7 +492,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user26",
               capacity = 250,
-              participantIds = generateParticipants("user26", 195)),
+              participantIds = generateParticipants("user26", 195),
+              price = 25.0),
           Event(
               uid = "event27",
               title = "Hackathon",
@@ -454,7 +504,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user27",
               capacity = 400,
-              participantIds = generateParticipants("user27", 368)),
+              participantIds = generateParticipants("user27", 368),
+              price = 40.0),
           Event(
               uid = "event28",
               title = "Robotics Demo",
@@ -465,9 +516,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user28",
               capacity = 180,
-              participantIds = generateParticipants("user28", 134)),
-
-          // Extended area - South of EPFL
+              participantIds = generateParticipants("user28", 134),
+              price = 15.0),
           Event(
               uid = "event29",
               title = "Lake Picnic",
@@ -478,7 +528,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user29",
               capacity = 200,
-              participantIds = generateParticipants("user29", 156)),
+              participantIds = generateParticipants("user29", 156),
+              price = 10.0),
           Event(
               uid = "event30",
               title = "Beach Volleyball",
@@ -489,7 +540,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user30",
               capacity = 100,
-              participantIds = generateParticipants("user30", 78)),
+              participantIds = generateParticipants("user30", 78),
+              price = 12.0),
           Event(
               uid = "event31",
               title = "Sailing Club",
@@ -500,9 +552,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user31",
               capacity = 50,
-              participantIds = generateParticipants("user31", 34)),
-
-          // Extended area - East of EPFL
+              participantIds = generateParticipants("user31", 34),
+              price = 50.0),
           Event(
               uid = "event32",
               title = "Trail Running",
@@ -513,7 +564,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user32",
               capacity = 70,
-              participantIds = generateParticipants("user32", 46)),
+              participantIds = generateParticipants("user32", 46),
+              price = 5.0),
           Event(
               uid = "event33",
               title = "Outdoor Cinema",
@@ -524,7 +576,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user33",
               capacity = 500,
-              participantIds = generateParticipants("user33", 425)), // Very popular
+              participantIds = generateParticipants("user33", 425),
+              price = 15.0),
           Event(
               uid = "event34",
               title = "Cycling Club",
@@ -535,9 +588,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user34",
               capacity = 90,
-              participantIds = generateParticipants("user34", 62)),
-
-          // Extended area - West of EPFL
+              participantIds = generateParticipants("user34", 62),
+              price = 8.0),
           Event(
               uid = "event35",
               title = "Wine Tasting",
@@ -548,7 +600,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user35",
               capacity = 60,
-              participantIds = generateParticipants("user35", 44)),
+              participantIds = generateParticipants("user35", 44),
+              price = 60.0),
           Event(
               uid = "event36",
               title = "Cooking Class",
@@ -559,7 +612,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user36",
               capacity = 50,
-              participantIds = generateParticipants("user36", 32)),
+              participantIds = generateParticipants("user36", 32),
+              price = 45.0),
           Event(
               uid = "event37",
               title = "Comedy Night",
@@ -570,9 +624,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user37",
               capacity = 220,
-              participantIds = generateParticipants("user37", 185)),
-
-          // Scattered small events across wider area
+              participantIds = generateParticipants("user37", 185),
+              price = 25.0),
           Event(
               uid = "event38",
               title = "Photography Walk",
@@ -583,7 +636,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user38",
               capacity = 25,
-              participantIds = generateParticipants("user38", 11)),
+              participantIds = generateParticipants("user38", 11),
+              price = 10.0),
           Event(
               uid = "event39",
               title = "Book Club",
@@ -594,7 +648,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user39",
               capacity = 25,
-              participantIds = generateParticipants("user39", 9)),
+              participantIds = generateParticipants("user39", 9),
+              price = 0.0),
           Event(
               uid = "event40",
               title = "Chess Tournament",
@@ -605,9 +660,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user40",
               capacity = 50,
-              participantIds = generateParticipants("user40", 28)),
-
-          // More scattered medium events
+              participantIds = generateParticipants("user40", 28),
+              price = 5.0),
           Event(
               uid = "event41",
               title = "Sustainability Fair",
@@ -618,7 +672,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user41",
               capacity = 350,
-              participantIds = generateParticipants("user41", 275)),
+              participantIds = generateParticipants("user41", 275),
+              price = 20.0),
           Event(
               uid = "event42",
               title = "3D Printing Workshop",
@@ -629,7 +684,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user42",
               capacity = 70,
-              participantIds = generateParticipants("user42", 48)),
+              participantIds = generateParticipants("user42", 48),
+              price = 35.0),
           Event(
               uid = "event43",
               title = "Dance Class",
@@ -640,7 +696,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user43",
               capacity = 110,
-              participantIds = generateParticipants("user43", 82)),
+              participantIds = generateParticipants("user43", 82),
+              price = 20.0),
           Event(
               uid = "event44",
               title = "Debate Club",
@@ -651,7 +708,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user44",
               capacity = 60,
-              participantIds = generateParticipants("user44", 38)),
+              participantIds = generateParticipants("user44", 38),
+              price = 0.0),
           Event(
               uid = "event45",
               title = "Astronomy Night",
@@ -662,9 +720,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user45",
               capacity = 100,
-              participantIds = generateParticipants("user45", 72)),
-
-          // Additional high-attendance events for better heatmap distribution
+              participantIds = generateParticipants("user45", 72),
+              price = 15.0),
           Event(
               uid = "event46",
               title = "International Food Festival",
@@ -675,7 +732,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user46",
               capacity = 800,
-              participantIds = generateParticipants("user46", 742)), // Massive event, nearly full
+              participantIds = generateParticipants("user46", 742),
+              price = 50.0),
           Event(
               uid = "event47",
               title = "Student Party",
@@ -686,7 +744,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user47",
               capacity = 600,
-              participantIds = generateParticipants("user47", 580)), // Huge party
+              participantIds = generateParticipants("user47", 580),
+              price = 20.0),
           Event(
               uid = "event48",
               title = "Rock Concert",
@@ -697,7 +756,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user48",
               capacity = 550,
-              participantIds = generateParticipants("user48", 488)),
+              participantIds = generateParticipants("user48", 488),
+              price = 30.0),
           Event(
               uid = "event49",
               title = "Marathon Training",
@@ -708,7 +768,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user49",
               capacity = 140,
-              participantIds = generateParticipants("user49", 105)),
+              participantIds = generateParticipants("user49", 105),
+              price = 10.0),
           Event(
               uid = "event50",
               title = "Craft Beer Festival",
@@ -719,7 +780,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               public = true,
               ownerId = "user50",
               capacity = 450,
-              participantIds = generateParticipants("user50", 398))) // Very popular
+              participantIds = generateParticipants("user50", 398),
+              price = 40.0))
     }
   }
 }
