@@ -30,18 +30,13 @@ import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.map.search.RecentItem
+import com.swent.mapin.ui.map.search.SearchStateController
 import java.util.UUID
 import kotlin.math.abs
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
-/** Represents a recent item in search history - either a search query or a clicked event. */
-sealed class RecentItem {
-  data class Search(val query: String) : RecentItem()
-
-  data class ClickedEvent(val eventId: String, val eventTitle: String) : RecentItem()
-}
 
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
@@ -59,6 +54,12 @@ class MapScreenViewModel(
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
+  private val searchStateController =
+      SearchStateController(
+          applicationContext = applicationContext,
+          eventRepository = eventRepository,
+          onClearFocus = onClearFocus,
+          scope = viewModelScope)
   // Bottom sheet state
   private var _bottomSheetState by mutableStateOf(initialSheetState)
   val bottomSheetState: BottomSheetState
@@ -70,32 +71,22 @@ class MapScreenViewModel(
 
   var currentSheetHeight by mutableStateOf(sheetConfig.collapsedHeight)
 
-  // Search input state
-  private var _searchQuery by mutableStateOf("")
   val searchQuery: String
-    get() = _searchQuery
+    get() = searchStateController.searchQuery
 
-  private var _shouldFocusSearch by mutableStateOf(false)
   val shouldFocusSearch: Boolean
-    get() = _shouldFocusSearch
-
-  private var isSearchActivated by mutableStateOf(false)
-
-  // Raw dataset loaded from repository (or empty until loaded)
-  private var _allEvents by mutableStateOf<List<Event>>(emptyList())
+    get() = searchStateController.shouldFocusSearch
 
   // Visible events for map (after filtering)
   private var _events by mutableStateOf(LocalEventRepository.defaultSampleEvents())
   val events: List<Event>
     get() = _events
 
-  // Search results for bottom sheet list
-  private var _searchResults by mutableStateOf<List<Event>>(emptyList())
   val searchResults: List<Event>
-    get() = _searchResults
+    get() = searchStateController.searchResults
 
   val isSearchMode: Boolean
-    get() = isSearchActivated && !showMemoryForm
+    get() = searchStateController.isSearchActive && !showMemoryForm
 
   // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
@@ -112,19 +103,8 @@ class MapScreenViewModel(
   private var isProgrammaticZoom by mutableStateOf(false)
   private var programmaticZoomJob: kotlinx.coroutines.Job? = null
   // Tracks whether leaving full sheet should clear the current query (active editing state)
-  private var clearSearchOnExitFull by mutableStateOf(false)
   // Saves the editing state before viewing an event, so we can restore it after closing
   private var wasEditingBeforeEvent by mutableStateOf(false)
-
-  private fun markSearchEditing() {
-    isSearchActivated = true
-    clearSearchOnExitFull = true
-  }
-
-  private fun markSearchCommitted() {
-    isSearchActivated = true
-    clearSearchOnExitFull = false
-  }
 
   enum class MapStyle {
     STANDARD,
@@ -222,10 +202,8 @@ class MapScreenViewModel(
   val topTags: List<String>
     get() = _topTags
 
-  // Recent search history (searches and clicked events)
-  private var _recentItems by mutableStateOf<List<RecentItem>>(emptyList())
   val recentItems: List<RecentItem>
-    get() = _recentItems
+    get() = searchStateController.recentItems
 
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
@@ -241,16 +219,14 @@ class MapScreenViewModel(
     // Initialize with sample events quickly, then load remote data
     loadInitialSamples()
     // Preload events so the form has immediate data
-    loadEvents()
+    refreshEventsDataset()
     loadJoinedEvents()
     loadSavedEvents()
     loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
-    loadAllEvents()
     loadParticipantEvents()
     loadUserProfile()
-    loadRecentSearches()
 
     registerAuthStateListener()
   }
@@ -318,8 +294,7 @@ class MapScreenViewModel(
 
   /** Loads initial sample events synchronously for immediate UI responsiveness. */
   private fun loadInitialSamples() {
-    _events = LocalEventRepository.defaultSampleEvents()
-    _searchResults = _events
+    _events = searchStateController.initializeWithSamples(_selectedTags)
   }
 
   /** Returns the top 5 most frequent tags across all events. */
@@ -334,18 +309,10 @@ class MapScreenViewModel(
     return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
   }
 
-  /** Loads primary events list for immediate UI usage with fallback to local samples. */
-  private fun loadEvents() {
-    viewModelScope.launch {
-      try {
-        val events = eventRepository.getAllEvents()
-        _events = events
-        _searchResults = events
-      } catch (e: Exception) {
-        Log.w("MapScreenViewModel", "Failed to load events from repository, using samples", e)
-        _events = LocalEventRepository.defaultSampleEvents()
-        _searchResults = _events
-      }
+  private fun refreshEventsDataset() {
+    searchStateController.loadRemoteEvents(_selectedTags) { filtered ->
+      _events = filtered
+      loadJoinedEvents()
     }
   }
 
@@ -421,11 +388,12 @@ class MapScreenViewModel(
     // - Always clear if user was editing and has no query (just tapped search bar)
     // - Always clear if user was editing (typing but not submitted)
     // - Keep results only if user has submitted a search query
-    val hasCommittedSearch = !clearSearchOnExitFull && _searchQuery.isNotEmpty()
+    val hasCommittedSearch =
+        !searchStateController.clearSearchOnExitFull && searchQuery.isNotEmpty()
     val shouldClear = leavingFull && !hasCommittedSearch
 
     if (resetSearch && shouldClear && !_showMemoryForm) {
-      resetSearchState()
+      _events = searchStateController.resetSearchState(_selectedTags)
     }
 
     _bottomSheetState = target
@@ -433,61 +401,44 @@ class MapScreenViewModel(
 
   fun onSearchQueryChange(query: String) {
     if (_bottomSheetState != BottomSheetState.FULL) {
-      _shouldFocusSearch = true
+      searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
-    _searchQuery = query
-    markSearchEditing()
-    applyFilters()
+    _events = searchStateController.onSearchQueryChange(query, _selectedTags)
   }
 
   fun onSearchTap() {
     if (_bottomSheetState != BottomSheetState.FULL) {
-      _shouldFocusSearch = true
+      searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
-    markSearchEditing()
+    searchStateController.markSearchEditing()
   }
 
   fun onSearchFocusHandled() {
-    _shouldFocusSearch = false
+    searchStateController.onSearchFocusHandled()
   }
 
   /** Called when user submits a search (presses enter or search button). */
   fun onSearchSubmit() {
-    val trimmedQuery = _searchQuery.trim()
-    if (trimmedQuery.isEmpty()) return
-
-    if (trimmedQuery != _searchQuery) {
-      _searchQuery = trimmedQuery
-      applyFilters()
-    }
-
-    markSearchCommitted()
-    saveRecentSearch(trimmedQuery)
-    onClearFocus()
+    val filteredEvents = searchStateController.onSearchSubmit(_selectedTags) ?: return
+    _events = filteredEvents
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
 
   /** Applies a recent search query from history. */
   fun applyRecentSearch(query: String) {
-    val trimmedQuery = query.trim()
-    if (trimmedQuery.isEmpty()) return
-
-    _searchQuery = trimmedQuery
-    markSearchCommitted()
-    saveRecentSearch(trimmedQuery)
-    applyFilters()
-    onClearFocus()
+    val filteredEvents = searchStateController.applyRecentSearch(query, _selectedTags) ?: return
+    _events = filteredEvents
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
 
   private fun focusCameraOnSearchResults() {
-    if (_searchQuery.isBlank()) return
+    if (!searchStateController.hasQuery()) return
 
-    val results = _searchResults
+    val results = searchResults
     if (results.isEmpty()) return
 
     isProgrammaticZoom = true
@@ -501,17 +452,8 @@ class MapScreenViewModel(
         }
   }
 
-  private fun resetSearchState() {
-    isSearchActivated = false
-    _shouldFocusSearch = false
-    onClearFocus()
-    clearSearchOnExitFull = false
-    if (_searchQuery.isNotEmpty()) _searchQuery = ""
-    applyFilters()
-  }
-
   fun onClearSearch() {
-    resetSearchState()
+    _events = searchStateController.resetSearchState(_selectedTags)
     setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
@@ -536,73 +478,6 @@ class MapScreenViewModel(
 
   fun clearError() {
     _errorMessage = null
-  }
-
-  /** Loads all events for search and map display, falling back to local data on error. */
-  private fun loadAllEvents() {
-    viewModelScope.launch {
-      try {
-        val events = eventRepository.getAllEvents()
-        applyEventsDataset(events)
-      } catch (primary: Exception) {
-        Log.e("MapScreenViewModel", "Error loading events from repository", primary)
-        try {
-          val localEvents = EventRepositoryProvider.createLocalRepository().getAllEvents()
-          applyEventsDataset(localEvents)
-        } catch (fallback: Exception) {
-          Log.e("MapScreenViewModel", "Failed to load local events fallback", fallback)
-          _allEvents = emptyList()
-          applyFilters()
-        }
-      }
-    }
-  }
-
-  private fun applyEventsDataset(events: List<Event>) {
-    _allEvents = events
-    loadJoinedEvents()
-    applyFilters()
-  }
-
-  private fun applyFilters() {
-    val base = _allEvents.ifEmpty { LocalEventRepository.defaultSampleEvents() }
-
-    val tagFiltered =
-        if (_selectedTags.isEmpty()) {
-          base
-        } else {
-          base.filter { event ->
-            event.tags.any { tag ->
-              _selectedTags.any { sel -> tag.equals(sel, ignoreCase = true) }
-            }
-          }
-        }
-
-    val finalList =
-        if (_searchQuery.isBlank()) {
-          tagFiltered
-        } else {
-          filterEvents(_searchQuery, tagFiltered)
-        }
-
-    // For search results: only show results when there's an active query
-    _searchResults = if (_searchQuery.isBlank()) emptyList() else finalList
-    // For map: show filtered results or all if no query
-    _events = finalList
-  }
-
-  private fun filterEvents(query: String, source: List<Event>): List<Event> {
-    val trimmed = query.trim()
-    if (trimmed.isEmpty()) return source
-
-    val normalized = trimmed.lowercase()
-    return source.filter { event ->
-      val titleMatch = event.title.lowercase().contains(normalized)
-      val descriptionMatch = event.description.lowercase().contains(normalized)
-      val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
-      val locationMatch = event.location.name.lowercase().contains(normalized)
-      titleMatch || descriptionMatch || tagsMatch || locationMatch
-    }
   }
 
   private fun loadParticipantEvents() {
@@ -644,7 +519,7 @@ class MapScreenViewModel(
               _joinedEvents = emptyList()
               return
             }
-    val base = _allEvents.ifEmpty { _events }
+    val base = searchStateController.currentEvents().ifEmpty { _events }
     _joinedEvents = base.filter { uid in it.participantIds }
   }
 
@@ -666,114 +541,9 @@ class MapScreenViewModel(
     viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
   }
 
-  /** Data class for serializing recent items. */
-  private data class RecentItemData(
-      val type: String,
-      val value: String,
-      val eventTitle: String? = null
-  )
-
-  /** Loads recent items (searches and events) from SharedPreferences. */
-  private fun loadRecentSearches() {
-    try {
-      val prefs =
-          applicationContext.getSharedPreferences(
-              "map_search_prefs", android.content.Context.MODE_PRIVATE)
-      val itemsJson = prefs.getString("recent_items", "[]")
-      val itemsData =
-          com.google.gson.Gson().fromJson(itemsJson, Array<RecentItemData>::class.java)?.toList()
-              ?: emptyList()
-
-      _recentItems =
-          itemsData.mapNotNull { data ->
-            when (data.type) {
-              "search" -> RecentItem.Search(data.value)
-              "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
-              else -> null
-            }
-          }
-    } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to load recent items", e)
-      _recentItems = emptyList()
-    }
-  }
-
-  /** Saves a search query to recent history. */
-  private fun saveRecentSearch(query: String) {
-    val trimmed = query.trim()
-    if (trimmed.isEmpty()) return
-
-    try {
-      val newItem = RecentItem.Search(trimmed)
-      val updatedList = mutableListOf<RecentItem>(newItem)
-      // Remove duplicate searches but keep events
-      _recentItems.forEach { item ->
-        when (item) {
-          is RecentItem.Search -> if (item.query != trimmed) updatedList.add(item)
-          is RecentItem.ClickedEvent -> updatedList.add(item)
-        }
-      }
-
-      _recentItems = updatedList
-      saveRecentItemsToPrefs(updatedList)
-    } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to save recent search", e)
-    }
-  }
-
-  /** Saves a clicked event to recent history. */
-  private fun saveRecentEvent(eventId: String, eventTitle: String) {
-    try {
-      val newItem = RecentItem.ClickedEvent(eventId, eventTitle)
-      val updatedList = mutableListOf<RecentItem>(newItem)
-      // Remove duplicate events but keep searches
-      _recentItems.forEach { item ->
-        when (item) {
-          is RecentItem.Search -> updatedList.add(item)
-          is RecentItem.ClickedEvent -> if (item.eventId != eventId) updatedList.add(item)
-        }
-      }
-
-      _recentItems = updatedList
-      saveRecentItemsToPrefs(updatedList)
-    } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to save recent event", e)
-    }
-  }
-
-  /** Persists recent items to SharedPreferences. */
-  private fun saveRecentItemsToPrefs(items: List<RecentItem>) {
-    try {
-      val prefs =
-          applicationContext.getSharedPreferences(
-              "map_search_prefs", android.content.Context.MODE_PRIVATE)
-      val itemsData =
-          items.map { item ->
-            when (item) {
-              is RecentItem.Search -> RecentItemData("search", item.query)
-              is RecentItem.ClickedEvent -> RecentItemData("event", item.eventId, item.eventTitle)
-            }
-          }
-      val itemsJson = com.google.gson.Gson().toJson(itemsData)
-      prefs.edit().putString("recent_items", itemsJson).apply()
-    } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to save recent items to prefs", e)
-    }
-  }
-
   /** Clears all recent items history. */
   fun clearRecentSearches() {
-    try {
-      val prefs =
-          applicationContext.getSharedPreferences(
-              "map_search_prefs", android.content.Context.MODE_PRIVATE)
-      prefs.edit().remove("recent_items").apply()
-      // Also remove old format for migration
-      prefs.edit().remove("recent_searches").apply()
-      _recentItems = emptyList()
-    } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to clear recent items", e)
-    }
+    searchStateController.clearRecentSearches()
   }
 
   fun showMemoryForm() {
@@ -884,13 +654,12 @@ class MapScreenViewModel(
   }
 
   fun setEvents(newEvents: List<Event>) {
-    _allEvents = newEvents
-    applyFilters()
+    _events = searchStateController.setEventsFromExternalSource(newEvents, _selectedTags)
   }
 
   fun toggleTagSelection(tag: String) {
     _selectedTags = if (_selectedTags.contains(tag)) _selectedTags - tag else _selectedTags + tag
-    applyFilters()
+    _events = searchStateController.refreshFilters(_selectedTags)
   }
 
   fun setBottomSheetTab(tab: BottomSheetTab) {
@@ -926,20 +695,20 @@ class MapScreenViewModel(
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
     // Save editing state before marking as committed, so we can restore it later
-    wasEditingBeforeEvent = clearSearchOnExitFull
-    saveRecentEvent(event.uid, event.title)
-    markSearchCommitted()
+    wasEditingBeforeEvent = searchStateController.clearSearchOnExitFull
+    searchStateController.saveRecentEvent(event.uid, event.title)
+    searchStateController.markSearchCommitted()
     onEventPinClicked(event, forceZoom = true)
   }
 
   /** Handles event click from recent items by finding the event and showing details. */
   fun onRecentEventClicked(eventId: String) {
-    val event = _allEvents.find { it.uid == eventId }
+    val event = searchStateController.findEventById(eventId)
     if (event != null) {
       _cameFromSearch = true
       // Recent events are always committed searches (not editing)
       wasEditingBeforeEvent = false
-      markSearchCommitted()
+      searchStateController.markSearchCommitted()
       onEventPinClicked(event, forceZoom = true)
     }
   }
@@ -954,16 +723,16 @@ class MapScreenViewModel(
     if (_cameFromSearch) {
       // Return to search mode without clearing the current query
       _cameFromSearch = false
-      isSearchActivated = true
+      searchStateController.markSearchCommitted()
       // Restore the editing state from before viewing the event
       val wasEditing = wasEditingBeforeEvent
       if (wasEditing) {
-        markSearchEditing()
+        searchStateController.markSearchEditing()
       }
       // Restore focus if user was typing (editing), otherwise just show search results
-      _shouldFocusSearch = wasEditing
+      searchStateController.setFocusRequested(wasEditing)
       wasEditingBeforeEvent = false // Reset for next time
-      applyFilters()
+      _events = searchStateController.refreshFilters(_selectedTags)
       // Return to FULL if user was editing, otherwise restore previous sheet state
       // (FULL for recents, MEDIUM for search results)
       val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
@@ -1037,8 +806,7 @@ class MapScreenViewModel(
         val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
-        _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
-        _allEvents = _allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+        _events = searchStateController.replaceEvent(updatedEvent, _selectedTags)
         loadJoinedEvents()
       } catch (e: Exception) {
         _errorMessage = "Failed to join event: ${e.message}"
@@ -1057,7 +825,7 @@ class MapScreenViewModel(
         val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         eventRepository.editEvent(event.uid, updatedEvent)
         _selectedEvent = updatedEvent
-        _events = _events.map { if (it.uid == event.uid) updatedEvent else it }
+        _events = searchStateController.replaceEvent(updatedEvent, _selectedTags)
         loadJoinedEvents()
       } catch (e: Exception) {
         _errorMessage = "Failed to unregister: ${e.message}"

@@ -74,6 +74,8 @@ class MapScreenViewModelTest {
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
     runBlocking {
+      whenever(mockEventRepository.getAllEvents())
+          .thenReturn(com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents())
       whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
