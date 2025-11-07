@@ -69,67 +69,67 @@ class EventViewModelTests {
   // 4. getFilteredEvents
   @Test
   fun getFilteredEvents_emitsEventsFromRepository() =
-    runTest(testDispatcher) {
-      // Arrange
-      val filters = Filters(tags = setOf("tag1"))
-      val event =
-        Event(
-          uid = "E1",
-          title = "Test Event",
-          description = "Desc",
-          date = Timestamp.now(),
-          location = Location("Loc", 1.0, 2.0),
-          tags = listOf("tag1"),
-          public = true,
-          ownerId = "owner1",
-          imageUrl = null,
-          capacity = 10,
-          participantIds = emptyList(),
-          price = 0.0)
-      Mockito.`when`(repository.getFilteredEvents(filters)).thenReturn(listOf(event))
+      runTest(testDispatcher) {
+        // Arrange
+        val filters = Filters(tags = setOf("tag1"))
+        val event =
+            Event(
+                uid = "E1",
+                title = "Test Event",
+                description = "Desc",
+                date = Timestamp.now(),
+                location = Location("Loc", 1.0, 2.0),
+                tags = listOf("tag1"),
+                public = true,
+                ownerId = "owner1",
+                imageUrl = null,
+                capacity = 10,
+                participantIds = emptyList(),
+                price = 0.0)
+        Mockito.`when`(repository.getFilteredEvents(filters)).thenReturn(listOf(event))
 
-      // Act
-      viewModel.getFilteredEvents(filters)
-      advanceUntilIdle()
+        // Act
+        viewModel.getFilteredEvents(filters)
+        advanceUntilIdle()
 
-      // Assert
-      val result = viewModel.events.value
-      assertEquals(1, result.size)
-      assertEquals("E1", result[0].uid)
-    }
+        // Assert
+        val result = viewModel.events.value
+        assertEquals(1, result.size)
+        assertEquals("E1", result[0].uid)
+      }
 
   // 5. getSearchedEvents
   @Test
   fun getSearchedEvents_emitsMatchingEvents() =
-    runTest(testDispatcher) {
-      val filters = Filters()
-      // Arrange
-      val searchTerm = "test"
-      val event =
-        Event(
-          uid = "E1",
-          title = "Test Event",
-          description = "Desc",
-          date = Timestamp.now(),
-          location = Location("Loc", 1.0, 2.0),
-          tags = emptyList(),
-          public = true,
-          ownerId = "owner1",
-          imageUrl = null,
-          capacity = 10,
-          participantIds = emptyList(),
-          price = 0.0)
-      Mockito.`when`(repository.getSearchedEvents(searchTerm, filters)).thenReturn(listOf(event))
+      runTest(testDispatcher) {
+        val filters = Filters()
+        // Arrange
+        val searchTerm = "test"
+        val event =
+            Event(
+                uid = "E1",
+                title = "Test Event",
+                description = "Desc",
+                date = Timestamp.now(),
+                location = Location("Loc", 1.0, 2.0),
+                tags = emptyList(),
+                public = true,
+                ownerId = "owner1",
+                imageUrl = null,
+                capacity = 10,
+                participantIds = emptyList(),
+                price = 0.0)
+        Mockito.`when`(repository.getSearchedEvents(searchTerm, filters)).thenReturn(listOf(event))
 
-      // Act
-      viewModel.getSearchedEvents(searchTerm, filters)
-      advanceUntilIdle()
+        // Act
+        viewModel.getSearchedEvents(searchTerm, filters)
+        advanceUntilIdle()
 
-      // Assert
-      val result = viewModel.events.value
-      assertEquals(1, result.size)
-      assertEquals("E1", result[0].uid)
-    }
+        // Assert
+        val result = viewModel.events.value
+        assertEquals(1, result.size)
+        assertEquals("E1", result[0].uid)
+      }
 
   // 6. addEvent
   @Test

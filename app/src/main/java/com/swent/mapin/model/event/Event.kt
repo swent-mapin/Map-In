@@ -2,7 +2,6 @@ package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
-import kotlin.compareTo
 
 /**
  * @property uid event id

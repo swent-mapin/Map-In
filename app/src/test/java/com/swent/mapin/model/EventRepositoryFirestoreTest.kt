@@ -186,7 +186,6 @@ class EventRepositoryFirestoreTest {
             ownerId = "owner123",
             participantIds = listOf("user1", "user2"))
 
-    val ownerDocRef = mock<DocumentReference>()
     val ownerSnapshot = userDoc("owner123", UserProfile())
     whenever(usersCollection.document("owner123")).thenReturn(userDocRef)
     whenever(userDocRef.get()).thenReturn(taskOf(ownerSnapshot))
