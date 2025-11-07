@@ -21,7 +21,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -82,6 +86,7 @@ import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.profile.ProfileViewModel
@@ -99,6 +104,7 @@ fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
@@ -274,6 +280,17 @@ fun MapScreen(
 
     // Overlays et contrôles au-dessus de la carte
     TopGradient()
+
+    FloatingActionButton(
+        onClick = { onNavigateToChat() },
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        modifier =
+            Modifier.align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
+                .testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)) {
+          Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
+        }
 
     ScrimOverlay(
         currentHeightDp = viewModel.currentSheetHeight,

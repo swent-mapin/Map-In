@@ -10,4 +10,8 @@ sealed class Route(val route: String) {
   object Settings : Route("settings")
 
   object Friends : Route("friends")
+
+  object Chat : Route("chat")
+
+  object NewConversation : Route("newConversation")
 }
