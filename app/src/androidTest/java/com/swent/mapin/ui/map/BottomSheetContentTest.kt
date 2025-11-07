@@ -93,6 +93,52 @@ class BottomSheetContentTest {
     }
   }
 
+  @Composable
+  private fun SearchModeContent(
+      query: String = "",
+      shouldRequestFocus: Boolean = false,
+      recentItems: List<RecentItem> = emptyList(),
+      topCategories: List<String> = emptyList(),
+      searchResults: List<Event> = emptyList(),
+      onQueryChange: (String) -> Unit = {},
+      onRecentSearchClick: (String) -> Unit = {},
+      onRecentEventClick: (String) -> Unit = {},
+      onCategoryClick: (String) -> Unit = {},
+      onEventClick: (Event) -> Unit = {},
+      onSubmit: () -> Unit = {}
+  ) {
+    MaterialTheme {
+      var searchQuery by remember { mutableStateOf(query) }
+      var requestFocus by remember { mutableStateOf(shouldRequestFocus) }
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = searchQuery,
+                  shouldRequestFocus = requestFocus,
+                  onQueryChange = {
+                    searchQuery = it
+                    onQueryChange(it)
+                  },
+                  onTap = {},
+                  onFocusHandled = { requestFocus = false },
+                  onClear = {},
+                  onSubmit = onSubmit),
+          isSearchMode = true,
+          recentItems = recentItems,
+          topCategories = topCategories,
+          searchResults = searchResults,
+          onRecentSearchClick = onRecentSearchClick,
+          onRecentEventClick = onRecentEventClick,
+          onCategoryClick = onCategoryClick,
+          onEventClick = onEventClick,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel)
+    }
+  }
+
   @Test
   fun collapsedState_showsSearchBarOnly() {
     rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
@@ -651,27 +697,7 @@ class BottomSheetContentTest {
             RecentItem.Search("basketball"),
             RecentItem.Search("museum"))
 
-    rule.setContent {
-      MaterialTheme {
-        var searchQuery by remember { mutableStateOf("") }
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = searchQuery,
-                    shouldRequestFocus = false,
-                    onQueryChange = { searchQuery = it },
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            recentItems = recentSearches,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
-    }
+    rule.setContent { SearchModeContent(recentItems = recentSearches) }
 
     rule.waitForIdle()
 
@@ -690,26 +716,7 @@ class BottomSheetContentTest {
     val recentSearches = listOf(RecentItem.Search("coffee"))
 
     rule.setContent {
-      MaterialTheme {
-        var searchQuery by remember { mutableStateOf("") }
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = searchQuery,
-                    shouldRequestFocus = false,
-                    onQueryChange = { searchQuery = it },
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            recentItems = recentSearches,
-            onRecentSearchClick = { clickedQuery = it },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(recentItems = recentSearches, onRecentSearchClick = { clickedQuery = it })
     }
 
     rule.waitForIdle()
@@ -726,26 +733,7 @@ class BottomSheetContentTest {
   fun recentItemsSection_showsShowAllButton() {
     val recentSearches = listOf(RecentItem.Search("coffee"), RecentItem.Search("tea"))
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            recentItems = recentSearches,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
-    }
+    rule.setContent { SearchModeContent(recentItems = recentSearches) }
 
     rule.waitForIdle()
 
@@ -757,26 +745,7 @@ class BottomSheetContentTest {
   fun topCategoriesSection_displaysCategories() {
     val topCategories = listOf("Sports", "Music", "Art")
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            topCategories = topCategories,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
-    }
+    rule.setContent { SearchModeContent(topCategories = topCategories) }
 
     rule.waitForIdle()
 
@@ -795,25 +764,7 @@ class BottomSheetContentTest {
     val topCategories = listOf("Sports")
 
     rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            topCategories = topCategories,
-            onCategoryClick = { clickedCategory = it },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(topCategories = topCategories, onCategoryClick = { clickedCategory = it })
     }
 
     rule.waitForIdle()
@@ -832,25 +783,7 @@ class BottomSheetContentTest {
     val topCategories = listOf("Sports")
 
     rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            recentItems = recentSearches,
-            topCategories = topCategories,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(recentItems = recentSearches, topCategories = topCategories)
     }
 
     rule.waitForIdle()
@@ -864,26 +797,7 @@ class BottomSheetContentTest {
   fun searchMode_withQuery_showsResults() {
     val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "concert",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            searchResults = testEvents,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
-    }
+    rule.setContent { SearchModeContent(query = "concert", searchResults = testEvents) }
 
     rule.waitForIdle()
 
@@ -899,25 +813,8 @@ class BottomSheetContentTest {
     var submitCalled = false
 
     rule.setContent {
-      MaterialTheme {
-        var searchQuery by remember { mutableStateOf("coffee") }
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = searchQuery,
-                    shouldRequestFocus = true,
-                    onQueryChange = { searchQuery = it },
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {},
-                    onSubmit = { submitCalled = true }),
-            isSearchMode = true,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(
+          query = "coffee", shouldRequestFocus = true, onSubmit = { submitCalled = true })
     }
 
     rule.waitForIdle()
@@ -933,25 +830,8 @@ class BottomSheetContentTest {
     val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
 
     rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "test",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            searchResults = testEvents,
-            onEventClick = { clickedEvent = it },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(
+          query = "test", searchResults = testEvents, onEventClick = { clickedEvent = it })
     }
 
     rule.waitForIdle()
@@ -974,25 +854,7 @@ class BottomSheetContentTest {
     val recentItems = listOf(RecentItem.ClickedEvent(testEvent.uid, testEvent.title))
 
     rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            isSearchMode = true,
-            recentItems = recentItems,
-            onRecentEventClick = { clickedEventId = it },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
-      }
+      SearchModeContent(recentItems = recentItems, onRecentEventClick = { clickedEventId = it })
     }
 
     rule.waitForIdle()

@@ -89,6 +89,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
+// Maximum zoom level when fitting camera to search results
+private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
+
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
 @Composable
@@ -185,7 +188,7 @@ fun MapScreen(
                 coordinates = points,
                 camera = cameraOptions {},
                 coordinatesPadding = padding,
-                maxZoom = 17.0,
+                maxZoom = MAX_SEARCH_RESULTS_ZOOM,
                 offset = null)
 
         camera?.let {

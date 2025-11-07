@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
@@ -100,6 +101,11 @@ enum class BottomSheetScreen {
   MEMORY_FORM,
   ADD_EVENT
 }
+
+// Animation constants for consistent transitions
+private const val TRANSITION_FADE_IN_DURATION_MS = 250
+private const val TRANSITION_FADE_OUT_DURATION_MS = 200
+private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
 
 /**
  * Unified BottomSheetContent combining features from both originals:
@@ -220,13 +226,15 @@ fun BottomSheetContent(
             AnimatedContent(
                 targetState = showAllRecents,
                 transitionSpec = {
-                  (fadeIn(animationSpec = tween(250)) +
+                  (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
                           slideInVertically(
-                              animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                              animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
+                              initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
                       .togetherWith(
-                          fadeOut(animationSpec = tween(200)) +
+                          fadeOut(animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
                               slideOutVertically(
-                                  animationSpec = tween(200), targetOffsetY = { -it / 6 }))
+                                  animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
+                                  targetOffsetY = { -it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
                 },
                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                 label = "allRecentsPageTransition") { showAll ->
@@ -268,13 +276,18 @@ fun BottomSheetContent(
                       AnimatedContent(
                           targetState = isSearchMode,
                           transitionSpec = {
-                            (fadeIn(animationSpec = tween(250)) +
+                            (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
                                     slideInVertically(
-                                        animationSpec = tween(250), initialOffsetY = { it / 6 }))
+                                        animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
+                                        initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
                                 .togetherWith(
-                                    fadeOut(animationSpec = tween(200)) +
+                                    fadeOut(
+                                        animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
                                         slideOutVertically(
-                                            animationSpec = tween(200), targetOffsetY = { it / 6 }))
+                                            animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
+                                            targetOffsetY = {
+                                              it / TRANSITION_SLIDE_OFFSET_DIVISOR
+                                            }))
                           },
                           modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                           label = "searchModeTransition") { searchActive ->
@@ -388,7 +401,7 @@ private fun SearchResultsSection(
     onCategoryClick: (String) -> Unit = {},
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
-    userProfile: com.swent.mapin.model.UserProfile? = null,
+    userProfile: UserProfile? = null,
     modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
 ) {
