@@ -248,7 +248,6 @@ class MapScreenViewModel(
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadAllEvents()
-    loadParticipantEvents()
     loadUserProfile()
     loadRecentSearches()
 
@@ -309,7 +308,6 @@ class MapScreenViewModel(
             loadSavedEvents()
             loadSavedEventIds()
             loadJoinedEvents()
-            loadParticipantEvents()
             loadUserProfile()
           }
         }
@@ -602,20 +600,6 @@ class MapScreenViewModel(
       val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
       val locationMatch = event.location.name.lowercase().contains(normalized)
       titleMatch || descriptionMatch || tagsMatch || locationMatch
-    }
-  }
-
-  private fun loadParticipantEvents() {
-    viewModelScope.launch {
-      try {
-        val currentUserId = auth.currentUser?.uid
-        _availableEvents =
-            if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
-            else emptyList()
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Error loading events", e)
-        _availableEvents = emptyList()
-      }
     }
   }
 
