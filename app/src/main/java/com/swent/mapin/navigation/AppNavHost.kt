@@ -85,7 +85,7 @@ fun AppNavHost(
 
     composable(Route.Chat.route) {
       ChatScreen(
-          onNavigateBack = { navController.navigate(Route.Map.route) },
+          onNavigateBack = { navController.popBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
             val encodedName = Uri.encode(conversation.name)
@@ -111,7 +111,7 @@ fun AppNavHost(
       ConversationScreen(
           conversationId = conversationId,
           conversationName = name,
-          onNavigateBack = { navController.navigate(Route.Chat.route) })
+          onNavigateBack = { navController.popBackStack() })
     }
   }
 }

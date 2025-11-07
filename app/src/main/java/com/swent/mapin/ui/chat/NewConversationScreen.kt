@@ -60,7 +60,7 @@ object NewConversationScreenTestTags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewConversationScreen(
-    friends: List<FriendWithProfile> = friendList,
+    friends: List<FriendWithProfile> = LocalChatFriendsRepository.getAllFriends(),
     onNavigateBack: () -> Unit = {},
     onConfirm: (List<FriendWithProfile>) -> Unit = {}
 ) {

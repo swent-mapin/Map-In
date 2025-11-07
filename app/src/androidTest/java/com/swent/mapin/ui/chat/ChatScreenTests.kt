@@ -3,38 +3,12 @@ package com.swent.mapin.ui.chat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.UserProfile
 import org.junit.Rule
 import org.junit.Test
 
 class ChatScreenTest {
 
-  private val friend1 =
-      FriendWithProfile(
-          UserProfile(name = "Nathan", bio = "Chill guy", hobbies = listOf("Surf")),
-          friendshipStatus = FriendshipStatus.ACCEPTED,
-          "")
-  private val friend2 =
-      FriendWithProfile(
-          UserProfile(name = "Alex", bio = "Photographer", hobbies = listOf("Coffee")),
-          friendshipStatus = FriendshipStatus.ACCEPTED,
-          "")
-  private val friend3 =
-      FriendWithProfile(
-          UserProfile(name = "Zoe", bio = "Runner", hobbies = listOf("Music")),
-          friendshipStatus = FriendshipStatus.ACCEPTED,
-          "")
-
-  val friendList = listOf(friend1, friend2, friend3)
-
-  private val sampleConversations =
-      listOf(
-          Conversation("c1", "Nathan", listOf(friend1), "Hey there!", true),
-          Conversation("c2", "Alex", listOf(friend2), "Shared a photo", false),
-          Conversation("c3", "Zoe", listOf(friend3), "Let's meet up!", true))
-
+  private val sampleConversations = LocalChatFriendsRepository.getAllConversations()
   @get:Rule val rule = createComposeRule()
 
   @Test
@@ -71,8 +45,7 @@ class ChatScreenTest {
     rule
         .onNodeWithTag(ChatScreenTestTags.CHAT_EMPTY_TEXT)
         .assertIsDisplayed()
-        .assertTextEquals(
-            "No conversations yet") // Make sure this matches the actual string in your app
+        .assertTextEquals("No conversations yet")
   }
 
   @Test
@@ -87,7 +60,6 @@ class ChatScreenTest {
       }
     }
 
-    // Only conversations created by the current user appear in ChatScreen
     val createdConversations = sampleConversations.filter { it.createdByCurrentUser }
 
     createdConversations.forEach { conversation ->
@@ -96,7 +68,6 @@ class ChatScreenTest {
           .assertIsDisplayed()
     }
 
-    // Click the first conversation
     val first = createdConversations.first()
     rule.onNodeWithTag("${ChatScreenTestTags.CONVERSATION_ITEM}_${first.id}").performClick()
     assert(clickedConversationId == first.id)

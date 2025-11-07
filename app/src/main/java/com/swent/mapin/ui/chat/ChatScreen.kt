@@ -24,8 +24,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.swent.mapin.R
 import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.UserProfile
 
 object ChatScreenTestTags {
   const val CHAT_SCREEN = "Chats"
@@ -39,31 +37,6 @@ object ChatScreenTestTags {
   const val CHAT_EMPTY_TEXT = "ChatEmptyText"
   const val BACK_BUTTON = "backButton"
 }
-
-private val friend1 =
-    FriendWithProfile(
-        UserProfile(name = "Nathan", bio = "Chill guy", hobbies = listOf("Surf")),
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        "")
-private val friend2 =
-    FriendWithProfile(
-        UserProfile(name = "Alex", bio = "Photographer", hobbies = listOf("Coffee")),
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        "")
-private val friend3 =
-    FriendWithProfile(
-        UserProfile(name = "Zoe", bio = "Runner", hobbies = listOf("Music")),
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        "")
-
-val friendList = listOf(friend1, friend2, friend3)
-
-private val sampleConversations =
-    listOf(
-        Conversation("c1", "Nathan", listOf(friend1), "Hey there!", true),
-        Conversation("c2", "Alex", listOf(friend2), "Shared a photo", false),
-        Conversation("c3", "Zoe", listOf(friend3), "Let's meet up!", true))
-
 /**
  * Represents a chat conversation between one or more participants.
  *
@@ -172,7 +145,7 @@ fun ConversationItem(
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    allConversations: List<Conversation> = sampleConversations,
+    allConversations: List<Conversation> = LocalChatFriendsRepository.getAllConversations(),
     onNavigateBack: () -> Unit = {},
     onNewConversation: () -> Unit = {},
     onOpenConversation: (Conversation) -> Unit = {},
