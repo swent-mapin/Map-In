@@ -30,6 +30,7 @@ import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.camera.MapCameraController
+import com.swent.mapin.ui.map.event.MapEventStateController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import java.util.UUID
@@ -65,6 +66,19 @@ class MapScreenViewModel(
           sheetConfig = sheetConfig,
           initialState = initialSheetState,
           isProgrammaticZoom = { cameraController.isProgrammaticZoom })
+  private val eventStateController =
+      MapEventStateController(
+          eventRepository = eventRepository,
+          auth = auth,
+          scope = viewModelScope,
+          replaceEventInSearch = { event ->
+            searchStateController.replaceEvent(event, _selectedTags)
+          },
+          updateEventsState = ::applyEvents,
+          getSelectedEvent = { _selectedEvent },
+          setSelectedEvent = { _selectedEvent = it },
+          setErrorMessage = { _errorMessage = it },
+          clearErrorMessage = { _errorMessage = null })
 
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
@@ -149,24 +163,20 @@ class MapScreenViewModel(
     get() = _isSavingMemory
 
   // Event catalog for memory linking
-  private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
   val availableEvents: List<Event>
-    get() = _availableEvents
+    get() = eventStateController.availableEvents
 
   // Joined events for bottom sheet display
-  private var _joinedEvents by mutableStateOf<List<Event>>(emptyList())
   val joinedEvents: List<Event>
-    get() = _joinedEvents
+    get() = eventStateController.joinedEvents
 
   // Saved events for bottom sheet display
-  private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
   val savedEvents: List<Event>
-    get() = _savedEvents
+    get() = eventStateController.savedEvents
 
   // Saved events ids for quick lookup
-  private var _savedEventIds by mutableStateOf<Set<String>>(emptySet())
   private val savedEventIds: Set<String>
-    get() = _savedEventIds
+    get() = eventStateController.savedEventIds
 
   enum class BottomSheetTab {
     SAVED_EVENTS,
@@ -214,6 +224,7 @@ class MapScreenViewModel(
   val directionViewModel = DirectionViewModel()
 
   init {
+    eventStateController.updateBaseEvents(_events)
     // Load map style preference
     loadMapStylePreference()
 
@@ -221,12 +232,11 @@ class MapScreenViewModel(
     loadInitialSamples()
     // Preload events so the form has immediate data
     refreshEventsDataset()
-    loadJoinedEvents()
-    loadSavedEvents()
-    loadSavedEventIds()
+    eventStateController.loadSavedEvents()
+    eventStateController.loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
-    loadParticipantEvents()
+    eventStateController.loadParticipantEvents()
     loadUserProfile()
 
     registerAuthStateListener()
@@ -277,16 +287,14 @@ class MapScreenViewModel(
           val uid = firebaseAuth.currentUser?.uid
           if (uid == null) {
             // Signed out → clear user-scoped state immediately
-            _savedEvents = emptyList()
-            _savedEventIds = emptySet()
-            _joinedEvents = emptyList()
+            eventStateController.clearUserScopedState()
             _avatarUrl = null
           } else {
             // Signed in → (re)load user-scoped data
-            loadSavedEvents()
-            loadSavedEventIds()
-            loadJoinedEvents()
-            loadParticipantEvents()
+            eventStateController.loadSavedEvents()
+            eventStateController.loadSavedEventIds()
+            eventStateController.updateBaseEvents(_events)
+            eventStateController.loadParticipantEvents()
             loadUserProfile()
           }
         }
@@ -295,7 +303,7 @@ class MapScreenViewModel(
 
   /** Loads initial sample events synchronously for immediate UI responsiveness. */
   private fun loadInitialSamples() {
-    _events = searchStateController.initializeWithSamples(_selectedTags)
+    applyEvents(searchStateController.initializeWithSamples(_selectedTags))
   }
 
   /** Returns the top 5 most frequent tags across all events. */
@@ -311,10 +319,12 @@ class MapScreenViewModel(
   }
 
   private fun refreshEventsDataset() {
-    searchStateController.loadRemoteEvents(_selectedTags) { filtered ->
-      _events = filtered
-      loadJoinedEvents()
-    }
+    searchStateController.loadRemoteEvents(_selectedTags) { filtered -> applyEvents(filtered) }
+  }
+
+  private fun applyEvents(newEvents: List<Event>) {
+    _events = newEvents
+    eventStateController.updateBaseEvents(newEvents)
   }
 
   fun onZoomChange(newZoom: Float) {
@@ -354,7 +364,7 @@ class MapScreenViewModel(
     val shouldClear = transition.leftFull && !hasCommittedSearch
 
     if (resetSearch && shouldClear && !_showMemoryForm) {
-      _events = searchStateController.resetSearchState(_selectedTags)
+      applyEvents(searchStateController.resetSearchState(_selectedTags))
     }
   }
 
@@ -363,7 +373,7 @@ class MapScreenViewModel(
       searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
-    _events = searchStateController.onSearchQueryChange(query, _selectedTags)
+    applyEvents(searchStateController.onSearchQueryChange(query, _selectedTags))
   }
 
   fun onSearchTap() {
@@ -381,7 +391,7 @@ class MapScreenViewModel(
   /** Called when user submits a search (presses enter or search button). */
   fun onSearchSubmit() {
     val filteredEvents = searchStateController.onSearchSubmit(_selectedTags) ?: return
-    _events = filteredEvents
+    applyEvents(filteredEvents)
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
@@ -389,7 +399,7 @@ class MapScreenViewModel(
   /** Applies a recent search query from history. */
   fun applyRecentSearch(query: String) {
     val filteredEvents = searchStateController.applyRecentSearch(query, _selectedTags) ?: return
-    _events = filteredEvents
+    applyEvents(filteredEvents)
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
@@ -429,20 +439,6 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
-  private fun loadParticipantEvents() {
-    viewModelScope.launch {
-      try {
-        val currentUserId = auth.currentUser?.uid
-        _availableEvents =
-            if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
-            else emptyList()
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Error loading events", e)
-        _availableEvents = emptyList()
-      }
-    }
-  }
-
   /** Loads the current user's avatar URL from their profile. */
   fun loadUserProfile() {
     val uid = auth.currentUser?.uid
@@ -459,35 +455,6 @@ class MapScreenViewModel(
         _avatarUrl = null
       }
     }
-  }
-
-  private fun loadJoinedEvents() {
-    val uid =
-        auth.currentUser?.uid
-            ?: run {
-              _joinedEvents = emptyList()
-              return
-            }
-    val base = searchStateController.currentEvents().ifEmpty { _events }
-    _joinedEvents = base.filter { uid in it.participantIds }
-  }
-
-  private fun loadSavedEvents() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEvents = emptyList()
-      return
-    }
-    viewModelScope.launch { _savedEvents = eventRepository.getSavedEvents(currentUserId) }
-  }
-
-  private fun loadSavedEventIds() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEventIds = emptySet()
-      return
-    }
-    viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
   }
 
   /** Clears all recent items history. */
@@ -602,12 +569,12 @@ class MapScreenViewModel(
   }
 
   fun setEvents(newEvents: List<Event>) {
-    _events = searchStateController.setEventsFromExternalSource(newEvents, _selectedTags)
+    applyEvents(searchStateController.setEventsFromExternalSource(newEvents, _selectedTags))
   }
 
   fun toggleTagSelection(tag: String) {
     _selectedTags = if (_selectedTags.contains(tag)) _selectedTags - tag else _selectedTags + tag
-    _events = searchStateController.refreshFilters(_selectedTags)
+    applyEvents(searchStateController.refreshFilters(_selectedTags))
   }
 
   fun setBottomSheetTab(tab: BottomSheetTab) {
@@ -670,7 +637,7 @@ class MapScreenViewModel(
       // Restore focus if user was typing (editing), otherwise just show search results
       searchStateController.setFocusRequested(wasEditing)
       wasEditingBeforeEvent = false // Reset for next time
-      _events = searchStateController.refreshFilters(_selectedTags)
+      applyEvents(searchStateController.refreshFilters(_selectedTags))
       // Return to FULL if user was editing, otherwise restore previous sheet state
       // (FULL for recents, MEDIUM for search results)
       val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
@@ -722,53 +689,11 @@ class MapScreenViewModel(
   }
 
   fun joinEvent() {
-    viewModelScope.launch {
-      val event = _selectedEvent ?: return@launch
-      val currentUserId = auth.currentUser?.uid
-      if (currentUserId == null) {
-        _errorMessage = "You must be signed in to join events"
-        return@launch
-      }
-      _errorMessage = null
-      try {
-        val capacity = event.capacity
-        val currentAttendees = event.participantIds.size
-        if (capacity != null && currentAttendees >= capacity) {
-          _errorMessage = "Event is at full capacity"
-          return@launch
-        }
-        val updatedParticipantIds =
-            event.participantIds.toMutableList().apply {
-              if (!contains(currentUserId)) add(currentUserId)
-            }
-        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-        eventRepository.editEvent(event.uid, updatedEvent)
-        _selectedEvent = updatedEvent
-        _events = searchStateController.replaceEvent(updatedEvent, _selectedTags)
-        loadJoinedEvents()
-      } catch (e: Exception) {
-        _errorMessage = "Failed to join event: ${e.message}"
-      }
-    }
+    eventStateController.joinSelectedEvent()
   }
 
   fun unregisterFromEvent() {
-    val event = _selectedEvent ?: return
-    val currentUserId = auth.currentUser?.uid ?: return
-    viewModelScope.launch {
-      _errorMessage = null
-      try {
-        val updatedParticipantIds =
-            event.participantIds.toMutableList().apply { remove(currentUserId) }
-        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-        eventRepository.editEvent(event.uid, updatedEvent)
-        _selectedEvent = updatedEvent
-        _events = searchStateController.replaceEvent(updatedEvent, _selectedTags)
-        loadJoinedEvents()
-      } catch (e: Exception) {
-        _errorMessage = "Failed to unregister: ${e.message}"
-      }
-    }
+    eventStateController.unregisterSelectedEvent()
   }
 
   /**
@@ -776,43 +701,7 @@ class MapScreenViewModel(
    * generated code.
    */
   fun saveEventForLater() {
-    viewModelScope.launch {
-      val eventUid = _selectedEvent?.uid ?: return@launch
-      val currentUserId = auth.currentUser?.uid
-      if (currentUserId == null) {
-        _errorMessage = "You must be signed in to save events"
-        return@launch
-      }
-      _errorMessage = null
-
-      // Optimistic add to UI
-      val previousSavedIds = _savedEventIds
-      val previousSavedList = _savedEvents
-      _savedEventIds = _savedEventIds + eventUid
-      // try to add event object from _events or selectedEvent
-      val eventToAdd = _events.find { it.uid == eventUid } ?: _selectedEvent
-      if (eventToAdd != null && _savedEvents.none { it.uid == eventUid }) {
-        _savedEvents = listOf(eventToAdd) + _savedEvents
-      }
-      // Force recomposition of selected event sheet so button updates immediately
-      _selectedEvent = _selectedEvent?.copy()
-
-      try {
-        val success = eventRepository.saveEventForUser(currentUserId, eventUid)
-        if (success) {
-          loadSavedEvents()
-        } else {
-          // revert optimistic change
-          _savedEventIds = previousSavedIds
-          _savedEvents = previousSavedList
-          _errorMessage = "Event is already saved"
-        }
-      } catch (e: Exception) {
-        _savedEventIds = previousSavedIds
-        _savedEvents = previousSavedList
-        _errorMessage = "Failed to save event: ${e.message}"
-      }
-    }
+    eventStateController.saveSelectedEventForLater()
   }
 
   /**
@@ -820,39 +709,7 @@ class MapScreenViewModel(
    * generated code.
    */
   fun unsaveEventForLater() {
-    val eventUid = _selectedEvent?.uid ?: return
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _errorMessage = "You must be signed in to unsave events"
-      return
-    }
-
-    // Optimistic UI update: remove immediately
-    _savedEventIds = _savedEventIds - eventUid
-    _savedEvents = _savedEvents.filter { it.uid != eventUid }
-    // Force recomposition of selected event sheet so button updates immediately
-    _selectedEvent = _selectedEvent?.copy()
-
-    viewModelScope.launch {
-      _errorMessage = null
-      try {
-        val success = eventRepository.unsaveEventForUser(currentUserId, eventUid)
-        if (!success) {
-          // Do not revert optimistic change to ensure offline UX — keep UI change but notify user
-          _errorMessage = "Could not remove saved status on server; action recorded locally."
-          // attempt to reload saved events from cache to ensure consistency
-          loadSavedEvents()
-        } else {
-          // remote ok, refresh from repository/cache
-          loadSavedEvents()
-        }
-      } catch (_: Exception) {
-        // Network or unexpected error: keep optimistic UI change, notify user
-        _errorMessage = "Failed to unsave (offline). Change will sync when online."
-        // reload from cache to ensure local state is authoritative
-        loadSavedEvents()
-      }
-    }
+    eventStateController.unsaveSelectedEvent()
   }
 
   /**
