@@ -36,6 +36,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/** Represents a recent item in search history - either a search query or a clicked event. */
+sealed class RecentItem {
+  data class Search(val query: String) : RecentItem()
+
+  data class ClickedEvent(val eventId: String, val eventTitle: String) : RecentItem()
+}
+
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
@@ -88,7 +95,7 @@ class MapScreenViewModel(
     get() = _searchResults
 
   val isSearchMode: Boolean
-    get() = isSearchActivated && _bottomSheetState == BottomSheetState.FULL && !showMemoryForm
+    get() = isSearchActivated && !showMemoryForm
 
   // Map interaction tracking
   private var _mediumReferenceZoom by mutableFloatStateOf(0f)
@@ -104,6 +111,20 @@ class MapScreenViewModel(
   // Track programmatic zooms to prevent sheet collapse during camera animations
   private var isProgrammaticZoom by mutableStateOf(false)
   private var programmaticZoomJob: kotlinx.coroutines.Job? = null
+  // Tracks whether leaving full sheet should clear the current query (active editing state)
+  private var clearSearchOnExitFull by mutableStateOf(false)
+  // Saves the editing state before viewing an event, so we can restore it after closing
+  private var wasEditingBeforeEvent by mutableStateOf(false)
+
+  private fun markSearchEditing() {
+    isSearchActivated = true
+    clearSearchOnExitFull = true
+  }
+
+  private fun markSearchCommitted() {
+    isSearchActivated = true
+    clearSearchOnExitFull = false
+  }
 
   enum class MapStyle {
     STANDARD,
@@ -185,9 +206,12 @@ class MapScreenViewModel(
     get() = _showShareDialog
 
   var onCenterCamera: ((Event, Boolean) -> Unit)? = null
+  var onFitCameraToEvents: ((List<Event>) -> Unit)? = null
 
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
+  // Track the sheet state before opening event to restore it correctly
+  private var _sheetStateBeforeEvent by mutableStateOf(BottomSheetState.COLLAPSED)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -197,6 +221,11 @@ class MapScreenViewModel(
   private var _topTags by mutableStateOf<List<String>>(emptyList())
   val topTags: List<String>
     get() = _topTags
+
+  // Recent search history (searches and clicked events)
+  private var _recentItems by mutableStateOf<List<RecentItem>>(emptyList())
+  val recentItems: List<RecentItem>
+    get() = _recentItems
 
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
@@ -221,6 +250,7 @@ class MapScreenViewModel(
     loadAllEvents()
     loadParticipantEvents()
     loadUserProfile()
+    loadRecentSearches()
 
     registerAuthStateListener()
   }
@@ -378,15 +408,23 @@ class MapScreenViewModel(
     }
   }
 
-  fun setBottomSheetState(target: BottomSheetState) {
+  fun setBottomSheetState(target: BottomSheetState, resetSearch: Boolean = true) {
     if (target == BottomSheetState.FULL && _bottomSheetState != BottomSheetState.FULL) {
       _fullEntryKey += 1
     }
 
     isInMediumMode = target == BottomSheetState.MEDIUM
-    if (target != BottomSheetState.FULL &&
-        _bottomSheetState == BottomSheetState.FULL &&
-        !_showMemoryForm) {
+    val leavingFull = _bottomSheetState == BottomSheetState.FULL && target != BottomSheetState.FULL
+    val collapsingSheet = target == BottomSheetState.COLLAPSED
+
+    // When leaving FULL, decide whether to clear search:
+    // - Always clear if user was editing and has no query (just tapped search bar)
+    // - Always clear if user was editing (typing but not submitted)
+    // - Keep results only if user has submitted a search query
+    val hasCommittedSearch = !clearSearchOnExitFull && _searchQuery.isNotEmpty()
+    val shouldClear = leavingFull && !hasCommittedSearch
+
+    if (resetSearch && shouldClear && !_showMemoryForm) {
       resetSearchState()
     }
 
@@ -398,8 +436,8 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
-    isSearchActivated = true
     _searchQuery = query
+    markSearchEditing()
     applyFilters()
   }
 
@@ -408,17 +446,66 @@ class MapScreenViewModel(
       _shouldFocusSearch = true
       setBottomSheetState(BottomSheetState.FULL)
     }
-    isSearchActivated = true
+    markSearchEditing()
   }
 
   fun onSearchFocusHandled() {
     _shouldFocusSearch = false
   }
 
+  /** Called when user submits a search (presses enter or search button). */
+  fun onSearchSubmit() {
+    val trimmedQuery = _searchQuery.trim()
+    if (trimmedQuery.isEmpty()) return
+
+    if (trimmedQuery != _searchQuery) {
+      _searchQuery = trimmedQuery
+      applyFilters()
+    }
+
+    markSearchCommitted()
+    saveRecentSearch(trimmedQuery)
+    onClearFocus()
+    setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
+    focusCameraOnSearchResults()
+  }
+
+  /** Applies a recent search query from history. */
+  fun applyRecentSearch(query: String) {
+    val trimmedQuery = query.trim()
+    if (trimmedQuery.isEmpty()) return
+
+    _searchQuery = trimmedQuery
+    markSearchCommitted()
+    saveRecentSearch(trimmedQuery)
+    applyFilters()
+    onClearFocus()
+    setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
+    focusCameraOnSearchResults()
+  }
+
+  private fun focusCameraOnSearchResults() {
+    if (_searchQuery.isBlank()) return
+
+    val results = _searchResults
+    if (results.isEmpty()) return
+
+    isProgrammaticZoom = true
+    onFitCameraToEvents?.invoke(results)
+
+    programmaticZoomJob?.cancel()
+    programmaticZoomJob =
+        viewModelScope.launch {
+          kotlinx.coroutines.delay(1100)
+          isProgrammaticZoom = false
+        }
+  }
+
   private fun resetSearchState() {
     isSearchActivated = false
     _shouldFocusSearch = false
     onClearFocus()
+    clearSearchOnExitFull = false
     if (_searchQuery.isNotEmpty()) _searchQuery = ""
     applyFilters()
   }
@@ -498,7 +585,9 @@ class MapScreenViewModel(
           filterEvents(_searchQuery, tagFiltered)
         }
 
-    _searchResults = if (_searchQuery.isBlank()) tagFiltered else finalList
+    // For search results: only show results when there's an active query
+    _searchResults = if (_searchQuery.isBlank()) emptyList() else finalList
+    // For map: show filtered results or all if no query
     _events = finalList
   }
 
@@ -575,6 +664,116 @@ class MapScreenViewModel(
       return
     }
     viewModelScope.launch { _savedEventIds = eventRepository.getSavedEventIds(currentUserId) }
+  }
+
+  /** Data class for serializing recent items. */
+  private data class RecentItemData(
+      val type: String,
+      val value: String,
+      val eventTitle: String? = null
+  )
+
+  /** Loads recent items (searches and events) from SharedPreferences. */
+  private fun loadRecentSearches() {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      val itemsJson = prefs.getString("recent_items", "[]")
+      val itemsData =
+          com.google.gson.Gson().fromJson(itemsJson, Array<RecentItemData>::class.java)?.toList()
+              ?: emptyList()
+
+      _recentItems =
+          itemsData.mapNotNull { data ->
+            when (data.type) {
+              "search" -> RecentItem.Search(data.value)
+              "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
+              else -> null
+            }
+          }
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to load recent items", e)
+      _recentItems = emptyList()
+    }
+  }
+
+  /** Saves a search query to recent history. */
+  private fun saveRecentSearch(query: String) {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return
+
+    try {
+      val newItem = RecentItem.Search(trimmed)
+      val updatedList = mutableListOf<RecentItem>(newItem)
+      // Remove duplicate searches but keep events
+      _recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> if (item.query != trimmed) updatedList.add(item)
+          is RecentItem.ClickedEvent -> updatedList.add(item)
+        }
+      }
+
+      _recentItems = updatedList
+      saveRecentItemsToPrefs(updatedList)
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent search", e)
+    }
+  }
+
+  /** Saves a clicked event to recent history. */
+  private fun saveRecentEvent(eventId: String, eventTitle: String) {
+    try {
+      val newItem = RecentItem.ClickedEvent(eventId, eventTitle)
+      val updatedList = mutableListOf<RecentItem>(newItem)
+      // Remove duplicate events but keep searches
+      _recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> updatedList.add(item)
+          is RecentItem.ClickedEvent -> if (item.eventId != eventId) updatedList.add(item)
+        }
+      }
+
+      _recentItems = updatedList
+      saveRecentItemsToPrefs(updatedList)
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent event", e)
+    }
+  }
+
+  /** Persists recent items to SharedPreferences. */
+  private fun saveRecentItemsToPrefs(items: List<RecentItem>) {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      val itemsData =
+          items.map { item ->
+            when (item) {
+              is RecentItem.Search -> RecentItemData("search", item.query)
+              is RecentItem.ClickedEvent -> RecentItemData("event", item.eventId, item.eventTitle)
+            }
+          }
+      val itemsJson = com.google.gson.Gson().toJson(itemsData)
+      prefs.edit().putString("recent_items", itemsJson).apply()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to save recent items to prefs", e)
+    }
+  }
+
+  /** Clears all recent items history. */
+  fun clearRecentSearches() {
+    try {
+      val prefs =
+          applicationContext.getSharedPreferences(
+              "map_search_prefs", android.content.Context.MODE_PRIVATE)
+      prefs.edit().remove("recent_items").apply()
+      // Also remove old format for migration
+      prefs.edit().remove("recent_searches").apply()
+      _recentItems = emptyList()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to clear recent items", e)
+    }
   }
 
   fun showMemoryForm() {
@@ -700,6 +899,8 @@ class MapScreenViewModel(
 
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     viewModelScope.launch {
+      // Save current sheet state before opening event detail
+      _sheetStateBeforeEvent = _bottomSheetState
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
@@ -724,7 +925,23 @@ class MapScreenViewModel(
    */
   fun onEventClickedFromSearch(event: Event) {
     _cameFromSearch = true
+    // Save editing state before marking as committed, so we can restore it later
+    wasEditingBeforeEvent = clearSearchOnExitFull
+    saveRecentEvent(event.uid, event.title)
+    markSearchCommitted()
     onEventPinClicked(event, forceZoom = true)
+  }
+
+  /** Handles event click from recent items by finding the event and showing details. */
+  fun onRecentEventClicked(eventId: String) {
+    val event = _allEvents.find { it.uid == eventId }
+    if (event != null) {
+      _cameFromSearch = true
+      // Recent events are always committed searches (not editing)
+      wasEditingBeforeEvent = false
+      markSearchCommitted()
+      onEventPinClicked(event, forceZoom = true)
+    }
   }
 
   fun closeEventDetail() {
@@ -735,13 +952,22 @@ class MapScreenViewModel(
     directionViewModel.clearDirection()
 
     if (_cameFromSearch) {
-      // Return to search mode: full sheet with cleared search, no keyboard
+      // Return to search mode without clearing the current query
       _cameFromSearch = false
-      _searchQuery = ""
       isSearchActivated = true
-      _shouldFocusSearch = false
-      setBottomSheetState(BottomSheetState.FULL)
+      // Restore the editing state from before viewing the event
+      val wasEditing = wasEditingBeforeEvent
+      if (wasEditing) {
+        markSearchEditing()
+      }
+      // Restore focus if user was typing (editing), otherwise just show search results
+      _shouldFocusSearch = wasEditing
+      wasEditingBeforeEvent = false // Reset for next time
       applyFilters()
+      // Return to FULL if user was editing, otherwise restore previous sheet state
+      // (FULL for recents, MEDIUM for search results)
+      val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
+      setBottomSheetState(targetState, resetSearch = false)
     } else {
       setBottomSheetState(BottomSheetState.COLLAPSED)
     }

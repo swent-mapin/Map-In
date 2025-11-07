@@ -55,7 +55,7 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    // When expanded to full, the map interaction blocker should be present
+    // Verify full state by checking for map interaction blocker (only present in full state)
     rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
   }
 
