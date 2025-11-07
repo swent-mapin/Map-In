@@ -1,7 +1,10 @@
 package com.swent.mapin.model.event
 
+import com.swent.mapin.model.Location
+import com.swent.mapin.ui.map.Filters
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -120,7 +123,7 @@ class LocalEventRepositoryTest {
     val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
     val user = "userA"
     assertEquals(emptySet<String>(), repo.getSavedEventIds(user))
-    assertEquals(emptyList<com.swent.mapin.model.event.Event>(), repo.getSavedEvents(user))
+    assertEquals(emptyList<Event>(), repo.getSavedEvents(user))
   }
 
   @Test
@@ -191,5 +194,105 @@ class LocalEventRepositoryTest {
     repo.saveEventForUser(user, "event1")
 
     assertEquals(listOf("event2", "event1"), repo.getSavedEvents(user).map { it.uid })
+  }
+
+  // ==== getEvent ====
+  @Test
+  fun `getEvent returns existing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val event = repo.getEvent("event1")
+    assertEquals("event1", event.uid)
+  }
+
+  @Test(expected = NoSuchElementException::class)
+  fun `getEvent throws for missing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    repo.getEvent("missing")
+  }
+
+  // ==== addEvent ====
+  @Test
+  fun `addEvent stores event with new UID`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val newEvent = LocalEventRepository.defaultSampleEvents().first().copy(uid = "")
+    repo.addEvent(newEvent)
+    val added = repo.getAllEvents().find { it.title == newEvent.title }
+    assertNotNull(added)
+    assertTrue(added!!.uid.isNotEmpty())
+    assertTrue(added.participantIds.contains(added.ownerId))
+  }
+
+  // ==== editEvent ====
+  @Test
+  fun `editEvent updates existing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val updatedEvent = repo.getEvent("event1").copy(title = "Updated Title")
+    repo.editEvent("event1", updatedEvent)
+    val fetched = repo.getEvent("event1")
+    assertEquals("Updated Title", fetched.title)
+  }
+
+  @Test(expected = NoSuchElementException::class)
+  fun `editEvent throws for missing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val newEvent = LocalEventRepository.defaultSampleEvents().first()
+    repo.editEvent("missing", newEvent)
+  }
+
+  // ==== deleteEvent ====
+  @Test
+  fun `deleteEvent removes existing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    repo.deleteEvent("event1")
+    assertFalse(repo.getAllEvents().any { it.uid == "event1" })
+  }
+
+  @Test(expected = NoSuchElementException::class)
+  fun `deleteEvent throws for missing event`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    repo.deleteEvent("missing")
+  }
+
+  // ==== getFilteredEvents ====
+  @Test
+  fun `getFilteredEvents filters by tag`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val filters = Filters(tags = setOf("Music"))
+    val result = repo.getFilteredEvents(filters)
+    assertTrue(result.all { it.tags.contains("Music") })
+  }
+
+  @Test
+  fun `getFilteredEvents filters by maxPrice`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val filters = Filters(maxPrice = 60)
+    val result = repo.getFilteredEvents(filters)
+    assertTrue(result.all { it.price <= 60 })
+  }
+
+  @Test
+  fun `getFilteredEvents filters by friendsOnly`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val filters = Filters(friendsOnly = true)
+    val result = repo.getFilteredEvents(filters)
+    assertTrue(result.all { "user1" in it.participantIds })
+  }
+
+  @Test
+  fun `getFilteredEvents filters by place and radius`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val place = Location("EPFL Campus", 46.5197, 6.5668)
+    val filters = Filters(place = place, radiusKm = 0)
+    val result = repo.getFilteredEvents(filters)
+    assertTrue(result.isNotEmpty())
+    assertTrue(result.all { it.location.name == "EPFL Campus" })
+  }
+
+  @Test
+  fun `getSearchedEvents filters by title`() = runTest {
+    val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
+    val filters = Filters()
+    val result = repo.getSearchedEvents("Music", filters)
+    assertTrue(result.all { it.title.contains("Music") })
   }
 }
