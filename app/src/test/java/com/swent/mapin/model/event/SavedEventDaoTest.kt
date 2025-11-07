@@ -98,4 +98,68 @@ class SavedEventDaoTest {
     r = dao.getSavedForUser(userId)
     assertEquals(0, r.size)
   }
+
+  @Test
+  fun getSavedForUser_emptyDatabase_returnsEmptyList() = runTest {
+    // Act
+    val result = dao.getSavedForUser("user1")
+
+    // Assert
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun delete_nonExistentEvent_doesNotThrow() = runTest {
+    // Act
+    dao.delete("nonexistent", "user1")
+
+    // Assert
+    val result = dao.getSavedForUser("user1")
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun clearForUser_emptyDatabase_doesNotThrow() = runTest {
+    // Act
+    dao.clearForUser("user1")
+
+    // Assert
+    val result = dao.getSavedForUser("user1")
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun insert_duplicateEvent_overwritesExisting() = runTest {
+    // Arrange
+    val userId = "user1"
+    val e1 =
+        SavedEventEntity(
+            id = "e1",
+            userId = userId,
+            title = "T1",
+            description = "D1",
+            dateSeconds = 1000L,
+            dateNanoseconds = 0,
+            locationName = "L1",
+            locationLat = 1.0,
+            locationLng = 2.0,
+            tagsCsv = "tag1",
+            isPublic = true,
+            ownerId = "owner1",
+            imageUrl = null,
+            capacity = 10,
+            participantIdsCsv = "",
+            savedAtSeconds = 2000L)
+    val e1Updated = e1.copy(title = "T1 Updated", savedAtSeconds = 3000L)
+    dao.insert(e1)
+
+    // Act
+    dao.insert(e1Updated)
+    val result = dao.getSavedForUser(userId)
+
+    // Assert
+    assertEquals(1, result.size)
+    assertEquals("T1 Updated", result[0].title)
+    assertEquals(3000L, result[0].savedAtSeconds)
+  }
 }

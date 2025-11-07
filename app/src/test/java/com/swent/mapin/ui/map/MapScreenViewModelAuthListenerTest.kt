@@ -5,124 +5,116 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.UserProfileRepository
-import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.event.EventViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
+import kotlinx.coroutines.test.setMain
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-// Tests for MapScreenViewModel's FirebaseAuth.AuthStateListener behavior
-// specifically loading/clearing saved and joined events on sign-in/sign-out.
-// Assisted by AI.
+/**
+ * Unit tests for [MapScreenViewModel] focusing on FirebaseAuth.AuthStateListener behavior. Verifies
+ * that saved/joined events are cleared on sign-out and reloaded on sign-in.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapScreenViewModelAuthListenerTest {
 
   @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
-  @Mock lateinit var mockRepo: EventRepository
   @Mock lateinit var mockAuth: FirebaseAuth
   @Mock lateinit var mockUser: FirebaseUser
+  @Mock lateinit var mockEventViewModel: EventViewModel
   @Mock lateinit var mockMemoryRepo: MemoryRepository
   @Mock lateinit var mockUserProfileRepo: UserProfileRepository
-
-  // We'll store the captured listener here after setup
-  private lateinit var authListener: FirebaseAuth.AuthStateListener
+  @Mock lateinit var mockFilterViewModel: FiltersSectionViewModel
+  @Mock lateinit var mockContext: Context
 
   private lateinit var vm: MapScreenViewModel
+  private lateinit var authListener: FirebaseAuth.AuthStateListener
 
   @Before
   fun setup() {
     MockitoAnnotations.openMocks(this)
+    Dispatchers.setMain(mainDispatcherRule.dispatcher)
 
-    // Default auth stubs
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
+    whenever(mockContext.applicationContext).thenReturn(mockContext)
 
-    // Stub all suspend repository calls inside a coroutine
-    runBlocking {
-      whenever(mockRepo.getAllEvents()).thenReturn(LocalEventRepository.defaultSampleEvents())
-      whenever(mockRepo.getEventsByParticipant(any())).thenReturn(emptyList())
-      whenever(mockRepo.getSavedEventIds(any())).thenReturn(emptySet())
-      whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
-      whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
-    }
+    whenever(mockEventViewModel.events).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventViewModel.savedEvents).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventViewModel.joinedEvents).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventViewModel.savedEventIds).thenReturn(MutableStateFlow(emptySet()))
+    whenever(mockEventViewModel.availableEvents).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventViewModel.searchResults).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventViewModel.error).thenReturn(MutableStateFlow(null))
 
-    // Never touch real Firebase in tests
-    whenever(mockMemoryRepo.getNewUid()).thenReturn("test-memory-id")
+    whenever(mockFilterViewModel.filters).thenReturn(MutableStateFlow(Filters()))
 
-    // Build the ViewModel after Dispatchers.Main is provided by the rule
     vm =
         MapScreenViewModel(
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig =
                 BottomSheetConfig(
-                    collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp),
+                    collapsedHeight = 100.dp, mediumHeight = 300.dp, fullHeight = 600.dp),
             onClearFocus = {},
-            applicationContext = mock<Context>(),
+            applicationContext = mockContext,
+            eventViewModel = mockEventViewModel,
             memoryRepository = mockMemoryRepo,
-            eventRepository = mockRepo,
+            filterViewModel = mockFilterViewModel,
             auth = mockAuth,
             userProfileRepository = mockUserProfileRepo)
 
-    // Capture the auth state listener the VM registers
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()
     verify(mockAuth).addAuthStateListener(captor.capture())
     authListener = captor.firstValue
   }
 
   @Test
-  fun authListener_onSignOut_clearsSavedAndJoined() = runTest {
-    // Simulate sign-out
+  fun `on sign-out clears saved and joined events`() = runTest {
+    // Given a signed-out state
     whenever(mockAuth.currentUser).thenReturn(null)
+
+    // When the auth listener triggers
     authListener.onAuthStateChanged(mockAuth)
 
-    // Saved list cleared
-    assertEquals(emptyList<Event>(), vm.savedEvents)
-
-    // savedEventIds is private; check via helper
-    val sample = LocalEventRepository.defaultSampleEvents().first()
-    assertEquals(false, vm.isEventSaved(sample))
-
-    // Joined list cleared
-    assertEquals(0, vm.joinedEvents.size)
+    // Then saved/joined events and avatar are cleared
+    assertTrue(vm.savedEvents.isEmpty())
+    assertTrue(vm.joinedEvents.isEmpty())
+    assertNull(vm.avatarUrl)
   }
 
   @Test
-  fun authListener_onSignIn_loadsSavedAndJoined() = runTest {
-    // Provide some saved data after sign-in
-    val e = LocalEventRepository.defaultSampleEvents().first()
-
+  fun `on sign-in loads saved and joined events`() = runTest {
+    // Given a signed-in user
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn("testUserId")
 
-    // Update repo responses for this user
-    runBlocking {
-      whenever(mockRepo.getSavedEventIds("testUserId")).thenReturn(setOf(e.uid))
-      whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
-      // Joined events are derived from _allEvents + uid; not required for this assertion,
-      // but you could also stub getEventsByParticipant if your VM uses it here.
-    }
-
+    // When the auth listener triggers
     authListener.onAuthStateChanged(mockAuth)
-    advanceUntilIdle()
 
-    // Saved IDs & list reflect repo
-    assertEquals(true, vm.isEventSaved(e))
-    assertEquals(listOf(e.uid), vm.savedEvents.map { it.uid })
+    // Then EventViewModel fetch methods should be called
+    verify(mockEventViewModel).getSavedEventIds("testUserId")
+    verify(mockEventViewModel).getSavedEvents("testUserId")
+  }
+
+  @Test
+  fun `onCleared removes auth state listener`() {
+    // When VM is cleared
+    vm.onCleared()
+
+    // Then the listener should be removed from FirebaseAuth
+    verify(mockAuth).removeAuthStateListener(any())
   }
 }

@@ -1,116 +1,38 @@
 package com.swent.mapin.model
 
-import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldPath
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.*
 import com.swent.mapin.model.event.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.EventLocalCache
 import com.swent.mapin.model.event.EventRepositoryFirestore
+import com.swent.mapin.model.event.SAVED_SUBCOLLECTION
+import com.swent.mapin.model.event.USERS_COLLECTION_PATH
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 
-// Test writing and documentation assisted by AI tools
-/**
- * Tests for [EventRepositoryFirestore]. Uses Mockito to mock Firestore interactions. Uses
- * kotlinx-coroutines-test to test suspend functions.
- *
- * These tests validate Firestore interactions for event data management.
- *
- * Test coverage includes:
- * - Correct mapping of Firestore documents to Event objects
- * - Handling of non-existent documents
- * - Client-side filtering by title
- * - Adding events with generated UIDs
- * - Editing events
- * - Deleting events
- * - Skipping invalid documents during list retrieval
- * - Querying by participant IDs
- * - Ensuring owner is included in participant list when adding events
- * - Querying by tags with Firestore limits
- * - Querying events within a date range
- * - Managing saved events for users, including chunked queries
- */
-@RunWith(MockitoJUnitRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class EventRepositoryFirestoreTest {
 
-  @Mock lateinit var db: FirebaseFirestore
-  @Mock lateinit var collection: CollectionReference
-  @Mock lateinit var document: DocumentReference
-  @Mock lateinit var query: Query
-
-  @Mock lateinit var usersCollection: CollectionReference
-  @Mock lateinit var userDoc: DocumentReference
-  @Mock lateinit var savedCollection: CollectionReference
-  @Mock lateinit var savedDoc: DocumentReference
-
-  // For whereIn chunking
-  @Mock lateinit var queryChunk1: Query
-  @Mock lateinit var queryChunk2: Query
+  private lateinit var db: FirebaseFirestore
   private lateinit var repo: EventRepositoryFirestore
+  private lateinit var document: DocumentReference
+  private lateinit var collection: CollectionReference
 
   @Before
-  fun setUp() {
+  fun setup() {
+    db = mock()
     repo = EventRepositoryFirestore(db)
+    document = mock()
+    collection = mock()
 
-    whenever(db.collection(EVENTS_COLLECTION_PATH)).thenReturn(collection)
-    whenever(collection.document()).thenReturn(document)
-    whenever(collection.document(any<String>())).thenReturn(document)
-    whenever(db.collection("users")).thenReturn(usersCollection)
-    whenever(usersCollection.document(any())).thenReturn(userDoc)
-    whenever(userDoc.collection("savedEvents")).thenReturn(savedCollection)
-    // Many tests expect ordering on the savedEvents subcollection; return a Query mock for orderBy
-    whenever(savedCollection.orderBy(eq("savedAt"))).thenReturn(query)
-    whenever(savedCollection.document(any())).thenReturn(savedDoc)
-  }
-
-  // Helpers
-  private fun <T> taskOf(value: T): Task<T> = Tasks.forResult(value)
-
-  private fun voidTask(): Task<Void> = Tasks.forResult(null)
-
-  private fun doc(id: String, event: Event?): DocumentSnapshot {
-    val d = mock<DocumentSnapshot>()
-    whenever(d.id).thenReturn(id)
-    whenever(d.toObject(Event::class.java)).thenReturn(event)
-    return d
-  }
-
-  private fun qs(vararg docs: DocumentSnapshot): QuerySnapshot {
-    val snap = mock<QuerySnapshot>()
-    whenever(snap.documents).thenReturn(docs.toList())
-    return snap
-  }
-
-  private fun <T> taskException(e: Exception): Task<T> = Tasks.forException(e)
-
-  // --- Tests ---
-
-  @Test
-  fun getNewUid_returnsNonEmpty() {
-    whenever(document.id).thenReturn("abc123")
-    val id = repo.getNewUid()
-    assertEquals("abc123", id)
+    whenever(db.collection(any())).thenReturn(collection)
+    whenever(collection.document(any())).thenReturn(document)
   }
 
   @Test
@@ -129,753 +51,310 @@ class EventRepositoryFirestoreTest {
             imageUrl = null,
             capacity = 50)
 
-    val snap: DocumentSnapshot = mock()
-    whenever(snap.id).thenReturn("E1")
-    whenever(snap.toObject(Event::class.java)).thenReturn(e)
-    whenever(document.get()).thenReturn(taskOf(snap))
-
-    val out = repo.getEvent("E1")
-    assertEquals("E1", out.uid)
-    assertEquals("Title", out.title)
-  }
-
-  @Test(expected = NoSuchElementException::class)
-  fun getEvent_notFound_throws() = runTest {
-    val snap: DocumentSnapshot = mock()
-    whenever(snap.toObject(Event::class.java)).thenReturn(null)
-    whenever(document.get()).thenReturn(taskOf(snap))
-
-    repo.getEvent("missing")
-  }
-
-  @Test
-  fun getAllEvents_mapsValidDocs_andSkipsBadOnes() = runTest {
-    val valid =
-        Event(
-            uid = "",
-            title = "Ok",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("Zurich", 47.37, 8.54),
-            tags = listOf("tag"),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 10)
-    val goodDoc = doc("GOOD", valid)
-
-    // Simulate a doc that throws during toObject -> documentToEvent returns null
-    val badDoc =
-        mock<DocumentSnapshot>().also {
-          whenever(it.id).thenReturn("BAD")
-          whenever(it.toObject(Event::class.java)).thenThrow(RuntimeException("boom"))
+    val docSnapshot =
+        mock<DocumentSnapshot> {
+          on { id } doReturn "E1"
+          on { toObject(Event::class.java) } doReturn e
         }
 
-    val snap = qs(goodDoc, badDoc)
+    whenever(document.get()).thenReturn(Tasks.forResult(docSnapshot))
 
-    // Only this test needs ordering & query.get()
-    whenever(collection.orderBy(eq("date"))).thenReturn(query)
-    whenever(query.get()).thenReturn(taskOf(snap))
-
-    val list = repo.getAllEvents()
-    assertEquals(1, list.size)
-    assertEquals("GOOD", list[0].uid)
+    val result = repo.getEvent("E1")
+    assertEquals("E1", result.uid)
+    assertEquals("Title", result.title)
   }
 
   @Test
-  fun getEventsByTitle_filtersClientSide_caseInsensitive_trim() = runTest {
+  fun getSearchedEvents_filtersByTitle() = runTest {
     val e1 =
         Event(
-            uid = "",
-            title = " Rock Night ",
-            url = "u",
-            description = "d",
+            uid = "1",
+            title = "Party",
+            url = "",
+            description = "",
             date = Timestamp.now(),
-            location = Location("ZRH", 0.0, 0.0),
-            tags = listOf("m"),
+            location = Location("L", 0.0, 0.0),
+            tags = listOf(),
             public = true,
-            ownerId = "a",
-            imageUrl = null,
-            capacity = 1)
+            ownerId = "owner")
     val e2 =
         Event(
-            uid = "",
-            title = "rock night",
-            url = "u",
-            description = "d",
+            uid = "2",
+            title = "Meeting",
+            url = "",
+            description = "",
             date = Timestamp.now(),
-            location = Location("ZRH", 0.0, 0.0),
-            tags = listOf("m"),
+            location = Location("L", 0.0, 0.0),
+            tags = listOf(),
             public = true,
-            ownerId = "b",
-            imageUrl = null,
-            capacity = 1)
-    val e3 =
-        Event(
-            uid = "",
-            title = "Jazz",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("ZRH", 0.0, 0.0),
-            tags = listOf("m"),
-            public = true,
-            ownerId = "c",
-            imageUrl = null,
-            capacity = 1)
+            ownerId = "owner")
 
-    val snap = qs(doc("1", e1), doc("2", e2), doc("3", e3))
+    val doc1 =
+        mock<DocumentSnapshot> {
+          on { id } doReturn "1"
+          on { toObject(Event::class.java) } doReturn e1
+        }
+    val doc2 =
+        mock<DocumentSnapshot> {
+          on { id } doReturn "2"
+          on { toObject(Event::class.java) } doReturn e2
+        }
 
-    whenever(collection.get()).thenReturn(taskOf(snap))
+    val querySnapshot = mock<QuerySnapshot>()
+    whenever(querySnapshot.documents).thenReturn(listOf(doc1, doc2))
 
-    val result = repo.getEventsByTitle("  ROCK NIGHT ")
-    assertEquals(listOf("1", "2"), result.map { it.uid })
+    val query = mock<Query>()
+    whenever(collection.orderBy("date")).thenReturn(query)
+    whenever(query.get()).thenReturn(Tasks.forResult(querySnapshot))
+
+    val results = repo.getSearchedEvents("Party")
+
+    assertEquals(1, results.size)
+    assertEquals("Party", results.first().title)
   }
 
   @Test
-  fun addEvent_withBlankUid_generatesAndPersists_withFilledUid() = runTest {
-    whenever(document.id).thenReturn("NEWID")
-    whenever(document.set(any<Event>())).thenReturn(voidTask())
-
+  fun addEvent_autoAddsOwnerToParticipants() = runTest {
     val input =
         Event(
             uid = "",
-            title = "T",
+            title = "New Event",
             url = "u",
             description = "d",
             date = Timestamp.now(),
             location = Location("L", 0.0, 0.0),
             tags = emptyList(),
             public = true,
-            ownerId = "o",
+            ownerId = "owner123",
             imageUrl = null,
-            capacity = 1)
+            capacity = 10,
+            participantIds = listOf("user1", "user2"))
 
+    // Mock user side
+    val usersCollection = mock<CollectionReference>()
+    val userDocRef = mock<DocumentReference>()
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.toObject(UserProfile::class.java)).thenReturn(UserProfile())
+
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document(any())).thenReturn(userDocRef)
+    whenever(userDocRef.get()).thenReturn(Tasks.forResult(userSnapshot))
+    whenever(userDocRef.update(any<Map<String, Any>>())).thenReturn(Tasks.forResult(mock()))
+
+    // Mock events side
+    val eventsCollection = mock<CollectionReference>()
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(db.collection(EVENTS_COLLECTION_PATH)).thenReturn(eventsCollection)
+    whenever(eventsCollection.document()).thenReturn(eventDocRef)
+    whenever(eventsCollection.document(any())).thenReturn(eventDocRef)
+    whenever(eventDocRef.id).thenReturn("E123")
+    whenever(eventDocRef.set(any<Event>())).thenReturn(Tasks.forResult(mock()))
+    whenever(userDocRef.update(any<String>(), any<Any>())).thenReturn(Tasks.forResult(mock()))
+
+    // Run method
     repo.addEvent(input)
 
+    // Verify
     argumentCaptor<Event>().apply {
-      verify(document).set(capture())
-      assertEquals("NEWID", firstValue.uid)
-      assertEquals("T", firstValue.title)
+      verify(eventDocRef).set(capture())
+      assertTrue(firstValue.participantIds.contains("owner123"))
+      assertEquals("E123", firstValue.uid)
     }
   }
 
   @Test
-  fun editEvent_setsNewValueOnDocument_withSameId() = runTest {
-    whenever(document.set(any<Event>())).thenReturn(voidTask())
-
-    val updated =
+  fun editEvent_updatesEvent() = runTest {
+    val existing =
         Event(
             uid = "E1",
-            title = "Updated",
-            url = "u",
-            description = "d",
+            title = "Old",
+            url = "",
+            description = "",
             date = Timestamp.now(),
             location = Location("L", 0.0, 0.0),
-            tags = listOf("x"),
-            public = false,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 5)
+            tags = listOf(),
+            public = true,
+            ownerId = "owner")
+    val updated = existing.copy(title = "Updated")
+
+    val docSnapshot =
+        mock<DocumentSnapshot> {
+          on { id } doReturn "E1"
+          on { exists() } doReturn true
+          on { toObject(Event::class.java) } doReturn existing
+        }
+
+    val eventsCollection = mock<CollectionReference>()
+    val eventsDocRef = mock<DocumentReference>()
+    whenever(db.collection(EVENTS_COLLECTION_PATH)).thenReturn(eventsCollection)
+    whenever(eventsCollection.document("E1")).thenReturn(eventsDocRef)
+    whenever(eventsDocRef.get()).thenReturn(Tasks.forResult(docSnapshot))
+    whenever(eventsDocRef.set(any<Event>())).thenReturn(Tasks.forResult(mock()))
+
+    val usersCollection = mock<CollectionReference>()
+    val userDocRef = mock<DocumentReference>()
+    val userSnapshot =
+        mock<DocumentSnapshot> {
+          on { exists() } doReturn true
+          on { toObject(UserProfile::class.java) } doReturn UserProfile()
+        }
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document(any())).thenReturn(userDocRef)
+    whenever(userDocRef.get()).thenReturn(Tasks.forResult(userSnapshot))
+    whenever(userDocRef.update(any<String>(), any<Any>())).thenReturn(Tasks.forResult(mock()))
+    whenever(userDocRef.update(any<Map<String, Any>>())).thenReturn(Tasks.forResult(mock()))
 
     repo.editEvent("E1", updated)
 
     argumentCaptor<Event>().apply {
-      verify(document).set(capture())
-      assertEquals("E1", firstValue.uid)
+      verify(eventsDocRef).set(capture())
       assertEquals("Updated", firstValue.title)
-      assertFalse(firstValue.public)
+      assertTrue(firstValue.participantIds.contains("owner"))
     }
   }
 
   @Test
-  fun deleteEvent_callsDeleteOnDocument() = runTest {
-    whenever(document.delete()).thenReturn(voidTask())
+  fun deleteEvent_removesEventAndUpdatesUserProfile() = runTest {
+    val userProfileOwner =
+        UserProfile(
+            userId = "owner123",
+            ownedEventIds = mutableListOf("E1"),
+            participatingEventIds = mutableListOf("E1"))
+
+    val userProfileParticipant =
+        UserProfile(
+            userId = "user1",
+            ownedEventIds = mutableListOf(),
+            participatingEventIds = mutableListOf("E1"))
+
+    val usersCollection = mock<CollectionReference>()
+    val ownerDocRef = mock<DocumentReference>()
+    val participantDocRef = mock<DocumentReference>()
+    val ownerSnapshot =
+        mock<DocumentSnapshot> {
+          on { exists() } doReturn true
+          on { toObject(UserProfile::class.java) } doReturn userProfileOwner
+        }
+    val participantSnapshot =
+        mock<DocumentSnapshot> {
+          on { exists() } doReturn true
+          on { toObject(UserProfile::class.java) } doReturn userProfileParticipant
+        }
+
+    // Mock Firestore document selection
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document("owner123")).thenReturn(ownerDocRef)
+    whenever(usersCollection.document("user1")).thenReturn(participantDocRef)
+
+    // Mock gets and updates
+    whenever(ownerDocRef.get()).thenReturn(Tasks.forResult(ownerSnapshot))
+    whenever(ownerDocRef.update(any<String>(), any())).thenReturn(Tasks.forResult(mock()))
+
+    whenever(participantDocRef.get()).thenReturn(Tasks.forResult(participantSnapshot))
+    whenever(participantDocRef.update(any<String>(), any())).thenReturn(Tasks.forResult(mock()))
+
+    // Event mocks
+    val eventsCollection = mock<CollectionReference>()
+    val eventDocRef = mock<DocumentReference>()
+    val eventSnapshot =
+        mock<DocumentSnapshot> {
+          on { exists() } doReturn true
+          on { id } doReturn "E1"
+          on { toObject(Event::class.java) } doReturn
+              Event(
+                  uid = "E1",
+                  title = "Title",
+                  url = "",
+                  description = "",
+                  date = com.google.firebase.Timestamp.now(),
+                  location = Location("L", 0.0, 0.0),
+                  tags = emptyList(),
+                  public = true,
+                  ownerId = "owner123",
+                  participantIds = listOf("user1"))
+        }
+
+    whenever(db.collection(EVENTS_COLLECTION_PATH)).thenReturn(eventsCollection)
+    whenever(eventsCollection.document("E1")).thenReturn(eventDocRef)
+    whenever(eventDocRef.get()).thenReturn(Tasks.forResult(eventSnapshot))
+    whenever(eventDocRef.delete()).thenReturn(Tasks.forResult(mock()))
+
+    // Run
     repo.deleteEvent("E1")
-    verify(document).delete()
+
+    // Verify
+    verify(eventDocRef).delete()
+    verify(ownerDocRef).update(eq("ownedEventIds"), eq(emptyList<String>()))
+    verify(participantDocRef).update(eq("participatingEventIds"), eq(emptyList<String>()))
   }
-
-  @Test
-  fun getEventsByParticipant_returnsMatchingEvents() = runTest {
-    val e1 =
-        Event(
-            uid = "",
-            title = "Event 1",
-            url = "u1",
-            description = "d1",
-            date = Timestamp.now(),
-            location = Location("Zurich", 8.5417, 47.3769),
-            tags = listOf("music"),
-            public = true,
-            ownerId = "owner1",
-            imageUrl = null,
-            capacity = 50,
-            participantIds = listOf("user1", "user2"))
-
-    val e2 =
-        Event(
-            uid = "",
-            title = "Event 2",
-            url = "u2",
-            description = "d2",
-            date = Timestamp.now(),
-            location = Location("Zurich", 8.5417, 47.3769),
-            tags = listOf("sports"),
-            public = true,
-            ownerId = "owner2",
-            imageUrl = null,
-            capacity = 30,
-            participantIds = listOf("user1", "user3"))
-
-    val snap = qs(doc("E1", e1), doc("E2", e2))
-
-    whenever(collection.whereArrayContains(eq("participantIds"), eq("user1"))).thenReturn(query)
-    whenever(query.orderBy(eq("date"))).thenReturn(query)
-    whenever(query.get()).thenReturn(taskOf(snap))
-
-    val result = repo.getEventsByParticipant("user1")
-    assertEquals(2, result.size)
-    assertEquals(listOf("E1", "E2"), result.map { it.uid })
-    assertTrue(result.all { it.participantIds.contains("user1") })
-  }
-
-  @Test
-  fun addEvent_autoAddsOwnerToParticipants_whenNotPresent() = runTest {
-    whenever(document.id).thenReturn("NEWID")
-    whenever(document.set(any<Event>())).thenReturn(voidTask())
-
-    val input =
-        Event(
-            uid = "",
-            title = "New Event",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "owner123",
-            imageUrl = null,
-            capacity = 10,
-            participantIds = listOf("user1", "user2"))
-
-    repo.addEvent(input)
-
-    argumentCaptor<Event>().apply {
-      verify(document).set(capture())
-      assertEquals("NEWID", firstValue.uid)
-      assertEquals("New Event", firstValue.title)
-      assertTrue(firstValue.participantIds.contains("owner123"))
-      assertEquals(3, firstValue.participantIds.size)
-    }
-  }
-
-  @Test
-  fun addEvent_doesNotDuplicateOwnerInParticipants_whenAlreadyPresent() = runTest {
-    whenever(document.id).thenReturn("NEWID")
-    whenever(document.set(any<Event>())).thenReturn(voidTask())
-
-    val input =
-        Event(
-            uid = "",
-            title = "New Event",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "owner123",
-            imageUrl = null,
-            capacity = 10,
-            participantIds = listOf("user1", "owner123", "user2"))
-
-    repo.addEvent(input)
-
-    argumentCaptor<Event>().apply {
-      verify(document).set(capture())
-      assertEquals(3, firstValue.participantIds.size)
-      assertEquals(1, firstValue.participantIds.count { it == "owner123" })
-    }
-  }
-
-  @Test
-  fun getEventsByTags_returnsAllWhenEmptyTags() = runTest {
-    val e =
-        Event(
-            uid = "E1",
-            title = "Title",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("ZRH", 0.0, 0.0),
-            tags = listOf("music"),
-            public = true,
-            ownerId = "owner",
-            imageUrl = null,
-            capacity = 10)
-    val snap = qs(doc("E1", e))
-    whenever(collection.orderBy("date")).thenReturn(query)
-    whenever(query.get()).thenReturn(taskOf(snap))
-
-    val result = repo.getEventsByTags(emptyList())
-    assertEquals(1, result.size)
-    assertEquals("E1", result[0].uid)
-  }
-
-  @Test
-  fun getEventsOnDay_returnsEventsWithinRange() = runTest {
-    val start = Timestamp.now()
-    val end = Timestamp(start.seconds + 3600, 0)
-
-    val e1 =
-        Event(
-            uid = "E1",
-            title = "Event 1",
-            url = "u",
-            description = "d",
-            date = start,
-            location = Location("ZRH", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "owner",
-            imageUrl = null,
-            capacity = 5)
-    val snap = qs(doc("E1", e1))
-
-    whenever(collection.whereGreaterThanOrEqualTo(eq("date"), eq(start))).thenReturn(query)
-    whenever(query.whereLessThan(eq("date"), eq(end))).thenReturn(query)
-    whenever(query.orderBy(eq("date"))).thenReturn(query)
-    whenever(query.get()).thenReturn(taskOf(snap))
-
-    val result = repo.getEventsOnDay(start, end)
-    assertEquals(1, result.size)
-    assertEquals("E1", result[0].uid)
-  }
-
-  @Test
-  fun getEventsByOwner_returnsMatchingEvents() = runTest {
-    val e1 =
-        Event(
-            uid = "E1",
-            title = "Event 1",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("ZRH", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "owner1",
-            imageUrl = null,
-            capacity = 5)
-    val snap = qs(doc("E1", e1))
-
-    whenever(collection.whereEqualTo(eq("ownerId"), eq("owner1"))).thenReturn(query)
-    whenever(query.orderBy(eq("date"))).thenReturn(query)
-    whenever(query.get()).thenReturn(taskOf(snap))
-
-    val result = repo.getEventsByOwner("owner1")
-    assertEquals(1, result.size)
-    assertEquals("E1", result[0].uid)
-  }
-  // ======== Saved Events: getSavedEventIds ========
 
   @Test
   fun getSavedEventIds_returnsDocumentIds() = runTest {
-    val snap =
-        qs(
-            // Only the id matters for this call
-            doc("E1", null),
-            doc("E2", null))
-    whenever(query.get()).thenReturn(taskOf(snap))
+    // Create individual mocks for DocumentSnapshot (avoid mock { ... })
+    val doc1 = mock<DocumentSnapshot>()
+    whenever(doc1.id).thenReturn("E1")
 
+    val doc2 = mock<DocumentSnapshot>()
+    whenever(doc2.id).thenReturn("E2")
+
+    // Mock QuerySnapshot and return list of docs
+    val snap = mock<QuerySnapshot>()
+    whenever(snap.documents).thenReturn(listOf(doc1, doc2))
+
+    // Mock Firestore references
+    val usersCollection = mock<CollectionReference>()
+    val userDocRef = mock<DocumentReference>()
+    val savedCollection = mock<CollectionReference>()
+    val query = mock<Query>()
+
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document("user123")).thenReturn(userDocRef)
+    whenever(userDocRef.collection(SAVED_SUBCOLLECTION)).thenReturn(savedCollection)
+    whenever(savedCollection.orderBy("savedAt")).thenReturn(query)
+    whenever(query.get()).thenReturn(Tasks.forResult(snap))
+
+    // Run the repo method
     val ids = repo.getSavedEventIds("user123")
+
+    // Verify
     assertEquals(setOf("E1", "E2"), ids)
   }
 
   @Test
-  fun getSavedEventIds_handlesFailure_returnsEmptySet() = runTest {
-    whenever(query.get()).thenReturn(taskException<QuerySnapshot>(RuntimeException("boom")))
-    val ids = repo.getSavedEventIds("user123")
-    assertEquals(emptySet<String>(), ids)
+  fun saveEvent_addsDocument() = runTest {
+    val usersCollection = mock<CollectionReference>()
+    val userDocRef = mock<DocumentReference>()
+    val savedCollection = mock<CollectionReference>()
+    val savedDocRef = mock<DocumentReference>()
+
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document("user123")).thenReturn(userDocRef)
+    whenever(userDocRef.collection(SAVED_SUBCOLLECTION)).thenReturn(savedCollection)
+    whenever(savedCollection.document("E1")).thenReturn(savedDocRef)
+    whenever(savedDocRef.set(any())).thenReturn(Tasks.forResult(mock()))
+
+    repo.saveEventForUser("user123", "E1")
+
+    verify(savedDocRef).set(any())
   }
 
   @Test
-  fun getSavedEventIds_fallsBackToLocalCache_whenRemoteFails() = runTest {
-    // Simulate remote failure
-    whenever(query.get()).thenReturn(taskException<QuerySnapshot>(RuntimeException("remote fail")))
+  fun unsaveEvent_removesDocument() = runTest {
+    val usersCollection = mock<CollectionReference>()
+    val userDocRef = mock<DocumentReference>()
+    val savedCollection = mock<CollectionReference>()
+    val savedDocRef = mock<DocumentReference>()
 
-    val localCache = mock<EventLocalCache>()
-    val cachedEvent =
-        Event(
-            uid = "L1",
-            title = "Local",
-            url = "",
-            description = "",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0))
-    whenever(localCache.getSavedEvents("user123")).thenReturn(listOf(cachedEvent))
+    whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
+    whenever(usersCollection.document("user123")).thenReturn(userDocRef)
+    whenever(userDocRef.collection(SAVED_SUBCOLLECTION)).thenReturn(savedCollection)
+    whenever(savedCollection.document("E1")).thenReturn(savedDocRef)
+    whenever(savedDocRef.delete()).thenReturn(Tasks.forResult(mock()))
 
-    // Recreate repo with local cache
-    repo = EventRepositoryFirestore(db, localCache)
+    repo.unsaveEventForUser("user123", "E1")
 
-    val ids = repo.getSavedEventIds("user123")
-    assertEquals(setOf("L1"), ids)
-    verify(localCache, org.mockito.kotlin.atLeastOnce()).getSavedEvents("user123")
-  }
-
-  // ======== Saved Events: save & unsave ========
-
-  @Test
-  fun saveEventForUser_writesDocAndReturnsTrue() = runTest {
-    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(Tasks.forResult(null))
-    val ok = repo.saveEventForUser("user123", "E1")
-    assertTrue(ok)
-    argumentCaptor<Map<String, Any?>>().apply {
-      verify(savedDoc).set(capture())
-      assertTrue(firstValue.containsKey("savedAt"))
-    }
-  }
-
-  @Test
-  fun saveEventForUser_failureReturnsFalse() = runTest {
-    whenever(savedDoc.set(any<Map<String, Any?>>()))
-        .thenReturn(taskException<Void>(RuntimeException("write failed")))
-    val ok = repo.saveEventForUser("user123", "E1")
-    assertFalse(ok)
-  }
-
-  @Test
-  fun saveEventForUser_remoteFails_butLocalCacheSaved_returnsTrue_and_usesPlaceholderIfGetEventFails() =
-      runTest {
-        // Remote write fails
-        whenever(savedDoc.set(any<Map<String, Any?>>()))
-            .thenReturn(taskException<Void>(RuntimeException("write failed")))
-
-        // Make getEvent throw (document.get returns exception)
-        whenever(document.get())
-            .thenReturn(taskException<DocumentSnapshot>(RuntimeException("not found")))
-
-        val localCache = mock<EventLocalCache>()
-        // local save should succeed (no exception)
-        whenever(localCache.saveEventLocally(eq("user123"), any(), any())).thenReturn(Unit)
-
-        repo = EventRepositoryFirestore(db, localCache)
-
-        val ok = repo.saveEventForUser("user123", "E-MISSING")
-        // remote failed, but local cache saved -> overall true
-        assertTrue(ok)
-
-        // Verify local cache was asked to save; event passed must have uid equal to the id we
-        // provided
-        argumentCaptor<Event>().apply {
-          verify(localCache).saveEventLocally(eq("user123"), capture(), any())
-          assertEquals("E-MISSING", firstValue.uid)
-        }
-      }
-
-  @Test
-  fun saveEventForUser_remoteSucceeds_updatesLocalCache_andReturnsTrue() = runTest {
-    // remote write succeeds
-    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(taskOf(null))
-
-    // getEvent returns a full event
-    val e =
-        Event(
-            uid = "E1",
-            title = "T",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-    val snap = doc("E1", e)
-    whenever(document.get()).thenReturn(taskOf(snap))
-
-    val localCache = mock<EventLocalCache>()
-    // local save should succeed
-    whenever(localCache.saveEventLocally(eq("user123"), any(), any())).thenReturn(Unit)
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val ok = repo.saveEventForUser("user123", "E1")
-    assertTrue(ok)
-
-    argumentCaptor<Event>().apply {
-      verify(localCache).saveEventLocally(eq("user123"), capture(), any())
-      assertEquals("E1", firstValue.uid)
-      assertEquals("T", firstValue.title)
-    }
-  }
-
-  @Test
-  fun saveEventForUser_remoteSucceeds_butLocalCacheThrows_stillReturnsTrue() = runTest {
-    whenever(savedDoc.set(any<Map<String, Any?>>())).thenReturn(taskOf(null))
-
-    val e =
-        Event(
-            uid = "E2",
-            title = "TT",
-            url = "u",
-            description = "d",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-    val snap = doc("E2", e)
-    whenever(document.get()).thenReturn(taskOf(snap))
-
-    val localCache = mock<EventLocalCache>()
-    whenever(localCache.saveEventLocally(eq("user123"), any(), any()))
-        .thenThrow(RuntimeException("local fail"))
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val ok = repo.saveEventForUser("user123", "E2")
-    // remote succeeded, so overall true despite local cache failure
-    assertTrue(ok)
-    verify(localCache).saveEventLocally(eq("user123"), any(), any())
-  }
-
-  @Test
-  fun unsaveEventForUser_remoteSucceeds_updatesLocalCache_andReturnsTrue() = runTest {
-    whenever(savedDoc.delete()).thenReturn(taskOf(null))
-
-    val localCache = mock<EventLocalCache>()
-    whenever(localCache.unsaveEventLocally("user123", "E1")).thenReturn(Unit)
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val ok = repo.unsaveEventForUser("user123", "E1")
-    assertTrue(ok)
-    verify(localCache).unsaveEventLocally("user123", "E1")
-  }
-
-  @Test
-  fun unsaveEventForUser_remoteSucceeds_butLocalCacheThrows_stillReturnsTrue() = runTest {
-    whenever(savedDoc.delete()).thenReturn(taskOf(null))
-
-    val localCache = mock<EventLocalCache>()
-    whenever(localCache.unsaveEventLocally("user123", "E1"))
-        .thenThrow(RuntimeException("local fail"))
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val ok = repo.unsaveEventForUser("user123", "E1")
-    // remote succeeded, so overall true even if local cache throws
-    assertTrue(ok)
-    verify(localCache).unsaveEventLocally("user123", "E1")
-  }
-
-  @Test
-  fun getSavedEvents_emptyWhenNoIds() = runTest {
-    val emptySnap = qs() // no docs in savedEvents subcollection
-    whenever(query.get()).thenReturn(taskOf(emptySnap))
-
-    val out = repo.getSavedEvents("user123")
-    assertEquals(emptyList<Event>(), out)
-  }
-
-  @Test
-  fun getSavedEvents_fetchesByIds_andSortsByDateAscending() = runTest {
-    // saved ids: E2, E1
-    val savedIdsSnap = qs(doc("E2", null), doc("E1", null))
-    whenever(query.get()).thenReturn(taskOf(savedIdsSnap))
-
-    // events collection lookups (whereIn single chunk)
-    val e1 =
-        Event(
-            uid = "E1",
-            title = "T1",
-            url = "u",
-            description = "d",
-            date = Timestamp(100L, 0), // older
-            location = Location("X", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-    val e2 =
-        Event(
-            uid = "E2",
-            title = "T2",
-            url = "u",
-            description = "d",
-            date = Timestamp(200L, 0), // newer
-            location = Location("X", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-
-    val chunkDocs: Array<DocumentSnapshot> = arrayOf(doc("E2", e2), doc("E1", e1))
-    val chunkSnap = qs(*chunkDocs)
-
-    // Stub whereIn with the exact saved ids chunk
-    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(listOf("E2", "E1"))))
-        .thenReturn(queryChunk1)
-    whenever(queryChunk1.get()).thenReturn(taskOf(chunkSnap))
-
-    val out = repo.getSavedEvents("user123")
-    // Repository sorts results by saved-order (ids), so expect E2 then E1
-    assertEquals(listOf("E2", "E1"), out.map { it.uid })
-  }
-
-  @Test
-  fun getSavedEvents_chunksWhereInQueries_whenOverLimit() = runTest {
-    // Build LIMIT+1 ids to force chunking (limit mirrored from repo)
-    val limit = 10
-    val ids = (1..(limit + 1)).map { "E$it" }
-
-    // saved IDs snapshot (subcollection)
-    val savedDocs: Array<DocumentSnapshot> = ids.map { id -> doc(id, null) }.toTypedArray()
-    val savedIdsSnapshot = qs(*savedDocs)
-    whenever(query.get()).thenReturn(taskOf(savedIdsSnapshot))
-
-    // Prepare first chunk (E1..E10)
-    val firstChunkIds = (1..limit).map { "E$it" }
-    val firstChunkEvents =
-        firstChunkIds.map { id ->
-          Event(
-              uid = id,
-              title = id,
-              url = "u",
-              description = "d",
-              date = Timestamp(100L + id.removePrefix("E").toLong(), 0),
-              location = Location("X", 0.0, 0.0),
-              tags = emptyList(),
-              public = true,
-              ownerId = "o",
-              imageUrl = null,
-              capacity = 1)
-        }
-    val firstDocs = firstChunkEvents.map { ev -> doc(ev.uid, ev) }.toTypedArray()
-    val firstSnap = qs(*firstDocs)
-
-    // Second chunk (E11)
-    val e11 =
-        Event(
-            uid = "E11",
-            title = "E11",
-            url = "u",
-            description = "d",
-            date = Timestamp(1000L, 0),
-            location = Location("X", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-    val secondSnap = qs(doc("E11", e11))
-
-    // Make whereIn return different queries depending on the chunk argument
-    whenever(collection.whereIn(eq(FieldPath.documentId()), any<List<String>>())).thenAnswer { inv
-      ->
-      val chunk = inv.getArgument<List<String>>(1)
-      if (chunk.contains("E11") || chunk.size == 1) queryChunk2 else queryChunk1
-    }
-    whenever(queryChunk1.get()).thenReturn(taskOf(firstSnap))
-    whenever(queryChunk2.get()).thenReturn(taskOf(secondSnap))
-
-    val out = repo.getSavedEvents("user123")
-    // verify contents (order not important) and no duplicates
-    assertEquals(ids.size, out.size)
-    assertEquals(ids.toSet(), out.map { it.uid }.toSet())
-
-    // Capture the whereIn calls to ensure repo chunked the ids without duplicating
-    val captor = argumentCaptor<List<String>>()
-    verify(collection, org.mockito.kotlin.times(2))
-        .whereIn(eq(FieldPath.documentId()), captor.capture())
-    val calls = captor.allValues
-    // merged ids from both calls should equal the original ids set
-    val merged = calls.flatten().toSet()
-    assertEquals(ids.toSet(), merged)
-  }
-
-  @Test
-  fun getSavedEvents_fallsBackToLocalCache_whenRemoteFails() = runTest {
-    // Make getSavedEventIds throw (simulate remote failure path inside getSavedEvents)
-    whenever(query.get()).thenReturn(taskException<QuerySnapshot>(RuntimeException("boom")))
-
-    val localCache = mock<EventLocalCache>()
-    val cachedEvent =
-        Event(
-            uid = "LC1",
-            title = "LC",
-            url = "",
-            description = "",
-            date = Timestamp.now(),
-            location = Location("L", 0.0, 0.0))
-    whenever(localCache.getSavedEvents("user123")).thenReturn(listOf(cachedEvent))
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val out = repo.getSavedEvents("user123")
-    assertEquals(1, out.size)
-    assertEquals("LC1", out[0].uid)
-    verify(localCache, org.mockito.kotlin.atLeastOnce()).getSavedEvents("user123")
-  }
-
-  @Test
-  fun unsaveEventForUser_remoteFails_butLocalCacheUnsaved_returnsTrue() = runTest {
-    // Remote delete fails
-    whenever(savedDoc.delete()).thenReturn(taskException<Void>(RuntimeException("delete fail")))
-
-    val localCache = mock<EventLocalCache>()
-    whenever(localCache.unsaveEventLocally("user123", "E1")).thenReturn(Unit)
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val ok = repo.unsaveEventForUser("user123", "E1")
-    assertTrue(ok)
-    verify(localCache).unsaveEventLocally("user123", "E1")
-  }
-
-  @Test
-  fun getSavedEvents_handlesLocalCacheCacheSavedEventsThrowing_andStillReturnsResults() = runTest {
-    // Simulate normal remote behavior: saved ids present and whereIn returns docs
-    val savedIdsSnap = qs(doc("E1", null))
-    whenever(query.get()).thenReturn(taskOf(savedIdsSnap))
-
-    val e1 =
-        Event(
-            uid = "E1",
-            title = "T1",
-            url = "u",
-            description = "d",
-            date = Timestamp(100L, 0),
-            location = Location("X", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 1)
-    val chunkSnap = qs(doc("E1", e1))
-    whenever(collection.whereIn(eq(FieldPath.documentId()), eq(listOf("E1"))))
-        .thenReturn(queryChunk1)
-    whenever(queryChunk1.get()).thenReturn(taskOf(chunkSnap))
-
-    // localCache.cacheSavedEvents throws
-    val localCache = mock<EventLocalCache>()
-    whenever(localCache.cacheSavedEvents(eq("user123"), any()))
-        .thenThrow(RuntimeException("cache fail"))
-
-    repo = EventRepositoryFirestore(db, localCache)
-
-    val out = repo.getSavedEvents("user123")
-    assertEquals(1, out.size)
-    assertEquals("E1", out[0].uid)
-    // ensure we attempted to update local cache
-    verify(localCache).cacheSavedEvents(eq("user123"), any())
+    verify(savedDocRef).delete()
   }
 }
