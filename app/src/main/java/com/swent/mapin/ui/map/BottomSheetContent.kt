@@ -36,7 +36,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
@@ -89,7 +92,8 @@ data class SearchBarState(
     val onQueryChange: (String) -> Unit,
     val onTap: () -> Unit,
     val onFocusHandled: () -> Unit,
-    val onClear: () -> Unit
+    val onClear: () -> Unit,
+    val onSubmit: () -> Unit = {}
 )
 
 enum class BottomSheetScreen {
@@ -97,6 +101,11 @@ enum class BottomSheetScreen {
   MEMORY_FORM,
   ADD_EVENT
 }
+
+// Animation constants for consistent transitions
+private const val TRANSITION_FADE_IN_DURATION_MS = 250
+private const val TRANSITION_FADE_OUT_DURATION_MS = 200
+private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
 
 /**
  * Unified BottomSheetContent combining features from both originals:
@@ -141,6 +150,12 @@ fun BottomSheetContent(
     // Search results and mode
     searchResults: List<Event> = emptyList(),
     isSearchMode: Boolean = false,
+    recentItems: List<RecentItem> = emptyList(),
+    onRecentSearchClick: (String) -> Unit = {},
+    onRecentEventClick: (String) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
+    topCategories: List<String> = emptyList(),
+    onCategoryClick: (String) -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -206,104 +221,169 @@ fun BottomSheetContent(
                 onDone = onCreateEventDone)
           }
           BottomSheetScreen.MAIN_CONTENT -> {
-            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-              SearchBar(
-                  value = searchBarState.query,
-                  onValueChange = searchBarState.onQueryChange,
-                  isFull = isFull,
-                  isSearchMode = isSearchMode,
-                  onTap = searchBarState.onTap,
-                  focusRequester = focusRequester,
-                  onSearchAction = { focusManager.clearFocus() },
-                  onClear = searchBarState.onClear,
-                  avatarUrl = avatarUrl ?: userProfile.avatarUrl,
-                  onProfileClick = onProfileClick)
+            var showAllRecents by remember { mutableStateOf(false) }
 
-              Spacer(modifier = Modifier.height(24.dp))
+            AnimatedContent(
+                targetState = showAllRecents,
+                transitionSpec = {
+                  (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
+                          slideInVertically(
+                              animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
+                              initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
+                      .togetherWith(
+                          fadeOut(animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
+                              slideOutVertically(
+                                  animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
+                                  targetOffsetY = { -it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
+                },
+                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                label = "allRecentsPageTransition") { showAll ->
+                  if (showAll) {
+                    AllRecentItemsPage(
+                        recentItems = recentItems,
+                        onRecentSearchClick = { query ->
+                          showAllRecents = false
+                          onRecentSearchClick(query)
+                        },
+                        onRecentEventClick = { eventId ->
+                          showAllRecents = false
+                          onRecentEventClick(eventId)
+                        },
+                        onClearAll = {
+                          onClearRecentSearches()
+                          showAllRecents = false
+                        },
+                        onBack = { showAllRecents = false })
+                  } else {
+                    Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+                      SearchBar(
+                          value = searchBarState.query,
+                          onValueChange = searchBarState.onQueryChange,
+                          isFull = isFull,
+                          isSearchMode = isSearchMode,
+                          onTap = searchBarState.onTap,
+                          focusRequester = focusRequester,
+                          onSearchAction = {
+                            searchBarState.onSubmit()
+                            focusManager.clearFocus()
+                          },
+                          onClear = searchBarState.onClear,
+                          avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
+                          onProfileClick = onProfileClick)
 
-              AnimatedContent(
-                  targetState = isSearchMode,
-                  transitionSpec = {
-                    (fadeIn(animationSpec = tween(250)) +
-                            slideInVertically(
-                                animationSpec = tween(250), initialOffsetY = { it / 6 }))
-                        .togetherWith(
-                            fadeOut(animationSpec = tween(200)) +
-                                slideOutVertically(
-                                    animationSpec = tween(200), targetOffsetY = { it / 6 }))
-                  },
-                  modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
-                  label = "searchModeTransition") { searchActive ->
-                    if (searchActive) {
-                      SearchResultsSection(
-                          results = searchResults,
-                          query = searchBarState.query,
-                          modifier = Modifier.fillMaxSize(),
-                          onEventClick = onEventClick)
-                    } else {
-                      val contentModifier =
-                          if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
-                          else Modifier.fillMaxWidth()
+                      Spacer(modifier = Modifier.height(24.dp))
 
-                      Column(modifier = contentModifier) {
-                        QuickActionsSection(
-                            onCreateMemoryClick = onCreateMemoryClick,
-                            onCreateEventClick = onCreateEventClick,
-                            onNavigateToFriends = onNavigateToFriends)
+                      AnimatedContent(
+                          targetState = isSearchMode,
+                          transitionSpec = {
+                            (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
+                                    slideInVertically(
+                                        animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
+                                        initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
+                                .togetherWith(
+                                    fadeOut(
+                                        animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
+                                        slideOutVertically(
+                                            animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
+                                            targetOffsetY = {
+                                              it / TRANSITION_SLIDE_OFFSET_DIVISOR
+                                            }))
+                          },
+                          modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                          label = "searchModeTransition") { searchActive ->
+                            if (searchActive) {
+                              SearchResultsSection(
+                                  results = searchResults,
+                                  query = searchBarState.query,
+                                  recentItems = recentItems,
+                                  onRecentSearchClick = onRecentSearchClick,
+                                  onRecentEventClick = onRecentEventClick,
+                                  onShowAllRecents = { showAllRecents = true },
+                                  topCategories = topCategories,
+                                  onCategoryClick = onCategoryClick,
+                                  filterViewModel = filterViewModel,
+                                  locationViewModel = locationViewModel,
+                                  userProfile = userProfile,
+                                  modifier = Modifier.fillMaxSize(),
+                                  onEventClick = onEventClick)
+                            } else {
+                              val contentModifier =
+                                  if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                                  else Modifier.fillMaxWidth()
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(modifier = Modifier.height(16.dp))
+                              Column(modifier = contentModifier) {
+                                QuickActionsSection(
+                                    onCreateMemoryClick = onCreateMemoryClick,
+                                    onCreateEventClick = onCreateEventClick,
+                                    onNavigateToFriends = onNavigateToFriends)
 
-                        // Tabs
-                        TabRow(
-                            selectedTabIndex =
-                                if (selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS) 0
-                                else 1,
-                            modifier = Modifier.fillMaxWidth()) {
-                              Tab(
-                                  selected =
-                                      selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
-                                  onClick = {
-                                    onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                  },
-                                  text = { Text("Saved Events") })
-                              Tab(
-                                  selected =
-                                      selectedTab ==
-                                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
-                                  onClick = {
-                                    onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-                                  },
-                                  text = { Text("Joined Events") })
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Tabs
+                                TabRow(
+                                    selectedTabIndex =
+                                        if (selectedTab ==
+                                            MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                            0
+                                        else 1,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                      Tab(
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                          onClick = {
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                          },
+                                          text = { Text("Saved Events") })
+                                      Tab(
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                          onClick = {
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                          },
+                                          text = { Text("Joined Events") })
+                                    }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                when (selectedTab) {
+                                  MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
+                                    EventsSection(
+                                        events = savedEvents, onEventClick = onTabEventClick)
+                                  }
+                                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
+                                    EventsSection(
+                                        events = joinedEvents, onEventClick = onTabEventClick)
+                                  }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Filters section visible unless collapsed
+                                if (state != BottomSheetState.COLLAPSED) {
+                                  filterSection.Render(
+                                      Modifier.fillMaxWidth(),
+                                      filterViewModel,
+                                      locationViewModel,
+                                      userProfile)
+
+                                  Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+                              }
                             }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        when (selectedTab) {
-                          MapScreenViewModel.BottomSheetTab.SAVED_EVENTS -> {
-                            EventsSection(events = savedEvents, onEventClick = onTabEventClick)
                           }
-                          MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
-                            EventsSection(events = joinedEvents, onEventClick = onTabEventClick)
-                          }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        filterSection.Render(
-                            Modifier.fillMaxWidth(),
-                            filterViewModel,
-                            locationViewModel,
-                            userProfile)
-
-                        Spacer(modifier = Modifier.height(24.dp))
-                      }
                     }
                   }
-            }
+                }
           }
         }
       }
@@ -313,34 +393,57 @@ fun BottomSheetContent(
 private fun SearchResultsSection(
     results: List<Event>,
     query: String,
+    recentItems: List<RecentItem> = emptyList(),
+    onRecentSearchClick: (String) -> Unit = {},
+    onRecentEventClick: (String) -> Unit = {},
+    onShowAllRecents: () -> Unit = {},
+    topCategories: List<String> = emptyList(),
+    onCategoryClick: (String) -> Unit = {},
+    filterViewModel: FiltersSectionViewModel,
+    locationViewModel: LocationViewModel,
+    userProfile: UserProfile? = null,
     modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
 ) {
+  // When query is empty, show recent items and top categories instead of results
+  if (query.isBlank()) {
+    val scrollState = remember { ScrollState(0) }
+
+    Column(
+        modifier = modifier.fillMaxWidth().verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+          // Recent items section (searches and events)
+          if (recentItems.isNotEmpty()) {
+            RecentItemsSection(
+                recentItems = recentItems,
+                onRecentSearchClick = onRecentSearchClick,
+                onRecentEventClick = onRecentEventClick,
+                onShowAll = onShowAllRecents)
+            HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+          }
+
+          // Top categories section
+          if (topCategories.isNotEmpty()) {
+            TopCategoriesSection(categories = topCategories, onCategoryClick = onCategoryClick)
+          }
+
+          Spacer(modifier = Modifier.height(24.dp))
+        }
+    return
+  }
+
+  // When there's a query but no results
   if (results.isEmpty()) {
     NoResultsMessage(query = query, modifier = modifier)
     return
   }
 
-  val heading = remember(query) { buildSearchHeading(query) }
+  // Show search results
+  LazyColumn(modifier = modifier.fillMaxWidth()) {
+    items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
 
-  LazyColumn(
-      modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-          Text(
-              text = heading,
-              style = MaterialTheme.typography.titleMedium,
-              modifier = Modifier.padding(horizontal = 16.dp))
-        }
-
-        items(results) { event ->
-          SearchResultItem(
-              event = event,
-              modifier = Modifier.padding(horizontal = 16.dp),
-              onClick = { onEventClick(event) })
-        }
-
-        item { Spacer(modifier = Modifier.height(8.dp)) }
-      }
+    item { Spacer(modifier = Modifier.height(8.dp)) }
+  }
 }
 
 @VisibleForTesting internal data class NoResultsCopy(val title: String, val subtitle: String)
@@ -348,7 +451,8 @@ private fun SearchResultsSection(
 @VisibleForTesting
 internal fun buildNoResultsCopy(query: String): NoResultsCopy {
   return if (query.isBlank()) {
-    NoResultsCopy(title = "No events available yet.", subtitle = "Try again once events are added.")
+    NoResultsCopy(
+        title = "Start typing to search", subtitle = "Search for events by name or location")
   } else {
     NoResultsCopy(
         title = "No results found", subtitle = "Try a different keyword or check the spelling.")
@@ -399,18 +503,16 @@ private fun SearchResultItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  Surface(
-      shape = RoundedCornerShape(16.dp),
-      tonalElevation = 2.dp,
+  Column(
       modifier =
           modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${'$'}{event.uid}")) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Text(
                   text = event.title,
-                  style = MaterialTheme.typography.titleMedium,
-                  maxLines = 2,
+                  style = MaterialTheme.typography.bodyLarge,
+                  maxLines = 1,
                   overflow = TextOverflow.Ellipsis)
 
               if (event.location.name.isNotBlank()) {
@@ -421,24 +523,11 @@ private fun SearchResultItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
               }
-
-              val tagsSummary = event.tags.take(3).joinToString(separator = " • ")
-              if (tagsSummary.isNotBlank()) {
-                Text(
-                    text = tagsSummary,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
-              }
-
-              if (event.participantIds.isNotEmpty()) {
-                Text(
-                    text = "${'$'}{event.participantIds.size} attending",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
             }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
       }
 }
 
@@ -460,11 +549,35 @@ private fun SearchBar(
   var isFocused by remember { mutableStateOf(false) }
   val profileVisible = !isFocused && !isSearchMode
   val fieldHeight = TextFieldDefaults.MinHeight
+  var textFieldValueState by remember {
+    mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(value))
+  }
+
+  // Update text field value when value changes, preserving cursor at end
+  LaunchedEffect(value) {
+    if (textFieldValueState.text != value) {
+      textFieldValueState =
+          androidx.compose.ui.text.input.TextFieldValue(
+              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
+    }
+  }
+
+  // When focus is gained and there's text, move cursor to end
+  LaunchedEffect(isFocused, value) {
+    if (isFocused && value.isNotEmpty() && textFieldValueState.selection.start == 0) {
+      textFieldValueState =
+          androidx.compose.ui.text.input.TextFieldValue(
+              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
+    }
+  }
 
   Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     TextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = textFieldValueState,
+        onValueChange = { newValue ->
+          textFieldValueState = newValue
+          onValueChange(newValue.text)
+        },
         placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
         modifier =
             Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
@@ -477,7 +590,7 @@ private fun SearchBar(
         textStyle = MaterialTheme.typography.bodyLarge,
         trailingIcon = {
           AnimatedVisibility(
-              visible = isFocused || value.isNotEmpty(),
+              visible = isSearchMode || value.isNotEmpty(),
               enter =
                   fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)),
               exit =
@@ -633,6 +746,221 @@ private fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
           }
     }
   }
+}
+
+/** Full page showing all recent items with clear all button. */
+@VisibleForTesting
+@Composable
+internal fun AllRecentItemsPage(
+    recentItems: List<RecentItem>,
+    onRecentSearchClick: (String) -> Unit,
+    onRecentEventClick: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val scrollState = remember { ScrollState(0) }
+
+  Column(modifier = modifier.fillMaxSize().fillMaxHeight()) {
+    // Header with back button and clear all
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+      // Left: Close button
+      IconButton(
+          onClick = onBack,
+          modifier = Modifier.align(Alignment.CenterStart).testTag("backFromAllRecentsButton")) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.onSurface)
+          }
+
+      // Center: Title
+      Text(
+          text = "Recent searches",
+          style = MaterialTheme.typography.titleLarge,
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.align(Alignment.Center))
+
+      // Right: Clear All button
+      TextButton(
+          onClick = onClearAll,
+          modifier = Modifier.align(Alignment.CenterEnd).testTag("clearAllRecentButton")) {
+            Text("Clear All", style = MaterialTheme.typography.bodyMedium)
+          }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // Scrollable content
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+      recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> {
+            RecentSearchItem(
+                searchQuery = item.query, onClick = { onRecentSearchClick(item.query) })
+          }
+          is RecentItem.ClickedEvent -> {
+            RecentEventItem(
+                eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+    }
+  }
+}
+
+/** Recent items section with list of recent searches and events, plus Show All button. */
+@Composable
+private fun RecentItemsSection(
+    recentItems: List<RecentItem>,
+    onRecentSearchClick: (String) -> Unit,
+    onRecentEventClick: (String) -> Unit,
+    onShowAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = "Recents",
+              style = MaterialTheme.typography.titleMedium,
+              color = MaterialTheme.colorScheme.onSurface)
+
+          if (recentItems.isNotEmpty()) {
+            TextButton(
+                onClick = onShowAll, modifier = Modifier.testTag("showAllRecentSearchesButton")) {
+                  Text("Show all", style = MaterialTheme.typography.bodyMedium)
+                }
+          }
+        }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    recentItems.take(3).forEach { item ->
+      when (item) {
+        is RecentItem.Search -> {
+          RecentSearchItem(searchQuery = item.query, onClick = { onRecentSearchClick(item.query) })
+        }
+        is RecentItem.ClickedEvent -> {
+          RecentEventItem(
+              eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
+        }
+      }
+    }
+  }
+}
+
+/** Individual recent search item with search icon and clickable text. */
+@Composable
+private fun RecentSearchItem(
+    searchQuery: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("recentSearchItem_$searchQuery"),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = Icons.Filled.Search,
+            contentDescription = "Recent search",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Text(
+            text = searchQuery,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Individual recent event item with location icon and clickable text. */
+@Composable
+private fun RecentEventItem(
+    eventTitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("recentEventItem_$eventTitle"),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = Icons.Filled.LocationOn,
+            contentDescription = "Recent event",
+            tint = MaterialTheme.colorScheme.primary)
+
+        Text(
+            text = eventTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Top categories section with list of popular event categories for quick search. */
+@Composable
+private fun TopCategoriesSection(
+    categories: List<String>,
+    onCategoryClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Text(
+        text = "Top Categories",
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = 16.dp))
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    categories.forEach { category ->
+      TopCategoryItem(categoryName = category, onClick = { onCategoryClick(category) })
+    }
+  }
+}
+
+/** Individual category item with clickable text. */
+@Composable
+private fun TopCategoryItem(
+    categoryName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("topCategoryItem_$categoryName"),
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = categoryName,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
 }
 
 /** Get avatar icon from URL/ID, matching ProfileScreen presets. */

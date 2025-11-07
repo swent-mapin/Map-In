@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +87,10 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
+
+// Maximum zoom level when fitting camera to search results
+private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
@@ -106,6 +111,12 @@ fun MapScreen(
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val snackbarHostState = remember { SnackbarHostState() }
+  val density = LocalDensity.current
+  val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
+  val edgePaddingPx = with(density) { 24.dp.toPx() }
+  val extraBottomMarginPx = with(density) { 32.dp.toPx() }
+  val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
+  val coroutineScope = rememberCoroutineScope()
 
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
@@ -152,6 +163,38 @@ fun MapScreen(
             padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
+    }
+  }
+
+  LaunchedEffect(mapViewportState, bottomPaddingPx, edgePaddingPx) {
+    viewModel.onFitCameraToEvents = label@{ events ->
+      if (events.isEmpty()) return@label
+
+      coroutineScope.launch {
+        val points =
+            events.map { event ->
+              Point.fromLngLat(event.location.longitude, event.location.latitude)
+            }
+
+        val padding =
+            com.mapbox.maps.EdgeInsets(
+                edgePaddingPx.toDouble(),
+                edgePaddingPx.toDouble(),
+                bottomPaddingPx.toDouble(),
+                edgePaddingPx.toDouble())
+
+        val camera =
+            mapViewportState.cameraForCoordinates(
+                coordinates = points,
+                camera = cameraOptions {},
+                coordinatesPadding = padding,
+                maxZoom = MAX_SEARCH_RESULTS_ZOOM,
+                offset = null)
+
+        camera?.let {
+          mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
+        }
+      }
     }
   }
 
@@ -303,9 +346,16 @@ fun MapScreen(
                               onQueryChange = viewModel::onSearchQueryChange,
                               onTap = viewModel::onSearchTap,
                               onFocusHandled = viewModel::onSearchFocusHandled,
-                              onClear = viewModel::onClearSearch),
+                              onClear = viewModel::onClearSearch,
+                              onSubmit = viewModel::onSearchSubmit),
                       searchResults = viewModel.searchResults,
                       isSearchMode = viewModel.isSearchMode,
+                      recentItems = viewModel.recentItems,
+                      onRecentSearchClick = viewModel::applyRecentSearch,
+                      onRecentEventClick = viewModel::onRecentEventClicked,
+                      onClearRecentSearches = viewModel::clearRecentSearches,
+                      topCategories = viewModel.topTags,
+                      onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
                       onEventClick = { event ->
