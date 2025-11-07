@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.map.directions
 
 import com.mapbox.geojson.Point
 

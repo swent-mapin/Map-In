@@ -1,6 +1,8 @@
 package com.swent.mapin.ui.map
 
 import com.mapbox.geojson.Point
+import com.swent.mapin.ui.map.directions.DirectionInfo
+import com.swent.mapin.ui.map.directions.DirectionState
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test

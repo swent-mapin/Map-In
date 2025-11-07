@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.map.dialogs
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

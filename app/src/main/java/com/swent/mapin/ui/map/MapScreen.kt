@@ -77,6 +77,9 @@ import com.swent.mapin.ui.map.components.drawableToBitmap
 import com.swent.mapin.ui.map.components.findEventForAnnotation
 import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
+import com.swent.mapin.ui.map.dialogs.ShareEventDialog
+import com.swent.mapin.ui.map.directions.DirectionOverlay
+import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
 import kotlinx.coroutines.launch
 

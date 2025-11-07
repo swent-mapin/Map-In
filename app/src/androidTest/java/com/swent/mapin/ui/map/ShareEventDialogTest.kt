@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.map.dialogs.ShareEventDialog
 import java.util.Calendar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -27,6 +27,8 @@ import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.camera.MapCameraController
+import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.event.MapEventStateController
 import com.swent.mapin.ui.map.memory.MemoryActionController
 import com.swent.mapin.ui.map.search.RecentItem
