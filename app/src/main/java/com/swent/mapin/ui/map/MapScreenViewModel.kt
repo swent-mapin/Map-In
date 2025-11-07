@@ -1,7 +1,6 @@
 package com.swent.mapin.ui.map
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -13,7 +12,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
@@ -25,18 +23,16 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.event.LocalEventRepository
-import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.camera.MapCameraController
 import com.swent.mapin.ui.map.event.MapEventStateController
+import com.swent.mapin.ui.map.memory.MemoryActionController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
-import java.util.UUID
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
@@ -77,6 +73,16 @@ class MapScreenViewModel(
           updateEventsState = ::applyEvents,
           getSelectedEvent = { _selectedEvent },
           setSelectedEvent = { _selectedEvent = it },
+          setErrorMessage = { _errorMessage = it },
+          clearErrorMessage = { _errorMessage = null })
+  private val memoryActionController =
+      MemoryActionController(
+          applicationContext = applicationContext,
+          memoryRepository = memoryRepository,
+          auth = auth,
+          scope = viewModelScope,
+          onHideMemoryForm = { hideMemoryForm() },
+          onRestoreSheetState = { restorePreviousSheetState() },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
 
@@ -158,9 +164,8 @@ class MapScreenViewModel(
   val errorMessage: String?
     get() = _errorMessage
 
-  private var _isSavingMemory by mutableStateOf(false)
   val isSavingMemory: Boolean
-    get() = _isSavingMemory
+    get() = memoryActionController.isSavingMemory
 
   // Event catalog for memory linking
   val availableEvents: List<Event>
@@ -486,62 +491,7 @@ class MapScreenViewModel(
   }
 
   fun onMemorySave(formData: MemoryFormData) {
-    viewModelScope.launch {
-      _isSavingMemory = true
-      _errorMessage = null
-      try {
-        val currentUserId = auth.currentUser?.uid
-        if (currentUserId == null) {
-          _errorMessage = "You must be signed in to create a memory"
-          Log.e("MapScreenViewModel", "Cannot save memory: User not authenticated")
-          return@launch
-        }
-
-        val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
-        val memory =
-            Memory(
-                uid = memoryRepository.getNewUid(),
-                title = formData.title,
-                description = formData.description,
-                eventId = formData.eventId,
-                ownerId = currentUserId,
-                isPublic = formData.isPublic,
-                createdAt = Timestamp.now(),
-                mediaUrls = mediaUrls,
-                taggedUserIds = formData.taggedUserIds)
-        memoryRepository.addMemory(memory)
-        Log.d("MapScreenViewModel", "Memory saved successfully")
-        hideMemoryForm()
-        restorePreviousSheetState()
-      } catch (e: Exception) {
-        _errorMessage = "Failed to save memory: ${e.message ?: "Unknown error"}"
-        Log.e("MapScreenViewModel", "Error saving memory", e)
-      } finally {
-        _isSavingMemory = false
-      }
-    }
-  }
-
-  private suspend fun uploadMediaFiles(uris: List<Uri>, userId: String): List<String> {
-    if (uris.isEmpty()) return emptyList()
-    val downloadUrls = mutableListOf<String>()
-    for (uri in uris) {
-      try {
-        val extension =
-            applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
-        val filename =
-            "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
-        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
-        val fileRef = storageRef.child(filename)
-        fileRef.putFile(uri).await()
-        val downloadUrl = fileRef.downloadUrl.await().toString()
-        downloadUrls.add(downloadUrl)
-        Log.d("MapScreenViewModel", "Uploaded media file successfully")
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to upload media file", e)
-      }
-    }
-    return downloadUrls
+    memoryActionController.saveMemory(formData)
   }
 
   fun onMemoryCancel() {
