@@ -55,7 +55,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,21 +80,9 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.profile.ProfileViewModel
-
-// --- Assisted by AI ---
-/** States for search bar interactions. */
-@Stable
-data class SearchBarState(
-    val query: String,
-    val shouldRequestFocus: Boolean,
-    val onQueryChange: (String) -> Unit,
-    val onTap: () -> Unit,
-    val onFocusHandled: () -> Unit,
-    val onClear: () -> Unit,
-    val onSubmit: () -> Unit = {}
-)
 
 enum class BottomSheetScreen {
   MAIN_CONTENT,
