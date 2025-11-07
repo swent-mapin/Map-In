@@ -147,7 +147,7 @@ fun MapScreen(
   // Setup camera centering callback
   val screenHeightDpValue = screenHeightDp.value
   LaunchedEffect(Unit) {
-    viewModel.onCenterCamera = { event, forceZoom ->
+    viewModel.setCenterCameraCallback { event, forceZoom ->
       val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
       val currentZoom = mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
 
@@ -173,35 +173,36 @@ fun MapScreen(
   }
 
   LaunchedEffect(mapViewportState, bottomPaddingPx, edgePaddingPx) {
-    viewModel.onFitCameraToEvents = label@{ events ->
-      if (events.isEmpty()) return@label
+    viewModel.setFitCameraCallback(
+        label@{ events ->
+          if (events.isEmpty()) return@label
 
-      coroutineScope.launch {
-        val points =
-            events.map { event ->
-              Point.fromLngLat(event.location.longitude, event.location.latitude)
+          coroutineScope.launch {
+            val points =
+                events.map { event ->
+                  Point.fromLngLat(event.location.longitude, event.location.latitude)
+                }
+
+            val padding =
+                com.mapbox.maps.EdgeInsets(
+                    edgePaddingPx.toDouble(),
+                    edgePaddingPx.toDouble(),
+                    bottomPaddingPx.toDouble(),
+                    edgePaddingPx.toDouble())
+
+            val camera =
+                mapViewportState.cameraForCoordinates(
+                    coordinates = points,
+                    camera = cameraOptions {},
+                    coordinatesPadding = padding,
+                    maxZoom = MAX_SEARCH_RESULTS_ZOOM,
+                    offset = null)
+
+            camera?.let {
+              mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
             }
-
-        val padding =
-            com.mapbox.maps.EdgeInsets(
-                edgePaddingPx.toDouble(),
-                edgePaddingPx.toDouble(),
-                bottomPaddingPx.toDouble(),
-                edgePaddingPx.toDouble())
-
-        val camera =
-            mapViewportState.cameraForCoordinates(
-                coordinates = points,
-                camera = cameraOptions {},
-                coordinatesPadding = padding,
-                maxZoom = MAX_SEARCH_RESULTS_ZOOM,
-                offset = null)
-
-        camera?.let {
-          mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
-        }
-      }
-    }
+          }
+        })
   }
 
   ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)

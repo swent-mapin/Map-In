@@ -676,7 +676,7 @@ class MapScreenViewModelTest {
   fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
@@ -834,7 +834,7 @@ class MapScreenViewModelTest {
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
@@ -1185,7 +1185,7 @@ class MapScreenViewModelTest {
   @Test
   fun `focusCameraOnSearchResults invokes callback when results exist`() = runTest {
     var callbackInvoked = false
-    viewModel.onFitCameraToEvents = { events ->
+    viewModel.setFitCameraCallback { events ->
       callbackInvoked = true
       assertTrue(events.isNotEmpty())
     }

@@ -5,8 +5,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -30,10 +28,11 @@ import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
+import com.swent.mapin.ui.map.camera.MapCameraController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import java.util.UUID
-import kotlin.math.abs
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -54,22 +53,30 @@ class MapScreenViewModel(
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
+  private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
           applicationContext = applicationContext,
           eventRepository = eventRepository,
           onClearFocus = onClearFocus,
           scope = viewModelScope)
-  // Bottom sheet state
-  private var _bottomSheetState by mutableStateOf(initialSheetState)
+  private val bottomSheetStateController =
+      BottomSheetStateController(
+          sheetConfig = sheetConfig,
+          initialState = initialSheetState,
+          isProgrammaticZoom = { cameraController.isProgrammaticZoom })
+
   val bottomSheetState: BottomSheetState
-    get() = _bottomSheetState
+    get() = bottomSheetStateController.state
 
-  private var _fullEntryKey by mutableIntStateOf(0)
   val fullEntryKey: Int
-    get() = _fullEntryKey
+    get() = bottomSheetStateController.fullEntryKey
 
-  var currentSheetHeight by mutableStateOf(sheetConfig.collapsedHeight)
+  var currentSheetHeight: Dp
+    get() = bottomSheetStateController.currentSheetHeight
+    set(value) {
+      bottomSheetStateController.updateSheetHeight(value)
+    }
 
   val searchQuery: String
     get() = searchStateController.searchQuery
@@ -85,23 +92,20 @@ class MapScreenViewModel(
   val searchResults: List<Event>
     get() = searchStateController.searchResults
 
+  fun setCenterCameraCallback(callback: (Event, Boolean) -> Unit) {
+    cameraController.centerCameraCallback = callback
+  }
+
+  fun setFitCameraCallback(callback: (List<Event>) -> Unit) {
+    cameraController.fitCameraCallback = callback
+  }
+
   val isSearchMode: Boolean
     get() = searchStateController.isSearchActive && !showMemoryForm
 
   // Map interaction tracking
-  private var _mediumReferenceZoom by mutableFloatStateOf(0f)
-  private var isInMediumMode = false
-
-  private var _isZooming by mutableStateOf(false)
   val isZooming: Boolean
-    get() = _isZooming
-
-  private var _lastZoom by mutableFloatStateOf(0f)
-  private var hideScaleBarJob: kotlinx.coroutines.Job? = null
-
-  // Track programmatic zooms to prevent sheet collapse during camera animations
-  private var isProgrammaticZoom by mutableStateOf(false)
-  private var programmaticZoomJob: kotlinx.coroutines.Job? = null
+    get() = cameraController.isZooming
   // Tracks whether leaving full sheet should clear the current query (active editing state)
   // Saves the editing state before viewing an event, so we can restore it after closing
   private var wasEditingBeforeEvent by mutableStateOf(false)
@@ -184,9 +188,6 @@ class MapScreenViewModel(
   private var _showShareDialog by mutableStateOf(false)
   val showShareDialog: Boolean
     get() = _showShareDialog
-
-  var onCenterCamera: ((Event, Boolean) -> Unit)? = null
-  var onFitCameraToEvents: ((List<Event>) -> Unit)? = null
 
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
@@ -317,41 +318,19 @@ class MapScreenViewModel(
   }
 
   fun onZoomChange(newZoom: Float) {
-    if (abs(newZoom - _lastZoom) > 0.01f) {
-      _isZooming = true
-      _lastZoom = newZoom
-
-      hideScaleBarJob?.cancel()
-      hideScaleBarJob =
-          viewModelScope.launch {
-            kotlinx.coroutines.delay(300)
-            _isZooming = false
-          }
-    }
+    cameraController.onZoomChange(newZoom)
   }
 
   fun updateMediumReferenceZoom(zoom: Float) {
-    if (isInMediumMode) {
-      _mediumReferenceZoom = zoom
-    }
+    bottomSheetStateController.updateMediumReferenceZoom(zoom)
   }
 
   fun checkZoomInteraction(currentZoom: Float): Boolean {
-    if (!isInMediumMode) return false
-    // Don't collapse during programmatic zooms (e.g., when centering on an event)
-    if (isProgrammaticZoom) return false
-
-    val zoomDelta = abs(currentZoom - _mediumReferenceZoom)
-    return zoomDelta >= MapConstants.ZOOM_CHANGE_THRESHOLD
+    return bottomSheetStateController.shouldCollapseAfterZoom(currentZoom)
   }
 
   fun checkTouchProximityToSheet(touchY: Float, sheetTopY: Float, densityDpi: Int): Boolean {
-    if (!isInMediumMode) return false
-
-    val thresholdPx = MapConstants.SHEET_PROXIMITY_THRESHOLD_DP * densityDpi / 160f
-    val distance = abs(touchY - sheetTopY)
-
-    return distance <= thresholdPx
+    return bottomSheetStateController.isTouchNearSheetTop(touchY, sheetTopY, densityDpi)
   }
 
   fun calculateTargetState(
@@ -360,47 +339,27 @@ class MapScreenViewModel(
       mediumPx: Float,
       fullPx: Float
   ): BottomSheetState {
-    return when {
-      currentHeightPx < (collapsedPx + mediumPx) / 2f -> BottomSheetState.COLLAPSED
-      currentHeightPx < (mediumPx + fullPx) / 2f -> BottomSheetState.MEDIUM
-      else -> BottomSheetState.FULL
-    }
+    return bottomSheetStateController.calculateTargetState(
+        currentHeightPx, collapsedPx, mediumPx, fullPx)
   }
 
   fun getHeightForState(state: BottomSheetState): Dp {
-    return when (state) {
-      BottomSheetState.COLLAPSED -> sheetConfig.collapsedHeight
-      BottomSheetState.MEDIUM -> sheetConfig.mediumHeight
-      BottomSheetState.FULL -> sheetConfig.fullHeight
-    }
+    return bottomSheetStateController.getHeightForState(state)
   }
 
   fun setBottomSheetState(target: BottomSheetState, resetSearch: Boolean = true) {
-    if (target == BottomSheetState.FULL && _bottomSheetState != BottomSheetState.FULL) {
-      _fullEntryKey += 1
-    }
-
-    isInMediumMode = target == BottomSheetState.MEDIUM
-    val leavingFull = _bottomSheetState == BottomSheetState.FULL && target != BottomSheetState.FULL
-    val collapsingSheet = target == BottomSheetState.COLLAPSED
-
-    // When leaving FULL, decide whether to clear search:
-    // - Always clear if user was editing and has no query (just tapped search bar)
-    // - Always clear if user was editing (typing but not submitted)
-    // - Keep results only if user has submitted a search query
+    val transition = bottomSheetStateController.transitionTo(target)
     val hasCommittedSearch =
         !searchStateController.clearSearchOnExitFull && searchQuery.isNotEmpty()
-    val shouldClear = leavingFull && !hasCommittedSearch
+    val shouldClear = transition.leftFull && !hasCommittedSearch
 
     if (resetSearch && shouldClear && !_showMemoryForm) {
       _events = searchStateController.resetSearchState(_selectedTags)
     }
-
-    _bottomSheetState = target
   }
 
   fun onSearchQueryChange(query: String) {
-    if (_bottomSheetState != BottomSheetState.FULL) {
+    if (bottomSheetState != BottomSheetState.FULL) {
       searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
@@ -408,7 +367,7 @@ class MapScreenViewModel(
   }
 
   fun onSearchTap() {
-    if (_bottomSheetState != BottomSheetState.FULL) {
+    if (bottomSheetState != BottomSheetState.FULL) {
       searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
@@ -437,19 +396,9 @@ class MapScreenViewModel(
 
   private fun focusCameraOnSearchResults() {
     if (!searchStateController.hasQuery()) return
-
     val results = searchResults
     if (results.isEmpty()) return
-
-    isProgrammaticZoom = true
-    onFitCameraToEvents?.invoke(results)
-
-    programmaticZoomJob?.cancel()
-    programmaticZoomJob =
-        viewModelScope.launch {
-          kotlinx.coroutines.delay(1100)
-          isProgrammaticZoom = false
-        }
+    cameraController.fitToEvents(results)
   }
 
   fun onClearSearch() {
@@ -547,7 +496,7 @@ class MapScreenViewModel(
   }
 
   fun showMemoryForm() {
-    _previousSheetState = _bottomSheetState
+    _previousSheetState = bottomSheetState
     _showMemoryForm = true
     _currentBottomSheetScreen = BottomSheetScreen.MEMORY_FORM
     setBottomSheetState(BottomSheetState.FULL)
@@ -559,7 +508,7 @@ class MapScreenViewModel(
   }
 
   fun showAddEventForm() {
-    _previousSheetState = _bottomSheetState
+    _previousSheetState = bottomSheetState
     _showMemoryForm = false
     _currentBottomSheetScreen = BottomSheetScreen.ADD_EVENT
     setBottomSheetState(BottomSheetState.FULL)
@@ -640,8 +589,7 @@ class MapScreenViewModel(
 
   override fun onCleared() {
     super.onCleared()
-    hideScaleBarJob?.cancel()
-    programmaticZoomJob?.cancel()
+    cameraController.clearCallbacks()
 
     // Remove auth listener to avoid leaks
     authListener?.let { auth.removeAuthStateListener(it) }
@@ -669,22 +617,12 @@ class MapScreenViewModel(
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     viewModelScope.launch {
       // Save current sheet state before opening event detail
-      _sheetStateBeforeEvent = _bottomSheetState
+      _sheetStateBeforeEvent = bottomSheetState
       _selectedEvent = event
       _organizerName = "User ${event.ownerId.take(6)}"
       setBottomSheetState(BottomSheetState.MEDIUM)
 
-      // Mark as programmatic zoom to prevent sheet collapse during camera animation
-      isProgrammaticZoom = true
-      onCenterCamera?.invoke(event, forceZoom)
-
-      // Clear the flag after animation completes (500ms animation + 600ms buffer)
-      programmaticZoomJob?.cancel()
-      programmaticZoomJob =
-          viewModelScope.launch {
-            kotlinx.coroutines.delay(1100)
-            isProgrammaticZoom = false
-          }
+      cameraController.centerOnEvent(event, forceZoom)
     }
   }
 
