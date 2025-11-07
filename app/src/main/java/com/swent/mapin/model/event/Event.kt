@@ -2,6 +2,7 @@ package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
+import kotlin.compareTo
 
 /**
  * @property uid event id
@@ -28,5 +29,14 @@ data class Event(
     val ownerId: String = "",
     val imageUrl: String? = null,
     val capacity: Int? = null,
-    val participantIds: List<String> = emptyList()
-)
+    val participantIds: List<String> = emptyList(),
+    val price: Double = 0.0
+) {
+  fun isValidEvent(): Boolean {
+    return ownerId.isNotBlank() &&
+        title.isNotBlank() &&
+        description.isNotBlank() &&
+        date != null &&
+        location.name.isNotBlank()
+  }
+}
