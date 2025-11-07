@@ -46,7 +46,11 @@ fun ChatBottomBar(
           icon = { Icon(tab.icon, contentDescription = null) },
           label = { Text(tab.name) },
           selected = tab == selectedTab,
-          onClick = { onTabSelected(tab) },
+          onClick = {
+            if (selectedTab != tab) {
+              onTabSelected(tab)
+            }
+          },
           modifier =
               Modifier.clip(RoundedCornerShape(50.dp))
                   .testTag("${ChatScreenTestTags.CHAT_BOTTOM_BAR_ITEM}_${tab.name}"))
