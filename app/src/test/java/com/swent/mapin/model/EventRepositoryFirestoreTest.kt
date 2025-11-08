@@ -25,9 +25,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.mockConstruction
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.*
+
+// Assisted by AI
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventRepositoryFirestoreTest {
@@ -39,11 +40,13 @@ class EventRepositoryFirestoreTest {
   private lateinit var usersCollection: CollectionReference
   private lateinit var savedCollection: CollectionReference
   private lateinit var userDocRef: DocumentReference
+  private lateinit var friendRepo: FriendRequestRepository
 
   @Before
   fun setup() {
     db = mock()
-    repo = EventRepositoryFirestore(db)
+    friendRepo = mock()
+    repo = EventRepositoryFirestore(db, friendRequestRepository = friendRepo)
     document = mock()
     collection =
         mock<CollectionReference>().apply {
@@ -422,17 +425,20 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_withFriendsOnly_noFriends_returnsEmptyList() = runTest {
-    val filters =
-        Filters(
-            startDate = LocalDate.now(),
-            endDate = null,
-            place = null,
-            radiusKm = 10,
-            maxPrice = null,
-            tags = emptySet(),
-            friendsOnly = true)
+    val filters = Filters(friendsOnly = true)
 
-    // Mock FirebaseAuth and current user
+    val event = createEvent(uid = "E1", title = "Event")
+    val doc = doc("E1", event)
+    val query = mock<Query>()
+    val querySnapshot = qs(doc)
+
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(query)
+    whenever(query.orderBy("date")).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(querySnapshot))
+
+    runBlocking { whenever(friendRepo.getFriends("user123")).thenReturn(emptyList()) }
+
     mockStatic(FirebaseAuth::class.java).use { authMock ->
       val auth = mock<FirebaseAuth>()
       val user = mock<FirebaseUser>()
@@ -440,28 +446,10 @@ class EventRepositoryFirestoreTest {
       whenever(user.uid).thenReturn("user123")
       authMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(auth)
 
-      // Mock FriendRequestRepository construction
-      mockConstruction(FriendRequestRepository::class.java) { mock, _ ->
-            runBlocking { whenever(mock.getFriends("user123")).thenReturn(emptyList()) }
+      val result = repo.getFilteredEvents(filters)
 
-            // Inside the block, the mock is active
-            val repo = EventRepositoryFirestore(db)
-
-            // Mock Firestore query chain
-            val query = mock<Query>()
-            whenever(collection.orderBy("date")).thenReturn(query)
-            val emptySnapshot = mock<QuerySnapshot>()
-            whenever(query.get()).thenReturn(taskOf(emptySnapshot))
-            whenever(emptySnapshot.documents).thenReturn(emptyList())
-
-            // Execute
-            val result = runBlocking { repo.getFilteredEvents(filters) }
-
-            // Verify
-            assertTrue(result.isEmpty())
-            verify(query).whereEqualTo("participantIds", "_NO_MATCH_")
-          }
-          .use { /* construction block is automatically closed */}
+      assertTrue(result.isEmpty())
+      verify(friendRepo).getFriends("user123")
     }
   }
 

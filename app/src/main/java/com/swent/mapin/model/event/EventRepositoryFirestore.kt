@@ -16,11 +16,13 @@ import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import java.time.ZoneId
 import kotlinx.coroutines.tasks.await
 
+// Assisted by AI
 const val EVENTS_COLLECTION_PATH = "events"
 const val USERS_COLLECTION_PATH = "users"
 const val SAVED_SUBCOLLECTION = "savedEvents"
 const val FIELD_SAVED_AT = "savedAt"
-const val FIRESTORE_QUERY_LIMIT: Int = 30
+const val FIRESTORE_QUERY_LIMIT: Int = 10
+const val POPULAR_EVENT: Int = 30
 
 /**
  * Firestore implementation of [EventRepository].
@@ -30,7 +32,8 @@ const val FIRESTORE_QUERY_LIMIT: Int = 30
  */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val localCache: EventLocalCache? = null
+    private val localCache: EventLocalCache? = null,
+    private val friendRequestRepository: FriendRequestRepository = FriendRequestRepository()
 ) : EventRepository {
 
   /**
@@ -101,12 +104,19 @@ class EventRepositoryFirestore(
       if (filters.tags.isNotEmpty()) {
         val limitedTags =
             if (filters.tags.size > FIRESTORE_QUERY_LIMIT) {
+              Log.w(
+                  "EventRepositoryFirestore",
+                  "Tags exceeded limit: ${filters.tags.size}, truncating to $FIRESTORE_QUERY_LIMIT")
               filters.tags.take(FIRESTORE_QUERY_LIMIT)
             } else {
               filters.tags.toList()
             }
         query = query.whereArrayContainsAny("tags", limitedTags)
       }
+
+      // Fetch events
+      val snap = query.orderBy("date").get().await()
+      var events = snap.documents.mapNotNull { documentToEvent(it) }
 
       // Apply friendsOnly filter (placeholder until friendIds is added)
       if (filters.friendsOnly) {
@@ -115,26 +125,17 @@ class EventRepositoryFirestore(
                 ?: throw IllegalArgumentException("User must be logged in for friendsOnly filter")
 
         // Get the friend IDs (example call to repository)
-        val friendIds = FriendRequestRepository().getFriends(userId).map { it.userProfile.userId }
+        val friendIds = friendRequestRepository.getFriends(userId).map { it.userProfile.userId }
 
-        // Firestore only allows up to 10 values in array-contains-any
-        query =
-            if (friendIds.isNotEmpty()) {
-              query.whereArrayContainsAny("participantIds", friendIds.take(10))
-            } else {
-              // No friends, so no events will match (could be interesting to have at some point a
-              // default event to be sure that the Id doesn't match anything)
-              query.whereEqualTo("participantIds", "_NO_MATCH_")
-            }
+        if (friendIds.isEmpty()) {
+          return emptyList()
+        }
+        events = events.filter { event -> friendIds.contains(event.ownerId) }
       }
-
-      // Fetch events
-      val snap = query.orderBy("date").get().await()
-      var events = snap.documents.mapNotNull { documentToEvent(it) }
 
       // Apply popularOnly filter (client-side)
       if (filters.popularOnly) {
-        events = events.filter { event -> event.participantIds.size > 100 }
+        events = events.filter { event -> event.participantIds.size > POPULAR_EVENT }
       }
 
       // Apply maxPrice filter (client-side)
@@ -216,7 +217,7 @@ class EventRepositoryFirestore(
         val userSnapshot = db.collection(USERS_COLLECTION_PATH).document(userId).get().await()
         if (userSnapshot.exists()) {
           db.collection(USERS_COLLECTION_PATH)
-              .document(eventToSave.ownerId)
+              .document(userId)
               .update("participatingEventIds", FieldValue.arrayUnion(id))
               .await()
         }
@@ -240,9 +241,8 @@ class EventRepositoryFirestore(
       val snapshot = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
       if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
       val oldValue = documentToEvent(snapshot)!!
-
-      if (oldValue.ownerId != newValue.ownerId) {
-        throw IllegalArgumentException("Cannot transfer event ownership via editEvent")
+      require(oldValue.ownerId != newValue.ownerId) {
+        "Cannot transfer event ownership via editEvent"
       }
       // Ensure owner is in participantIds
       val participantIds =
@@ -468,28 +468,14 @@ class EventRepositoryFirestore(
    * @param document The Firestore DocumentSnapshot to convert.
    * @return The corresponding Event object, or null if conversion fails.
    */
-  private fun documentToEvent(document: DocumentSnapshot): Event? {
-    return try {
-      val event = document.toObject(Event::class.java) ?: return null
-
-      val locationName =
-          document.getString("location.name") ?: throw Exception("Missing location.name")
-      val latitude =
-          document.getDouble("location.latitude") ?: throw Exception("Missing location.latitude")
-      val longitude =
-          document.getDouble("location.longitude") ?: throw Exception("Missing location.longitude")
-
-      event.copy(
-          uid = document.id,
-          location =
-              event.location.copy(name = locationName, latitude = latitude, longitude = longitude),
-          capacity = (document.getLong("capacity")?.toInt()),
-          price = document.getDouble("price") ?: 0.0)
-    } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${document.id})", e)
-      null
-    }
-  }
+  private fun documentToEvent(document: DocumentSnapshot): Event? =
+      try {
+        document.toObject(Event::class.java)?.copy(uid = document.id)
+      } catch (e: Exception) {
+        Log.e(
+            "EventRepositoryFirestore", "Error converting document to Event (id=${document.id})", e)
+        null
+      }
 
   private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
     return try {
