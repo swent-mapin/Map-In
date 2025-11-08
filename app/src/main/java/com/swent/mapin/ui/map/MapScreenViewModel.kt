@@ -243,7 +243,6 @@ class MapScreenViewModel(
     eventStateController.loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
-    eventStateController.loadParticipantEvents()
     loadUserProfile()
 
     registerAuthStateListener()
@@ -301,7 +300,6 @@ class MapScreenViewModel(
             eventStateController.loadSavedEvents()
             eventStateController.loadSavedEventIds()
             eventStateController.updateBaseEvents(_events)
-            eventStateController.loadParticipantEvents()
             loadUserProfile()
           }
         }

@@ -3,7 +3,6 @@ package com.swent.mapin.ui.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.firestore
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -50,30 +49,20 @@ class EventViewModel(
     }
   }
 
-  fun getEventByTags(tags: List<String>) {
+  fun getFilteredEvents(filters: com.swent.mapin.ui.filters.Filters) {
     viewModelScope.launch {
       try {
-        _events.value = eventRepository.getEventsByTags(tags)
+        _events.value = eventRepository.getFilteredEvents(filters)
       } catch (e: Exception) {
         _error.value = e.message
       }
     }
   }
 
-  fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp) {
+  fun getSearchedEvents(title: String, filters: com.swent.mapin.ui.filters.Filters) {
     viewModelScope.launch {
       try {
-        _events.value = eventRepository.getEventsOnDay(dayStart, dayEnd)
-      } catch (e: Exception) {
-        _error.value = e.message
-      }
-    }
-  }
-
-  fun getEventsByOwner(ownerId: String) {
-    viewModelScope.launch {
-      try {
-        _events.value = eventRepository.getEventsByOwner(ownerId)
+        _events.value = eventRepository.getSearchedEvents(title, filters)
       } catch (e: Exception) {
         _error.value = e.message
       }

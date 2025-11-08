@@ -28,12 +28,16 @@ class MapEventStateController(
 
   private var baseEvents: List<Event> = emptyList()
 
-  private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
-  val availableEvents: List<Event>
-    get() = _availableEvents
-
   private var _joinedEvents by mutableStateOf<List<Event>>(emptyList())
   val joinedEvents: List<Event>
+    get() = _joinedEvents
+
+  /**
+   * Events available for memory linking. Returns joined events (events the user participates in).
+   * This replaces the old loadParticipantEvents() which used the removed getEventsByParticipant()
+   * repository method.
+   */
+  val availableEvents: List<Event>
     get() = _joinedEvents
 
   private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
@@ -47,20 +51,6 @@ class MapEventStateController(
   fun updateBaseEvents(events: List<Event>) {
     baseEvents = events
     refreshJoinedEvents()
-  }
-
-  fun loadParticipantEvents() {
-    scope.launch {
-      try {
-        val currentUserId = auth.currentUser?.uid
-        _availableEvents =
-            if (currentUserId != null) eventRepository.getEventsByParticipant(currentUserId)
-            else emptyList()
-      } catch (e: Exception) {
-        Log.e(TAG, "Error loading participant events", e)
-        _availableEvents = emptyList()
-      }
-    }
   }
 
   fun loadSavedEvents() {
