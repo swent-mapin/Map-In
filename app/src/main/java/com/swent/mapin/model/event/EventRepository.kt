@@ -1,9 +1,14 @@
 package com.swent.mapin.model.event
 
-import com.google.firebase.Timestamp
+import com.swent.mapin.ui.map.Filters
 
+/** Repository interface for managing Event items in the MapIn application. */
 interface EventRepository {
-  /** Generates and returns a new unique identifier for an Event item. */
+  /**
+   * Generates and returns a new unique identifier for an Event item.
+   *
+   * @return A unique string identifier.
+   */
   fun getNewUid(): String
 
   /**
@@ -16,53 +21,28 @@ interface EventRepository {
   /**
    * Retrieves a specific Event item by its unique identifier.
    *
-   * @param eventID The unique identifier of the Event item to retrieve.
+   * @param eventId The unique identifier of the Event item to retrieve.
    * @return The Event item with the specified identifier.
    * @throws NoSuchElementException if the Event item is not found.
    */
-  suspend fun getEvent(eventID: String): Event
+  suspend fun getEvent(eventId: String): Event
 
   /**
-   * Retrieves Event items that match any of the specified tags.
+   * Retrieves Event items based on the specified filters.
    *
-   * @param tags A list of tags to filter Event items.
-   * @return A list of Event items that match any of the specified tags or all Event items if the
-   *   list is empty.
+   * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
+   * @return A list of Event items matching the filters.
    */
-  suspend fun getEventsByTags(tags: List<String>): List<Event>
+  suspend fun getFilteredEvents(filters: Filters): List<Event>
 
   /**
-   * Retrieves Event items occurring within the specified day.
+   * Retrieves Event items whose titles match the specified search query (case-insensitive).
    *
-   * @param dayStart The start timestamp of the day.
-   * @param dayEnd The end timestamp of the day.
-   * @return A list of Event items occurring within the specified day.
+   * @param title The search query to match against event titles.
+   * @param filters Additional filtering criteria to apply.
+   * @return A list of Event items whose titles contain the query.
    */
-  suspend fun getEventsOnDay(dayStart: Timestamp, dayEnd: Timestamp): List<Event>
-
-  /**
-   * Retrieves Event items created by the specified owner.
-   *
-   * @param ownerId The unique identifier of the owner.
-   * @return A list of Event items created by the specified owner.
-   */
-  suspend fun getEventsByOwner(ownerId: String): List<Event>
-
-  /**
-   * Retrieves Event items that match the specified title.
-   *
-   * @param title The title to filter Event items.
-   * @return A list of Event items that match the specified title.
-   */
-  suspend fun getEventsByTitle(title: String): List<Event>
-
-  /**
-   * Retrieves Event items where the specified user is a participant.
-   *
-   * @param userId The unique identifier of the user.
-   * @return A list of Event items where the specified user is participating.
-   */
-  suspend fun getEventsByParticipant(userId: String): List<Event>
+  suspend fun getSearchedEvents(title: String, filters: Filters): List<Event>
 
   /**
    * Adds a new Event item to the repository.
@@ -74,32 +54,33 @@ interface EventRepository {
   /**
    * Edits an existing Event item in the repository.
    *
-   * @param eventID The unique identifier of the Event item to edit.
-   * @param newValue The new value for the Event item.
+   * @param eventId The unique identifier of the Event item to edit.
+   * @param newValue The updated Event item.
    * @throws NoSuchElementException if the Event item is not found.
    */
-  suspend fun editEvent(eventID: String, newValue: Event)
+  suspend fun editEvent(eventId: String, newValue: Event)
 
   /**
-   * Deletes a Event item from the repository.
+   * Deletes an Event item from the repository.
    *
-   * @param eventID The unique identifier of the Event item to delete.
+   * @param eventId The unique identifier of the Event item to delete.
    * @throws NoSuchElementException if the Event item is not found.
    */
-  suspend fun deleteEvent(eventID: String)
+  suspend fun deleteEvent(eventId: String)
 
   /**
    * Retrieves the IDs of Event items saved by the specified user.
    *
    * @param userId The unique identifier of the user.
-   * @return A set of IDs of Event items saved by the specified user.
+   * @return A set of IDs of Event items saved by the user.
    */
   suspend fun getSavedEventIds(userId: String): Set<String>
+
   /**
    * Retrieves Event items saved by the specified user.
    *
    * @param userId The unique identifier of the user.
-   * @return A list of Event items saved by the specified user.
+   * @return A list of Event items saved by the user.
    */
   suspend fun getSavedEvents(userId: String): List<Event>
 
@@ -108,18 +89,18 @@ interface EventRepository {
    *
    * @param userId The unique identifier of the user.
    * @param eventId The unique identifier of the Event item to save.
-   * @return True if the Event item was successfully saved for the user, false otherwise.
+   * @return True if the Event item was successfully saved, false if already saved.
    * @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun saveEventForUser(userId: String, eventId: String): Boolean
+
   /**
    * Removes a saved Event item for the specified user.
    *
    * @param userId The unique identifier of the user.
    * @param eventId The unique identifier of the Event item to remove.
-   * @return True if the Event item was successfully removed from the user's saved list, false
-   *   otherwise.
-   *     @throws NoSuchElementException if the Event item is not found.
+   * @return True if the Event item was successfully removed, false if not saved.
+   * @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
 }

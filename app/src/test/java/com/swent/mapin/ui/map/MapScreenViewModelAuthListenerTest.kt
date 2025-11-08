@@ -56,7 +56,6 @@ class MapScreenViewModelAuthListenerTest {
     // Stub all suspend repository calls inside a coroutine
     runBlocking {
       whenever(mockRepo.getAllEvents()).thenReturn(LocalEventRepository.defaultSampleEvents())
-      whenever(mockRepo.getEventsByParticipant(any())).thenReturn(emptyList())
       whenever(mockRepo.getSavedEventIds(any())).thenReturn(emptySet())
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
