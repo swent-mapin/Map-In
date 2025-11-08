@@ -11,6 +11,7 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
+import com.swent.mapin.ui.map.location.LocationManager
 import io.mockk.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

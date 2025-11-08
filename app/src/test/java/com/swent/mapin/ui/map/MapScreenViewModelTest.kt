@@ -9,6 +9,7 @@ import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.map.location.LocationManager
 import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.map.location
 
 import android.Manifest
 import android.content.Context

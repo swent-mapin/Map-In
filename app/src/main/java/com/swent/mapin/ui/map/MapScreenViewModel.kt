@@ -30,12 +30,12 @@ import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
+import com.swent.mapin.ui.map.location.LocationController
+import com.swent.mapin.ui.map.location.LocationManager
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
-import kotlin.math.abs
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -91,6 +91,11 @@ class MapScreenViewModel(
           onRestoreSheetState = { restorePreviousSheetState() },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
+  private val locationController =
+      LocationController(
+          locationManager = locationManager,
+          scope = viewModelScope,
+          setErrorMessage = { _errorMessage = it })
 
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
@@ -227,25 +232,30 @@ class MapScreenViewModel(
   val recentItems: List<RecentItem>
     get() = searchStateController.recentItems
 
-  // Location state
-  private var _currentLocation by mutableStateOf<Location?>(null)
+  // Location state - delegated to LocationController
   val currentLocation: Location?
-    get() = _currentLocation
+    get() = locationController.currentLocation
 
-  private var _hasLocationPermission by mutableStateOf(false)
   val hasLocationPermission: Boolean
-    get() = _hasLocationPermission
+    get() = locationController.hasLocationPermission
 
-  var onCenterOnUserLocation: (() -> Unit)? = null
-  var onRequestLocationPermission: (() -> Unit)? = null
+  var onCenterOnUserLocation: (() -> Unit)?
+    get() = locationController.onCenterOnUserLocation
+    set(value) {
+      locationController.onCenterOnUserLocation = value
+    }
 
-  private var _locationBearing by mutableStateOf(0f)
+  var onRequestLocationPermission: (() -> Unit)?
+    get() = locationController.onRequestLocationPermission
+    set(value) {
+      locationController.onRequestLocationPermission = value
+    }
+
   val locationBearing: Float
-    get() = _locationBearing
+    get() = locationController.locationBearing
 
-  private var _isCenteredOnUser by mutableStateOf(false)
   val isCenteredOnUser: Boolean
-    get() = _isCenteredOnUser
+    get() = locationController.isCenteredOnUser
 
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
@@ -694,92 +704,36 @@ class MapScreenViewModel(
     onEventPinClicked(event)
   }
 
-  // Location management methods
+  // Location management methods - delegated to LocationController
 
   /** Checks and updates the location permission status. */
-  fun checkLocationPermission() {
-    _hasLocationPermission = locationManager.hasLocationPermission()
-  }
+  fun checkLocationPermission() = locationController.checkLocationPermission()
 
   /** Starts listening to location updates if permission is granted. */
-  fun startLocationUpdates() {
-    if (!locationManager.hasLocationPermission()) {
-      _hasLocationPermission = false
-      return
-    }
-
-    _hasLocationPermission = true
-
-    viewModelScope.launch {
-      locationManager
-          .getLocationUpdates()
-          .catch { e ->
-            android.util.Log.e("MapScreenViewModel", "Error getting location updates", e)
-            _errorMessage = "Failed to get location updates"
-          }
-          .collect { location ->
-            _currentLocation = location
-            if (location.hasBearing()) {
-              _locationBearing = location.bearing
-            }
-          }
-    }
-  }
+  fun startLocationUpdates() = locationController.startLocationUpdates()
 
   /** Gets the last known location and optionally centers the camera on it. */
-  fun getLastKnownLocation(centerCamera: Boolean = false) {
-    locationManager.getLastKnownLocation(
-        onSuccess = { location ->
-          _currentLocation = location
-          if (location.hasBearing()) {
-            _locationBearing = location.bearing
-          }
-          if (centerCamera) {
-            onCenterOnUserLocation?.invoke()
-          }
-        },
-        onError = { android.util.Log.w("MapScreenViewModel", "Could not get last known location") })
-  }
+  fun getLastKnownLocation(centerCamera: Boolean = false) =
+      locationController.getLastKnownLocation(centerCamera)
 
   /**
    * Handles the location button click. If permission is granted, centers on user location.
    * Otherwise, requests permission.
    */
-  fun onLocationButtonClick() {
-    if (locationManager.hasLocationPermission()) {
-      _isCenteredOnUser = true
-      onCenterOnUserLocation?.invoke()
-    } else {
-      onRequestLocationPermission?.invoke()
-    }
-  }
+  fun onLocationButtonClick() = locationController.onLocationButtonClick()
 
   /**
    * Updates the centered state based on camera position. Call this when the camera moves to check
    * if still centered on user.
    */
-  fun updateCenteredState(cameraLat: Double, cameraLon: Double) {
-    val userLoc = _currentLocation
-    if (userLoc == null) {
-      _isCenteredOnUser = false
-      return
-    }
-
-    // Check if camera is close enough to user location (within ~50 meters)
-    val latDiff = abs(cameraLat - userLoc.latitude)
-    val lonDiff = abs(cameraLon - userLoc.longitude)
-    val threshold = 0.0005
-
-    _isCenteredOnUser = latDiff < threshold && lonDiff < threshold
-  }
+  fun updateCenteredState(cameraLat: Double, cameraLon: Double) =
+      locationController.updateCenteredState(cameraLat, cameraLon)
 
   /**
    * Manually marks that the camera is no longer centered on the user. Call this when user manually
    * moves the map.
    */
-  fun onMapMoved() {
-    _isCenteredOnUser = false
-  }
+  fun onMapMoved() = locationController.onMapMoved()
 }
 
 @Composable
