@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.map
 
 import android.content.Context
+import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +30,8 @@ import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
+import com.swent.mapin.ui.map.location.LocationController
+import com.swent.mapin.ui.map.location.LocationManager
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import com.swent.mapin.ui.memory.MemoryActionController
@@ -48,7 +51,8 @@ class MapScreenViewModel(
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
+    private val locationManager: LocationManager = LocationManager(applicationContext)
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -87,6 +91,11 @@ class MapScreenViewModel(
           onRestoreSheetState = { restorePreviousSheetState() },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
+  private val locationController =
+      LocationController(
+          locationManager = locationManager,
+          scope = viewModelScope,
+          setErrorMessage = { _errorMessage = it })
 
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
@@ -222,6 +231,31 @@ class MapScreenViewModel(
 
   val recentItems: List<RecentItem>
     get() = searchStateController.recentItems
+
+  // Location state - delegated to LocationController
+  val currentLocation: Location?
+    get() = locationController.currentLocation
+
+  val hasLocationPermission: Boolean
+    get() = locationController.hasLocationPermission
+
+  var onCenterOnUserLocation: (() -> Unit)?
+    get() = locationController.onCenterOnUserLocation
+    set(value) {
+      locationController.onCenterOnUserLocation = value
+    }
+
+  var onRequestLocationPermission: (() -> Unit)?
+    get() = locationController.onRequestLocationPermission
+    set(value) {
+      locationController.onRequestLocationPermission = value
+    }
+
+  val locationBearing: Float
+    get() = locationController.locationBearing
+
+  val isCenteredOnUser: Boolean
+    get() = locationController.isCenteredOnUser
 
   // User avatar URL for profile button (can be HTTP URL or preset icon ID)
   private var _avatarUrl by mutableStateOf<String?>(null)
@@ -669,6 +703,37 @@ class MapScreenViewModel(
   fun onTabEventClicked(event: Event) {
     onEventPinClicked(event)
   }
+
+  // Location management methods - delegated to LocationController
+
+  /** Checks and updates the location permission status. */
+  fun checkLocationPermission() = locationController.checkLocationPermission()
+
+  /** Starts listening to location updates if permission is granted. */
+  fun startLocationUpdates() = locationController.startLocationUpdates()
+
+  /** Gets the last known location and optionally centers the camera on it. */
+  fun getLastKnownLocation(centerCamera: Boolean = false) =
+      locationController.getLastKnownLocation(centerCamera)
+
+  /**
+   * Handles the location button click. If permission is granted, centers on user location.
+   * Otherwise, requests permission.
+   */
+  fun onLocationButtonClick() = locationController.onLocationButtonClick()
+
+  /**
+   * Updates the centered state based on camera position. Call this when the camera moves to check
+   * if still centered on user.
+   */
+  fun updateCenteredState(cameraLat: Double, cameraLon: Double) =
+      locationController.updateCenteredState(cameraLat, cameraLon)
+
+  /**
+   * Manually marks that the camera is no longer centered on the user. Call this when user manually
+   * moves the map.
+   */
+  fun onMapMoved() = locationController.onMapMoved()
 }
 
 @Composable

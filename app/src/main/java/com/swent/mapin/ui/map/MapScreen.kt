@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.map
 
+import android.Manifest
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -11,8 +14,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
+import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
@@ -54,7 +63,10 @@ import com.mapbox.maps.extension.compose.style.standard.MapboxStandardSatelliteS
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.StandardStyleState
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
+import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
+import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
+import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
@@ -83,6 +95,7 @@ import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 // Maximum zoom level when fitting camera to search results
@@ -115,6 +128,23 @@ fun MapScreen(
   val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
   val coroutineScope = rememberCoroutineScope()
 
+  // Location permission launcher
+  val locationPermissionLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val coarseLocationGranted =
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+            if (fineLocationGranted && coarseLocationGranted) {
+              viewModel.checkLocationPermission()
+              viewModel.startLocationUpdates()
+              viewModel.getLastKnownLocation(centerCamera = true)
+            } else {
+              coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
+            }
+          }
+
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
 
@@ -122,6 +152,21 @@ fun MapScreen(
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
       viewModel.clearError()
+    }
+  }
+
+  // Setup location management
+  LaunchedEffect(Unit) {
+    viewModel.checkLocationPermission()
+    if (viewModel.hasLocationPermission) {
+      viewModel.startLocationUpdates()
+      viewModel.getLastKnownLocation(centerCamera = true)
+    }
+
+    viewModel.onRequestLocationPermission = {
+      locationPermissionLauncher.launch(
+          arrayOf(
+              Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
   }
 
@@ -160,6 +205,20 @@ fun MapScreen(
             padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
+    }
+
+    // Setup location centering callback
+    viewModel.onCenterOnUserLocation = {
+      viewModel.currentLocation?.let { location ->
+        val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
+        mapViewportState.easeTo(
+            cameraOptions {
+              center(Point.fromLngLat(location.longitude, location.latitude))
+              zoom(16.0)
+              bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
+            },
+            animationOptions = animationOptions)
+      }
     }
   }
 
@@ -432,6 +491,15 @@ private fun MapboxLayer(
     isDarkTheme: Boolean,
     onEventClick: (Event) -> Unit
 ) {
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .collect { cameraState ->
+          val center = cameraState.center
+          viewModel.updateCenteredState(center.latitude(), center.longitude())
+        }
+  }
+
   MapboxMap(
       Modifier.fillMaxSize()
           .then(
@@ -450,10 +518,20 @@ private fun MapboxLayer(
       },
       compass = {
         Box(modifier = Modifier.fillMaxSize()) {
-          Compass(
+          Column(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp))
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp),
+              horizontalAlignment = Alignment.End) {
+                AnimatedVisibility(
+                    visible = !viewModel.isCenteredOnUser, enter = fadeIn(), exit = fadeOut()) {
+                      LocationButton(onClick = { viewModel.onLocationButtonClick() })
+                    }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(modifier = Modifier.size(48.dp)) { Compass() }
+              }
         }
       },
       scaleBar = {
@@ -481,6 +559,8 @@ private fun MapboxLayer(
  *
  * Switches between heatmap mode (with simple annotations) and clustering mode based on
  * [MapScreenViewModel.showHeatmap].
+ *
+ * Also configures the user location puck to display the device's position and bearing on the map.
  */
 @SuppressLint("VisibleForTests")
 @Composable
@@ -504,7 +584,6 @@ private fun MapLayers(
 
   val clusterConfig = remember { createClusterConfig() }
 
-  // Render heatmap layer when enabled
   if (viewModel.showHeatmap) {
     CreateHeatmapLayer(heatmapSource)
   }
@@ -564,6 +643,20 @@ private fun MapLayers(
                 animationOptions = animationOptions)
             true
           }
+    }
+  }
+
+  MapEffect(viewModel.hasLocationPermission) { mapView ->
+    mapView.location.updateSettings {
+      if (viewModel.hasLocationPermission) {
+        locationPuck = createDefault2DPuck(withBearing = true)
+        enabled = true
+        pulsingEnabled = true
+        puckBearingEnabled = true
+        puckBearing = PuckBearing.HEADING
+      } else {
+        enabled = false
+      }
     }
   }
 }

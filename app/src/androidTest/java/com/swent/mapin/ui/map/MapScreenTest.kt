@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheetConfig
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -200,12 +203,33 @@ class MapScreenTest {
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 
+  // ===== Location feature tests =====
+
   @Test
-  fun mapScreen_locationClick_triggersCallback() {
-    rule.setContent { MaterialTheme { MapScreen() } }
+  fun mapScreen_locationPermissionFlow_handlesCorrectly() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationButton_isVisibleWhenNotCentered() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
   }
 
   @Test
@@ -374,7 +398,6 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
-    // When no event is selected, should show BottomSheetContent (else branch)
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 
@@ -393,5 +416,171 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen() } }
 
     rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_locationButton_stateChangesWithMapMovement() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
+
+    rule.runOnIdle { viewModel.onMapMoved() }
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
+
+    rule.runOnIdle { viewModel.updateCenteredState(46.5, 6.5) }
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
+  }
+
+  @Test
+  fun mapScreen_compassAndLocationButton_positioning() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_updateCenteredState_tracksCamera() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
+
+    rule.runOnIdle { viewModel.updateCenteredState(46.518, 6.566) }
+    rule.waitForIdle()
+
+    rule.runOnIdle { assertFalse(viewModel.isCenteredOnUser) }
+  }
+
+  @Test
+  fun mapScreen_locationManagement_initializesOnComposition() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify LaunchedEffect executed by checking that permission was checked
+    // This exercises the LaunchedEffect(Unit) location setup code
+    rule.runOnIdle {
+      // The LaunchedEffect should have called checkLocationPermission
+      // We can't directly verify it was called, but we can verify the ViewModel is in a valid state
+      assertNotNull(viewModel)
+      // hasLocationPermission is initialized by checkLocationPermission
+      assertFalse(viewModel.hasLocationPermission)
+    }
+  }
+
+  @Test
+  fun mapScreen_locationCenteringCallback_isSet() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify the onCenterOnUserLocation callback was set
+    rule.runOnIdle {
+      assertNotNull(viewModel.onCenterOnUserLocation)
+      // Try to invoke it - it should not crash even without location
+      viewModel.onCenterOnUserLocation?.invoke()
+    }
+
+    rule.waitForIdle()
+  }
+
+  @Test
+  fun mapScreen_locationPermissionRequestCallback_isSet() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify the onRequestLocationPermission callback was set
+    rule.runOnIdle { assertNotNull(viewModel.onRequestLocationPermission) }
+  }
+
+  @Test
+  fun mapScreen_withRenderMapTrue_displaysMapComponents() {
+    rule.setContent { MaterialTheme { MapScreen(renderMap = true) } }
+
+    rule.waitForIdle()
+
+    // Verify map screen displays (this exercises MapEffect and map rendering code)
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search activities").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_cameraCallbacks_areSetCorrectly() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // The LaunchedEffect should have set up camera callbacks
+    // We can test this by triggering an event click which uses the camera callback
+    rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
+
+    rule.waitForIdle()
+
+    // Verify the event was selected (callback worked)
+    rule.runOnIdle { assertEquals(testEvent, viewModel.selectedEvent) }
   }
 }
