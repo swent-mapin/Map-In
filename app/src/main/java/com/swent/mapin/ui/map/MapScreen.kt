@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.map
 
+import android.Manifest
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -125,6 +128,23 @@ fun MapScreen(
   val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
   val coroutineScope = rememberCoroutineScope()
 
+  // Location permission launcher
+  val locationPermissionLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val coarseLocationGranted =
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+            if (fineLocationGranted && coarseLocationGranted) {
+              viewModel.checkLocationPermission()
+              viewModel.startLocationUpdates()
+              viewModel.getLastKnownLocation(centerCamera = true)
+            } else {
+              coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
+            }
+          }
+
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
 
@@ -141,6 +161,12 @@ fun MapScreen(
     if (viewModel.hasLocationPermission) {
       viewModel.startLocationUpdates()
       viewModel.getLastKnownLocation(centerCamera = true)
+    }
+
+    viewModel.onRequestLocationPermission = {
+      locationPermissionLauncher.launch(
+          arrayOf(
+              Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
   }
 
