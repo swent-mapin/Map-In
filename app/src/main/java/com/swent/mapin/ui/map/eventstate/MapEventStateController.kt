@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map.event
+package com.swent.mapin.ui.map.eventstate
 
 import android.util.Log
 import androidx.compose.runtime.getValue

@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map.memory
+package com.swent.mapin.ui.memory
 
 import android.content.Context
 import android.net.Uri
@@ -11,7 +11,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
-import com.swent.mapin.ui.map.MemoryFormData
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

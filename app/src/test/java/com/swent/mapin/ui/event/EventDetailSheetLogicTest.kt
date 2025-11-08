@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.event
 
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event

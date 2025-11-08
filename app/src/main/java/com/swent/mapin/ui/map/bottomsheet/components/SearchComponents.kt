@@ -63,7 +63,7 @@ import coil.compose.AsyncImage
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.map.FiltersSectionViewModel
+import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.search.RecentItem
 
 @Composable

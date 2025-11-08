@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.event
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.map.BottomSheetState
 import java.util.Calendar
 import org.junit.Assert.assertTrue
 import org.junit.Rule

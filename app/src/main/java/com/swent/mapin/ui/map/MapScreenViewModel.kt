@@ -29,10 +29,11 @@ import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.camera.MapCameraController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
-import com.swent.mapin.ui.map.event.MapEventStateController
-import com.swent.mapin.ui.map.memory.MemoryActionController
+import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
+import com.swent.mapin.ui.memory.MemoryActionController
+import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 

@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.event
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.map.BottomSheetState
 import java.util.Date
 import org.junit.Assert.*
 import org.junit.Rule
