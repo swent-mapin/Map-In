@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.filters
 
 import android.app.DatePickerDialog
 import android.view.Gravity

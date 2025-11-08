@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map
 
+import com.swent.mapin.ui.map.bottomsheet.components.buildNoResultsCopy
+import com.swent.mapin.ui.map.bottomsheet.components.buildSearchHeading
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

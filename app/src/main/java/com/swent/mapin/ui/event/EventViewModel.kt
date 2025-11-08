@@ -49,7 +49,7 @@ class EventViewModel(
     }
   }
 
-  fun getFilteredEvents(filters: com.swent.mapin.ui.map.Filters) {
+  fun getFilteredEvents(filters: com.swent.mapin.ui.filters.Filters) {
     viewModelScope.launch {
       try {
         _events.value = eventRepository.getFilteredEvents(filters)
@@ -59,7 +59,7 @@ class EventViewModel(
     }
   }
 
-  fun getSearchedEvents(title: String, filters: com.swent.mapin.ui.map.Filters) {
+  fun getSearchedEvents(title: String, filters: com.swent.mapin.ui.filters.Filters) {
     viewModelScope.launch {
       try {
         _events.value = eventRepository.getSearchedEvents(title, filters)

@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.filters
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule

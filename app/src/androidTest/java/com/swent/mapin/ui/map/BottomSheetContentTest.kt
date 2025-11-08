@@ -19,6 +19,11 @@ import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.ui.filters.FiltersSectionTestTags
+import com.swent.mapin.ui.filters.FiltersSectionViewModel
+import com.swent.mapin.ui.map.bottomsheet.SearchBarState
+import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
+import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.profile.ProfileViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

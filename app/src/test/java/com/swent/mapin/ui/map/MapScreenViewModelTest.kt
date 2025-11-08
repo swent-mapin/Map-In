@@ -10,6 +10,7 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -74,6 +75,8 @@ class MapScreenViewModelTest {
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
     runBlocking {
+      whenever(mockEventRepository.getAllEvents())
+          .thenReturn(com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
       whenever(mockEventRepository.getSavedEventIds(any())).thenReturn(emptySet())
@@ -673,7 +676,7 @@ class MapScreenViewModelTest {
   fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
@@ -831,7 +834,7 @@ class MapScreenViewModelTest {
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
@@ -1182,7 +1185,7 @@ class MapScreenViewModelTest {
   @Test
   fun `focusCameraOnSearchResults invokes callback when results exist`() = runTest {
     var callbackInvoked = false
-    viewModel.onFitCameraToEvents = { events ->
+    viewModel.setFitCameraCallback { events ->
       callbackInvoked = true
       assertTrue(events.isNotEmpty())
     }

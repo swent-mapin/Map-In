@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

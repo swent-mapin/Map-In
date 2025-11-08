@@ -12,7 +12,7 @@ import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.model.event.FIELD_SAVED_AT
 import com.swent.mapin.model.event.SAVED_SUBCOLLECTION
 import com.swent.mapin.model.event.USERS_COLLECTION_PATH
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
 import java.time.ZoneId
 import junit.framework.TestCase.assertFalse

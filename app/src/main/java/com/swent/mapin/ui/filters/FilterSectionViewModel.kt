@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.filters
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf

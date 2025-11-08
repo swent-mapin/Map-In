@@ -5,7 +5,7 @@ import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.ui.event.EventViewModel
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

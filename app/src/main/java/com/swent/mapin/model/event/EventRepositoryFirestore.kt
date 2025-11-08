@@ -11,7 +11,7 @@ import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.Location
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import java.time.ZoneId
 import kotlinx.coroutines.tasks.await

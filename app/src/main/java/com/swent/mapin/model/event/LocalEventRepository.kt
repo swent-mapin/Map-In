@@ -3,7 +3,7 @@ package com.swent.mapin.model.event
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.swent.mapin.model.Location
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import java.time.ZoneId
 import java.util.Date

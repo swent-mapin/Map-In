@@ -1,6 +1,6 @@
 package com.swent.mapin.model.event
 
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 
 /** Repository interface for managing Event items in the MapIn application. */
 interface EventRepository {

@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map
+package com.swent.mapin.ui.memory
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,6 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.components.UserPickerDialog
+import com.swent.mapin.ui.event.EventPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -320,11 +322,15 @@ private fun UserTaggingSection(
 /**
  * UI switch to toggle Public/Private
  *
- * @param isPublic boolean indicating the state of public (true) or privcate (false)
+ * @param isPublic boolean indicating the state of public (true) or private (false)
  * @param onPublicChange callback for when the switch is toggled
+ * @param title The title text to display
+ * @param subTitle The subtitle text to display
+ * @param modifier Optional modifier for the switch
+ * @param textTestTag Optional modifier for the text (for testing)
  */
 @Composable
-fun PublicSwitch(
+private fun PublicSwitch(
     isPublic: Boolean,
     onPublicChange: (Boolean) -> Unit,
     title: String,
