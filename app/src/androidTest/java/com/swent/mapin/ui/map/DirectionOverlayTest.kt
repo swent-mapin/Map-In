@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mapbox.geojson.Point
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.swent.mapin.ui.map.directions.DirectionOverlay
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

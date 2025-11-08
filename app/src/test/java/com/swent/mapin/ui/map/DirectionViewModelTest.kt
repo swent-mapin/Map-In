@@ -1,6 +1,8 @@
 package com.swent.mapin.ui.map
 
 import com.mapbox.geojson.Point
+import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.directions.DirectionViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*

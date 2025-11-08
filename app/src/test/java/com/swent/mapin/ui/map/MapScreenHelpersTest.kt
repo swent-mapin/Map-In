@@ -6,6 +6,11 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotation
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.map.components.computeAnnotationVisualParameters
+import com.swent.mapin.ui.map.components.createAnnotationStyle
+import com.swent.mapin.ui.map.components.createClusterConfig
+import com.swent.mapin.ui.map.components.createEventAnnotations
+import com.swent.mapin.ui.map.components.findEventForAnnotation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

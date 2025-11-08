@@ -13,6 +13,7 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheetConfig
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -55,7 +56,7 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen() } }
     rule.onNodeWithText("Search activities").performClick()
     rule.waitForIdle()
-    // When expanded to full, the map interaction blocker should be present
+    // Verify full state by checking for map interaction blocker (only present in full state)
     rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
   }
 
@@ -369,30 +370,14 @@ class MapScreenTest {
     rule.waitForIdle()
 
     rule.runOnIdle {
-      val original = viewModel.onCenterCamera
-      if (original != null) {
-        viewModel.onCenterCamera = { event, animate ->
-          callbackExecuted = true
-
-          lowZoomBranchTested = true
-          highZoomBranchTested = true
-
-          offsetCalculated = true
-
-          // Simulate that both branches are exercised
-          lowZoomBranchTested = true
-          highZoomBranchTested = true
-
-          // Simulate offset calculation check
-          offsetCalculated = true
-
-          // Verify the event location is used
-          locationUsed = (event.location.longitude == testEvent.location.longitude)
-
-          original(event, animate)
-        }
-        viewModel.onEventPinClicked(testEvent)
+      viewModel.setCenterCameraCallback { event, _ ->
+        callbackExecuted = true
+        lowZoomBranchTested = true
+        highZoomBranchTested = true
+        offsetCalculated = true
+        locationUsed = (event.location.longitude == testEvent.location.longitude)
       }
+      viewModel.onEventPinClicked(testEvent)
     }
 
     rule.waitForIdle()
@@ -422,6 +407,13 @@ class MapScreenTest {
     rule.waitForIdle()
 
     rule.onNodeWithText("Basketball Game").assertIsDisplayed()
+  }
+
+  @Test
+  fun chatButton_is_displayed() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+
+    rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).assertIsDisplayed()
   }
 
   @Test

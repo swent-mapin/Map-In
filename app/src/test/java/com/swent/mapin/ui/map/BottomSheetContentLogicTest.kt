@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map
 
+import com.swent.mapin.ui.map.bottomsheet.components.buildNoResultsCopy
+import com.swent.mapin.ui.map.bottomsheet.components.buildSearchHeading
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -9,8 +11,8 @@ class BottomSheetContentLogicTest {
   fun buildNoResultsCopy_whenQueryBlank_returnsEmptyStateMessages() {
     val copy = buildNoResultsCopy("")
 
-    assertEquals("No events available yet.", copy.title)
-    assertEquals("Try again once events are added.", copy.subtitle)
+    assertEquals("Start typing to search", copy.title)
+    assertEquals("Search for events by name or location", copy.subtitle)
   }
 
   @Test
