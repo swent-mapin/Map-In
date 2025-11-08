@@ -51,7 +51,8 @@ class MapScreenViewModel(
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
+    private val locationManager: LocationManager = LocationManager(applicationContext)
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -227,8 +228,6 @@ class MapScreenViewModel(
     get() = searchStateController.recentItems
 
   // Location state
-  private val locationManager = LocationManager(applicationContext)
-
   private var _currentLocation by mutableStateOf<Location?>(null)
   val currentLocation: Location?
     get() = _currentLocation

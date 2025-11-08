@@ -49,6 +49,7 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
   @Mock(lenient = true) private lateinit var mockUserProfileRepository: UserProfileRepository
+  @Mock(lenient = true) private lateinit var mockLocationManager: LocationManager
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -73,6 +74,9 @@ class MapScreenViewModelTest {
     whenever(mockUser.uid).thenReturn("testUserId")
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
+    // Mock LocationManager default behavior
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
     runBlocking {
       whenever(mockEventRepository.getAllEvents())
           .thenReturn(com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents())
@@ -92,7 +96,8 @@ class MapScreenViewModelTest {
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
             auth = mockAuth,
-            userProfileRepository = mockUserProfileRepository)
+            userProfileRepository = mockUserProfileRepository,
+            locationManager = mockLocationManager)
   }
 
   @After
@@ -1022,32 +1027,167 @@ class MapScreenViewModelTest {
 
   // === Location tests ===
   @Test
-  fun startLocationUpdates_callsLocationManager() {
+  fun checkLocationPermission_updatesPermissionState_whenGranted() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+
+    viewModel.checkLocationPermission()
+
+    assertTrue(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun checkLocationPermission_updatesPermissionState_whenDenied() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
+    viewModel.checkLocationPermission()
+
+    assertFalse(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_setsPermissionFalse_whenNoPermission() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
     viewModel.startLocationUpdates()
 
-    assertNotNull(viewModel)
+    assertFalse(viewModel.hasLocationPermission)
   }
 
   @Test
-  fun getLastKnownLocation_withoutCenterCamera_doesNotCallCenter() = runTest {
-    var centerCalled = false
-    viewModel.onCenterOnUserLocation = { centerCalled = true }
+  fun startLocationUpdates_setsPermissionTrue_whenPermissionGranted() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.emptyFlow())
+
+    viewModel.startLocationUpdates()
+
+    assertTrue(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_collectsLocationUpdates_withBearing() = runTest {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(45f)
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flowOf(mockLocation))
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+    assertEquals(45f, viewModel.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun startLocationUpdates_collectsLocationUpdates_withoutBearing() = runTest {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flowOf(mockLocation))
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+    // Bearing should remain at initial value (0f)
+  }
+
+  @Test
+  fun startLocationUpdates_handlesError_setsErrorMessage() = runTest {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flow { throw Exception("Location error") })
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals("Failed to get location updates", viewModel.errorMessage)
+  }
+
+  @Test
+  fun getLastKnownLocation_withoutCenterCamera_triggersSuccessCallback_withBearing() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(90f)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
 
     viewModel.getLastKnownLocation(centerCamera = false)
-    advanceUntilIdle()
 
-    assertFalse(centerCalled)
+    assertEquals(mockLocation, viewModel.currentLocation)
+    assertEquals(90f, viewModel.locationBearing, 0.001f)
   }
 
   @Test
-  fun getLastKnownLocation_withCenterCamera_respectsCenterFlag() = runTest {
+  fun getLastKnownLocation_withoutCenterCamera_triggersSuccessCallback_withoutBearing() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+
+    viewModel.getLastKnownLocation(centerCamera = false)
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+  }
+
+  @Test
+  fun getLastKnownLocation_withCenterCamera_invokesCallback() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    var centerCalled = false
+    viewModel.onCenterOnUserLocation = { centerCalled = true }
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+
+    viewModel.getLastKnownLocation(centerCamera = true)
+
+    assertTrue(centerCalled)
+  }
+
+  @Test
+  fun getLastKnownLocation_triggersErrorCallback() {
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onError = invocation.getArgument<() -> Unit>(1)
+      onError()
+    }
+
+    viewModel.getLastKnownLocation()
+
+    // Just verify it doesn't crash - error is logged
+    assertNull(viewModel.currentLocation)
+  }
+
+  @Test
+  fun onLocationButtonClick_withPermission_centersOnUser() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
     var centerCalled = false
     viewModel.onCenterOnUserLocation = { centerCalled = true }
 
-    viewModel.getLastKnownLocation(centerCamera = true)
-    advanceUntilIdle()
+    viewModel.onLocationButtonClick()
 
-    assertFalse(centerCalled)
+    assertTrue(centerCalled)
+    assertTrue(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun onLocationButtonClick_withoutPermission_requestsPermission() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    var permissionRequested = false
+    viewModel.onRequestLocationPermission = { permissionRequested = true }
+
+    viewModel.onLocationButtonClick()
+
+    assertTrue(permissionRequested)
+    assertFalse(viewModel.isCenteredOnUser)
   }
 
   @Test
@@ -1058,15 +1198,58 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun updateCenteredState_differentCoordinates_updatesCenteredState() {
+  fun updateCenteredState_withinThreshold_setsCenteredToTrue() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Update with coordinates within threshold (0.0005)
     viewModel.updateCenteredState(46.50001, 6.50001)
+
+    assertTrue(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_outsideThreshold_setsCenteredToFalse() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Update with coordinates outside threshold (0.0005)
+    viewModel.updateCenteredState(46.6, 6.6)
 
     assertFalse(viewModel.isCenteredOnUser)
   }
 
   @Test
-  fun updateCenteredState_outsideThreshold_setsCenteredToFalse() {
-    viewModel.updateCenteredState(46.6, 6.6)
+  fun updateCenteredState_atThresholdBoundary_setsCenteredToFalse() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Exactly at threshold (0.0005) - should be outside
+    viewModel.updateCenteredState(46.5005, 6.5005)
 
     assertFalse(viewModel.isCenteredOnUser)
   }
@@ -1076,13 +1259,6 @@ class MapScreenViewModelTest {
     viewModel.onMapMoved()
 
     assertFalse(viewModel.isCenteredOnUser)
-  }
-
-  @Test
-  fun checkLocationPermission_executesSuccessfully() {
-    viewModel.checkLocationPermission()
-
-    assertNotNull(viewModel)
   }
 
   @Test
