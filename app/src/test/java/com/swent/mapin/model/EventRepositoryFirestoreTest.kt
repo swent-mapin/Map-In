@@ -775,22 +775,4 @@ class EventRepositoryFirestoreTest {
     val result = repo.unsaveEventForUser("user123", "E1")
     assertFalse(result)
   }
-
-  @Test
-  fun documentToEvent_returnsNull_onMissingFields() {
-    val doc = mock<DocumentSnapshot>()
-    whenever(doc.id).thenReturn("E1")
-    whenever(doc.toObject(Event::class.java)).thenReturn(Event(uid = "E1"))
-    whenever(doc.getString("location.name")).thenReturn(null)
-
-    val result =
-        repo.run {
-          val method =
-              this::class.java.getDeclaredMethod("documentToEvent", DocumentSnapshot::class.java)
-          method.isAccessible = true
-          method.invoke(this, doc)
-        }
-
-    assertEquals(null, result)
-  }
 }

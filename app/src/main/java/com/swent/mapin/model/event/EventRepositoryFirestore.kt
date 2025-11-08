@@ -241,7 +241,7 @@ class EventRepositoryFirestore(
       val snapshot = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
       if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
       val oldValue = documentToEvent(snapshot)!!
-      require(oldValue.ownerId != newValue.ownerId) {
+      require(oldValue.ownerId == newValue.ownerId) {
         "Cannot transfer event ownership via editEvent"
       }
       // Ensure owner is in participantIds
