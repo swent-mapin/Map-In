@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map.camera
+package com.swent.mapin.ui.map
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf

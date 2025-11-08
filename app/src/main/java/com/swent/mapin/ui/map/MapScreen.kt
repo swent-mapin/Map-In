@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -11,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -63,6 +63,7 @@ import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.event.EventDetailSheet
+import com.swent.mapin.ui.event.ShareEventDialog
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.components.ConditionalMapBlocker
@@ -79,7 +80,6 @@ import com.swent.mapin.ui.map.components.drawableToBitmap
 import com.swent.mapin.ui.map.components.findEventForAnnotation
 import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
-import com.swent.mapin.ui.map.dialogs.ShareEventDialog
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
@@ -164,36 +164,35 @@ fun MapScreen(
   }
 
   LaunchedEffect(mapViewportState, bottomPaddingPx, edgePaddingPx) {
-    viewModel.setFitCameraCallback(
-        label@{ events ->
-          if (events.isEmpty()) return@label
+    viewModel.setFitCameraCallback label@{ events ->
+      if (events.isEmpty()) return@label
 
-          coroutineScope.launch {
-            val points =
-                events.map { event ->
-                  Point.fromLngLat(event.location.longitude, event.location.latitude)
-                }
-
-            val padding =
-                com.mapbox.maps.EdgeInsets(
-                    edgePaddingPx.toDouble(),
-                    edgePaddingPx.toDouble(),
-                    bottomPaddingPx.toDouble(),
-                    edgePaddingPx.toDouble())
-
-            val camera =
-                mapViewportState.cameraForCoordinates(
-                    coordinates = points,
-                    camera = cameraOptions {},
-                    coordinatesPadding = padding,
-                    maxZoom = MAX_SEARCH_RESULTS_ZOOM,
-                    offset = null)
-
-            camera?.let {
-              mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
+      coroutineScope.launch {
+        val points =
+            events.map { event ->
+              Point.fromLngLat(event.location.longitude, event.location.latitude)
             }
-          }
-        })
+
+        val padding =
+            com.mapbox.maps.EdgeInsets(
+                edgePaddingPx.toDouble(),
+                edgePaddingPx.toDouble(),
+                bottomPaddingPx.toDouble(),
+                edgePaddingPx.toDouble())
+
+        val camera =
+            mapViewportState.cameraForCoordinates(
+                coordinates = points,
+                camera = cameraOptions {},
+                coordinatesPadding = padding,
+                maxZoom = MAX_SEARCH_RESULTS_ZOOM,
+                offset = null)
+
+        camera.let {
+          mapViewportState.easeTo(it, MapAnimationOptions.Builder().duration(600L).build())
+        }
+      }
+    }
   }
 
   ObserveSheetStateForZoomUpdate(viewModel, mapViewportState)
@@ -483,6 +482,7 @@ private fun MapboxLayer(
  * Switches between heatmap mode (with simple annotations) and clustering mode based on
  * [MapScreenViewModel.showHeatmap].
  */
+@SuppressLint("VisibleForTests")
 @Composable
 private fun MapLayers(
     viewModel: MapScreenViewModel,

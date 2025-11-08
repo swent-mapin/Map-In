@@ -1,4 +1,4 @@
-package com.swent.mapin.ui.map.dialogs
+package com.swent.mapin.ui.event
 
 import android.content.ClipData
 import android.content.ClipboardManager

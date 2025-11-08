@@ -53,8 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.map.dialogs.EventPickerDialog
-import com.swent.mapin.ui.map.dialogs.UserPickerDialog
+import com.swent.mapin.ui.components.UserPickerDialog
+import com.swent.mapin.ui.event.EventPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Locale
 
