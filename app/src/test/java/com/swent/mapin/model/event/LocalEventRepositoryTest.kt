@@ -1,7 +1,7 @@
 package com.swent.mapin.model.event
 
 import com.swent.mapin.model.Location
-import com.swent.mapin.ui.map.Filters
+import com.swent.mapin.ui.filters.Filters
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
