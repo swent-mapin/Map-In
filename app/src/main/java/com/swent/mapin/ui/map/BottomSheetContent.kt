@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -95,6 +96,7 @@ private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
  * @param locationViewModel ViewModel for managing location-related data.
  * @param profileViewModel ViewModel for accessing user profile data, such as avatar URL.
  */
+@SuppressLint("VisibleForTests")
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BottomSheetContent(
@@ -213,7 +215,6 @@ fun BottomSheetContent(
                       SearchBar(
                           value = searchBarState.query,
                           onValueChange = searchBarState.onQueryChange,
-                          isFull = isFull,
                           isSearchMode = isSearchMode,
                           onTap = searchBarState.onTap,
                           focusRequester = focusRequester,
@@ -222,7 +223,7 @@ fun BottomSheetContent(
                             focusManager.clearFocus()
                           },
                           onClear = searchBarState.onClear,
-                          avatarUrl = avatarUrl ?: userProfile?.avatarUrl,
+                          avatarUrl = avatarUrl ?: userProfile.avatarUrl,
                           onProfileClick = onProfileClick)
 
                       Spacer(modifier = Modifier.height(24.dp))
@@ -247,6 +248,7 @@ fun BottomSheetContent(
                           label = "searchModeTransition") { searchActive ->
                             if (searchActive) {
                               SearchResultsSection(
+                                  modifier = Modifier.fillMaxSize(),
                                   results = searchResults,
                                   query = searchBarState.query,
                                   recentItems = recentItems,
@@ -255,10 +257,6 @@ fun BottomSheetContent(
                                   onShowAllRecents = { showAllRecents = true },
                                   topCategories = topCategories,
                                   onCategoryClick = onCategoryClick,
-                                  filterViewModel = filterViewModel,
-                                  locationViewModel = locationViewModel,
-                                  userProfile = userProfile,
-                                  modifier = Modifier.fillMaxSize(),
                                   onEventClick = onEventClick)
                             } else {
                               val contentModifier =

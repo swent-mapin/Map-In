@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 import com.google.gson.Gson
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -183,7 +184,7 @@ class SearchStateController(
   fun clearRecentSearches() {
     try {
       val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-      prefs.edit().remove(RECENT_ITEMS_KEY).remove(LEGACY_RECENT_KEY).apply()
+      prefs.edit { remove(RECENT_ITEMS_KEY).remove(LEGACY_RECENT_KEY) }
       _recentItems = emptyList()
     } catch (e: Exception) {
       Log.e(TAG, "Failed to clear recent items", e)
@@ -193,8 +194,6 @@ class SearchStateController(
   fun findEventById(eventId: String): Event? = allEvents.find { it.uid == eventId }
 
   fun hasQuery(): Boolean = _searchQuery.isNotBlank()
-
-  fun currentEvents(): List<Event> = allEvents
 
   fun loadRecentSearches() {
     try {

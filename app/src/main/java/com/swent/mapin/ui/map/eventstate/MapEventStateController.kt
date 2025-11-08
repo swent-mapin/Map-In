@@ -206,7 +206,7 @@ class MapEventStateController(
         } else {
           loadSavedEvents()
         }
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         setErrorMessage("Failed to unsave (offline). Change will sync when online.")
         loadSavedEvents()
       }

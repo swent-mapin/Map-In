@@ -60,14 +60,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.swent.mapin.model.LocationViewModel
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.search.RecentItem
 
 @Composable
 fun SearchResultsSection(
+    modifier: Modifier = Modifier,
     results: List<Event>,
     query: String,
     recentItems: List<RecentItem> = emptyList(),
@@ -76,10 +74,6 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    filterViewModel: FiltersSectionViewModel,
-    locationViewModel: LocationViewModel,
-    userProfile: UserProfile? = null,
-    modifier: Modifier = Modifier,
     onEventClick: (Event) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
@@ -158,7 +152,6 @@ fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () ->
 fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
-    isFull: Boolean,
     isSearchMode: Boolean,
     onTap: () -> Unit,
     focusRequester: FocusRequester,

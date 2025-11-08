@@ -1,7 +1,6 @@
 package com.swent.mapin.ui.map.bottomsheet.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -106,22 +104,6 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
               Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
             Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
           }
-    }
-  }
-}
-
-@Composable
-fun NoActivitiesMessage(modifier: Modifier = Modifier) {
-  Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      Text(text = "No recent events.", style = MaterialTheme.typography.titleMedium)
-      Spacer(modifier = Modifier.height(8.dp))
-      Text(
-          text =
-              "Your recent activity will appear here once you interact with events or create memories.",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          textAlign = TextAlign.Center)
     }
   }
 }
