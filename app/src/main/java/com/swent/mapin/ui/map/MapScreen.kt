@@ -213,13 +213,19 @@ fun MapScreen(
     viewModel.onCenterOnUserLocation = {
       viewModel.currentLocation?.let { location ->
         val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
-        val anchoredHeightPx =
-            if (viewModel.currentSheetHeight < sheetConfig.mediumHeight) {
-              with(density) { viewModel.currentSheetHeight.toPx() }
-            } else {
-              with(density) { sheetConfig.mediumHeight.toPx() }
-            }
-        val locationBottomPaddingPx = (anchoredHeightPx * 0.6f) + with(density) { 24.dp.toPx() }
+        val collapsedPx = with(density) { sheetConfig.collapsedHeight.toPx() }
+        val mediumPx = with(density) { sheetConfig.mediumHeight.toPx() }
+        val sheetPx = with(density) { viewModel.currentSheetHeight.toPx() }
+        val minPaddingPx = with(density) { MapConstants.LOCATION_CENTER_MIN_PADDING_DP.dp.toPx() }
+        val mediumExtraPx = with(density) { MapConstants.LOCATION_CENTER_MEDIUM_EXTRA_DP.dp.toPx() }
+        val locationBottomPaddingPx =
+            calculateLocationPaddingPx(
+                sheetHeightPx = sheetPx,
+                collapsedHeightPx = collapsedPx,
+                mediumHeightPx = mediumPx,
+                minPaddingPx = minPaddingPx,
+                mediumWeight = MapConstants.LOCATION_CENTER_MEDIUM_WEIGHT,
+                mediumExtraPx = mediumExtraPx)
         viewModel.runProgrammaticCamera {
           mapViewportState.easeTo(
               cameraOptions {
@@ -708,4 +714,18 @@ private fun MapLayers(
       }
     }
   }
+}
+
+internal fun calculateLocationPaddingPx(
+    sheetHeightPx: Float,
+    collapsedHeightPx: Float,
+    mediumHeightPx: Float,
+    minPaddingPx: Float,
+    mediumWeight: Float,
+    mediumExtraPx: Float
+): Float {
+  val clampedSheet = sheetHeightPx.coerceAtLeast(0f)
+  val mediumThreshold = mediumHeightPx.coerceAtLeast(collapsedHeightPx)
+  val mediumPaddingPx = clampedSheet * mediumWeight + mediumExtraPx
+  return if (clampedSheet >= mediumThreshold) mediumPaddingPx else minPaddingPx
 }
