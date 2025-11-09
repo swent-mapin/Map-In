@@ -19,11 +19,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -352,15 +354,22 @@ fun MapScreen(
     // Overlays et contrôles au-dessus de la carte
     TopGradient()
 
-    FloatingActionButton(
-        onClick = { onNavigateToChat() },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+    Box(
         modifier =
             Modifier.align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = chatBottomPadding)
-                .testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)) {
-          Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
+                .padding(start = 16.dp, bottom = chatBottomPadding)) {
+          FilledIconButton(
+              onClick = { onNavigateToChat() },
+              shape = CircleShape,
+              modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
+              colors =
+                  IconButtonDefaults.filledIconButtonColors(
+                      containerColor = MaterialTheme.colorScheme.primary,
+                      contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Go to Chats")
+              }
         }
 
     ScrimOverlay(
