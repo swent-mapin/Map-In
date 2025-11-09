@@ -13,11 +13,10 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -347,12 +346,25 @@ fun MapScreen(
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
 
-    MapStyleSelector(
-        selectedStyle = viewModel.mapStyle,
-        onStyleSelected = { style -> viewModel.setMapStyle(style) },
-        modifier =
-            Modifier.align(Alignment.BottomEnd)
-                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
+    if (!renderMap) {
+      Column(
+          modifier =
+              Modifier.align(Alignment.BottomEnd)
+                  .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
+          horizontalAlignment = Alignment.End) {
+            Box(modifier = Modifier.size(48.dp)) {
+              LocationButton(
+                  onClick = { viewModel.onLocationButtonClick() },
+                  modifier = Modifier.fillMaxSize())
+            }
+
+            MapStyleSelector(
+                selectedStyle = viewModel.mapStyle,
+                onStyleSelected = { style -> viewModel.setMapStyle(style) },
+                modifier = Modifier.size(48.dp))
+          }
+    }
 
     // Bloque les interactions de carte quand la feuille est pleine
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
@@ -521,16 +533,21 @@ private fun MapboxLayer(
           Column(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp),
+                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 24.dp, end = 16.dp),
+              verticalArrangement = Arrangement.spacedBy(12.dp),
               horizontalAlignment = Alignment.End) {
-                AnimatedVisibility(
-                    visible = !viewModel.isCenteredOnUser, enter = fadeIn(), exit = fadeOut()) {
-                      LocationButton(onClick = { viewModel.onLocationButtonClick() })
-                    }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Box(modifier = Modifier.size(48.dp)) { Compass() }
+
+                Box(modifier = Modifier.size(48.dp)) {
+                  LocationButton(
+                      onClick = { viewModel.onLocationButtonClick() },
+                      modifier = Modifier.fillMaxSize())
+                }
+
+                MapStyleSelector(
+                    selectedStyle = viewModel.mapStyle,
+                    onStyleSelected = { style -> viewModel.setMapStyle(style) },
+                    modifier = Modifier.size(48.dp))
               }
         }
       },
