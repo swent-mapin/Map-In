@@ -40,6 +40,15 @@ object MapConstants {
   /** Default map zoom level */
   const val DEFAULT_ZOOM = 15f
 
+  /** Minimum padding (dp) applied when re-centering on user with collapsed sheet */
+  const val LOCATION_CENTER_MIN_PADDING_DP = 8f
+
+  /** Weight of sheet height applied when re-centering at medium state */
+  const val LOCATION_CENTER_MEDIUM_WEIGHT = 0.85f
+
+  /** Extra padding (dp) added at medium state */
+  const val LOCATION_CENTER_MEDIUM_EXTRA_DP = 16f
+
   /** Heatmap color stops for visualization */
   object HeatmapColors {
     val COLOR_STOPS =

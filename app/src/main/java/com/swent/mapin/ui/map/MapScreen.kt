@@ -13,18 +13,19 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -211,13 +213,30 @@ fun MapScreen(
     viewModel.onCenterOnUserLocation = {
       viewModel.currentLocation?.let { location ->
         val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
-        mapViewportState.easeTo(
-            cameraOptions {
-              center(Point.fromLngLat(location.longitude, location.latitude))
-              zoom(16.0)
-              bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
-            },
-            animationOptions = animationOptions)
+        val collapsedPx = with(density) { sheetConfig.collapsedHeight.toPx() }
+        val mediumPx = with(density) { sheetConfig.mediumHeight.toPx() }
+        val sheetPx = with(density) { viewModel.currentSheetHeight.toPx() }
+        val minPaddingPx = with(density) { MapConstants.LOCATION_CENTER_MIN_PADDING_DP.dp.toPx() }
+        val mediumExtraPx = with(density) { MapConstants.LOCATION_CENTER_MEDIUM_EXTRA_DP.dp.toPx() }
+        val locationBottomPaddingPx =
+            calculateLocationPaddingPx(
+                sheetHeightPx = sheetPx,
+                collapsedHeightPx = collapsedPx,
+                mediumHeightPx = mediumPx,
+                minPaddingPx = minPaddingPx,
+                mediumWeight = MapConstants.LOCATION_CENTER_MEDIUM_WEIGHT,
+                mediumExtraPx = mediumExtraPx)
+        viewModel.runProgrammaticCamera {
+          mapViewportState.easeTo(
+              cameraOptions {
+                center(Point.fromLngLat(location.longitude, location.latitude))
+                zoom(16.0)
+                bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
+                padding(
+                    com.mapbox.maps.EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
+              },
+              animationOptions = animationOptions)
+        }
       }
     }
   }
@@ -308,6 +327,15 @@ fun MapScreen(
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
 
+  val anchoredSheetHeight =
+      if (viewModel.currentSheetHeight < sheetConfig.mediumHeight) {
+        viewModel.currentSheetHeight
+      } else {
+        sheetConfig.mediumHeight
+      }
+  val controlBottomPadding = anchoredSheetHeight + 24.dp
+  val chatBottomPadding = anchoredSheetHeight + 16.dp
+
   // Fusion d'une seule racine UI box qui contient la carte, overlays et la feuille inférieure
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     // Carte Mapbox: combine les comportements précédemment séparés
@@ -316,6 +344,7 @@ fun MapScreen(
           viewModel = viewModel,
           mapViewportState = mapViewportState,
           sheetMetrics = sheetMetrics,
+          controlBottomPadding = controlBottomPadding,
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
@@ -331,15 +360,22 @@ fun MapScreen(
     // Overlays et contrôles au-dessus de la carte
     TopGradient()
 
-    FloatingActionButton(
-        onClick = { onNavigateToChat() },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+    Box(
         modifier =
             Modifier.align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
-                .testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)) {
-          Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
+                .padding(start = 16.dp, bottom = chatBottomPadding)) {
+          FilledIconButton(
+              onClick = { onNavigateToChat() },
+              shape = CircleShape,
+              modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
+              colors =
+                  IconButtonDefaults.filledIconButtonColors(
+                      containerColor = MaterialTheme.colorScheme.primary,
+                      contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Go to Chats")
+              }
         }
 
     ScrimOverlay(
@@ -347,12 +383,25 @@ fun MapScreen(
         mediumHeightDp = sheetConfig.mediumHeight,
         fullHeightDp = sheetConfig.fullHeight)
 
-    MapStyleSelector(
-        selectedStyle = viewModel.mapStyle,
-        onStyleSelected = { style -> viewModel.setMapStyle(style) },
-        modifier =
-            Modifier.align(Alignment.BottomEnd)
-                .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp))
+    if (!renderMap) {
+      Column(
+          modifier =
+              Modifier.align(Alignment.BottomEnd)
+                  .padding(bottom = controlBottomPadding, end = 16.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
+          horizontalAlignment = Alignment.End) {
+            Box(modifier = Modifier.size(48.dp)) {
+              LocationButton(
+                  onClick = { viewModel.onLocationButtonClick() },
+                  modifier = Modifier.fillMaxSize())
+            }
+
+            MapStyleSelector(
+                selectedStyle = viewModel.mapStyle,
+                onStyleSelected = { style -> viewModel.setMapStyle(style) },
+                modifier = Modifier.size(48.dp))
+          }
+    }
 
     // Bloque les interactions de carte quand la feuille est pleine
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
@@ -486,6 +535,7 @@ private fun MapboxLayer(
     viewModel: MapScreenViewModel,
     mapViewportState: MapViewportState,
     sheetMetrics: SheetInteractionMetrics,
+    controlBottomPadding: Dp,
     standardStyleState: StandardStyleState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
@@ -521,16 +571,21 @@ private fun MapboxLayer(
           Column(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 96.dp, end = 16.dp),
+                      .padding(bottom = controlBottomPadding, end = 16.dp),
+              verticalArrangement = Arrangement.spacedBy(12.dp),
               horizontalAlignment = Alignment.End) {
-                AnimatedVisibility(
-                    visible = !viewModel.isCenteredOnUser, enter = fadeIn(), exit = fadeOut()) {
-                      LocationButton(onClick = { viewModel.onLocationButtonClick() })
-                    }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Box(modifier = Modifier.size(48.dp)) { Compass() }
+
+                Box(modifier = Modifier.size(48.dp)) {
+                  LocationButton(
+                      onClick = { viewModel.onLocationButtonClick() },
+                      modifier = Modifier.fillMaxSize())
+                }
+
+                MapStyleSelector(
+                    selectedStyle = viewModel.mapStyle,
+                    onStyleSelected = { style -> viewModel.setMapStyle(style) },
+                    modifier = Modifier.size(48.dp))
               }
         }
       },
@@ -659,4 +714,18 @@ private fun MapLayers(
       }
     }
   }
+}
+
+internal fun calculateLocationPaddingPx(
+    sheetHeightPx: Float,
+    collapsedHeightPx: Float,
+    mediumHeightPx: Float,
+    minPaddingPx: Float,
+    mediumWeight: Float,
+    mediumExtraPx: Float
+): Float {
+  val clampedSheet = sheetHeightPx.coerceAtLeast(0f)
+  val mediumThreshold = mediumHeightPx.coerceAtLeast(collapsedHeightPx)
+  val mediumPaddingPx = clampedSheet * mediumWeight + mediumExtraPx
+  return if (clampedSheet >= mediumThreshold) mediumPaddingPx else minPaddingPx
 }

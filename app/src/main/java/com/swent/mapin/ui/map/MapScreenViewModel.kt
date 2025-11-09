@@ -134,6 +134,10 @@ class MapScreenViewModel(
   val isSearchMode: Boolean
     get() = searchStateController.isSearchActive && !showMemoryForm
 
+  fun runProgrammaticCamera(block: () -> Unit) {
+    cameraController.runProgrammatic(block)
+  }
+
   // Map interaction tracking
   val isZooming: Boolean
     get() = cameraController.isZooming
