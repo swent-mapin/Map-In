@@ -211,11 +211,20 @@ fun MapScreen(
     viewModel.onCenterOnUserLocation = {
       viewModel.currentLocation?.let { location ->
         val animationOptions = MapAnimationOptions.Builder().duration(500L).build()
+        val anchoredHeightPx =
+            if (viewModel.currentSheetHeight < sheetConfig.mediumHeight) {
+              with(density) { viewModel.currentSheetHeight.toPx() }
+            } else {
+              with(density) { sheetConfig.mediumHeight.toPx() }
+            }
+        val locationBottomPaddingPx =
+            anchoredHeightPx + with(density) { 24.dp.toPx() } + with(density) { 32.dp.toPx() }
         mapViewportState.easeTo(
             cameraOptions {
               center(Point.fromLngLat(location.longitude, location.latitude))
               zoom(16.0)
               bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
+              padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
             },
             animationOptions = animationOptions)
       }
