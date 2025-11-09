@@ -62,6 +62,15 @@ class MapCameraController(private val scope: CoroutineScope) {
     scheduleProgrammaticReset()
   }
 
+  fun runProgrammatic(block: () -> Unit) {
+    _isProgrammaticZoom = true
+    try {
+      block()
+    } finally {
+      scheduleProgrammaticReset()
+    }
+  }
+
   fun clearCallbacks() {
     hideScaleBarJob?.cancel()
     programmaticZoomJob?.cancel()
