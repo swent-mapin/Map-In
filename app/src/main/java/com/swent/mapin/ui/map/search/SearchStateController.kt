@@ -232,7 +232,7 @@ class SearchStateController(
   }
 
   private fun applyFilters(selectedTags: Set<String>): List<Event> {
-    val base = if (allEvents.isEmpty()) localEventsProvider() else allEvents
+    val base = allEvents.ifEmpty { localEventsProvider() }
 
     val tagFiltered =
         if (selectedTags.isEmpty()) {
@@ -299,7 +299,7 @@ class SearchStateController(
             }
           }
       val itemsJson = Gson().toJson(itemsData)
-      prefs.edit().putString(RECENT_ITEMS_KEY, itemsJson).apply()
+      prefs.edit { putString(RECENT_ITEMS_KEY, itemsJson) }
     } catch (e: Exception) {
       Log.e(TAG, "Failed to save recent items to prefs", e)
     }
