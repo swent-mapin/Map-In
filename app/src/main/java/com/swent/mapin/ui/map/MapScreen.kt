@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -307,6 +308,15 @@ fun MapScreen(
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
 
+  val anchoredSheetHeight =
+      if (viewModel.currentSheetHeight < sheetConfig.mediumHeight) {
+        viewModel.currentSheetHeight
+      } else {
+        sheetConfig.mediumHeight
+      }
+  val controlBottomPadding = anchoredSheetHeight + 24.dp
+  val chatBottomPadding = anchoredSheetHeight + 16.dp
+
   // Fusion d'une seule racine UI box qui contient la carte, overlays et la feuille inférieure
   Box(modifier = Modifier.fillMaxSize().testTag(UiTestTags.MAP_SCREEN)) {
     // Carte Mapbox: combine les comportements précédemment séparés
@@ -315,6 +325,7 @@ fun MapScreen(
           viewModel = viewModel,
           mapViewportState = mapViewportState,
           sheetMetrics = sheetMetrics,
+          controlBottomPadding = controlBottomPadding,
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
@@ -336,7 +347,7 @@ fun MapScreen(
         contentColor = MaterialTheme.colorScheme.onPrimary,
         modifier =
             Modifier.align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = MapConstants.COLLAPSED_HEIGHT + 16.dp)
+                .padding(start = 16.dp, bottom = chatBottomPadding)
                 .testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)) {
           Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Go to Chats")
         }
@@ -350,7 +361,7 @@ fun MapScreen(
       Column(
           modifier =
               Modifier.align(Alignment.BottomEnd)
-                  .padding(bottom = sheetConfig.collapsedHeight + 24.dp, end = 16.dp),
+                  .padding(bottom = controlBottomPadding, end = 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
           horizontalAlignment = Alignment.End) {
             Box(modifier = Modifier.size(48.dp)) {
@@ -498,6 +509,7 @@ private fun MapboxLayer(
     viewModel: MapScreenViewModel,
     mapViewportState: MapViewportState,
     sheetMetrics: SheetInteractionMetrics,
+    controlBottomPadding: Dp,
     standardStyleState: StandardStyleState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
@@ -533,7 +545,7 @@ private fun MapboxLayer(
           Column(
               modifier =
                   Modifier.align(Alignment.BottomEnd)
-                      .padding(bottom = MapConstants.COLLAPSED_HEIGHT + 24.dp, end = 16.dp),
+                      .padding(bottom = controlBottomPadding, end = 16.dp),
               verticalArrangement = Arrangement.spacedBy(12.dp),
               horizontalAlignment = Alignment.End) {
                 Box(modifier = Modifier.size(48.dp)) { Compass() }

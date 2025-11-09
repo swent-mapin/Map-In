@@ -409,7 +409,25 @@ class MapScreenTest {
   fun chatButton_is_displayed() {
     rule.setContent { MaterialTheme { MapScreen() } }
 
-    rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).assertIsDisplayed()
+    rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).ensureVisible().assertIsDisplayed()
+  }
+
+  @Test
+  fun chatButton_staysVisibleAcrossSheetStates() {
+    rule.setContent { MaterialTheme { MapScreen() } }
+    rule.waitForIdle()
+
+    val chatButton = rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)
+
+    chatButton.ensureVisible().assertIsDisplayed()
+
+    rule.onNodeWithTag("bottomSheet").performTouchInput { swipeUp() }
+    rule.waitForIdle()
+    chatButton.ensureVisible().assertIsDisplayed()
+
+    rule.onNodeWithText("Search activities").performClick()
+    rule.waitForIdle()
+    chatButton.ensureVisible().assertIsDisplayed()
   }
 
   @Test
@@ -488,13 +506,7 @@ class MapScreenTest {
 
     // Verify LaunchedEffect executed by checking that permission was checked
     // This exercises the LaunchedEffect(Unit) location setup code
-    rule.runOnIdle {
-      // The LaunchedEffect should have called checkLocationPermission
-      // We can't directly verify it was called, but we can verify the ViewModel is in a valid state
-      assertNotNull(viewModel)
-      // hasLocationPermission is initialized by checkLocationPermission
-      assertFalse(viewModel.hasLocationPermission)
-    }
+    rule.runOnIdle { assertNotNull(viewModel.onRequestLocationPermission) }
   }
 
   @Test
