@@ -37,14 +37,15 @@ class MapCameraController(private val scope: CoroutineScope) {
     get() = _isProgrammaticZoom
 
   fun onZoomChange(newZoom: Float) {
-    if (kotlin.math.abs(newZoom - _lastZoom) <= 0.01f) return
+    if (kotlin.math.abs(newZoom - _lastZoom) <= MapConstants.CameraConfig.ZOOM_DELTA_THRESHOLD)
+        return
     _isZooming = true
     _lastZoom = newZoom
 
     hideScaleBarJob?.cancel()
     hideScaleBarJob =
         scope.launch {
-          delay(300)
+          delay(MapConstants.CameraConfig.SCALE_BAR_HIDE_DELAY_MS)
           _isZooming = false
         }
   }
@@ -69,7 +70,9 @@ class MapCameraController(private val scope: CoroutineScope) {
     fitCameraCallback = null
   }
 
-  private fun scheduleProgrammaticReset(delayMillis: Long = 1100) {
+  private fun scheduleProgrammaticReset(
+      delayMillis: Long = MapConstants.CameraConfig.PROGRAMMATIC_ZOOM_RESET_DELAY_MS
+  ) {
     programmaticZoomJob?.cancel()
     programmaticZoomJob =
         scope.launch {
