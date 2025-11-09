@@ -57,6 +57,21 @@ class MapConstantsTest {
   }
 
   @Test
+  fun locationCenterMinPadding_hasCorrectValue() {
+    assertEquals(8f, MapConstants.LOCATION_CENTER_MIN_PADDING_DP)
+  }
+
+  @Test
+  fun locationCenterMediumWeight_hasCorrectValue() {
+    assertEquals(0.85f, MapConstants.LOCATION_CENTER_MEDIUM_WEIGHT)
+  }
+
+  @Test
+  fun locationCenterMediumExtra_hasCorrectValue() {
+    assertEquals(16f, MapConstants.LOCATION_CENTER_MEDIUM_EXTRA_DP)
+  }
+
+  @Test
   fun defaultCoordinates_areAtEPFL() {
     val epflLat = 46.5197
     val epflLon = 6.5668
