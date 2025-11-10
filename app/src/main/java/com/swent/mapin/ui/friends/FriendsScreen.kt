@@ -289,7 +289,10 @@ private fun FriendCard(
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              Avatar(friend.userProfile.avatarUrl, friend.userProfile.name, Modifier.size(48.dp).testTag("avatar_${friend.userProfile.userId}"))
+              Avatar(
+                  friend.userProfile.avatarUrl,
+                  friend.userProfile.name,
+                  Modifier.size(48.dp).testTag("avatar_${friend.userProfile.userId}"))
               Spacer(Modifier.width(12.dp))
               Column(Modifier.weight(1f)) {
                 Text(
@@ -367,7 +370,10 @@ private fun RequestCard(
       CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar(req.userProfile.avatarUrl, req.userProfile.name, Modifier.size(48.dp).testTag("avatar_${req.userProfile.userId}"))
+            Avatar(
+                req.userProfile.avatarUrl,
+                req.userProfile.name,
+                Modifier.size(48.dp).testTag("avatar_${req.userProfile.userId}"))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
               Text(
@@ -428,7 +434,10 @@ private fun SearchCard(
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              Avatar(result.userProfile.avatarUrl, result.userProfile.name, Modifier.size(48.dp).testTag("avatar_${result.userProfile.userId}"))
+              Avatar(
+                  result.userProfile.avatarUrl,
+                  result.userProfile.name,
+                  Modifier.size(48.dp).testTag("avatar_${result.userProfile.userId}"))
               Spacer(Modifier.width(12.dp))
               Column(Modifier.weight(1f)) {
                 Text(
@@ -479,10 +488,11 @@ private fun SearchCard(
 @Composable
 private fun Avatar(url: String?, name: String, modifier: Modifier = Modifier) {
   Box(
-      modifier = modifier
-          .size(48.dp)
-          .clip(CircleShape)
-          .background(MaterialTheme.colorScheme.primaryContainer),
+      modifier =
+          modifier
+              .size(48.dp)
+              .clip(CircleShape)
+              .background(MaterialTheme.colorScheme.primaryContainer),
       contentAlignment = Alignment.Center) {
         when {
           url.isNullOrEmpty() || url == "person" -> {

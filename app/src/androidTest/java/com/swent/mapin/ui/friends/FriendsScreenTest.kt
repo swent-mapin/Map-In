@@ -212,4 +212,3 @@ class FriendsScreenTest {
     assert(searchQuery == "test")
   }
 }
-
