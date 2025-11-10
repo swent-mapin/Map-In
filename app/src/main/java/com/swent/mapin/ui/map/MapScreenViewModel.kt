@@ -229,7 +229,7 @@ class MapScreenViewModel(
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
   // Track the sheet state before opening event to restore it correctly
-  private var _sheetStateBeforeEvent by mutableStateOf(BottomSheetState.COLLAPSED)
+  private var _sheetStateBeforeEvent by mutableStateOf<BottomSheetState?>(null)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -624,6 +624,9 @@ class MapScreenViewModel(
     // Clear directions when closing event detail
     directionViewModel.clearDirection()
 
+    val previousSheetState = _sheetStateBeforeEvent
+    _sheetStateBeforeEvent = null
+
     if (_cameFromSearch) {
       // Return to search mode without clearing the current query
       _cameFromSearch = false
@@ -639,10 +642,13 @@ class MapScreenViewModel(
       applyEvents(searchStateController.refreshFilters(_selectedTags))
       // Return to FULL if user was editing, otherwise restore previous sheet state
       // (FULL for recents, MEDIUM for search results)
-      val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
+      val targetState =
+          if (wasEditing) BottomSheetState.FULL
+          else previousSheetState ?: BottomSheetState.COLLAPSED
       setBottomSheetState(targetState, resetSearch = false)
     } else {
-      setBottomSheetState(BottomSheetState.COLLAPSED)
+      val targetState = previousSheetState ?: BottomSheetState.COLLAPSED
+      setBottomSheetState(targetState)
     }
   }
 
