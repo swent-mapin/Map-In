@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -45,7 +46,7 @@ import kotlinx.coroutines.launch
 class MapScreenViewModel(
     initialSheetState: BottomSheetState,
     private val sheetConfig: BottomSheetConfig,
-    private val onClearFocus: () -> Unit,
+    onClearFocus: () -> Unit,
     private val applicationContext: Context,
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
@@ -55,13 +56,19 @@ class MapScreenViewModel(
     private val locationManager: LocationManager = LocationManager(applicationContext)
 ) : ViewModel() {
 
+  private var clearFocusCallback: (() -> Unit) = onClearFocus
+
+  private fun clearSearchFieldFocus() {
+    clearFocusCallback()
+  }
+
   private var authListener: FirebaseAuth.AuthStateListener? = null
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
           applicationContext = applicationContext,
           eventRepository = eventRepository,
-          onClearFocus = onClearFocus,
+          onClearFocus = ::clearSearchFieldFocus,
           scope = viewModelScope)
   private val bottomSheetStateController =
       BottomSheetStateController(
@@ -459,6 +466,10 @@ class MapScreenViewModel(
     setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
+  fun updateFocusClearer(onClearFocus: () -> Unit) {
+    clearFocusCallback = onClearFocus
+  }
+
   fun setMapStyle(style: MapStyle) {
     _mapStyle = style
     // Persist the user's choice to DataStore
@@ -749,13 +760,20 @@ fun rememberMapScreenViewModel(
   val context = LocalContext.current
   val appContext = context.applicationContext
 
-  return viewModel {
+  val mapScreenViewModel: MapScreenViewModel = viewModel {
     MapScreenViewModel(
         initialSheetState = initialSheetState,
         sheetConfig = sheetConfig,
         onClearFocus = { focusManager.clearFocus(force = true) },
         applicationContext = appContext)
   }
+
+  DisposableEffect(focusManager, mapScreenViewModel) {
+    mapScreenViewModel.updateFocusClearer { focusManager.clearFocus(force = true) }
+    onDispose { mapScreenViewModel.updateFocusClearer {} }
+  }
+
+  return mapScreenViewModel
 }
 
 fun eventsToGeoJson(events: List<Event>): String {
