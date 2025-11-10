@@ -24,18 +24,14 @@ fun isValidTagInput(input: String): Boolean {
 }
 
 /**
+ * With help of GPT
  * Helper function to check whether a given string input is a valid price (double)
  *
  * @param input The string input
  */
 fun isValidPriceInput(input: String): Boolean {
-  val trimmed = input.trim()
-  return try {
-    trimmed.toDouble()
-    true
-  } catch (e: NumberFormatException) {
-    false
-  }
+    val regex = """^\d+(\.\d+)?$""".toRegex()
+    return regex.matches(input.trim())
 }
 
 /**
