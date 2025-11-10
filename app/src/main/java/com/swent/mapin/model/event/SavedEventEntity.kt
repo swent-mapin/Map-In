@@ -18,6 +18,8 @@ data class SavedEventEntity(
     @ColumnInfo(name = "description") var description: String,
     @ColumnInfo(name = "date_seconds") var dateSeconds: Long?,
     @ColumnInfo(name = "date_nanoseconds") var dateNanoseconds: Int?,
+    @ColumnInfo(name = "end_date_seconds") var endDateSeconds: Long?,
+    @ColumnInfo(name = "end_date_nanoseconds") var endDateNanoseconds: Int?,
     @ColumnInfo(name = "location_name") var locationName: String,
     @ColumnInfo(name = "location_lat") var locationLat: Double,
     @ColumnInfo(name = "location_lng") var locationLng: Double,
