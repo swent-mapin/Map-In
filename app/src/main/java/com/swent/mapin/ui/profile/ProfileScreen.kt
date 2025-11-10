@@ -806,11 +806,11 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                     verticalAlignment = Alignment.CenterVertically) {
                       Icon(
                           imageVector = Icons.Default.Delete,
-                          contentDescription = "Delete Profile",
+                          contentDescription = "Clear Profile",
                           modifier = Modifier.size(20.dp))
                       Spacer(modifier = Modifier.width(8.dp))
                       Text(
-                          "Delete Profile",
+                          "Clear Profile",
                           style = MaterialTheme.typography.bodyLarge,
                           fontWeight = FontWeight.Bold)
                     }
@@ -1095,7 +1095,7 @@ fun DeleteProfileConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit
         Button(
             onClick = onConfirm,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFef5350))) {
-              Text("Delete Profile", color = Color.White)
+              Text("Clear Profile", color = Color.White)
             }
       },
       dismissButton = {
