@@ -39,9 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.BottomSheetState
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 /**
@@ -75,9 +78,9 @@ fun EventDetailSheet(
     onUnsaveForLater: () -> Unit,
     onClose: () -> Unit,
     onShare: () -> Unit,
+    modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false,
-    modifier: Modifier = Modifier
+    showDirections: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
@@ -139,9 +142,9 @@ private fun EventDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
 @Composable
 private fun CollapsedEventContent(
     event: Event,
+    modifier: Modifier = Modifier,
     onShare: () -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
   Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
     Row(
@@ -192,9 +195,9 @@ private fun MediumEventContent(
     isParticipating: Boolean,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
+    modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false,
-    modifier: Modifier = Modifier
+    showDirections: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
     // Title with direction icon
@@ -225,11 +228,11 @@ private fun MediumEventContent(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Date
-    event.date?.let { timestamp ->
-      val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", Locale.getDefault())
+    // Date (smart range)
+    event.date?.let { startTimestamp ->
+      val dateText = formatEventDateRangeMedium(startTimestamp, event.endDate)
       Text(
-          text = dateFormat.format(timestamp.toDate()),
+          text = dateText,
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           modifier = Modifier.testTag("eventDate"))
@@ -310,9 +313,9 @@ private fun FullEventContent(
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
     onUnsaveForLater: () -> Unit,
+    modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false,
-    modifier: Modifier = Modifier
+    showDirections: Boolean = false
 ) {
   val scrollState = rememberScrollState()
 
@@ -378,11 +381,11 @@ private fun FullEventContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Date
-        event.date?.let { timestamp ->
-          val dateFormat = SimpleDateFormat("EEEE, MMM dd, yyyy 'at' HH:mm", Locale.getDefault())
+        // Date (smart range, full)
+        event.date?.let { startTimestamp ->
+          val dateText = formatEventDateRangeFull(startTimestamp, event.endDate)
           Text(
-              text = dateFormat.format(timestamp.toDate()),
+              text = dateText,
               style = MaterialTheme.typography.bodyLarge,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               modifier = Modifier.testTag("eventDateFull"))
@@ -558,6 +561,96 @@ private fun AttendeeInfo(event: Event, testTagSuffix: String) {
           text = it,
           style = MaterialTheme.typography.bodyMedium,
           modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
+    }
+  }
+}
+
+/**
+ * Format helpers for smart start-end date/time display.
+ */
+@VisibleForTesting
+internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): String {
+  val startDate = start.toDate()
+  // Treat end equal to start as no end
+  val endDateRaw = end?.toDate()
+  val endDate = if (endDateRaw != null && endDateRaw.time == startDate.time) null else endDateRaw
+
+  val calStart = Calendar.getInstance().apply { time = startDate }
+  // Determine if we should show year for single events
+  val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+  val startYear = calStart.get(Calendar.YEAR)
+  val showYearSingle = startYear != currentYear
+
+  // For ranges, when endDate is non-null create a calEnd and compare
+  val sameYearRange: Boolean
+  val sameDayRange: Boolean
+  if (endDate != null) {
+    val calEndLocal = Calendar.getInstance().apply { time = endDate }
+    sameYearRange = calStart.get(Calendar.YEAR) == calEndLocal.get(Calendar.YEAR)
+    sameDayRange = sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEndLocal.get(Calendar.DAY_OF_YEAR)
+  } else {
+    sameYearRange = false
+    sameDayRange = false
+  }
+
+  val dateFmtNoYear = SimpleDateFormat("MMM d", Locale.getDefault())
+  val dateFmtWithYear = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+
+  // 24-hour format always showing minutes (e.g., 13:00 or 13:30)
+  fun timeShort(d: Date): String {
+    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
+  }
+
+  return if (endDate == null) {
+    // Single time
+    val dateStr = if (showYearSingle) dateFmtWithYear.format(startDate) else dateFmtNoYear.format(startDate)
+    "$dateStr, ${timeShort(startDate)}"
+  } else {
+    // Range
+    if (sameDayRange) {
+      val dateStr = dateFmtNoYear.format(startDate) // same day -> no year needed
+      "$dateStr, ${timeShort(startDate)} - ${timeShort(endDate)}"
+    } else {
+      // determine if start/end are same year
+      val startStr = if (sameYearRange) dateFmtNoYear.format(startDate) else dateFmtWithYear.format(startDate)
+      val endStr = if (sameYearRange) dateFmtNoYear.format(endDate) else dateFmtWithYear.format(endDate)
+      "$startStr, ${timeShort(startDate)} - $endStr, ${timeShort(endDate)}"
+    }
+  }
+}
+
+@VisibleForTesting
+internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String {
+  val startDate = start.toDate()
+  // Treat end equal to start as no end
+  val endDateRaw = end?.toDate()
+  val endDate = if (endDateRaw != null && endDateRaw.time == startDate.time) null else endDateRaw
+
+  val calStart = Calendar.getInstance().apply { time = startDate }
+  // For ranges, when endDate is non-null create a calEnd and compare
+  val calEnd = endDate?.let { Calendar.getInstance().apply { time = it } }
+
+  // For ranges, only compare year/day if calEnd is provided
+  val sameYearRange = calEnd != null && calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR)
+  val sameDayRange = calEnd != null && sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
+
+  val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault())
+
+  // 24-hour format always showing minutes
+  fun timeFull(d: Date): String {
+    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
+  }
+
+  return if (endDate == null) {
+    // Single time, include weekday and year
+    "${dateFullFmt.format(startDate)} at ${timeFull(startDate)}"
+  } else {
+    if (sameDayRange) {
+      "${dateFullFmt.format(startDate)} at ${timeFull(startDate)} - ${timeFull(endDate)}"
+    } else {
+      val startStr = dateFullFmt.format(startDate)
+      val endStr = dateFullFmt.format(endDate)
+      "$startStr at ${timeFull(startDate)} - $endStr at ${timeFull(endDate)}"
     }
   }
 }
