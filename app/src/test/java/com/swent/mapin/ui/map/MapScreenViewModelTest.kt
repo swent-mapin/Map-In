@@ -1489,4 +1489,261 @@ class MapScreenViewModelTest {
     // (may be empty if no stored data)
     assertNotNull(viewModel.recentItems)
   }
+
+  @Test
+  fun `toggleDirections activates directions when not displayed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    // Initially no directions
+    assertTrue(
+        viewModel.directionViewModel.directionState
+            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
+
+    // Toggle directions on
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Directions should be loading or displayed
+    val state = viewModel.directionViewModel.directionState
+    assertTrue(
+        state is com.swent.mapin.ui.map.directions.DirectionState.Loading ||
+            state is com.swent.mapin.ui.map.directions.DirectionState.Displayed)
+  }
+
+  @Test
+  fun `toggleDirections clears directions when already displayed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    // First toggle - activate directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Manually set to displayed state to test the clear branch
+    val userLocation =
+        com.mapbox.geojson.Point.fromLngLat(
+            MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+    val eventLocation =
+        com.mapbox.geojson.Point.fromLngLat(
+            testEvent.location.longitude, testEvent.location.latitude)
+    viewModel.directionViewModel.requestDirections(userLocation, eventLocation)
+    advanceUntilIdle()
+
+    // Second toggle - should clear directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Directions should be cleared
+    assertTrue(
+        viewModel.directionViewModel.directionState
+            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
+  }
+
+  @Test
+  fun `onEventClickedFromSearch sets cameFromSearch and marks search committed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Perform a search first
+    viewModel.onSearchQueryChange("Basketball")
+    advanceUntilIdle()
+
+    // Click event from search results
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    // Event should be selected
+    assertEquals(testEvent, viewModel.selectedEvent)
+    // Search query should still be present (committed, not cleared)
+    assertTrue(viewModel.searchQuery.isNotEmpty())
+  }
+
+  @Test
+  fun `closeEventDetail with cameFromSearch restores search mode correctly`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Setup: perform a search and click an event from results
+    viewModel.onSearchQueryChange("Basketball")
+    advanceUntilIdle()
+
+    val queryBeforeEvent = viewModel.searchQuery
+
+    // Click event from search (this sets _cameFromSearch = true)
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+
+    // Close event detail
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Should return to search mode with query preserved
+    assertEquals(queryBeforeEvent, viewModel.searchQuery)
+    assertNull(viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `closeEventDetail with cameFromSearch and wasEditing restores editing state`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Setup: start typing in search (editing mode)
+    viewModel.onSearchTap()
+    viewModel.onSearchQueryChange("Bask")
+    advanceUntilIdle()
+
+    // Click event from search while still editing
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+
+    // Close event detail
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Should return to FULL state (editing mode) with search focused
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+    assertNull(viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `onRecentEventClicked selects event when found`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // First, search and submit to save as recent
+    viewModel.onSearchQueryChange(testEvent.title)
+    viewModel.onSearchSubmit()
+    advanceUntilIdle()
+
+    // Click the event to save it as recent
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    // Close the event
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Now click from recent events
+    viewModel.onRecentEventClicked(testEvent.uid)
+    advanceUntilIdle()
+
+    // Event should be selected
+    assertEquals(testEvent.uid, viewModel.selectedEvent?.uid)
+  }
+
+  @Test
+  fun `onRecentEventClicked does nothing when event not found`() = runTest {
+    val initialSelected = viewModel.selectedEvent
+
+    // Try to click a non-existent event
+    viewModel.onRecentEventClicked("non-existent-id")
+    advanceUntilIdle()
+
+    // Selected event should not change
+    assertEquals(initialSelected, viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `onClearSearch resets events and sets sheet to medium`() = runTest {
+    // Perform a search first
+    viewModel.onSearchQueryChange("Basketball")
+    viewModel.onSearchSubmit()
+    advanceUntilIdle()
+
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(viewModel.searchQuery.isNotEmpty())
+
+    // Clear the search
+    viewModel.onClearSearch()
+    advanceUntilIdle()
+
+    // Sheet should be MEDIUM and search should be reset
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(viewModel.searchQuery.isEmpty())
+  }
+
+  @Test
+  fun `isUserParticipating returns false when no user is logged in`() = runTest {
+    // Mock no user logged in
+    whenever(mockAuth.currentUser).thenReturn(null)
+
+    val result = viewModel.isUserParticipating()
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating returns false when no event is selected`() = runTest {
+    // Mock user logged in
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn("user123")
+
+    // No event selected
+    val result = viewModel.isUserParticipating()
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating returns true when user is in participant list`() = runTest {
+    val userId = "user123"
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+
+    // Select an event where user is participating
+    val testEvent =
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(userId))
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    val result = viewModel.isUserParticipating()
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns false when no user`() = runTest {
+    whenever(mockAuth.currentUser).thenReturn(null)
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    val result = viewModel.isUserParticipating(testEvent)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns true when user participates`() = runTest {
+    val userId = "user123"
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+
+    val testEvent =
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(userId))
+
+    val result = viewModel.isUserParticipating(testEvent)
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns false when user does not participate`() =
+      runTest {
+        val userId = "user123"
+        whenever(mockAuth.currentUser).thenReturn(mockUser)
+        whenever(mockUser.uid).thenReturn(userId)
+
+        val testEvent =
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+                participantIds = listOf("otherUser456"))
+
+        val result = viewModel.isUserParticipating(testEvent)
+
+        assertFalse(result)
+      }
 }
