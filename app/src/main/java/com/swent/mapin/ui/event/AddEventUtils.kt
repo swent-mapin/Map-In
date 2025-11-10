@@ -3,6 +3,9 @@ package com.swent.mapin.ui.event
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * With help of GPT: Helper function which checks if the user's input string for tags are of valid
@@ -75,7 +78,8 @@ fun saveEvent(
     title: String,
     description: String,
     location: Location,
-    date: Timestamp,
+    startDate: Timestamp,
+    endDate: Timestamp?,
     currentUserId: String?,
     tags: List<String>,
     isPublic: Boolean,
@@ -89,7 +93,8 @@ fun saveEvent(
           url = null,
           description = description,
           location = location,
-          date = date,
+          date = startDate,
+          endDate = endDate,
           tags = tags,
           public = isPublic,
           ownerId = uid,
@@ -97,4 +102,40 @@ fun saveEvent(
           capacity = null)
   viewModel.addEvent(newEvent)
   onDone()
+}
+
+sealed class ParseResult {
+  data class Success(val start: Timestamp, val end: Timestamp) : ParseResult()
+  data class Error(val message: String) : ParseResult()
+}
+
+/**
+ * Parse and validate start/end date+time strings using pattern dd/MM/yyyyHHmm (24h).
+ * Returns Success(startTs, endTs) if both parse and end > start, otherwise Error with reason.
+ */
+fun parseAndValidateStartEnd(
+    startDateStr: String,
+    startTimeStr: String,
+    endDateStr: String,
+    endTimeStr: String
+): ParseResult {
+  val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+  sdf.timeZone = TimeZone.getDefault()
+
+  val rawStart = startDateStr + startTimeStr
+  val rawEnd = endDateStr + endTimeStr
+
+  val parsedStart = runCatching { sdf.parse(rawStart) }.getOrNull()
+  if (parsedStart == null) return ParseResult.Error("invalid start datetime")
+  val parsedEnd = runCatching { sdf.parse(rawEnd) }.getOrNull()
+  if (parsedEnd == null) return ParseResult.Error("invalid end datetime")
+
+  val startTs = Timestamp(parsedStart)
+  val endTs = Timestamp(parsedEnd)
+
+  return if (!endTs.toDate().after(startTs.toDate())) {
+    ParseResult.Error("end must be after start")
+  } else {
+    ParseResult.Success(startTs, endTs)
+  }
 }
