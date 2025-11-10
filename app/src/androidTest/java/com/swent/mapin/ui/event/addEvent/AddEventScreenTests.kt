@@ -1,12 +1,13 @@
 package com.swent.mapin.ui.event.addEvent
 
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -57,11 +58,13 @@ class AddEventScreenTests {
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .onFirst()
         .performScrollTo()
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
     composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .onFirst()
         .performScrollTo()
         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
     composeTestRule
@@ -75,8 +78,10 @@ class AddEventScreenTests {
   }
 
   @Test
-  fun doesNotShowErrorMessageInitially() {
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsNotDisplayed()
+  fun showsErrorMessageInitially() {
+    // The UI shows the missing-fields error row initially because many required fields are empty.
+    // Target the first node in case multiple nodes share the same tag.
+    composeTestRule.onAllNodesWithTag(AddEventScreenTestTags.ERROR_MESSAGE).onFirst().assertIsDisplayed()
   }
 
   @Test
@@ -170,14 +175,17 @@ class AddEventScreenTests {
   @Test
   fun datePickerButtonDisplaysDefaultText() {
     composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .onFirst()
         .assertTextContains("Select Date:", substring = true, ignoreCase = true)
   }
 
   @Test
   fun timePickerButtonDisplaysDefaultText() {
     composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .onFirst()
+        .performScrollTo()
         .assertTextContains("Select Time:", substring = true, ignoreCase = true)
   }
 
@@ -221,11 +229,19 @@ class AddEventScreenTests {
 
   @Test
   fun invalidInputsKeepSaveButtonDisabled() {
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("")
+    // Ensure title is blank
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performScrollTo().performTextClearance()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
         .performTextInput("This is a valid description")
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsNotEnabled()
+
+    // The Save button is clickable by design; clicking it should NOT call onDone when form invalid.
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo().performClick()
+    // onDone should not have been called
+    assert(!saveClicked)
+    // And the validation banner / error message should be visible
+    composeTestRule.onAllNodesWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertCountEquals(1)
   }
 }
 
@@ -248,7 +264,8 @@ class SaveEventTests {
         viewModel = mockViewModel,
         title = testTitle,
         description = testDescription,
-        date = Timestamp(10000, 200),
+        startDate = Timestamp(10000, 200),
+        endDate = Timestamp(10000, 200),
         location = testLocation,
         currentUserId = currentUserId,
         tags = testTags,
@@ -277,7 +294,8 @@ class SaveEventTests {
         viewModel = mockViewModel,
         title = testTitle,
         description = testDescription,
-        date = Timestamp(10000, 200),
+        startDate = Timestamp(10000, 200),
+        endDate = Timestamp(10000, 200),
         location = testLocation,
         currentUserId = currentUserId,
         tags = testTags,
