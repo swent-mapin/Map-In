@@ -9,31 +9,31 @@ import kotlin.test.assertTrue
 class AddEventUtilsTest {
   @Test
   fun `returns true for blank input`() {
-      assertTrue(isValidTagInput(""))
-      assertTrue(isValidTagInput("   ")) // whitespace only
+    assertTrue(isValidTagInput(""))
+    assertTrue(isValidTagInput("   ")) // whitespace only
   }
 
   @Test
   fun `returns true for single valid tag`() {
-      assertTrue(isValidTagInput("#food"))
-      assertTrue(isValidTagInput("#fun_2025"))
+    assertTrue(isValidTagInput("#food"))
+    assertTrue(isValidTagInput("#fun_2025"))
   }
 
   @Test
   fun `returns true for multiple valid tags separated by commas`() {
-      assertTrue(isValidTagInput("#food,#travel"))
-      assertTrue(isValidTagInput("#food ,#travel"))
-      assertTrue(isValidTagInput("#food , #travel , #music"))
+    assertTrue(isValidTagInput("#food,#travel"))
+    assertTrue(isValidTagInput("#food ,#travel"))
+    assertTrue(isValidTagInput("#food , #travel , #music"))
   }
 
   @Test
   fun `returns false for tags missing hash or invalid format`() {
-      TestCase.assertFalse(isValidTagInput("food")) // missing #
-      TestCase.assertFalse(isValidTagInput("#food travel")) // second missing #
-      TestCase.assertFalse(isValidTagInput("#food,travel")) // invalid second
-      TestCase.assertFalse(isValidTagInput("#")) // incomplete tag
-      TestCase.assertFalse(isValidTagInput("#food,,")) // trailing commas
-      TestCase.assertFalse(isValidTagInput("#food, #")) // dangling #
+    TestCase.assertFalse(isValidTagInput("food")) // missing #
+    TestCase.assertFalse(isValidTagInput("#food travel")) // second missing #
+    TestCase.assertFalse(isValidTagInput("#food,travel")) // invalid second
+    TestCase.assertFalse(isValidTagInput("#")) // incomplete tag
+    TestCase.assertFalse(isValidTagInput("#food,,")) // trailing commas
+    TestCase.assertFalse(isValidTagInput("#food, #")) // dangling #
   }
 
   // ---------- Tests for extractTags ----------
@@ -41,19 +41,19 @@ class AddEventUtilsTest {
   @Test
   fun `extracts single tag correctly`() {
     val result = extractTags("#food")
-      assertEquals(listOf("#food"), result)
+    assertEquals(listOf("#food"), result)
   }
 
   @Test
   fun `extracts multiple tags with mixed separators`() {
     val result = extractTags("#food , #travel,#music")
-      assertEquals(listOf("#food", "#travel", "#music"), result)
+    assertEquals(listOf("#food", "#travel", "#music"), result)
   }
 
   @Test
   fun `returns empty list when no tags present`() {
     val result = extractTags("no tags here")
-      assertTrue(result.isEmpty())
+    assertTrue(result.isEmpty())
   }
 
   // ---------- Tests for isValidLocation ----------
@@ -64,45 +64,44 @@ class AddEventUtilsTest {
         listOf(
             Location("Paris", 0.0, 0.0),
             Location("London", 0.0, 0.0),
-            Location("New York", 0.0, 0.0)
-        )
-      assertTrue(isValidLocation("paris", locations))
-      assertTrue(isValidLocation("LONDON", locations))
+            Location("New York", 0.0, 0.0))
+    assertTrue(isValidLocation("paris", locations))
+    assertTrue(isValidLocation("LONDON", locations))
   }
 
   @Test
   fun `returns false when location not in list`() {
     val locations = listOf(Location("Berlin", 0.0, 0.0), Location("Rome", 0.0, 0.0))
-      TestCase.assertFalse(isValidLocation("Madrid", locations))
+    TestCase.assertFalse(isValidLocation("Madrid", locations))
   }
 
   @Test
   fun `returns false for empty location list`() {
     val locations = emptyList<Location>()
-      TestCase.assertFalse(isValidLocation("Anything", locations))
+    TestCase.assertFalse(isValidLocation("Anything", locations))
   }
 
   @Test
-  fun `returns false for invalid price`(){
-      val invalidPrice = "3.0price"
-      val invalidPrice2 = "3.0f"
-      val invalidPrice3 = "price"
-      val invalidPrice4 = "price0.0"
-      TestCase.assertFalse(isValidPriceInput(invalidPrice))
-      TestCase.assertFalse(isValidPriceInput(invalidPrice2))
-      TestCase.assertFalse(isValidPriceInput(invalidPrice3))
-      TestCase.assertFalse(isValidPriceInput(invalidPrice4))
+  fun `returns false for invalid price`() {
+    val invalidPrice = "3.0price"
+    val invalidPrice2 = "3.0f"
+    val invalidPrice3 = "price"
+    val invalidPrice4 = "price0.0"
+    TestCase.assertFalse(isValidPriceInput(invalidPrice))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice2))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice3))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice4))
   }
 
   @Test
-  fun `returns true for valid price`(){
-      val validPrice = "3.0"
-      val validPrice2 = "0"
-      val validPrice3 = "0.0"
-      val validPrice4 = "10"
-      TestCase.assertTrue(isValidPriceInput(validPrice))
-      TestCase.assertTrue(isValidPriceInput(validPrice2))
-      TestCase.assertTrue(isValidPriceInput(validPrice3))
-      TestCase.assertTrue(isValidPriceInput(validPrice4))
+  fun `returns true for valid price`() {
+    val validPrice = "3.0"
+    val validPrice2 = "0"
+    val validPrice3 = "0.0"
+    val validPrice4 = "10"
+    TestCase.assertTrue(isValidPriceInput(validPrice))
+    TestCase.assertTrue(isValidPriceInput(validPrice2))
+    TestCase.assertTrue(isValidPriceInput(validPrice3))
+    TestCase.assertTrue(isValidPriceInput(validPrice4))
   }
 }
