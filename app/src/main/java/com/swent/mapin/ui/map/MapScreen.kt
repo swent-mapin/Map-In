@@ -86,7 +86,6 @@ import com.swent.mapin.ui.map.components.ObserveSheetStateForZoomUpdate
 import com.swent.mapin.ui.map.components.ObserveZoomForSheetCollapse
 import com.swent.mapin.ui.map.components.ScrimOverlay
 import com.swent.mapin.ui.map.components.SheetInteractionMetrics
-import com.swent.mapin.ui.map.components.TopGradient
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
 import com.swent.mapin.ui.map.components.createEventAnnotations
@@ -358,8 +357,6 @@ fun MapScreen(
     }
 
     // Overlays et contrôles au-dessus de la carte
-    TopGradient()
-
     Box(
         modifier =
             Modifier.align(Alignment.BottomStart)
