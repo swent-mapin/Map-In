@@ -163,6 +163,71 @@ class FriendsScreenTest {
     assert(removedUserId == "1")
   }
 
+  // Test 8: Friends list displays friend avatars
+  @Test
+  fun friendsListTab_displaysFriendAvatars() {
+    val friends =
+        listOf(
+            FriendWithProfile(
+                userProfile =
+                    UserProfile(
+                        userId = "1",
+                        name = "Alice",
+                        avatarUrl = "https://example.com/avatar1.jpg"),
+                friendshipStatus = FriendshipStatus.ACCEPTED,
+                requestId = "req1"))
+
+    composeTestRule.setContent {
+      MaterialTheme { FriendsScreen(onNavigateBack = {}, friends = friends) }
+    }
+
+    // Avatar uses testTag "avatar_<userId>"
+    composeTestRule.onNodeWithTag("avatar_1").assertIsDisplayed()
+  }
+
+  // Test 9: Requests tab displays request avatars
+  @Test
+  fun requestsTab_displaysRequestAvatars() {
+    val requests =
+        listOf(
+            FriendWithProfile(
+                userProfile =
+                    UserProfile(
+                        userId = "2", name = "Bob", avatarUrl = "https://example.com/avatar2.jpg"),
+                friendshipStatus = FriendshipStatus.PENDING,
+                requestId = "req2"))
+
+    composeTestRule.setContent {
+      MaterialTheme { FriendsScreen(onNavigateBack = {}, pendingRequests = requests) }
+    }
+
+    composeTestRule.onNodeWithTag("tabREQUESTS").performClick()
+    composeTestRule.onNodeWithTag("avatar_2").assertIsDisplayed()
+  }
+
+  // Test 10: Search tab displays search result avatars
+  @Test
+  fun searchTab_displaysSearchResultAvatars() {
+    val results =
+        listOf(
+            com.swent.mapin.model.SearchResultWithStatus(
+                userProfile =
+                    UserProfile(
+                        userId = "3",
+                        name = "Charlie",
+                        avatarUrl = "https://example.com/avatar3.jpg"),
+                hasPendingRequest = false))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        FriendsScreen(onNavigateBack = {}, searchQuery = "charlie", searchResults = results)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("tabSEARCH").performClick()
+    composeTestRule.onNodeWithTag("avatar_3").assertIsDisplayed()
+  }
+
   // Additional essential tests for UI stability
 
   @Test
