@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -69,6 +71,7 @@ object AddEventScreenTestTags {
   const val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   const val INPUT_EVENT_TAG = "inputEventTag"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
+  const val INPUT_EVENT_PRICE = "inputEventPrice"
   const val EVENT_CANCEL = "eventCancel"
   const val EVENT_SAVE = "eventSave"
   const val ERROR_MESSAGE = "errorMessage"
@@ -261,6 +264,7 @@ fun AddEventScreen(
   val date = remember { mutableStateOf("") }
   val tag = remember { mutableStateOf("") }
   val time = remember { mutableStateOf("") }
+  val price = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
 
   val dateError = remember { mutableStateOf(false) }
@@ -269,6 +273,7 @@ fun AddEventScreen(
   val descriptionError = remember { mutableStateOf(false) }
   val locationError = remember { mutableStateOf(false) }
   val tagError = remember { mutableStateOf(false) }
+  val priceError = remember { mutableStateOf(false) }
   val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
   val locationExpanded = remember { mutableStateOf(false) }
@@ -288,7 +293,8 @@ fun AddEventScreen(
           time.value.isBlank() ||
           dateError.value ||
           date.value.isBlank() ||
-          tagError.value
+          tagError.value ||
+          priceError.value
 
   val showMissingFields =
       titleError.value ||
@@ -296,23 +302,31 @@ fun AddEventScreen(
           locationError.value ||
           timeError.value ||
           dateError.value ||
-          tagError.value
+          tagError.value ||
+          priceError.value
 
   val errorFields =
       listOfNotNull(
           if (titleError.value) stringResource(R.string.title_field) else null,
           if (dateError.value) stringResource(R.string.date_field) else null,
+          if (timeError.value) stringResource(R.string.time) else null,
           if (locationError.value) stringResource(R.string.location_field) else null,
           if (descriptionError.value) stringResource(R.string.description_field) else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (timeError.value) stringResource(R.string.time) else null)
+          if (priceError.value) stringResource(R.string.price_field) else null)
 
   val isEventValid = !error && isLoggedIn.value
   val isDateAndTimeValid =
       dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
   val scrollState = rememberScrollState()
 
-  Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
+  Column(
+      modifier = modifier
+          .fillMaxWidth()
+          .verticalScroll(scrollState)
+          .imePadding()
+          .navigationBarsPadding()
+  ) {
     // TopBar
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -457,7 +471,31 @@ fun AddEventScreen(
         modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
         isTag = true)
 
+    Spacer(modifier = Modifier.padding(bottom = 10.dp))
+    //Price field
+    Text(
+        stringResource(R.string.price_text),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically ) {
+        AddEventTextField(
+            price,
+            priceError,
+            stringResource(R.string.price_place_holder),
+            modifier = Modifier.fillMaxWidth(0.3f).testTag(AddEventScreenTestTags.INPUT_EVENT_PRICE),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.padding(horizontal = 5.dp))
+        Text(
+            stringResource(R.string.currency_switzerland),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+
     Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
     // Public/Private switch
     if (isPublic.value) {
       PublicSwitch(
