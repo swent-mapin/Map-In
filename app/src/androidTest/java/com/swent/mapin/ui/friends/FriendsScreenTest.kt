@@ -13,8 +13,6 @@ import org.junit.Rule
 import org.junit.Test
 
 // Assisted by AI
-
-/** Instrumentation tests for FriendsScreen - covers the 7 essential features. */
 class FriendsScreenTest {
 
   @get:Rule val composeTestRule = createComposeRule()
@@ -214,3 +212,4 @@ class FriendsScreenTest {
     assert(searchQuery == "test")
   }
 }
+
