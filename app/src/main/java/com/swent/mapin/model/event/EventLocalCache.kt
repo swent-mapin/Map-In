@@ -40,12 +40,14 @@ class EventLocalCache(private val dao: SavedEventDao) {
 // Mapping helpers
 private fun SavedEventEntity.toEvent(): Event {
   val ts = dateSeconds?.let { Timestamp(it, dateNanoseconds ?: 0) }
+  val endTs = endDateSeconds?.let { Timestamp(it, endDateNanoseconds ?: 0) }
   return Event(
       uid = id,
       title = title,
       url = null,
       description = description,
       date = ts,
+      endDate = endTs,
       location = com.swent.mapin.model.Location(locationName, locationLat, locationLng),
       tags = if (tagsCsv.isBlank()) emptyList() else tagsCsv.split(","),
       public = isPublic,
@@ -68,6 +70,8 @@ private fun savedEventEntityFrom(
         description = event.description,
         dateSeconds = event.date?.seconds,
         dateNanoseconds = event.date?.nanoseconds,
+        endDateSeconds = event.endDate?.seconds,
+        endDateNanoseconds = event.endDate?.nanoseconds,
         locationName = event.location.name,
         locationLat = event.location.latitude,
         locationLng = event.location.longitude,
