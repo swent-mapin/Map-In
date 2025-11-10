@@ -43,6 +43,8 @@ class SavedEventEntityMapperTest {
             description = "Desc",
             dateSeconds = 123L,
             dateNanoseconds = 0,
+            endDateSeconds = null,
+            endDateNanoseconds = null,
             locationName = "Loc",
             locationLat = 1.5,
             locationLng = 2.5,
