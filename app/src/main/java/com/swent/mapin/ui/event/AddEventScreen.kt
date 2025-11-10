@@ -297,12 +297,16 @@ fun AddEventScreen(
   val description = remember { mutableStateOf("") }
   val location = remember { mutableStateOf("") }
   val date = remember { mutableStateOf("") }
+  val endDate = remember { mutableStateOf("") }
   val tag = remember { mutableStateOf("") }
   val time = remember { mutableStateOf("") }
+  val endTime = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
 
   val dateError = remember { mutableStateOf(false) }
+  val endDateError = remember { mutableStateOf(false) }
   val timeError = remember { mutableStateOf(false) }
+  val endTimeError = remember { mutableStateOf(false) }
   val titleError = remember { mutableStateOf(false) }
   val descriptionError = remember { mutableStateOf(false) }
   val locationError = remember { mutableStateOf(false) }
@@ -315,6 +319,67 @@ fun AddEventScreen(
   }
   val locations by locationViewModel.locations.collectAsState()
 
+  // Helper to validate start/end together and set appropriate error flags.
+  fun validateStartEnd() {
+    // Basic presence checks
+    dateError.value = date.value.isBlank()
+    timeError.value = time.value.isBlank()
+    endDateError.value = endDate.value.isBlank()
+    endTimeError.value = endTime.value.isBlank()
+
+    // Only proceed if both date strings parse
+    if (date.value.isBlank() || endDate.value.isBlank()) return
+
+    val dateFmt = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val startDateOnly = runCatching { dateFmt.parse(date.value) }.getOrNull()
+    val endDateOnly = runCatching { dateFmt.parse(endDate.value) }.getOrNull()
+    if (startDateOnly == null) {
+      dateError.value = true
+      return
+    }
+    if (endDateOnly == null) {
+      endDateError.value = true
+      return
+    }
+
+    // If end date is after start date, we're good regardless of time
+    if (endDateOnly.time > startDateOnly.time) {
+      endDateError.value = false
+      endTimeError.value = false
+      return
+    }
+
+    // If end date is before start date -> mark endDate error
+    if (endDateOnly.time < startDateOnly.time) {
+      endDateError.value = true
+      endTimeError.value = false
+      return
+    }
+
+    // Dates equal -> need to validate times
+    if (time.value.isBlank() || endTime.value.isBlank()) {
+      // presence flags already set above
+      return
+    }
+
+    val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
+    val rawEndTime = if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
+
+    // parse HHmm into minutes since midnight
+    val startMinutes = runCatching { rawTime.substring(0,2).toInt()*60 + rawTime.substring(2,4).toInt() }.getOrNull()
+    val endMinutes = runCatching { rawEndTime.substring(0,2).toInt()*60 + rawEndTime.substring(2,4).toInt() }.getOrNull()
+    if (startMinutes == null) { timeError.value = true; return }
+    if (endMinutes == null) { endTimeError.value = true; return }
+
+    if (endMinutes <= startMinutes) {
+      endDateError.value = true
+      endTimeError.value = false
+    } else {
+      endDateError.value = false
+      endTimeError.value = false
+    }
+  }
+
   val error =
       titleError.value ||
           title.value.isBlank() ||
@@ -326,31 +391,42 @@ fun AddEventScreen(
           time.value.isBlank() ||
           dateError.value ||
           date.value.isBlank() ||
-          tagError.value
-
-  val showMissingFields =
-      titleError.value ||
-          descriptionError.value ||
-          locationError.value ||
-          timeError.value ||
-          dateError.value ||
-          tagError.value
+          tagError.value ||
+          endDateError.value ||
+          endDate.value.isBlank() ||
+          endTimeError.value ||
+          endTime.value.isBlank()
 
   val errorFields =
       listOfNotNull(
-          if (titleError.value) stringResource(R.string.title_field) else null,
-          if (dateError.value) stringResource(R.string.date_field) else null,
-          if (locationError.value) stringResource(R.string.location_field) else null,
-          if (descriptionError.value) stringResource(R.string.description_field) else null,
+          if (titleError.value || title.value.isBlank()) stringResource(R.string.title_field) else null,
+          if (dateError.value || date.value.isBlank()) stringResource(R.string.date_field) else null,
+          if (locationError.value || location.value.isBlank()) stringResource(R.string.location_field) else null,
+          if (descriptionError.value || description.value.isBlank()) stringResource(R.string.description_field) else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (timeError.value) stringResource(R.string.time) else null)
+          if (timeError.value || time.value.isBlank()) stringResource(R.string.time) else null,
+          if (endDateError.value || endDate.value.isBlank()) "End date" else null,
+          if (endTimeError.value || endTime.value.isBlank()) "End time" else null)
 
   val isEventValid = !error && isLoggedIn.value
   val isDateAndTimeValid =
-      dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
-  val scrollState = rememberScrollState()
+      dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank() || endDateError.value || endTimeError.value || endDate.value.isBlank() || endTime.value.isBlank()
+  val showValidation = remember { mutableStateOf(false) }
+  // Show missing/incorrect fields either when the user requested validation (clicked Save)
+  // or when a per-field error flag is set, or when a required field is empty.
+  val shouldShowMissingFields = showValidation.value ||
+      titleError.value || title.value.isBlank() ||
+      descriptionError.value || description.value.isBlank() ||
+      locationError.value || location.value.isBlank() ||
+      timeError.value || time.value.isBlank() ||
+      dateError.value || date.value.isBlank() ||
+      tagError.value ||
+      endDateError.value || endDate.value.isBlank() ||
+      endTimeError.value || endTime.value.isBlank()
 
-  Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
+   val scrollState = rememberScrollState()
+
+   Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
     // TopBar
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -373,24 +449,66 @@ fun AddEventScreen(
 
           IconButton(
               onClick = {
+                // Show validation feedback when user attempts to save
+                showValidation.value = true
+
+                // update per-field error flags from current values so UI shows them immediately
+                titleError.value = title.value.isBlank()
+                descriptionError.value = description.value.isBlank()
+                locationError.value = location.value.isBlank()
+                dateError.value = date.value.isBlank()
+                timeError.value = time.value.isBlank()
+                endDateError.value = endDate.value.isBlank()
+                endTimeError.value = endTime.value.isBlank()
+                tagError.value = !isValidTagInput(tag.value)
+
+                // Run relational validation for start/end (may clear or set end errors)
+                validateStartEnd()
+
+                // compute validity based on flags (fresh values)
+                val nowValid = !(titleError.value || descriptionError.value || locationError.value || dateError.value || timeError.value || endDateError.value || endTimeError.value || tagError.value) && isLoggedIn.value
+                if (!nowValid) return@IconButton
+
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
                 sdf.timeZone = java.util.TimeZone.getDefault()
-                val rawTime =
-                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val parsed = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                val timestamp = parsed?.let { Timestamp(it) } ?: Timestamp.now()
+                val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
+                val rawEndTime = if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
+
+                val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+                val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
+
+                if (parsedStart == null) {
+                  dateError.value = true
+                  return@IconButton
+                }
+                if (parsedEnd == null) {
+                  endDateError.value = true
+                  return@IconButton
+                }
+
+                val startTs = Timestamp(parsedStart)
+                val endTs = Timestamp(parsedEnd)
+
+                if (!endTs.toDate().after(startTs.toDate())) {
+                  // end must be strictly after start
+                  // mark end date invalid (don't force changing time)
+                  endDateError.value = true
+                  endTimeError.value = false
+                  return@IconButton
+                }
+
                 saveEvent(
                     eventViewModel,
                     title.value,
                     description.value,
                     gotLocation.value,
-                    timestamp,
+                    startTs,
+                    endTs,
                     Firebase.auth.currentUser?.uid,
                     extractTags(tag.value),
                     isPublic.value,
                     onDone)
               },
-              enabled = isEventValid,
               modifier =
                   Modifier.size(48.dp)
                       .background(
@@ -407,6 +525,27 @@ fun AddEventScreen(
                         else MaterialTheme.colorScheme.onSurfaceVariant)
               }
         }
+
+    // Prominent validation banner shown right after the top bar when user attempted to save
+    if (showValidation.value && !isEventValid) {
+      Row(
+          modifier = Modifier
+              .fillMaxWidth()
+              .background(color = colorResource(R.color.red))
+              .padding(8.dp),
+          verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Validation",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "The following fields are missing/incorrect: ${errorFields.joinToString(", ")}",
+                color = Color.White,
+                style = MaterialTheme.typography.bodySmall)
+          }
+    }
 
     Spacer(modifier = Modifier.padding(5.dp))
     // Title field
@@ -444,12 +583,45 @@ fun AddEventScreen(
         verticalAlignment = Alignment.CenterVertically) {
           FutureDatePickerButton(
               date,
-              onDateChanged = { dateError.value = (date.value.isBlank()) },
+              onDateChanged = {
+                dateError.value = (date.value.isBlank())
+                validateStartEnd()
+              },
           )
 
           TimePickerButton(
               time,
-              onTimeChanged = { timeError.value = (time.value.isBlank()) },
+              onTimeChanged = {
+                timeError.value = (time.value.isBlank())
+                validateStartEnd()
+              },
+          )
+        }
+    Spacer(modifier = Modifier.height(8.dp))
+    // End date/time pickers
+    Text(
+        stringResource(R.string.end_date_text),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+          FutureDatePickerButton(
+              endDate,
+              onDateChanged = {
+                endDateError.value = (endDate.value.isBlank())
+                validateStartEnd()
+              },
+          )
+
+          TimePickerButton(
+              endTime,
+              onTimeChanged = {
+                endTimeError.value = (endTime.value.isBlank())
+                validateStartEnd()
+              },
           )
         }
     // Location Field
@@ -516,7 +688,7 @@ fun AddEventScreen(
     }
 
     // Error displaying
-    if (showMissingFields) {
+    if (shouldShowMissingFields) {
       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(60.dp)) {
         Spacer(modifier = Modifier.padding(2.dp))
         Icon(
