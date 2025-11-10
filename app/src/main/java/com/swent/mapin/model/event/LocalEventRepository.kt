@@ -7,6 +7,8 @@ import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import java.time.ZoneId
 import java.util.Date
+import java.util.GregorianCalendar
+import java.util.TimeZone
 import java.util.UUID
 
 /**
@@ -167,7 +169,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return try {
       if (place == null) return null
       GeoPoint(place.latitude, place.longitude)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       null
     }
   }
@@ -181,12 +183,21 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     fun defaultSampleEvents(): List<Event> {
       val now = Timestamp(Date())
 
+        fun ts(year: Int, month0: Int, day: Int, hour: Int, minute: Int = 0): Timestamp {
+            // month0: 0-based month
+            val cal = GregorianCalendar.getInstance(TimeZone.getDefault())
+            cal.clear()
+            cal.set(year, month0, day, hour, minute)
+            return Timestamp(Date(cal.timeInMillis))
+        }
+
       return listOf(
           Event(
               uid = "event1",
               title = "Music Festival",
               description = "Live music and food",
-              date = now,
+              date = ts(2025, 1, 1, 10, 0),
+              endDate = ts(2025, 1,2,11,0),
               location = Location("EPFL Campus", 46.5197, 6.5668),
               tags = listOf("Music", "Festival"),
               public = true,
@@ -198,7 +209,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               uid = "event2",
               title = "Tech Conference",
               description = "Latest technology trends",
-              date = now,
+              date = ts(2025, 1, 1, 10, 0),
+              endDate = ts(2025, 1,1,10,0),
               location = Location("Rolex Learning Center", 46.5187, 6.5659),
               tags = listOf("Technology", "Conference"),
               public = true,
@@ -210,7 +222,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               uid = "event3",
               title = "Food Festival",
               description = "International cuisine",
-              date = now,
+              date = ts(2025, 1, 1, 10, 0),
+              endDate = ts(2025, 1,1,11,0),
               location = Location("EPFL Plaza", 46.5192, 6.5662),
               tags = listOf("Food", "Festival"),
               public = true,
