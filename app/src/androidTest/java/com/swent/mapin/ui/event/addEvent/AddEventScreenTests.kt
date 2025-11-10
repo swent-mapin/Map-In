@@ -228,6 +228,7 @@ class AddEventScreenTests {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.performScrollTo()
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("InvalidPrice")
     tagNode.performTextClearance()
@@ -242,6 +243,7 @@ class AddEventScreenTests {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.performScrollTo()
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("InvalidPrice")
     composeTestRule
