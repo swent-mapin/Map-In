@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -54,7 +55,6 @@ import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
-import com.swent.mapin.ui.map.PublicSwitch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -248,6 +248,44 @@ fun TimePickerButton(
         Text(
             ("Select Time: ${selectedTime.value.chunked(2).joinToString("h")}"),
             color = MaterialTheme.colorScheme.onPrimary)
+      }
+}
+
+/**
+ * UI switch to toggle Public/Private
+ *
+ * @param isPublic boolean indicating the state of public (true) or private (false)
+ * @param onPublicChange callback for when the switch is toggled
+ * @param title The title text to display
+ * @param subTitle The subtitle text to display
+ * @param modifier Optional modifier for the switch
+ * @param textTestTag Optional modifier for the text (for testing)
+ */
+@Composable
+private fun PublicSwitch(
+    isPublic: Boolean,
+    onPublicChange: (Boolean) -> Unit,
+    title: String,
+    subTitle: String,
+    modifier: Modifier = Modifier,
+    textTestTag: Modifier = Modifier,
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = textTestTag)
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+              text = subTitle,
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Switch(checked = isPublic, onCheckedChange = onPublicChange, modifier = modifier)
       }
 }
 

@@ -1,9 +1,11 @@
 package com.swent.mapin.ui
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.ui.event.EventViewModel
+import com.swent.mapin.ui.filters.Filters
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,10 +51,8 @@ class EventViewModelTests {
   fun `getAllEvents updates events StateFlow`() = runTest {
     val events = listOf(Event("1"), Event("2"))
     Mockito.`when`(repository.getAllEvents()).thenReturn(events)
-
     viewModel.getAllEvents()
     advanceUntilIdle()
-
     assertEquals(events, viewModel.events.value)
   }
 
@@ -61,131 +61,141 @@ class EventViewModelTests {
   fun `getEvent updates gotEvent StateFlow`() = runTest {
     val event = Event("1")
     Mockito.`when`(repository.getEvent("1")).thenReturn(event)
-
     viewModel.getEvent("1")
     advanceUntilIdle()
-
     assertEquals(event, viewModel.gotEvent.value)
   }
 
-  // 4. getEventByTags
+  // 4. getFilteredEvents
   @Test
-  fun `getEventByTags updates events StateFlow`() = runTest {
-    val events = listOf(Event("1"))
-    val tags = listOf("tag1")
-    Mockito.`when`(repository.getEventsByTags(tags)).thenReturn(events)
+  fun getFilteredEvents_emitsEventsFromRepository() =
+      runTest(testDispatcher) {
+        // Arrange
+        val filters = Filters(tags = setOf("tag1"))
+        val event =
+            Event(
+                uid = "E1",
+                title = "Test Event",
+                description = "Desc",
+                date = Timestamp.now(),
+                location = Location("Loc", 1.0, 2.0),
+                tags = listOf("tag1"),
+                public = true,
+                ownerId = "owner1",
+                imageUrl = null,
+                capacity = 10,
+                participantIds = emptyList(),
+                price = 0.0)
+        Mockito.`when`(repository.getFilteredEvents(filters)).thenReturn(listOf(event))
 
-    viewModel.getEventByTags(tags)
-    advanceUntilIdle()
+        // Act
+        viewModel.getFilteredEvents(filters)
+        advanceUntilIdle()
 
-    assertEquals(events, viewModel.events.value)
-  }
+        // Assert
+        val result = viewModel.events.value
+        assertEquals(1, result.size)
+        assertEquals("E1", result[0].uid)
+      }
 
-  // 5. getEventsOnDay
+  // 5. getSearchedEvents
   @Test
-  fun `getEventsOnDay updates events StateFlow`() = runTest {
-    val events = listOf(Event("1"))
-    val start = Timestamp.Companion.now()
-    val end = Timestamp.Companion.now()
-    Mockito.`when`(repository.getEventsOnDay(start, end)).thenReturn(events)
+  fun getSearchedEvents_emitsMatchingEvents() =
+      runTest(testDispatcher) {
+        val filters = Filters()
+        // Arrange
+        val searchTerm = "test"
+        val event =
+            Event(
+                uid = "E1",
+                title = "Test Event",
+                description = "Desc",
+                date = Timestamp.now(),
+                location = Location("Loc", 1.0, 2.0),
+                tags = emptyList(),
+                public = true,
+                ownerId = "owner1",
+                imageUrl = null,
+                capacity = 10,
+                participantIds = emptyList(),
+                price = 0.0)
+        Mockito.`when`(repository.getSearchedEvents(searchTerm, filters)).thenReturn(listOf(event))
 
-    viewModel.getEventsOnDay(start, end)
-    advanceUntilIdle()
+        // Act
+        viewModel.getSearchedEvents(searchTerm, filters)
+        advanceUntilIdle()
 
-    assertEquals(events, viewModel.events.value)
-  }
+        // Assert
+        val result = viewModel.events.value
+        assertEquals(1, result.size)
+        assertEquals("E1", result[0].uid)
+      }
 
-  // 6. getEventsByOwner
-  @Test
-  fun `getEventsByOwner updates events StateFlow`() = runTest {
-    val events = listOf(Event("1"))
-    val ownerId = "owner123"
-    Mockito.`when`(repository.getEventsByOwner(ownerId)).thenReturn(events)
-
-    viewModel.getEventsByOwner(ownerId)
-    advanceUntilIdle()
-
-    assertEquals(events, viewModel.events.value)
-  }
-
-  // 7. addEvent
+  // 6. addEvent
   @Test
   fun `addEvent calls repository`() = runTest {
     val event = Event("1")
-
     viewModel.addEvent(event)
     advanceUntilIdle()
-
     Mockito.verify(repository).addEvent(event)
   }
 
-  // 8. editEvent
+  // 7. editEvent
   @Test
   fun `editEvent calls repository`() = runTest {
     val event = Event("1")
-
     viewModel.editEvent("1", event)
     advanceUntilIdle()
-
     Mockito.verify(repository).editEvent("1", event)
   }
 
-  // 9. deleteEvent
+  // 8. deleteEvent
   @Test
   fun `deleteEvent calls repository`() = runTest {
     viewModel.deleteEvent("1")
     advanceUntilIdle()
-
     Mockito.verify(repository).deleteEvent("1")
   }
 
-  // 10. getAllEvents handles exception and updates error StateFlow
+  // 9. getAllEvents handles exception and updates error StateFlow
   @Test
   fun `getAllEvents sets error when repository throws`() = runTest {
     Mockito.`when`(repository.getAllEvents()).thenThrow(RuntimeException("Network error"))
-
     viewModel.getAllEvents()
     advanceUntilIdle()
-
     assertEquals("Network error", viewModel.error.value)
   }
 
-  // 11. addEvent handles exception and updates error StateFlow
+  // 10. addEvent handles exception and updates error StateFlow
   @Test
   fun `addEvent sets error when repository throws`() = runTest {
     val event = Event("1")
     Mockito.doThrow(RuntimeException("Write failed")).`when`(repository).addEvent(event)
-
     viewModel.addEvent(event)
     advanceUntilIdle()
-
     assertEquals("Write failed", viewModel.error.value)
   }
 
-  // 12. editEvent handles exception and updates error StateFlow
+  // 11. editEvent handles exception and updates error StateFlow
   @Test
   fun `editEvent sets error when repository throws`() = runTest {
     val event = Event("1")
     Mockito.doThrow(RuntimeException("Edit failed")).`when`(repository).editEvent("1", event)
-
     viewModel.editEvent("1", event)
     advanceUntilIdle()
-
     assertEquals("Edit failed", viewModel.error.value)
   }
 
-  // 13. deleteEvent handles exception and updates error StateFlow
+  // 12. deleteEvent handles exception and updates error StateFlow
   @Test
   fun `deleteEvent sets error when repository throws`() = runTest {
     Mockito.doThrow(RuntimeException("Delete failed")).`when`(repository).deleteEvent("1")
-
     viewModel.deleteEvent("1")
     advanceUntilIdle()
-
     assertEquals("Delete failed", viewModel.error.value)
   }
 
-  // 14. clearError resets error StateFlow
+  // 13. clearError resets error StateFlow
   @Test
   fun `clearError resets error StateFlow`() = runTest {
     viewModel.getAllEvents() // no error yet

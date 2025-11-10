@@ -22,7 +22,7 @@ class ChatBottomBarTest {
   }
 
   @Test
-  fun navigationBarItem_click_triggersCallback() {
+  fun navigationBarItem_click_SameTabDoesNotTriggersCallback() {
     var selectedTab: ChatTab? = null
 
     rule.setContent {
@@ -33,7 +33,7 @@ class ChatBottomBarTest {
 
     rule.onNodeWithTag(ChatScreenTestTags.CHAT_BOTTOM_BAR).performClick()
 
-    assert(selectedTab == ChatTab.Chats)
+    assert(selectedTab != ChatTab.Chats)
   }
 
   @Test

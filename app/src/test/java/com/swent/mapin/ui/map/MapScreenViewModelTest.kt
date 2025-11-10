@@ -7,9 +7,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.map.location.LocationManager
+import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -49,6 +50,7 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockAuth: FirebaseAuth
   @Mock(lenient = true) private lateinit var mockUser: FirebaseUser
   @Mock(lenient = true) private lateinit var mockUserProfileRepository: UserProfileRepository
+  @Mock(lenient = true) private lateinit var mockLocationManager: LocationManager
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -73,8 +75,12 @@ class MapScreenViewModelTest {
     whenever(mockUser.uid).thenReturn("testUserId")
     whenever(mockContext.applicationContext).thenReturn(mockContext)
 
+    // Mock LocationManager default behavior
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
     runBlocking {
-      whenever(mockEventRepository.getEventsByParticipant("testUserId")).thenReturn(emptyList())
+      whenever(mockEventRepository.getAllEvents())
+          .thenReturn(com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
       whenever(mockEventRepository.getSavedEventIds(any())).thenReturn(emptySet())
@@ -91,7 +97,8 @@ class MapScreenViewModelTest {
             memoryRepository = mockMemoryRepository,
             eventRepository = mockEventRepository,
             auth = mockAuth,
-            userProfileRepository = mockUserProfileRepository)
+            userProfileRepository = mockUserProfileRepository,
+            locationManager = mockLocationManager)
   }
 
   @After
@@ -451,11 +458,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun isSavingMemory_correctlyTracksState() = runTest {
-    var capturedMemory: Memory? = null
-    whenever(mockMemoryRepository.addMemory(any())).thenAnswer { invocation ->
-      capturedMemory = invocation.getArgument(0)
-      Unit
-    }
+    whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
 
     assertFalse(viewModel.isSavingMemory)
 
@@ -674,7 +677,7 @@ class MapScreenViewModelTest {
   fun onEventPinClicked_setsSelectedEventAndTransitionsToMedium() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
@@ -832,7 +835,7 @@ class MapScreenViewModelTest {
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     var cameraCentered = false
-    viewModel.onCenterCamera = { _, _ -> cameraCentered = true }
+    viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
     viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
@@ -977,8 +980,6 @@ class MapScreenViewModelTest {
 
   @Test
   fun `showMemoryForm sets state correctly`() {
-    val initialState = viewModel.bottomSheetState
-
     viewModel.showMemoryForm()
 
     assertTrue(viewModel.showMemoryForm)
@@ -1016,15 +1017,264 @@ class MapScreenViewModelTest {
 
   @Test
   fun `onAddEventCancel hides AddEvent form and returns to MAIN_CONTENT`() {
-    // Simulate showing AddEvent form
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
     viewModel.showAddEventForm()
 
-    // Cancel
     viewModel.onAddEventCancel()
 
-    // Validate public state
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
-    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+  }
+
+  // === Location tests ===
+  @Test
+  fun checkLocationPermission_updatesPermissionState_whenGranted() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+
+    viewModel.checkLocationPermission()
+
+    assertTrue(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun checkLocationPermission_updatesPermissionState_whenDenied() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
+    viewModel.checkLocationPermission()
+
+    assertFalse(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_setsPermissionFalse_whenNoPermission() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+
+    viewModel.startLocationUpdates()
+
+    assertFalse(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_setsPermissionTrue_whenPermissionGranted() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.emptyFlow())
+
+    viewModel.startLocationUpdates()
+
+    assertTrue(viewModel.hasLocationPermission)
+  }
+
+  @Test
+  fun startLocationUpdates_collectsLocationUpdates_withBearing() = runTest {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(45f)
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flowOf(mockLocation))
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+    assertEquals(45f, viewModel.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun startLocationUpdates_collectsLocationUpdates_withoutBearing() = runTest {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flowOf(mockLocation))
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+    // Bearing should remain at initial value (0f)
+  }
+
+  @Test
+  fun startLocationUpdates_handlesError_setsErrorMessage() = runTest {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    whenever(mockLocationManager.getLocationUpdates())
+        .thenReturn(kotlinx.coroutines.flow.flow { throw Exception("Location error") })
+
+    viewModel.startLocationUpdates()
+    advanceUntilIdle()
+
+    assertEquals("Failed to get location updates", viewModel.errorMessage)
+  }
+
+  @Test
+  fun getLastKnownLocation_withoutCenterCamera_triggersSuccessCallback_withBearing() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(true)
+    whenever(mockLocation.bearing).thenReturn(90f)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+
+    viewModel.getLastKnownLocation(centerCamera = false)
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+    assertEquals(90f, viewModel.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun getLastKnownLocation_withoutCenterCamera_triggersSuccessCallback_withoutBearing() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+
+    viewModel.getLastKnownLocation(centerCamera = false)
+
+    assertEquals(mockLocation, viewModel.currentLocation)
+  }
+
+  @Test
+  fun getLastKnownLocation_withCenterCamera_invokesCallback() {
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    var centerCalled = false
+    viewModel.onCenterOnUserLocation = { centerCalled = true }
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+
+    viewModel.getLastKnownLocation(centerCamera = true)
+
+    assertTrue(centerCalled)
+  }
+
+  @Test
+  fun getLastKnownLocation_triggersErrorCallback() {
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onError = invocation.getArgument<() -> Unit>(1)
+      onError()
+    }
+
+    viewModel.getLastKnownLocation()
+
+    // Just verify it doesn't crash - error is logged
+    assertNull(viewModel.currentLocation)
+  }
+
+  @Test
+  fun onLocationButtonClick_withPermission_centersOnUser() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    var centerCalled = false
+    viewModel.onCenterOnUserLocation = { centerCalled = true }
+
+    viewModel.onLocationButtonClick()
+
+    assertTrue(centerCalled)
+    assertTrue(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun onLocationButtonClick_withoutPermission_requestsPermission() {
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    var permissionRequested = false
+    viewModel.onRequestLocationPermission = { permissionRequested = true }
+
+    viewModel.onLocationButtonClick()
+
+    assertTrue(permissionRequested)
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_withNullLocation_setsCenteredToFalse() {
+    viewModel.updateCenteredState(46.5, 6.5)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_withinThreshold_setsCenteredToTrue() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Update with coordinates within threshold (0.0005)
+    viewModel.updateCenteredState(46.50001, 6.50001)
+
+    assertTrue(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_outsideThreshold_setsCenteredToFalse() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Update with coordinates outside threshold (0.0005)
+    viewModel.updateCenteredState(46.6, 6.6)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun updateCenteredState_atThresholdBoundary_setsCenteredToFalse() {
+    // Set a current location first
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Exactly at threshold (0.0005) - should be outside
+    viewModel.updateCenteredState(46.5005, 6.5005)
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun onMapMoved_setsCenteredToFalse() {
+    viewModel.onMapMoved()
+
+    assertFalse(viewModel.isCenteredOnUser)
+  }
+
+  @Test
+  fun locationBearing_initiallyZero() {
+    assertEquals(0f, viewModel.locationBearing, 0.001f)
+  }
+
+  @Test
+  fun currentLocation_initiallyNull() {
+    assertNull(viewModel.currentLocation)
+  }
+
+  @Test
+  fun isCenteredOnUser_initiallyFalse() {
+    assertFalse(viewModel.isCenteredOnUser)
   }
 
   @Test
@@ -1183,7 +1433,7 @@ class MapScreenViewModelTest {
   @Test
   fun `focusCameraOnSearchResults invokes callback when results exist`() = runTest {
     var callbackInvoked = false
-    viewModel.onFitCameraToEvents = { events ->
+    viewModel.setFitCameraCallback { events ->
       callbackInvoked = true
       assertTrue(events.isNotEmpty())
     }
@@ -1239,4 +1489,261 @@ class MapScreenViewModelTest {
     // (may be empty if no stored data)
     assertNotNull(viewModel.recentItems)
   }
+
+  @Test
+  fun `toggleDirections activates directions when not displayed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    // Initially no directions
+    assertTrue(
+        viewModel.directionViewModel.directionState
+            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
+
+    // Toggle directions on
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Directions should be loading or displayed
+    val state = viewModel.directionViewModel.directionState
+    assertTrue(
+        state is com.swent.mapin.ui.map.directions.DirectionState.Loading ||
+            state is com.swent.mapin.ui.map.directions.DirectionState.Displayed)
+  }
+
+  @Test
+  fun `toggleDirections clears directions when already displayed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    // First toggle - activate directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Manually set to displayed state to test the clear branch
+    val userLocation =
+        com.mapbox.geojson.Point.fromLngLat(
+            MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+    val eventLocation =
+        com.mapbox.geojson.Point.fromLngLat(
+            testEvent.location.longitude, testEvent.location.latitude)
+    viewModel.directionViewModel.requestDirections(userLocation, eventLocation)
+    advanceUntilIdle()
+
+    // Second toggle - should clear directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Directions should be cleared
+    assertTrue(
+        viewModel.directionViewModel.directionState
+            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
+  }
+
+  @Test
+  fun `onEventClickedFromSearch sets cameFromSearch and marks search committed`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Perform a search first
+    viewModel.onSearchQueryChange("Basketball")
+    advanceUntilIdle()
+
+    // Click event from search results
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    // Event should be selected
+    assertEquals(testEvent, viewModel.selectedEvent)
+    // Search query should still be present (committed, not cleared)
+    assertTrue(viewModel.searchQuery.isNotEmpty())
+  }
+
+  @Test
+  fun `closeEventDetail with cameFromSearch restores search mode correctly`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Setup: perform a search and click an event from results
+    viewModel.onSearchQueryChange("Basketball")
+    advanceUntilIdle()
+
+    val queryBeforeEvent = viewModel.searchQuery
+
+    // Click event from search (this sets _cameFromSearch = true)
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+
+    // Close event detail
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Should return to search mode with query preserved
+    assertEquals(queryBeforeEvent, viewModel.searchQuery)
+    assertNull(viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `closeEventDetail with cameFromSearch and wasEditing restores editing state`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // Setup: start typing in search (editing mode)
+    viewModel.onSearchTap()
+    viewModel.onSearchQueryChange("Bask")
+    advanceUntilIdle()
+
+    // Click event from search while still editing
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+
+    // Close event detail
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Should return to FULL state (editing mode) with search focused
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+    assertNull(viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `onRecentEventClicked selects event when found`() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    // First, search and submit to save as recent
+    viewModel.onSearchQueryChange(testEvent.title)
+    viewModel.onSearchSubmit()
+    advanceUntilIdle()
+
+    // Click the event to save it as recent
+    viewModel.onEventClickedFromSearch(testEvent)
+    advanceUntilIdle()
+
+    // Close the event
+    viewModel.closeEventDetail()
+    advanceUntilIdle()
+
+    // Now click from recent events
+    viewModel.onRecentEventClicked(testEvent.uid)
+    advanceUntilIdle()
+
+    // Event should be selected
+    assertEquals(testEvent.uid, viewModel.selectedEvent?.uid)
+  }
+
+  @Test
+  fun `onRecentEventClicked does nothing when event not found`() = runTest {
+    val initialSelected = viewModel.selectedEvent
+
+    // Try to click a non-existent event
+    viewModel.onRecentEventClicked("non-existent-id")
+    advanceUntilIdle()
+
+    // Selected event should not change
+    assertEquals(initialSelected, viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `onClearSearch resets events and sets sheet to medium`() = runTest {
+    // Perform a search first
+    viewModel.onSearchQueryChange("Basketball")
+    viewModel.onSearchSubmit()
+    advanceUntilIdle()
+
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(viewModel.searchQuery.isNotEmpty())
+
+    // Clear the search
+    viewModel.onClearSearch()
+    advanceUntilIdle()
+
+    // Sheet should be MEDIUM and search should be reset
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    assertTrue(viewModel.searchQuery.isEmpty())
+  }
+
+  @Test
+  fun `isUserParticipating returns false when no user is logged in`() = runTest {
+    // Mock no user logged in
+    whenever(mockAuth.currentUser).thenReturn(null)
+
+    val result = viewModel.isUserParticipating()
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating returns false when no event is selected`() = runTest {
+    // Mock user logged in
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn("user123")
+
+    // No event selected
+    val result = viewModel.isUserParticipating()
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating returns true when user is in participant list`() = runTest {
+    val userId = "user123"
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+
+    // Select an event where user is participating
+    val testEvent =
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(userId))
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    val result = viewModel.isUserParticipating()
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns false when no user`() = runTest {
+    whenever(mockAuth.currentUser).thenReturn(null)
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+
+    val result = viewModel.isUserParticipating(testEvent)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns true when user participates`() = runTest {
+    val userId = "user123"
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+
+    val testEvent =
+        com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+            participantIds = listOf(userId))
+
+    val result = viewModel.isUserParticipating(testEvent)
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isUserParticipating with event parameter returns false when user does not participate`() =
+      runTest {
+        val userId = "user123"
+        whenever(mockAuth.currentUser).thenReturn(mockUser)
+        whenever(mockUser.uid).thenReturn(userId)
+
+        val testEvent =
+            com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0].copy(
+                participantIds = listOf("otherUser456"))
+
+        val result = viewModel.isUserParticipating(testEvent)
+
+        assertFalse(result)
+      }
 }

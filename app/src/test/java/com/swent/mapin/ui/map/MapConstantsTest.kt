@@ -57,6 +57,21 @@ class MapConstantsTest {
   }
 
   @Test
+  fun locationCenterMinPadding_hasCorrectValue() {
+    assertEquals(8f, MapConstants.LOCATION_CENTER_MIN_PADDING_DP)
+  }
+
+  @Test
+  fun locationCenterMediumWeight_hasCorrectValue() {
+    assertEquals(0.85f, MapConstants.LOCATION_CENTER_MEDIUM_WEIGHT)
+  }
+
+  @Test
+  fun locationCenterMediumExtra_hasCorrectValue() {
+    assertEquals(16f, MapConstants.LOCATION_CENTER_MEDIUM_EXTRA_DP)
+  }
+
+  @Test
   fun defaultCoordinates_areAtEPFL() {
     val epflLat = 46.5197
     val epflLon = 6.5668
@@ -91,5 +106,23 @@ class MapConstantsTest {
   fun defaultZoom_isReasonableForCityView() {
     assert(MapConstants.DEFAULT_ZOOM >= 10f)
     assert(MapConstants.DEFAULT_ZOOM <= 20f)
+  }
+
+  @Test
+  fun heatmapConfig_hasExpectedValues() {
+    assertEquals(18L, MapConstants.HeatmapConfig.MAX_ZOOM_LEVEL)
+    assertEquals(0.65, MapConstants.HeatmapConfig.OPACITY, 0.0001)
+    assertEquals(
+        listOf(0.0 to 18.0, 14.0 to 32.0, 22.0 to 48.0), MapConstants.HeatmapConfig.RADIUS_STOPS)
+    assertEquals(
+        listOf(0.0 to 0.0, 5.0 to 0.4, 25.0 to 0.8, 100.0 to 1.0),
+        MapConstants.HeatmapConfig.WEIGHT_STOPS)
+  }
+
+  @Test
+  fun cameraConfig_hasExpectedValues() {
+    assertEquals(0.01f, MapConstants.CameraConfig.ZOOM_DELTA_THRESHOLD)
+    assertEquals(300L, MapConstants.CameraConfig.SCALE_BAR_HIDE_DELAY_MS)
+    assertEquals(1100L, MapConstants.CameraConfig.PROGRAMMATIC_ZOOM_RESET_DELAY_MS)
   }
 }
