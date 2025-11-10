@@ -363,13 +363,24 @@ fun AddEventScreen(
     }
 
     val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
-    val rawEndTime = if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
+    val rawEndTime =
+        if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
 
     // parse HHmm into minutes since midnight
-    val startMinutes = runCatching { rawTime.substring(0,2).toInt()*60 + rawTime.substring(2,4).toInt() }.getOrNull()
-    val endMinutes = runCatching { rawEndTime.substring(0,2).toInt()*60 + rawEndTime.substring(2,4).toInt() }.getOrNull()
-    if (startMinutes == null) { timeError.value = true; return }
-    if (endMinutes == null) { endTimeError.value = true; return }
+    val startMinutes =
+        runCatching { rawTime.substring(0, 2).toInt() * 60 + rawTime.substring(2, 4).toInt() }
+            .getOrNull()
+    val endMinutes =
+        runCatching { rawEndTime.substring(0, 2).toInt() * 60 + rawEndTime.substring(2, 4).toInt() }
+            .getOrNull()
+    if (startMinutes == null) {
+      timeError.value = true
+      return
+    }
+    if (endMinutes == null) {
+      endTimeError.value = true
+      return
+    }
 
     if (endMinutes <= startMinutes) {
       endDateError.value = true
@@ -399,10 +410,16 @@ fun AddEventScreen(
 
   val errorFields =
       listOfNotNull(
-          if (titleError.value || title.value.isBlank()) stringResource(R.string.title_field) else null,
-          if (dateError.value || date.value.isBlank()) stringResource(R.string.date_field) else null,
-          if (locationError.value || location.value.isBlank()) stringResource(R.string.location_field) else null,
-          if (descriptionError.value || description.value.isBlank()) stringResource(R.string.description_field) else null,
+          if (titleError.value || title.value.isBlank()) stringResource(R.string.title_field)
+          else null,
+          if (dateError.value || date.value.isBlank()) stringResource(R.string.date_field)
+          else null,
+          if (locationError.value || location.value.isBlank())
+              stringResource(R.string.location_field)
+          else null,
+          if (descriptionError.value || description.value.isBlank())
+              stringResource(R.string.description_field)
+          else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,
           if (timeError.value || time.value.isBlank()) stringResource(R.string.time) else null,
           if (endDateError.value || endDate.value.isBlank()) "End date" else null,
@@ -410,23 +427,38 @@ fun AddEventScreen(
 
   val isEventValid = !error && isLoggedIn.value
   val isDateAndTimeValid =
-      dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank() || endDateError.value || endTimeError.value || endDate.value.isBlank() || endTime.value.isBlank()
+      dateError.value ||
+          timeError.value ||
+          date.value.isBlank() ||
+          time.value.isBlank() ||
+          endDateError.value ||
+          endTimeError.value ||
+          endDate.value.isBlank() ||
+          endTime.value.isBlank()
   val showValidation = remember { mutableStateOf(false) }
   // Show missing/incorrect fields either when the user requested validation (clicked Save)
   // or when a per-field error flag is set, or when a required field is empty.
-  val shouldShowMissingFields = showValidation.value ||
-      titleError.value || title.value.isBlank() ||
-      descriptionError.value || description.value.isBlank() ||
-      locationError.value || location.value.isBlank() ||
-      timeError.value || time.value.isBlank() ||
-      dateError.value || date.value.isBlank() ||
-      tagError.value ||
-      endDateError.value || endDate.value.isBlank() ||
-      endTimeError.value || endTime.value.isBlank()
+  val shouldShowMissingFields =
+      showValidation.value ||
+          titleError.value ||
+          title.value.isBlank() ||
+          descriptionError.value ||
+          description.value.isBlank() ||
+          locationError.value ||
+          location.value.isBlank() ||
+          timeError.value ||
+          time.value.isBlank() ||
+          dateError.value ||
+          date.value.isBlank() ||
+          tagError.value ||
+          endDateError.value ||
+          endDate.value.isBlank() ||
+          endTimeError.value ||
+          endTime.value.isBlank()
 
-   val scrollState = rememberScrollState()
+  val scrollState = rememberScrollState()
 
-   Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
+  Column(modifier = modifier.fillMaxWidth().verticalScroll(scrollState)) {
     // TopBar
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -466,13 +498,24 @@ fun AddEventScreen(
                 validateStartEnd()
 
                 // compute validity based on flags (fresh values)
-                val nowValid = !(titleError.value || descriptionError.value || locationError.value || dateError.value || timeError.value || endDateError.value || endTimeError.value || tagError.value) && isLoggedIn.value
+                val nowValid =
+                    !(titleError.value ||
+                        descriptionError.value ||
+                        locationError.value ||
+                        dateError.value ||
+                        timeError.value ||
+                        endDateError.value ||
+                        endTimeError.value ||
+                        tagError.value) && isLoggedIn.value
                 if (!nowValid) return@IconButton
 
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
                 sdf.timeZone = java.util.TimeZone.getDefault()
-                val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val rawEndTime = if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
+                val rawTime =
+                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
+                val rawEndTime =
+                    if (endTime.value.contains("h")) endTime.value.replace("h", "")
+                    else endTime.value
 
                 val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
                 val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
@@ -529,10 +572,8 @@ fun AddEventScreen(
     // Prominent validation banner shown right after the top bar when user attempted to save
     if (showValidation.value && !isEventValid) {
       Row(
-          modifier = Modifier
-              .fillMaxWidth()
-              .background(color = colorResource(R.color.red))
-              .padding(8.dp),
+          modifier =
+              Modifier.fillMaxWidth().background(color = colorResource(R.color.red)).padding(8.dp),
           verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.Info,
@@ -541,7 +582,8 @@ fun AddEventScreen(
                 modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "The following fields are missing/incorrect: ${errorFields.joinToString(", ")}",
+                text =
+                    "The following fields are missing/incorrect: ${errorFields.joinToString(", ")}",
                 color = Color.White,
                 style = MaterialTheme.typography.bodySmall)
           }

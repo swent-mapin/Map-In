@@ -2,6 +2,7 @@ package com.swent.mapin.model.event
 
 import com.swent.mapin.model.Location
 import com.swent.mapin.ui.filters.Filters
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -282,7 +283,8 @@ class LocalEventRepositoryTest {
   fun `getFilteredEvents filters by place and radius`() = runTest {
     val repo = LocalEventRepository(LocalEventRepository.defaultSampleEvents())
     val place = Location("EPFL Campus", 46.5197, 6.5668)
-    val filters = Filters(place = place, radiusKm = 0)
+    // Ensure the startDate is early so that sample events (in 2025) are included
+    val filters = Filters(startDate = LocalDate.of(1970, 1, 1), place = place, radiusKm = 0)
     val result = repo.getFilteredEvents(filters)
     assertTrue(result.isNotEmpty())
     assertTrue(result.all { it.location.name == "EPFL Campus" })

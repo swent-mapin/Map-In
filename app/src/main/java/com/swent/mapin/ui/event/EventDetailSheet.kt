@@ -565,9 +565,7 @@ private fun AttendeeInfo(event: Event, testTagSuffix: String) {
   }
 }
 
-/**
- * Format helpers for smart start-end date/time display.
- */
+/** Format helpers for smart start-end date/time display. */
 @VisibleForTesting
 internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): String {
   val startDate = start.toDate()
@@ -587,7 +585,8 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
   if (endDate != null) {
     val calEndLocal = Calendar.getInstance().apply { time = endDate }
     sameYearRange = calStart.get(Calendar.YEAR) == calEndLocal.get(Calendar.YEAR)
-    sameDayRange = sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEndLocal.get(Calendar.DAY_OF_YEAR)
+    sameDayRange =
+        sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEndLocal.get(Calendar.DAY_OF_YEAR)
   } else {
     sameYearRange = false
     sameDayRange = false
@@ -603,7 +602,8 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
 
   return if (endDate == null) {
     // Single time
-    val dateStr = if (showYearSingle) dateFmtWithYear.format(startDate) else dateFmtNoYear.format(startDate)
+    val dateStr =
+        if (showYearSingle) dateFmtWithYear.format(startDate) else dateFmtNoYear.format(startDate)
     "$dateStr, ${timeShort(startDate)}"
   } else {
     // Range
@@ -612,8 +612,10 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
       "$dateStr, ${timeShort(startDate)} - ${timeShort(endDate)}"
     } else {
       // determine if start/end are same year
-      val startStr = if (sameYearRange) dateFmtNoYear.format(startDate) else dateFmtWithYear.format(startDate)
-      val endStr = if (sameYearRange) dateFmtNoYear.format(endDate) else dateFmtWithYear.format(endDate)
+      val startStr =
+          if (sameYearRange) dateFmtNoYear.format(startDate) else dateFmtWithYear.format(startDate)
+      val endStr =
+          if (sameYearRange) dateFmtNoYear.format(endDate) else dateFmtWithYear.format(endDate)
       "$startStr, ${timeShort(startDate)} - $endStr, ${timeShort(endDate)}"
     }
   }
@@ -632,7 +634,10 @@ internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String
 
   // For ranges, only compare year/day if calEnd is provided
   val sameYearRange = calEnd != null && calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR)
-  val sameDayRange = calEnd != null && sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
+  val sameDayRange =
+      calEnd != null &&
+          sameYearRange &&
+          calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
 
   val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault())
 

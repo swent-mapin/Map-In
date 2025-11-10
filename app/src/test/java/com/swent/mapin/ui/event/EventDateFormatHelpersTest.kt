@@ -1,16 +1,13 @@
 package com.swent.mapin.ui.event
 
 import com.google.firebase.Timestamp
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.util.Date
 import java.util.GregorianCalendar
 import java.util.TimeZone
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
-/**
- *
- */
-
+/**  */
 class EventDateFormatHelpersTest {
 
   private fun ts(year: Int, month0: Int, day: Int, hour: Int, minute: Int = 0): Timestamp {
@@ -86,4 +83,3 @@ class EventDateFormatHelpersTest {
     assertEquals(true, out.contains("-"))
   }
 }
-

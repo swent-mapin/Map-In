@@ -106,12 +106,13 @@ fun saveEvent(
 
 sealed class ParseResult {
   data class Success(val start: Timestamp, val end: Timestamp) : ParseResult()
+
   data class Error(val message: String) : ParseResult()
 }
 
 /**
- * Parse and validate start/end date+time strings using pattern dd/MM/yyyyHHmm (24h).
- * Returns Success(startTs, endTs) if both parse and end > start, otherwise Error with reason.
+ * Parse and validate start/end date+time strings using pattern dd/MM/yyyyHHmm (24h). Returns
+ * Success(startTs, endTs) if both parse and end > start, otherwise Error with reason.
  */
 fun parseAndValidateStartEnd(
     startDateStr: String,

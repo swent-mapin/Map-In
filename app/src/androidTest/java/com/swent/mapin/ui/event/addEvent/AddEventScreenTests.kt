@@ -81,7 +81,10 @@ class AddEventScreenTests {
   fun showsErrorMessageInitially() {
     // The UI shows the missing-fields error row initially because many required fields are empty.
     // Target the first node in case multiple nodes share the same tag.
-    composeTestRule.onAllNodesWithTag(AddEventScreenTestTags.ERROR_MESSAGE).onFirst().assertIsDisplayed()
+    composeTestRule
+        .onAllNodesWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
+        .onFirst()
+        .assertIsDisplayed()
   }
 
   @Test
@@ -230,14 +233,20 @@ class AddEventScreenTests {
   @Test
   fun invalidInputsKeepSaveButtonDisabled() {
     // Ensure title is blank
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performScrollTo().performTextClearance()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performScrollTo()
+        .performTextClearance()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performScrollTo()
         .performTextInput("This is a valid description")
 
     // The Save button is clickable by design; clicking it should NOT call onDone when form invalid.
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo().performClick()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
+        .performScrollTo()
+        .performClick()
     // onDone should not have been called
     assert(!saveClicked)
     // And the validation banner / error message should be visible

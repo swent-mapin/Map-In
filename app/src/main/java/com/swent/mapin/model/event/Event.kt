@@ -34,7 +34,11 @@ data class Event(
     val price: Double = 0.0
 ) {
   fun isValidEvent(): Boolean {
-    if (ownerId.isBlank() || title.isBlank() || description.isBlank() || date == null || location.name.isBlank()) {
+    if (ownerId.isBlank() ||
+        title.isBlank() ||
+        description.isBlank() ||
+        date == null ||
+        location.name.isBlank()) {
       return false
     }
     // if endDate is provided it must be the same or after start date

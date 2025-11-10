@@ -183,13 +183,13 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     fun defaultSampleEvents(): List<Event> {
       val now = Timestamp(Date())
 
-        fun ts(year: Int, month0: Int, day: Int, hour: Int, minute: Int = 0): Timestamp {
-            // month0: 0-based month
-            val cal = GregorianCalendar.getInstance(TimeZone.getDefault())
-            cal.clear()
-            cal.set(year, month0, day, hour, minute)
-            return Timestamp(Date(cal.timeInMillis))
-        }
+      fun ts(year: Int, month0: Int, day: Int, hour: Int, minute: Int = 0): Timestamp {
+        // month0: 0-based month
+        val cal = GregorianCalendar.getInstance(TimeZone.getDefault())
+        cal.clear()
+        cal.set(year, month0, day, hour, minute)
+        return Timestamp(Date(cal.timeInMillis))
+      }
 
       return listOf(
           Event(
@@ -197,7 +197,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               title = "Music Festival",
               description = "Live music and food",
               date = ts(2025, 1, 1, 10, 0),
-              endDate = ts(2025, 1,2,11,0),
+              endDate = ts(2025, 1, 2, 11, 0),
               location = Location("EPFL Campus", 46.5197, 6.5668),
               tags = listOf("Music", "Festival"),
               public = true,
@@ -210,7 +210,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               title = "Tech Conference",
               description = "Latest technology trends",
               date = ts(2025, 1, 1, 10, 0),
-              endDate = ts(2025, 1,1,10,0),
+              endDate = ts(2025, 1, 1, 10, 0),
               location = Location("Rolex Learning Center", 46.5187, 6.5659),
               tags = listOf("Technology", "Conference"),
               public = true,
@@ -223,7 +223,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               title = "Food Festival",
               description = "International cuisine",
               date = ts(2025, 1, 1, 10, 0),
-              endDate = ts(2025, 1,1,11,0),
+              endDate = ts(2025, 1, 1, 11, 0),
               location = Location("EPFL Plaza", 46.5192, 6.5662),
               tags = listOf("Food", "Festival"),
               public = true,
