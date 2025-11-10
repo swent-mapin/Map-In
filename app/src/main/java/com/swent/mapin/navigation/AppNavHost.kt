@@ -85,7 +85,11 @@ fun AppNavHost(
 
     composable(Route.Chat.route) {
       ChatScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = {
+              if (navController.previousBackStackEntry != null) {
+                  navController.popBackStack()
+              }
+          },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
             val encodedName = Uri.encode(conversation.name)
@@ -96,10 +100,19 @@ fun AppNavHost(
 
     composable(Route.NewConversation.route) {
       NewConversationScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = {
+              if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+              }
+          },
           onConfirm = { selectedFriends
             -> // TODO Add Logic to navigate to a potential add group name page
-            navController.navigate(Route.Chat.route)
+            navController.navigate(Route.Chat.route) {
+                popUpTo(Route.Chat.route) {
+                  inclusive = true
+                }
+                launchSingleTop = true
+            }
           })
     }
     composable("conversation/{conversationId}/{name}") { backStackEntry ->
