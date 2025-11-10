@@ -307,7 +307,7 @@ fun MapScreen(
   // Force white status bar icons on light-mode satellite maps for readability
   val defaultLightStatusBars = !isDarkTheme
   val desiredLightStatusBars =
-      if (!isDarkTheme && viewModel.useSatelliteStyle) {
+      if (defaultLightStatusBars && viewModel.useSatelliteStyle) {
         false
       } else {
         defaultLightStatusBars
