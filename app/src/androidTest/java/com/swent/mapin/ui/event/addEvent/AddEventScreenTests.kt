@@ -225,27 +225,28 @@ class AddEventScreenTests {
 
   @Test
   fun validPriceInputWorks() {
-      composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
-      composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-      val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
-      tagNode.assertIsDisplayed()
-      tagNode.performTextInput("InvalidPrice")
-      tagNode.performTextClearance()
-      tagNode.performTextInput("3.0")
-      composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-          .assert(!hasText("Price", substring = true, ignoreCase = true))
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidPrice")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("3.0")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
+        .assert(!hasText("Price", substring = true, ignoreCase = true))
   }
+
   @Test
   fun invalidPriceInputDoesNotWork() {
-      composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
-      composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
-      val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
-      tagNode.assertIsDisplayed()
-      tagNode.performTextInput("InvalidPrice")
-      composeTestRule
-          .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-          .assert(hasText("Price", substring = true, ignoreCase = true))
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidPrice")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
+        .assert(hasText("Price", substring = true, ignoreCase = true))
   }
 
   @Test
@@ -284,8 +285,7 @@ class SaveEventTests {
         tags = testTags,
         isPublic = isPublic,
         onDone = onDone,
-        price = price
-    )
+        price = price)
 
     verify { mockViewModel.addEvent(any<Event>()) }
     assert(onDoneCalled)
@@ -316,8 +316,7 @@ class SaveEventTests {
         tags = testTags,
         isPublic = isPublic,
         onDone = onDone,
-        price = price
-    )
+        price = price)
 
     verify(exactly = 0) { mockViewModel.addEvent(any<Event>()) } // should NOT be called
     assert(!onDoneCalled)
