@@ -1,9 +1,10 @@
-package com.swent.mapin.ui.event
+package com.swent.mapin.ui
 
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.Filters
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +77,7 @@ class EventViewModelTests {
                 uid = "E1",
                 title = "Test Event",
                 description = "Desc",
-                date = Timestamp.Companion.now(),
+                date = Timestamp.now(),
                 location = Location("Loc", 1.0, 2.0),
                 tags = listOf("tag1"),
                 public = true,
@@ -109,7 +110,7 @@ class EventViewModelTests {
                 uid = "E1",
                 title = "Test Event",
                 description = "Desc",
-                date = Timestamp.Companion.now(),
+                date = Timestamp.now(),
                 location = Location("Loc", 1.0, 2.0),
                 tags = emptyList(),
                 public = true,
