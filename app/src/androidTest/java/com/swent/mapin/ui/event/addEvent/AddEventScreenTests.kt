@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event.addEvent
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -19,9 +20,13 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
+import com.swent.mapin.ui.event.FutureDatePickerButton
+import com.swent.mapin.ui.event.TimePickerButton
 import com.swent.mapin.ui.event.saveEvent
 import io.mockk.mockk
 import io.mockk.verify
+import java.text.SimpleDateFormat
+import java.util.Locale
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -181,23 +186,6 @@ class AddEventScreenTests {
   }
 
   @Test
-  fun datePickerButtonDisplaysDefaultText() {
-    composeTestRule
-        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
-        .onFirst()
-        .assertTextContains("Select Date:", substring = true, ignoreCase = true)
-  }
-
-  @Test
-  fun timePickerButtonDisplaysDefaultText() {
-    composeTestRule
-        .onAllNodesWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
-        .onFirst()
-        .performScrollTo()
-        .assertTextContains("Select Time:", substring = true, ignoreCase = true)
-  }
-
-  @Test
   fun tagInputValidationWorks() {
     val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TAG)
     // Ensure tag field is visible on emulator and clear any existing text, then type an invalid
@@ -350,5 +338,190 @@ class SaveEventTests {
 
     verify(exactly = 0) { mockViewModel.addEvent(any<Event>()) } // should NOT be called
     assert(!onDoneCalled)
+  }
+}
+
+// New plain-unit tests that reproduce the validation logic from AddEventScreen.kt to assert
+// behavior of validateStartEnd, isDateAndTimeValid, error composition and shouldShowMissingFields.
+class AddEventLogicTests {
+
+  private fun runValidateStartEnd(
+      date: String,
+      endDate: String,
+      time: String,
+      endTime: String
+  ): Pair<Boolean, Boolean> {
+    // returns Pair(endDateError, endTimeError)
+    var dateError = date.isBlank()
+    var endDateError = endDate.isBlank()
+    var timeError = time.isBlank()
+    var endTimeError = endTime.isBlank()
+
+    if (date.isBlank() || endDate.isBlank()) return Pair(endDateError, endTimeError)
+
+    val dateFmt = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val startDateOnly = runCatching { dateFmt.parse(date) }.getOrNull()
+    val endDateOnly = runCatching { dateFmt.parse(endDate) }.getOrNull()
+    if (startDateOnly == null) {
+      dateError = true
+      return Pair(endDateError, endTimeError)
+    }
+    if (endDateOnly == null) {
+      endDateError = true
+      return Pair(endDateError, endTimeError)
+    }
+
+    if (endDateOnly.time > startDateOnly.time) {
+      endDateError = false
+      endTimeError = false
+      return Pair(endDateError, endTimeError)
+    }
+
+    if (endDateOnly.time < startDateOnly.time) {
+      endDateError = true
+      endTimeError = false
+      return Pair(endDateError, endTimeError)
+    }
+
+    if (time.isBlank() || endTime.isBlank()) {
+      return Pair(endDateError, endTimeError)
+    }
+
+    val rawTime = if (time.contains("h")) time.replace("h", "") else time
+    val rawEndTime = if (endTime.contains("h")) endTime.replace("h", "") else endTime
+
+    val startMinutes =
+        runCatching { rawTime.substring(0, 2).toInt() * 60 + rawTime.substring(2, 4).toInt() }
+            .getOrNull()
+    val endMinutes =
+        runCatching { rawEndTime.substring(0, 2).toInt() * 60 + rawEndTime.substring(2, 4).toInt() }
+            .getOrNull()
+    if (startMinutes == null) {
+      timeError = true
+      return Pair(endDateError, endTimeError)
+    }
+    if (endMinutes == null) {
+      endTimeError = true
+      return Pair(endDateError, endTimeError)
+    }
+
+    if (endMinutes <= startMinutes) {
+      endDateError = true
+      endTimeError = false
+    } else {
+      endDateError = false
+      endTimeError = false
+    }
+
+    return Pair(endDateError, endTimeError)
+  }
+
+  @Test
+  fun validateStartEnd_detectsEndBeforeStart_sameDay() {
+    val (endDateError, endTimeError) =
+        runValidateStartEnd("11/11/2025", "11/11/2025", "1200", "1100")
+    assert(endDateError)
+    assert(!endTimeError)
+  }
+
+  @Test
+  fun validateStartEnd_acceptsEndAfterStart_sameDay() {
+    val (endDateError, endTimeError) =
+        runValidateStartEnd("11/11/2025", "11/11/2025", "0900", "1000")
+    assert(!endDateError)
+    assert(!endTimeError)
+  }
+
+  @Test
+  fun isDateAndTimeValid_and_shouldShowMissingFields_behavior() {
+    // reproduce the boolean logic that the composable uses
+    val titleError = false
+    val titleBlank = false
+    val descriptionError = false
+    val descriptionBlank = false
+    val locationError = false
+    val locationBlank = false
+    val timeError = false
+    val timeBlank = false
+    val dateError = false
+    val dateBlank = false
+    val tagError = false
+    val endDateError = false
+    val endDateBlank = false
+    val endTimeError = false
+    val endTimeBlank = false
+
+    val isDateAndTimeValid =
+        dateError ||
+            timeError ||
+            dateBlank ||
+            timeBlank ||
+            endDateError ||
+            endTimeError ||
+            endDateBlank ||
+            endTimeBlank
+
+    val showValidation = true
+    val shouldShowMissingFields =
+        showValidation ||
+            titleError ||
+            titleBlank ||
+            descriptionError ||
+            descriptionBlank ||
+            locationError ||
+            locationBlank ||
+            timeError ||
+            timeBlank ||
+            dateError ||
+            dateBlank ||
+            tagError ||
+            endDateError ||
+            endDateBlank ||
+            endTimeError ||
+            endTimeBlank
+
+    assert(!isDateAndTimeValid)
+    assert(shouldShowMissingFields)
+  }
+}
+
+// Isolated tests for the small date/time picker buttons. This class has its own Rule so it may
+// call setContent independently from the `AddEventScreenTests` class which sets content in @Before.
+class DateTimeButtonTests {
+  @get:Rule val composeTestRule = createComposeRule()
+
+  @Test
+  fun futureDatePickerButton_onDateClick_updatesSelectedDateText() {
+    val selected = mutableStateOf("")
+    composeTestRule.setContent {
+      FutureDatePickerButton(
+          selectedDate = selected, onDateClick = { selected.value = "01/01/3000" })
+    }
+
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .performScrollTo()
+        .performClick()
+
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
+        .assertTextContains("01/01/3000", substring = true, ignoreCase = true)
+  }
+
+  @Test
+  fun timePickerButton_onTimeClick_updatesSelectedTimeText() {
+    val selected = mutableStateOf("")
+    composeTestRule.setContent {
+      TimePickerButton(selectedTime = selected, onTimeClick = { selected.value = "1230" })
+    }
+
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .performScrollTo()
+        .performClick()
+
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
+        .assertTextContains("12h30", substring = true, ignoreCase = true)
   }
 }

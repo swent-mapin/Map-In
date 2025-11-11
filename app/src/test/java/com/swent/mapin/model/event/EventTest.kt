@@ -301,4 +301,141 @@ class EventTest {
     assertEquals("", event.location.name)
     assertEquals("", event.ownerId)
   }
+
+  // New tests for isValidEvent()
+  @Test
+  fun isValidEvent_returnsTrue_forValidEvent() {
+    val now = Date()
+    val event =
+        Event(
+            uid = "e1",
+            title = "Valid",
+            description = "Desc",
+            date = Timestamp(now),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertTrue(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenOwnerBlank() {
+    val now = Date()
+    val event =
+        Event(
+            uid = "e2",
+            title = "Valid",
+            description = "Desc",
+            date = Timestamp(now),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenTitleBlank() {
+    val now = Date()
+    val event =
+        Event(
+            uid = "e3",
+            title = "",
+            description = "Desc",
+            date = Timestamp(now),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenDescriptionBlank() {
+    val now = Date()
+    val event =
+        Event(
+            uid = "e4",
+            title = "Title",
+            description = "",
+            date = Timestamp(now),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenDateMissing() {
+    val event =
+        Event(
+            uid = "e5",
+            title = "Title",
+            description = "Desc",
+            date = null,
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenLocationNameBlank() {
+    val now = Date()
+    val event =
+        Event(
+            uid = "e6",
+            title = "Title",
+            description = "Desc",
+            date = Timestamp(now),
+            location = Location("", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsFalse_whenEndDateBeforeStart() {
+    val now = Date()
+    val earlier = Date(now.time - 24 * 60 * 60 * 1000)
+    val event =
+        Event(
+            uid = "e7",
+            title = "Title",
+            description = "Desc",
+            date = Timestamp(now),
+            endDate = Timestamp(earlier),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertFalse(event.isValidEvent())
+  }
+
+  @Test
+  fun isValidEvent_returnsTrue_whenEndDateEqualOrAfterStart() {
+    val now = Date()
+    val equal = Date(now.time)
+    val later = Date(now.time + 24 * 60 * 60 * 1000)
+
+    val eventEqual =
+        Event(
+            uid = "e8",
+            title = "Title",
+            description = "Desc",
+            date = Timestamp(now),
+            endDate = Timestamp(equal),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    val eventLater =
+        Event(
+            uid = "e9",
+            title = "Title",
+            description = "Desc",
+            date = Timestamp(now),
+            endDate = Timestamp(later),
+            location = Location("Loc", 1.0, 2.0),
+            ownerId = "owner")
+
+    assertTrue(eventEqual.isValidEvent())
+    assertTrue(eventLater.isValidEvent())
+  }
 }
