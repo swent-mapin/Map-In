@@ -1,8 +1,7 @@
-package com.swent.mapin.ui
+package com.swent.mapin.ui.event
 
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
