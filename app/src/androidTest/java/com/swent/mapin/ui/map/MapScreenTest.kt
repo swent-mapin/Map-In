@@ -21,7 +21,7 @@ import org.junit.Test
  * - MapScreen composition and rendering
  * - Integration with bottom sheet states
  * - Search bar interactions across different states
- * - Visual elements (TopGradient, ScrimOverlay, MapInteractionBlocker)
+ * - Visual elements (ScrimOverlay, MapInteractionBlocker)
  * - State transitions via bottom sheet interactions
  * - Map interaction blocking in full state
  * - Scrim overlay presence across states

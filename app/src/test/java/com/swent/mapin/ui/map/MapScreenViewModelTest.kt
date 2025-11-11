@@ -703,6 +703,19 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun closeEventDetail_restoresPreviousSheetStateWhenNotFromSearch() = runTest {
+    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
+
+    viewModel.onEventPinClicked(testEvent)
+    advanceUntilIdle()
+
+    viewModel.closeEventDetail()
+
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+  }
+
+  @Test
   fun shareDialog_showAndDismiss() {
     assertFalse(viewModel.showShareDialog)
     viewModel.showShareDialog()
