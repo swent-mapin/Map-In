@@ -44,17 +44,17 @@ import kotlinx.coroutines.launch
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
 class MapScreenViewModel(
-  initialSheetState: BottomSheetState,
-  private val sheetConfig: BottomSheetConfig,
-  private val onClearFocus: () -> Unit,
-  private val applicationContext: Context,
-  private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
+    initialSheetState: BottomSheetState,
+    private val sheetConfig: BottomSheetConfig,
+    private val onClearFocus: () -> Unit,
+    private val applicationContext: Context,
+    private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
-  private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
-  private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-  private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
-  private val locationManager: LocationManager = LocationManager(applicationContext),
-  val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
+    private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
+    private val locationManager: LocationManager = LocationManager(applicationContext),
+    val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null

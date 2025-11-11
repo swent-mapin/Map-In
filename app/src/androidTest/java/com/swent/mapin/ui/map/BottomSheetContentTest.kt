@@ -41,10 +41,9 @@ class BottomSheetContentTest {
   val locationViewModel = LocationViewModel()
   val profileViewModel = ProfileViewModel()
   val eventStateController = mockk<MapEventStateController>()
-  val eventViewModel = EventViewModel(
-    eventRepository = LocalEventRepository(),
-    stateController = eventStateController
-  )
+  val eventViewModel =
+      EventViewModel(
+          eventRepository = LocalEventRepository(), stateController = eventStateController)
 
   @Composable
   private fun TestContent(

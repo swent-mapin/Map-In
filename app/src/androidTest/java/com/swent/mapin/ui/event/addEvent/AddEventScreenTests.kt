@@ -35,7 +35,10 @@ class AddEventScreenTests {
   @Before
   fun setUp() {
     composeTestRule.setContent {
-      AddEventScreen(onDone = { saveClicked = true }, eventViewModel = eventViewModel, onCancel = { cancelClicked = true })
+      AddEventScreen(
+          onDone = { saveClicked = true },
+          eventViewModel = eventViewModel,
+          onCancel = { cancelClicked = true })
     }
   }
 
