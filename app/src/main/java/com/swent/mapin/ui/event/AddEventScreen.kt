@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -29,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -442,7 +445,7 @@ fun AddEventScreen(
           if (tagError.value) stringResource(R.string.tag_field) else null,
           if (timeError.value || time.value.isBlank()) stringResource(R.string.time) else null,
           if (endDateError.value || endDate.value.isBlank()) "End date" else null,
-          if (endTimeError.value || endTime.value.isBlank()) "End time" else null)
+          if (endTimeError.value || endTime.value.isBlank()) "End time" else null,
           if (priceError.value) stringResource(R.string.price_field) else null)
 
   val isEventValid = !error && isLoggedIn.value
@@ -478,26 +481,28 @@ fun AddEventScreen(
 
   val scrollState = rememberScrollState()
 
-  Column(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .verticalScroll(scrollState)
-              .imePadding()
-              .navigationBarsPadding()) {
-        // TopBar
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(
-                  onClick = onCancel,
-                  modifier = Modifier.size(48.dp).testTag(AddEventScreenTestTags.EVENT_CANCEL)) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        tint = MaterialTheme.colorScheme.onSurface)
-                  }
+  Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
+    Column(
+        modifier =
+            modifier
+                .padding(padding)
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .imePadding()
+                .navigationBarsPadding()) {
+          // TopBar
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onCancel,
+                    modifier = Modifier.size(48.dp).testTag(AddEventScreenTestTags.EVENT_CANCEL)) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Cancel",
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
 
               Text(
                   text = "New Event",
@@ -632,8 +637,8 @@ fun AddEventScreen(
         modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
         singleLine = true)
 
-    Spacer(modifier = Modifier.padding(10.dp))
-    // Date and time fields
+        Spacer(modifier = Modifier.padding(10.dp))
+        // Date and time fields
 
     Text(
         stringResource(R.string.date_text),
@@ -725,19 +730,19 @@ fun AddEventScreen(
                 Modifier.height(120.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION),
         )
 
-    Spacer(modifier = Modifier.padding(10.dp))
-    // Tag Field
-    Text(
-        stringResource(R.string.tag_text),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(bottom = 8.dp))
-    AddEventTextField(
-        tag,
-        tagError,
-        stringResource(R.string.add_tag_place_holder),
-        modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
-        isTag = true)
+        Spacer(modifier = Modifier.padding(10.dp))
+        // Tag Field
+        Text(
+            stringResource(R.string.tag_text),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp))
+        AddEventTextField(
+            tag,
+            tagError,
+            stringResource(R.string.add_tag_place_holder),
+            modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
+            isTag = true)
 
         Spacer(modifier = Modifier.padding(bottom = 10.dp))
         // Price field
@@ -802,4 +807,5 @@ fun AddEventScreen(
       }
     }
   }
+}
 }
