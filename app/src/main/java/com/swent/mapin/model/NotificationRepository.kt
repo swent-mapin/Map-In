@@ -1,5 +1,6 @@
 package com.swent.mapin.model
 
+import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -23,6 +24,7 @@ class NotificationRepository(
 ) {
 
   companion object {
+    private const val TAG = "NotificationRepository"
     private const val COLLECTION_NOTIFICATIONS = "notifications"
     private const val FIELD_RECIPIENT_ID = "recipientId"
     private const val FIELD_READ_STATUS = "readStatus"
@@ -55,7 +57,7 @@ class NotificationRepository(
 
       NotificationResult.Success(notificationToSend)
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to send notification", e)
       NotificationResult.Error("Failed to send notification: ${e.message}", e)
     }
   }
@@ -89,7 +91,7 @@ class NotificationRepository(
       val snapshot = query.get().await()
       snapshot.documents.mapNotNull { it.toObject(Notification::class.java) }
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to get notifications for user: $userId", e)
       emptyList()
     }
   }
@@ -112,7 +114,7 @@ class NotificationRepository(
 
       snapshot.size()
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to get unread count for user: $userId", e)
       0
     }
   }
@@ -132,7 +134,7 @@ class NotificationRepository(
           .await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to mark notification as read: $notificationId", e)
       false
     }
   }
@@ -155,7 +157,7 @@ class NotificationRepository(
       batch.commit().await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to mark multiple notifications as read", e)
       false
     }
   }
@@ -184,7 +186,7 @@ class NotificationRepository(
       batch.commit().await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to mark all notifications as read for user: $userId", e)
       false
     }
   }
@@ -200,7 +202,7 @@ class NotificationRepository(
       firestore.collection(COLLECTION_NOTIFICATIONS).document(notificationId).delete().await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to delete notification: $notificationId", e)
       false
     }
   }
@@ -226,7 +228,7 @@ class NotificationRepository(
       batch.commit().await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to delete all notifications for user: $userId", e)
       false
     }
   }
@@ -244,18 +246,21 @@ class NotificationRepository(
 
       document.toObject(Notification::class.java)
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to get notification: $notificationId", e)
       null
     }
   }
 
   /**
-   * Listen to real-time notifications for a user. Returns a Flow that emits the list of
-   * notifications whenever it changes.
+   * Listen to real-time notifications for a user. Returns a cold Flow that emits the list of
+   * notifications whenever it changes in Firestore.
+   *
+   * The Flow uses a buffer with DROP_OLDEST strategy for backpressure handling. If the collector is
+   * slow, older updates may be dropped to prevent memory buildup.
    *
    * @param userId The user ID
    * @param includeRead Whether to include read notifications
-   * @return Flow of notification lists
+   * @return Cold Flow of notification lists that starts listening when collected
    */
   fun observeNotifications(userId: String, includeRead: Boolean = true): Flow<List<Notification>> =
       callbackFlow {
@@ -273,6 +278,7 @@ class NotificationRepository(
         val listenerRegistration =
             query.addSnapshotListener { snapshot, error ->
               if (error != null) {
+                Log.e(TAG, "Error observing notifications for user: $userId", error)
                 close(error)
                 return@addSnapshotListener
               }
@@ -280,11 +286,21 @@ class NotificationRepository(
               if (snapshot != null) {
                 val notifications =
                     snapshot.documents.mapNotNull { it.toObject(Notification::class.java) }
-                trySend(notifications)
+                val result = trySend(notifications)
+                if (!result.isSuccess) {
+                  Log.w(
+                      TAG,
+                      "Failed to send notifications update to flow for user: $userId. " +
+                          "Channel may be closed or full.")
+                }
               }
             }
 
-        awaitClose { listenerRegistration.remove() }
+        awaitClose {
+          // Safely remove listener, checking for null in case addSnapshotListener failed
+          listenerRegistration?.remove()
+              ?: Log.w(TAG, "Listener registration was null during awaitClose for user: $userId")
+        }
       }
 
   /**
@@ -313,7 +329,7 @@ class NotificationRepository(
 
       snapshot.documents.mapNotNull { it.toObject(Notification::class.java) }
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to get notifications by type $type for user: $userId", e)
       emptyList()
     }
   }
