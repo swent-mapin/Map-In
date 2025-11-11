@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -29,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -111,7 +114,6 @@ fun AddEventTextField(
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
 ) {
-
   OutlinedTextField(
       modifier = modifier.fillMaxWidth(),
       value = textField.value,
@@ -371,13 +373,15 @@ fun AddEventScreen(
       dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
   val scrollState = rememberScrollState()
 
-  Column(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .verticalScroll(scrollState)
-              .imePadding()
-              .navigationBarsPadding()) {
+  Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
+    Column(
+        modifier =
+            modifier
+                .padding(padding)
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .imePadding()
+                .navigationBarsPadding()) {
         // TopBar
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -588,4 +592,5 @@ fun AddEventScreen(
           }
         }
       }
+  }
 }
