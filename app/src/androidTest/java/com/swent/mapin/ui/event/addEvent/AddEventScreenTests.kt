@@ -498,10 +498,10 @@ class DateTimeButtonTests {
           selectedDate = selected, onDateClick = { selected.value = "01/01/3000" })
     }
 
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
-        .performScrollTo()
-        .performClick()
+    // click directly (no scroll container in this isolated composable)
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE).performClick()
+
+    composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE)
@@ -515,10 +515,10 @@ class DateTimeButtonTests {
       TimePickerButton(selectedTime = selected, onTimeClick = { selected.value = "1230" })
     }
 
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
-        .performScrollTo()
-        .performClick()
+    // click directly (no scroll container in this isolated composable)
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME).performClick()
+
+    composeTestRule.waitForIdle()
 
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME)
