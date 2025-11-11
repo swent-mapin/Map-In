@@ -1,10 +1,7 @@
-package com.swent.mapin.ui
+package com.swent.mapin.ui.event
 
 import com.swent.mapin.model.Location
-import com.swent.mapin.ui.event.extractTags
-import com.swent.mapin.ui.event.isValidLocation
-import com.swent.mapin.ui.event.isValidTagInput
-import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -31,12 +28,12 @@ class AddEventUtilsTest {
 
   @Test
   fun `returns false for tags missing hash or invalid format`() {
-    assertFalse(isValidTagInput("food")) // missing #
-    assertFalse(isValidTagInput("#food travel")) // second missing #
-    assertFalse(isValidTagInput("#food,travel")) // invalid second
-    assertFalse(isValidTagInput("#")) // incomplete tag
-    assertFalse(isValidTagInput("#food,,")) // trailing commas
-    assertFalse(isValidTagInput("#food, #")) // dangling #
+    TestCase.assertFalse(isValidTagInput("food")) // missing #
+    TestCase.assertFalse(isValidTagInput("#food travel")) // second missing #
+    TestCase.assertFalse(isValidTagInput("#food,travel")) // invalid second
+    TestCase.assertFalse(isValidTagInput("#")) // incomplete tag
+    TestCase.assertFalse(isValidTagInput("#food,,")) // trailing commas
+    TestCase.assertFalse(isValidTagInput("#food, #")) // dangling #
   }
 
   // ---------- Tests for extractTags ----------
@@ -75,12 +72,36 @@ class AddEventUtilsTest {
   @Test
   fun `returns false when location not in list`() {
     val locations = listOf(Location("Berlin", 0.0, 0.0), Location("Rome", 0.0, 0.0))
-    assertFalse(isValidLocation("Madrid", locations))
+    TestCase.assertFalse(isValidLocation("Madrid", locations))
   }
 
   @Test
   fun `returns false for empty location list`() {
     val locations = emptyList<Location>()
-    assertFalse(isValidLocation("Anything", locations))
+    TestCase.assertFalse(isValidLocation("Anything", locations))
+  }
+
+  @Test
+  fun `returns false for invalid price`() {
+    val invalidPrice = "3.0price"
+    val invalidPrice2 = "3.0f"
+    val invalidPrice3 = "price"
+    val invalidPrice4 = "price0.0"
+    TestCase.assertFalse(isValidPriceInput(invalidPrice))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice2))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice3))
+    TestCase.assertFalse(isValidPriceInput(invalidPrice4))
+  }
+
+  @Test
+  fun `returns true for valid price`() {
+    val validPrice = "3.0"
+    val validPrice2 = "0"
+    val validPrice3 = "0.0"
+    val validPrice4 = "10"
+    TestCase.assertTrue(isValidPriceInput(validPrice))
+    TestCase.assertTrue(isValidPriceInput(validPrice2))
+    TestCase.assertTrue(isValidPriceInput(validPrice3))
+    TestCase.assertTrue(isValidPriceInput(validPrice4))
   }
 }
