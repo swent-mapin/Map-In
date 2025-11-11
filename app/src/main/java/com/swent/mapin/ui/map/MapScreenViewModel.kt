@@ -26,6 +26,7 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
@@ -43,16 +44,17 @@ import kotlinx.coroutines.launch
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
 class MapScreenViewModel(
-    initialSheetState: BottomSheetState,
-    private val sheetConfig: BottomSheetConfig,
-    private val onClearFocus: () -> Unit,
-    private val applicationContext: Context,
-    private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
+  initialSheetState: BottomSheetState,
+  private val sheetConfig: BottomSheetConfig,
+  private val onClearFocus: () -> Unit,
+  private val applicationContext: Context,
+  private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
-    private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
-    private val locationManager: LocationManager = LocationManager(applicationContext)
+  private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
+  private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+  private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
+  private val locationManager: LocationManager = LocationManager(applicationContext),
+  val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
 ) : ViewModel() {
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
@@ -68,17 +70,14 @@ class MapScreenViewModel(
           sheetConfig = sheetConfig,
           initialState = initialSheetState,
           isProgrammaticZoom = { cameraController.isProgrammaticZoom })
-  private val eventStateController =
+  val eventStateController =
       MapEventStateController(
           eventRepository = eventRepository,
+          userProfileRepository = userProfileRepository,
           auth = auth,
           scope = viewModelScope,
-          replaceEventInSearch = { event ->
-            searchStateController.replaceEvent(event, _selectedTags)
-          },
-          updateEventsState = ::applyEvents,
+          filterViewModel = filterViewModel,
           getSelectedEvent = { _selectedEvent },
-          setSelectedEvent = { _selectedEvent = it },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
   private val memoryActionController =
@@ -194,10 +193,6 @@ class MapScreenViewModel(
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents
 
-  // Saved events ids for quick lookup
-  private val savedEventIds: Set<String>
-    get() = eventStateController.savedEventIds
-
   enum class BottomSheetTab {
     SAVED_EVENTS,
     JOINED_EVENTS
@@ -269,7 +264,6 @@ class MapScreenViewModel(
   val directionViewModel = DirectionViewModel()
 
   init {
-    eventStateController.updateBaseEvents(_events)
     // Load map style preference
     loadMapStylePreference()
 
@@ -277,8 +271,8 @@ class MapScreenViewModel(
     loadInitialSamples()
     // Preload events so the form has immediate data
     refreshEventsDataset()
+    eventStateController.refreshEventsList()
     eventStateController.loadSavedEvents()
-    eventStateController.loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadUserProfile()
@@ -336,8 +330,7 @@ class MapScreenViewModel(
           } else {
             // Signed in → (re)load user-scoped data
             eventStateController.loadSavedEvents()
-            eventStateController.loadSavedEventIds()
-            eventStateController.updateBaseEvents(_events)
+            eventStateController.refreshEventsList()
             loadUserProfile()
           }
         }
@@ -367,7 +360,7 @@ class MapScreenViewModel(
 
   private fun applyEvents(newEvents: List<Event>) {
     _events = newEvents
-    eventStateController.updateBaseEvents(newEvents)
+    eventStateController.refreshEventsList()
   }
 
   fun onZoomChange(newZoom: Float) {
@@ -673,7 +666,7 @@ class MapScreenViewModel(
   }
 
   fun isEventSaved(event: Event): Boolean {
-    return savedEventIds.contains(event.uid)
+    return savedEvents.contains(event)
   }
 
   fun joinEvent() {
@@ -681,7 +674,7 @@ class MapScreenViewModel(
   }
 
   fun unregisterFromEvent() {
-    eventStateController.unregisterSelectedEvent()
+    eventStateController.leaveSelectedEvent()
   }
 
   /**
@@ -689,7 +682,7 @@ class MapScreenViewModel(
    * generated code.
    */
   fun saveEventForLater() {
-    eventStateController.saveSelectedEventForLater()
+    eventStateController.saveSelectedEvent()
   }
 
   /**

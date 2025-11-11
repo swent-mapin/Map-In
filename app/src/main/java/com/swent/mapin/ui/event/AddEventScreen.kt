@@ -288,7 +288,7 @@ private fun PublicSwitch(
 @Composable
 fun AddEventScreen(
     modifier: Modifier = Modifier,
-    eventViewModel: EventViewModel = viewModel(),
+    eventViewModel: EventViewModel,
     locationViewModel: LocationViewModel = viewModel(),
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
