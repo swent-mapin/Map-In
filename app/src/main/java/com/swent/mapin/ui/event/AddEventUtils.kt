@@ -27,6 +27,17 @@ fun isValidTagInput(input: String): Boolean {
 }
 
 /**
+ * With help of GPT Helper function to check whether a given string input is a valid price (double)
+ *
+ * @param input The string input
+ */
+fun isValidPriceInput(input: String): Boolean {
+  if (input.isBlank()) return true
+  val regex = """^\d+(\.\d+)?$""".toRegex()
+  return regex.matches(input.trim())
+}
+
+/**
  * With Help of GPT: Helper function that extracts individual tags from a valid input string.
  *
  * The input string is expected to follow the same format checked by [isValidTagInput], where each
@@ -83,7 +94,8 @@ fun saveEvent(
     currentUserId: String?,
     tags: List<String>,
     isPublic: Boolean,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    price: Double = 0.0
 ) {
   val uid = currentUserId ?: return
   val newEvent =
@@ -99,7 +111,8 @@ fun saveEvent(
           public = isPublic,
           ownerId = uid,
           imageUrl = null,
-          capacity = null)
+          capacity = null,
+          price = price)
   viewModel.addEvent(newEvent)
   onDone()
 }

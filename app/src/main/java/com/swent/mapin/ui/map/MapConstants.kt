@@ -40,6 +40,29 @@ object MapConstants {
   /** Default map zoom level */
   const val DEFAULT_ZOOM = 15f
 
+  object HeatmapConfig {
+    const val MAX_ZOOM_LEVEL = 18L
+    const val OPACITY = 0.65
+    val RADIUS_STOPS =
+        listOf(
+            0.0 to 18.0,
+            14.0 to 32.0,
+            22.0 to 48.0,
+        )
+    val WEIGHT_STOPS =
+        listOf(
+            0.0 to 0.0,
+            5.0 to 0.4,
+            25.0 to 0.8,
+            100.0 to 1.0,
+        )
+  }
+
+  object CameraConfig {
+    const val ZOOM_DELTA_THRESHOLD = 0.01f
+    const val SCALE_BAR_HIDE_DELAY_MS = 300L
+    const val PROGRAMMATIC_ZOOM_RESET_DELAY_MS = 1100L
+  }
   /** Minimum padding (dp) applied when re-centering on user with collapsed sheet */
   const val LOCATION_CENTER_MIN_PADDING_DP = 8f
 

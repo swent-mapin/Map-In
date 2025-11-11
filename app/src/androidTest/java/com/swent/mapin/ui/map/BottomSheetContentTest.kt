@@ -1006,4 +1006,94 @@ class BottomSheetContentTest {
     // Verify callback was triggered
     assertEquals("event123", clickedEventId)
   }
+
+  @Test
+  fun memoryFormScreen_displaysWhenCurrentScreenIsMemoryForm() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            currentScreen = BottomSheetScreen.MEMORY_FORM,
+            availableEvents = testEvents,
+            onMemorySave = {},
+            onMemoryCancel = {},
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify MemoryFormScreen is displayed by checking its test tag
+    rule.onNodeWithTag("memoryFormScreen").assertIsDisplayed()
+  }
+
+  @Test
+  fun addEventScreen_displaysWhenCurrentScreenIsAddEvent() {
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            currentScreen = BottomSheetScreen.ADD_EVENT,
+            onCreateEventDone = {},
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify AddEventScreen is displayed by checking its test tag
+    rule.onNodeWithTag("AddEventScreen").assertIsDisplayed()
+  }
+
+  @Test
+  fun showAllRecentsButton_navigatesToAllRecentItemsPage() {
+    val recentItems =
+        listOf(
+            RecentItem.Search("coffee"),
+            RecentItem.Search("tea"),
+            RecentItem.ClickedEvent("event1", "Concert"))
+
+    rule.setContent {
+      SearchModeContent(
+          recentItems = recentItems,
+          onRecentSearchClick = {},
+          onRecentEventClick = {},
+          onCategoryClick = {})
+    }
+
+    rule.waitForIdle()
+
+    // Click "Show all" button
+    rule.onNodeWithTag("showAllRecentSearchesButton").performClick()
+    rule.waitForIdle()
+
+    // Verify AllRecentItemsPage is now displayed
+    rule.onNodeWithText("Recent searches").assertIsDisplayed()
+    rule.onNodeWithTag("backFromAllRecentsButton").assertIsDisplayed()
+    rule.onNodeWithTag("clearAllRecentButton").assertIsDisplayed()
+  }
 }

@@ -19,24 +19,18 @@ import com.swent.mapin.ui.map.MapConstants
 @Composable
 fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
   HeatmapLayer(sourceState = heatmapSource, layerId = "locations-heatmap") {
-    maxZoom = LongValue(18L)
-    heatmapOpacity = DoubleValue(0.65)
+    maxZoom = LongValue(MapConstants.HeatmapConfig.MAX_ZOOM_LEVEL)
+    heatmapOpacity = DoubleValue(MapConstants.HeatmapConfig.OPACITY)
     heatmapRadius =
         DoubleValue(
             interpolate {
               linear()
               zoom()
-              stop {
-                literal(0.0)
-                literal(18.0)
-              }
-              stop {
-                literal(14.0)
-                literal(32.0)
-              }
-              stop {
-                literal(22.0)
-                literal(48.0)
+              MapConstants.HeatmapConfig.RADIUS_STOPS.forEach { (zoom, radius) ->
+                stop {
+                  literal(zoom)
+                  literal(radius)
+                }
               }
             })
     heatmapWeight =
@@ -44,21 +38,11 @@ fun CreateHeatmapLayer(heatmapSource: GeoJsonSourceState) {
             interpolate {
               linear()
               get { literal("weight") }
-              stop {
-                literal(0.0)
-                literal(0.0)
-              }
-              stop {
-                literal(5.0)
-                literal(0.4)
-              }
-              stop {
-                literal(25.0)
-                literal(0.8)
-              }
-              stop {
-                literal(100.0)
-                literal(1.0)
+              MapConstants.HeatmapConfig.WEIGHT_STOPS.forEach { (weight, output) ->
+                stop {
+                  literal(weight)
+                  literal(output)
+                }
               }
             })
     heatmapColor =
