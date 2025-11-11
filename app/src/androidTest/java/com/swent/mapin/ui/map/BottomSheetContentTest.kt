@@ -19,12 +19,15 @@ import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
+import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.profile.ProfileViewModel
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -37,6 +40,11 @@ class BottomSheetContentTest {
   val filterViewModel = FiltersSectionViewModel()
   val locationViewModel = LocationViewModel()
   val profileViewModel = ProfileViewModel()
+  val eventStateController = mockk<MapEventStateController>()
+  val eventViewModel = EventViewModel(
+    eventRepository = LocalEventRepository(),
+    stateController = eventStateController
+  )
 
   @Composable
   private fun TestContent(
@@ -66,7 +74,8 @@ class BottomSheetContentTest {
                   onClear = {}),
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -94,7 +103,8 @@ class BottomSheetContentTest {
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -140,7 +150,8 @@ class BottomSheetContentTest {
           onEventClick = onEventClick,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -245,7 +256,8 @@ class BottomSheetContentTest {
             onNavigateToFriends = { navigationTriggered = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
     rule.waitForIdle()
@@ -286,7 +298,8 @@ class BottomSheetContentTest {
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -352,7 +365,8 @@ class BottomSheetContentTest {
             },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
     rule.waitForIdle()
@@ -391,7 +405,8 @@ class BottomSheetContentTest {
           isSearchMode = isSearchMode,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -453,7 +468,8 @@ class BottomSheetContentTest {
                   onClear = {}),
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
-          profileViewModel = profileViewModel)
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
     }
   }
 
@@ -583,7 +599,8 @@ class BottomSheetContentTest {
             onTabChange = { selectedTab = it },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
     rule.waitForIdle()
@@ -620,7 +637,8 @@ class BottomSheetContentTest {
             onProfileClick = { clicked = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
 
@@ -652,7 +670,8 @@ class BottomSheetContentTest {
             onProfileClick = {},
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
 
@@ -682,7 +701,8 @@ class BottomSheetContentTest {
             onProfileClick = {},
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
 
@@ -1030,7 +1050,8 @@ class BottomSheetContentTest {
             onMemoryCancel = {},
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
 
@@ -1059,7 +1080,8 @@ class BottomSheetContentTest {
             onCreateEventDone = {},
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
       }
     }
 
