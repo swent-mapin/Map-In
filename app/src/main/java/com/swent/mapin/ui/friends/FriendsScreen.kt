@@ -15,12 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.SearchResultWithStatus
 
@@ -287,7 +289,10 @@ private fun FriendCard(
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              Avatar(friend.userProfile.avatarUrl, friend.userProfile.name, Modifier.size(48.dp))
+              Avatar(
+                  friend.userProfile.avatarUrl,
+                  friend.userProfile.name,
+                  Modifier.size(48.dp).testTag("avatar_${friend.userProfile.userId}"))
               Spacer(Modifier.width(12.dp))
               Column(Modifier.weight(1f)) {
                 Text(
@@ -365,7 +370,10 @@ private fun RequestCard(
       CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar(req.userProfile.avatarUrl, req.userProfile.name, Modifier.size(48.dp))
+            Avatar(
+                req.userProfile.avatarUrl,
+                req.userProfile.name,
+                Modifier.size(48.dp).testTag("avatar_${req.userProfile.userId}"))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
               Text(
@@ -426,7 +434,10 @@ private fun SearchCard(
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              Avatar(result.userProfile.avatarUrl, result.userProfile.name, Modifier.size(48.dp))
+              Avatar(
+                  result.userProfile.avatarUrl,
+                  result.userProfile.name,
+                  Modifier.size(48.dp).testTag("avatar_${result.userProfile.userId}"))
               Spacer(Modifier.width(12.dp))
               Column(Modifier.weight(1f)) {
                 Text(
@@ -477,20 +488,34 @@ private fun SearchCard(
 @Composable
 private fun Avatar(url: String?, name: String, modifier: Modifier = Modifier) {
   Box(
-      modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-      Alignment.Center) {
-        if (url.isNullOrEmpty() || url == "person") {
-          Text(
-              name.firstOrNull()?.uppercase() ?: "?",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onPrimaryContainer)
-        } else {
-          Icon(
-              Icons.Default.Person,
-              null,
-              Modifier.size(32.dp),
-              tint = MaterialTheme.colorScheme.onPrimaryContainer)
+      modifier =
+          modifier
+              .size(48.dp)
+              .clip(CircleShape)
+              .background(MaterialTheme.colorScheme.primaryContainer),
+      contentAlignment = Alignment.Center) {
+        when {
+          url.isNullOrEmpty() || url == "person" -> {
+            Text(
+                name.firstOrNull()?.uppercase() ?: "?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+          }
+          url.startsWith("http") -> {
+            AsyncImage(
+                model = url,
+                contentDescription = "${name} avatar",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(CircleShape))
+          }
+          else -> {
+            Icon(
+                Icons.Default.Person,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer)
+          }
         }
       }
 }
