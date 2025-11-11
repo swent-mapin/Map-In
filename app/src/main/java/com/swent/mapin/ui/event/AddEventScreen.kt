@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -29,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -111,7 +114,6 @@ fun AddEventTextField(
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
 ) {
-
   OutlinedTextField(
       modifier = modifier.fillMaxWidth(),
       value = textField.value,
@@ -371,221 +373,224 @@ fun AddEventScreen(
       dateError.value || timeError.value || date.value.isBlank() || time.value.isBlank()
   val scrollState = rememberScrollState()
 
-  Column(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .verticalScroll(scrollState)
-              .imePadding()
-              .navigationBarsPadding()) {
-        // TopBar
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              IconButton(
-                  onClick = onCancel,
-                  modifier = Modifier.size(48.dp).testTag(AddEventScreenTestTags.EVENT_CANCEL)) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        tint = MaterialTheme.colorScheme.onSurface)
-                  }
+  Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
+    Column(
+        modifier =
+            modifier
+                .padding(padding)
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .imePadding()
+                .navigationBarsPadding()) {
+          // TopBar
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onCancel,
+                    modifier = Modifier.size(48.dp).testTag(AddEventScreenTestTags.EVENT_CANCEL)) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Cancel",
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
 
-              Text(
-                  text = "New Event",
-                  style = MaterialTheme.typography.titleLarge,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.weight(1f))
+                Text(
+                    text = "New Event",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f))
 
-              IconButton(
-                  onClick = {
-                    val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                    sdf.timeZone = java.util.TimeZone.getDefault()
-                    val rawTime =
-                        if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                    val parsed = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                    val timestamp = parsed?.let { Timestamp(it) } ?: Timestamp.now()
-                    saveEvent(
-                        eventViewModel,
-                        title.value,
-                        description.value,
-                        gotLocation.value,
-                        timestamp,
-                        Firebase.auth.currentUser?.uid,
-                        extractTags(tag.value),
-                        isPublic.value,
-                        onDone,
-                        price.value.toDoubleOrNull() ?: 0.0,
-                    )
-                  },
-                  enabled = isEventValid,
-                  modifier =
-                      Modifier.size(48.dp)
-                          .background(
-                              color =
-                                  if (isEventValid) MaterialTheme.colorScheme.primaryContainer
-                                  else MaterialTheme.colorScheme.surfaceVariant,
-                              shape = CircleShape)
-                          .testTag(AddEventScreenTestTags.EVENT_SAVE)) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Save",
-                        tint =
-                            if (isEventValid) MaterialTheme.colorScheme.onPrimaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant)
-                  }
-            }
+                IconButton(
+                    onClick = {
+                      val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+                      sdf.timeZone = java.util.TimeZone.getDefault()
+                      val rawTime =
+                          if (time.value.contains("h")) time.value.replace("h", "") else time.value
+                      val parsed = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+                      val timestamp = parsed?.let { Timestamp(it) } ?: Timestamp.now()
+                      saveEvent(
+                          eventViewModel,
+                          title.value,
+                          description.value,
+                          gotLocation.value,
+                          timestamp,
+                          Firebase.auth.currentUser?.uid,
+                          extractTags(tag.value),
+                          isPublic.value,
+                          onDone,
+                          price.value.toDoubleOrNull() ?: 0.0,
+                      )
+                    },
+                    enabled = isEventValid,
+                    modifier =
+                        Modifier.size(48.dp)
+                            .background(
+                                color =
+                                    if (isEventValid) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = CircleShape)
+                            .testTag(AddEventScreenTestTags.EVENT_SAVE)) {
+                      Icon(
+                          imageVector = Icons.Default.Check,
+                          contentDescription = "Save",
+                          tint =
+                              if (isEventValid) MaterialTheme.colorScheme.onPrimaryContainer
+                              else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+              }
 
-        Spacer(modifier = Modifier.padding(5.dp))
-        // Title field
-        Text(
-            text = stringResource(R.string.title_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        AddEventTextField(
-            title,
-            titleError,
-            stringResource(R.string.title_place_holder),
-            modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
-            singleLine = true)
-
-        Spacer(modifier = Modifier.padding(10.dp))
-        // Date and time fields
-
-        Text(
-            stringResource(R.string.date_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        if (isDateAndTimeValid) {
+          Spacer(modifier = Modifier.padding(5.dp))
+          // Title field
           Text(
-              stringResource(R.string.date_time_error),
+              text = stringResource(R.string.title_text),
               style = MaterialTheme.typography.labelMedium,
-              color = Color.Red,
-              modifier =
-                  Modifier.padding(bottom = 8.dp).testTag(AddEventScreenTestTags.DATE_TIME_ERROR))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-              FutureDatePickerButton(
-                  date,
-                  onDateChanged = { dateError.value = (date.value.isBlank()) },
-              )
-
-              TimePickerButton(
-                  time,
-                  onTimeChanged = { timeError.value = (time.value.isBlank()) },
-              )
-            }
-        // Location Field
-        Text(
-            stringResource(R.string.location_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        LocationDropDownMenu(
-            location,
-            locationError,
-            locationViewModel,
-            locationExpanded,
-            locations,
-            gotLocation,
-        )
-
-        Spacer(modifier = Modifier.padding(10.dp))
-        // Description field
-        Text(
-            stringResource(R.string.description_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        AddEventTextField(
-            description,
-            descriptionError,
-            stringResource(R.string.description_place_holder),
-            modifier =
-                Modifier.height(120.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION),
-        )
-
-        Spacer(modifier = Modifier.padding(10.dp))
-        // Tag Field
-        Text(
-            stringResource(R.string.tag_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        AddEventTextField(
-            tag,
-            tagError,
-            stringResource(R.string.add_tag_place_holder),
-            modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
-            isTag = true)
-
-        Spacer(modifier = Modifier.padding(bottom = 10.dp))
-        // Price field
-        Text(
-            stringResource(R.string.price_text),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          AddEventTextField(
-              price,
-              priceError,
-              stringResource(R.string.price_place_holder),
-              modifier =
-                  Modifier.fillMaxWidth(0.3f).testTag(AddEventScreenTestTags.INPUT_EVENT_PRICE),
-              singleLine = true,
-              isPrice = true)
-          Spacer(modifier = Modifier.padding(horizontal = 5.dp))
-          Text(
-              stringResource(R.string.currency_switzerland),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
+              modifier = Modifier.padding(bottom = 8.dp))
+          AddEventTextField(
+              title,
+              titleError,
+              stringResource(R.string.title_place_holder),
+              modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
+              singleLine = true)
 
-        Spacer(modifier = Modifier.padding(bottom = 5.dp))
+          Spacer(modifier = Modifier.padding(10.dp))
+          // Date and time fields
 
-        // Public/Private switch
-        if (isPublic.value) {
-          PublicSwitch(
-              isPublic = isPublic.value,
-              onPublicChange = { isPublic.value = it },
-              "This event will be public",
-              "Others can see this event on the map",
-              Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
-              Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
-        } else {
-          PublicSwitch(
-              isPublic = isPublic.value,
-              onPublicChange = { isPublic.value = it },
-              "This event will be private",
-              "Others will not see this event on the map",
-              Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
-              Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
-        }
-
-        // Error displaying
-        if (showMissingFields) {
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(60.dp)) {
-            Spacer(modifier = Modifier.padding(2.dp))
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = "Info",
-                tint = colorResource(R.color.red),
-                modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.padding(3.dp))
+          Text(
+              stringResource(R.string.date_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          if (isDateAndTimeValid) {
             Text(
-                "The following fields are missing/incorrect: " + errorFields.joinToString(", "),
-                fontSize = 12.sp,
-                color = colorResource(R.color.red),
-                lineHeight = 14.sp,
-                modifier = Modifier.testTag(AddEventScreenTestTags.ERROR_MESSAGE))
+                stringResource(R.string.date_time_error),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.Red,
+                modifier =
+                    Modifier.padding(bottom = 8.dp).testTag(AddEventScreenTestTags.DATE_TIME_ERROR))
+          }
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically) {
+                FutureDatePickerButton(
+                    date,
+                    onDateChanged = { dateError.value = (date.value.isBlank()) },
+                )
+
+                TimePickerButton(
+                    time,
+                    onTimeChanged = { timeError.value = (time.value.isBlank()) },
+                )
+              }
+          // Location Field
+          Text(
+              stringResource(R.string.location_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          LocationDropDownMenu(
+              location,
+              locationError,
+              locationViewModel,
+              locationExpanded,
+              locations,
+              gotLocation,
+          )
+
+          Spacer(modifier = Modifier.padding(10.dp))
+          // Description field
+          Text(
+              stringResource(R.string.description_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          AddEventTextField(
+              description,
+              descriptionError,
+              stringResource(R.string.description_place_holder),
+              modifier =
+                  Modifier.height(120.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION),
+          )
+
+          Spacer(modifier = Modifier.padding(10.dp))
+          // Tag Field
+          Text(
+              stringResource(R.string.tag_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          AddEventTextField(
+              tag,
+              tagError,
+              stringResource(R.string.add_tag_place_holder),
+              modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
+              isTag = true)
+
+          Spacer(modifier = Modifier.padding(bottom = 10.dp))
+          // Price field
+          Text(
+              stringResource(R.string.price_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            AddEventTextField(
+                price,
+                priceError,
+                stringResource(R.string.price_place_holder),
+                modifier =
+                    Modifier.fillMaxWidth(0.3f).testTag(AddEventScreenTestTags.INPUT_EVENT_PRICE),
+                singleLine = true,
+                isPrice = true)
+            Spacer(modifier = Modifier.padding(horizontal = 5.dp))
+            Text(
+                stringResource(R.string.currency_switzerland),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+
+          Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
+          // Public/Private switch
+          if (isPublic.value) {
+            PublicSwitch(
+                isPublic = isPublic.value,
+                onPublicChange = { isPublic.value = it },
+                "This event will be public",
+                "Others can see this event on the map",
+                Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
+                Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
+          } else {
+            PublicSwitch(
+                isPublic = isPublic.value,
+                onPublicChange = { isPublic.value = it },
+                "This event will be private",
+                "Others will not see this event on the map",
+                Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
+                Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
+          }
+
+          // Error displaying
+          if (showMissingFields) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(60.dp)) {
+              Spacer(modifier = Modifier.padding(2.dp))
+              Icon(
+                  imageVector = Icons.Outlined.Info,
+                  contentDescription = "Info",
+                  tint = colorResource(R.color.red),
+                  modifier = Modifier.size(20.dp))
+              Spacer(modifier = Modifier.padding(3.dp))
+              Text(
+                  "The following fields are missing/incorrect: " + errorFields.joinToString(", "),
+                  fontSize = 12.sp,
+                  color = colorResource(R.color.red),
+                  lineHeight = 14.sp,
+                  modifier = Modifier.testTag(AddEventScreenTestTags.ERROR_MESSAGE))
+            }
           }
         }
-      }
+  }
 }
