@@ -173,6 +173,7 @@ class M2AddEventScreenTest {
 
     // Tap Save immediately: everything is blank -> shouldShowMissingFields banner appears
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
+    compose.waitForIdle()
     compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
   }
 
@@ -190,6 +191,7 @@ class M2AddEventScreenTest {
     // date/time)
 
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
+    compose.waitForIdle()
     // Still missing/invalid date & time -> banner present
     compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
     // And the inline date/time error helper should still be visible
