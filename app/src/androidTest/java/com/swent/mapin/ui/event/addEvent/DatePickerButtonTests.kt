@@ -6,7 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.swent.mapin.ui.event.AddEventScreenTestTags
-import com.swent.mapin.ui.event.FutureDatePickerButton
+import com.swent.mapin.ui.event.DatePickerButton
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -18,7 +18,7 @@ class DatePickerButtonTests {
   fun setup() {
     val date = mutableStateOf("")
     composeTestRule.setContent {
-      FutureDatePickerButton(
+      DatePickerButton(
           selectedDate = date, onDateClick = { date.value = "10/10/2025" } // simulate selection
           )
     }
