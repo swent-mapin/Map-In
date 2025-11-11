@@ -1,217 +1,319 @@
 package com.swent.mapin.ui.map.eventstate
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.ui.filters.Filters
+import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
- * Encapsulates saved/joined/available event state and all repository interactions (join, save,
- * etc.) so the ViewModel only coordinates UI state.
+ * Encapsulates all event-related state (filtered, search results, joined, saved) and repository
+ * interactions (join, save, etc.) so the ViewModel only coordinates UI state.
  */
 class MapEventStateController(
     private val eventRepository: EventRepository,
+    private val userProfileRepository: UserProfileRepository,
     private val auth: FirebaseAuth,
     private val scope: CoroutineScope,
-    private val replaceEventInSearch: (Event) -> List<Event>,
-    private val updateEventsState: (List<Event>) -> Unit,
+    private val filterViewModel: FiltersSectionViewModel,
     private val getSelectedEvent: () -> Event?,
-    private val setSelectedEvent: (Event?) -> Unit,
     private val setErrorMessage: (String) -> Unit,
     private val clearErrorMessage: () -> Unit
 ) {
 
-  private var baseEvents: List<Event> = emptyList()
+  var allEvents by mutableStateOf<List<Event>>(emptyList())
 
-  private var _joinedEvents by mutableStateOf<List<Event>>(emptyList())
-  val joinedEvents: List<Event>
-    get() = _joinedEvents
+  var searchResults by mutableStateOf<List<Event>>(emptyList())
+
+  var availableEvents by mutableStateOf<List<Event>>(emptyList())
+
+  var joinedEvents by mutableStateOf<List<Event>>(emptyList())
+
+  var savedEvents by mutableStateOf<List<Event>>(emptyList())
 
   /**
-   * Events available for memory linking. Returns joined events (events the user participates in).
-   * This replaces the old loadParticipantEvents() which used the removed getEventsByParticipant()
-   * repository method.
+   * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
+   * accordingly.
    */
-  val availableEvents: List<Event>
-    get() = _joinedEvents
-
-  private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
-  val savedEvents: List<Event>
-    get() = _savedEvents
-
-  private var _savedEventIds by mutableStateOf<Set<String>>(emptySet())
-  val savedEventIds: Set<String>
-    get() = _savedEventIds
-
-  fun updateBaseEvents(events: List<Event>) {
-    baseEvents = events
-    refreshJoinedEvents()
+  @OptIn(FlowPreview::class)
+  fun observeFilters() {
+    scope.launch {
+      filterViewModel.filters.debounce(300).distinctUntilChanged().collect { filters ->
+        getFilteredEvents(filters)
+      }
+    }
   }
 
+  /** Refreshes [allEvents] using the current filters. */
+  fun refreshEventsList() {
+    getFilteredEvents(filterViewModel.filters.value)
+    loadJoinedEvents()
+    loadSavedEvents()
+  }
+
+  /**
+   * Refreshes and returns the latest data for the event with the given [eventId] from [allEvents].
+   *
+   * @param eventId The ID of the event to refresh.
+   * @return The refreshed [Event] if found, otherwise null.
+   */
+  fun refreshSelectedEvent(eventId: String): Event? {
+    return allEvents.find { it.uid == eventId }
+  }
+
+  /**
+   * Applies the given [filters] to fetch events from the repository and update [allEvents].
+   *
+   * @param filters The filters to apply to the event list.
+   */
+  fun getFilteredEvents(filters: Filters) {
+    scope.launch {
+      try {
+        allEvents = eventRepository.getFilteredEvents(filters)
+      } catch (e: Exception) {
+        setErrorMessage(e.message ?: "Unknown error occurred while fetching events")
+      }
+    }
+  }
+
+  /**
+   * Performs a local search on [allEvents] for events containing the [query] in their title.
+   *
+   * @param query The search query string.
+   */
+  fun searchEvents(query: String) {
+    val lowerQuery = query.trim().lowercase()
+    searchResults =
+        if (lowerQuery.isEmpty()) {
+          emptyList()
+        } else {
+          allEvents.filter {
+            it.title.trim().lowercase().contains(lowerQuery) ||
+                it.description.trim().lowercase().contains(lowerQuery) ||
+                it.tags.any { tag -> tag.lowercase().contains(lowerQuery) } ||
+                it.location.name.lowercase().contains(lowerQuery)
+          }
+        }
+  }
+
+  /**
+   * Loads the list of events that the current user has joined.
+   *
+   * Populates [joinedEvents] by fetching each event from the repository based on the participating
+   * event IDs in the user's profile. This reflects the events where the current user is a
+   * participant.
+   *
+   * Errors encountered during loading are transmitted to caller.
+   */
+  fun loadJoinedEvents() {
+    scope.launch {
+      try {
+        val currentUserId = getUserId()
+        val user = userProfileRepository.getUserProfile(currentUserId)
+        requireNotNull(user) { "User profile not found" }
+
+        val joinedEventsList = mutableListOf<Event>()
+        for (eventId in user.participatingEventIds) {
+          val event = eventRepository.getEvent(eventId)
+          if (event.participantIds.contains(currentUserId)) {
+            joinedEventsList.add(event)
+          } else {
+            throw Exception(
+                "Inconsistent data: User not in participant list for event $eventId but event ID is in user's participatingEventIds")
+          }
+        }
+        joinedEvents = joinedEventsList
+      } catch (e: Exception) {
+        setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
+      }
+    }
+  }
+
+  /**
+   * Loads the list of events that the current user has saved for later reference.
+   *
+   * Populates [savedEvents] by fetching the saved events from the repository. Errors encountered
+   * during loading are transmitted to caller.
+   */
   fun loadSavedEvents() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEvents = emptyList()
-      return
-    }
     scope.launch {
       try {
-        _savedEvents = eventRepository.getSavedEvents(currentUserId)
+        val currentUserId = getUserId()
+        savedEvents = eventRepository.getSavedEvents(currentUserId)
       } catch (e: Exception) {
-        Log.e(TAG, "Error loading saved events", e)
-        _savedEvents = emptyList()
+        setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
       }
     }
   }
 
-  fun loadSavedEventIds() {
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      _savedEventIds = emptySet()
-      return
-    }
-    scope.launch {
-      try {
-        _savedEventIds = eventRepository.getSavedEventIds(currentUserId)
-      } catch (e: Exception) {
-        Log.e(TAG, "Error loading saved event ids", e)
-        _savedEventIds = emptySet()
-      }
-    }
-  }
-
+  /**
+   * Adds the current user as a participant to the selected event.
+   *
+   * Updates the event in the repository and refreshes [allEvents] and [joinedEvents]. Any
+   * exceptions encountered are transmitted to caller.
+   */
   fun joinSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      setErrorMessage("You must be signed in to join events")
-      return
-    }
-
     scope.launch {
-      clearErrorMessage()
       try {
-        val capacity = event.capacity
-        if (capacity != null && event.participantIds.size >= capacity) {
-          setErrorMessage("Event is at full capacity")
-          return@launch
-        }
-        val updatedParticipantIds =
-            event.participantIds.toMutableList().apply {
-              if (!contains(currentUserId)) add(currentUserId)
+        val currentUserId = getUserId()
+        if (!event.participantIds.contains(currentUserId)) {
+          require(event.capacity == null || event.capacity > event.participantIds.size) {
+            "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}"
+          }
+
+          // Update event's participant list
+          val updatedParticipantIds =
+              event.participantIds.toMutableList().apply { add(currentUserId) }
+          val updatedEvent = event.copy(participantIds = updatedParticipantIds)
+
+          // Update locally the event list immediately
+          allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+
+          try {
+            eventRepository.editEvent(event.uid, updatedEvent)
+
+            // Update user's participatingEventIds
+            val userProfile =
+                userProfileRepository.getUserProfile(currentUserId)
+                    ?: throw Exception("User profile not found")
+            if (!userProfile.participatingEventIds.contains(event.uid)) {
+              val updatedParticipatingEventIds =
+                  userProfile.participatingEventIds.toMutableList().apply { add(event.uid) }
+              val updatedUserProfile =
+                  userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
+              userProfileRepository.saveUserProfile(updatedUserProfile)
             }
-        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-        eventRepository.editEvent(event.uid, updatedEvent)
-        setSelectedEvent(updatedEvent)
-        val updatedList = replaceEventInSearch(updatedEvent)
-        updateEventsState(updatedList)
-        updateBaseEvents(updatedList)
+          } catch (e: Exception) {
+            // Revert local change if remote update fails
+            allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+            throw e
+          }
+        }
+
+        refreshEventsList()
       } catch (e: Exception) {
-        setErrorMessage("Failed to join event: ${e.message}")
+        setErrorMessage(e.message ?: "Unknown error occurred while joining event")
       }
     }
   }
 
-  fun unregisterSelectedEvent() {
+  /**
+   * Removes the current user from the participant list of the selected event.
+   *
+   * Updates the event in the repository and refreshes [allEvents] and [joinedEvents]. Any
+   * exceptions encountered are transmitted to caller.
+   */
+  fun leaveSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    val currentUserId = auth.currentUser?.uid ?: return
     scope.launch {
-      clearErrorMessage()
       try {
+        val currentUserId = getUserId()
+        // Update event's participant list
         val updatedParticipantIds =
             event.participantIds.toMutableList().apply { remove(currentUserId) }
         val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-        eventRepository.editEvent(event.uid, updatedEvent)
-        setSelectedEvent(updatedEvent)
-        val updatedList = replaceEventInSearch(updatedEvent)
-        updateEventsState(updatedList)
-        updateBaseEvents(updatedList)
+        // Update locally the event list immediately
+        allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+
+        try {
+          eventRepository.editEvent(event.uid, updatedEvent)
+
+          val userProfile =
+              userProfileRepository.getUserProfile(currentUserId)
+                  ?: throw Exception("User profile not found")
+          val updatedParticipatingEventIds =
+              userProfile.participatingEventIds.toMutableList().apply { remove(event.uid) }
+          val updatedUserProfile =
+              userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
+          userProfileRepository.saveUserProfile(updatedUserProfile)
+        } catch (e: Exception) {
+          // Revert local change if remote update fails
+          allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+          throw e
+        }
+
+        refreshEventsList()
       } catch (e: Exception) {
-        setErrorMessage("Failed to unregister: ${e.message}")
+        setErrorMessage(e.message ?: "Unknown error occurred while unregistering from event")
       }
     }
   }
 
-  fun saveSelectedEventForLater() {
-    val eventUid = getSelectedEvent()?.uid ?: return
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      setErrorMessage("You must be signed in to save events")
-      return
-    }
-
+  /**
+   * Saves the selected event for the current user.
+   *
+   * Updates the repository and refreshes [savedEvents] to include the newly saved event. Any
+   * exceptions encountered are transmitted to caller.
+   */
+  fun saveSelectedEvent() {
+    val event = getSelectedEvent() ?: return
     scope.launch {
-      clearErrorMessage()
-      val previousSavedIds = _savedEventIds
-      val previousSaved = _savedEvents
-
-      _savedEventIds = _savedEventIds + eventUid
-      val eventToAdd = baseEvents.find { it.uid == eventUid } ?: getSelectedEvent()
-      if (eventToAdd != null && _savedEvents.none { it.uid == eventUid }) {
-        _savedEvents = listOf(eventToAdd) + _savedEvents
-      }
-      setSelectedEvent(getSelectedEvent()?.copy())
-
       try {
-        val success = eventRepository.saveEventForUser(currentUserId, eventUid)
-        if (success) {
-          loadSavedEvents()
-        } else {
-          _savedEventIds = previousSavedIds
-          _savedEvents = previousSaved
-          setErrorMessage("Event is already saved")
-        }
-      } catch (e: Exception) {
-        _savedEventIds = previousSavedIds
-        _savedEvents = previousSaved
-        setErrorMessage("Failed to save event: ${e.message}")
-      }
-    }
-  }
-
-  fun unsaveSelectedEvent() {
-    val eventUid = getSelectedEvent()?.uid ?: return
-    val currentUserId = auth.currentUser?.uid
-    if (currentUserId == null) {
-      setErrorMessage("You must be signed in to unsave events")
-      return
-    }
-
-    _savedEventIds = _savedEventIds - eventUid
-    _savedEvents = _savedEvents.filter { it.uid != eventUid }
-    setSelectedEvent(getSelectedEvent()?.copy())
-
-    scope.launch {
-      clearErrorMessage()
-      try {
-        val success = eventRepository.unsaveEventForUser(currentUserId, eventUid)
-        if (!success) {
-          setErrorMessage("Could not remove saved status on server; action recorded locally.")
-          loadSavedEvents()
-        } else {
-          loadSavedEvents()
-        }
-      } catch (_: Exception) {
-        setErrorMessage("Failed to unsave (offline). Change will sync when online.")
+        val currentUserId = getUserId()
+        eventRepository.saveEventForUser(currentUserId, event.uid)
         loadSavedEvents()
+      } catch (e: Exception) {
+        setErrorMessage(e.message ?: "Unknown error occurred while saving event")
       }
     }
   }
 
-  private fun refreshJoinedEvents() {
-    val uid = auth.currentUser?.uid
-    _joinedEvents = if (uid == null) emptyList() else baseEvents.filter { uid in it.participantIds }
+  /**
+   * Unsaves the selected event for the current user.
+   *
+   * Updates the repository and refreshes [savedEvents] to remove the event. Any exceptions
+   * encountered are transmitted to caller.
+   */
+  fun unsaveSelectedEvent() {
+    val event = getSelectedEvent() ?: return
+    scope.launch {
+      try {
+        val currentUserId = getUserId()
+        eventRepository.unsaveEventForUser(currentUserId, event.uid)
+        loadSavedEvents()
+      } catch (e: Exception) {
+        setErrorMessage(e.message ?: "Unknown error occurred while unsaving event")
+      }
+    }
   }
 
+  /**
+   * Retrieves the current authenticated user's ID.
+   *
+   * @return The user ID of the currently authenticated user.
+   * @throws Exception if no user is authenticated.
+   */
+  fun getUserId(): String {
+    return auth.currentUser?.uid ?: throw Exception("User not authenticated")
+  }
+
+  /** Clears all user-scoped state (joined, saved, etc.). */
   fun clearUserScopedState() {
-    _savedEvents = emptyList()
-    _savedEventIds = emptySet()
-    _joinedEvents = emptyList()
+    allEvents = emptyList()
+    searchResults = emptyList()
+    availableEvents = emptyList()
+    joinedEvents = emptyList()
+    savedEvents = emptyList()
+  }
+
+  /** Clears the current search results. */
+  fun clearSearchResults() {
+    searchResults = emptyList()
+  }
+
+  /** Clears the current error message. */
+  fun clearError() {
+    clearErrorMessage()
   }
 
   companion object {
