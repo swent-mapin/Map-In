@@ -29,6 +29,7 @@ fun isValidTagInput(input: String): Boolean {
  * @param input The string input
  */
 fun isValidPriceInput(input: String): Boolean {
+  if (input.isBlank()) return true
   val regex = """^\d+(\.\d+)?$""".toRegex()
   return regex.matches(input.trim())
 }

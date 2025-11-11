@@ -415,7 +415,9 @@ fun AddEventScreen(
                         Firebase.auth.currentUser?.uid,
                         extractTags(tag.value),
                         isPublic.value,
-                        onDone)
+                        onDone,
+                        price.value.toDoubleOrNull() ?: 0.0,
+                    )
                   },
                   enabled = isEventValid,
                   modifier =
