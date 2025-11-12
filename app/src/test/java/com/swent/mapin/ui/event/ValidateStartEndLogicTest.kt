@@ -18,7 +18,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertTrue(dateError.value)
   }
@@ -35,7 +36,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertTrue(endDateError.value)
   }
@@ -52,7 +54,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(true)
     val endTimeError = mutableStateOf(true)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertFalse(endDateError.value)
     assertFalse(endTimeError.value)
@@ -70,7 +73,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertTrue(endDateError.value)
     assertFalse(endTimeError.value)
@@ -88,7 +92,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertTrue(timeError.value)
     assertTrue(endTimeError.value)
@@ -106,7 +111,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     // startMinutes parsing fails -> timeError true
     assertTrue(timeError.value)
@@ -124,7 +130,8 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(false)
     val endTimeError = mutableStateOf(false)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertTrue(endDateError.value)
     assertFalse(endTimeError.value)
@@ -142,10 +149,10 @@ class ValidateStartEndLogicTest {
     val timeError = mutableStateOf(true)
     val endTimeError = mutableStateOf(true)
 
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
     assertFalse(endDateError.value)
     assertFalse(endTimeError.value)
   }
 }
-

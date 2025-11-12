@@ -342,7 +342,8 @@ fun AddEventScreen(
 
   // Helper to validate start/end together and set appropriate error flags.
   fun validateStartEnd() {
-    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
   }
   // Show missing/incorrect fields either when the user requested validation (clicked Save)
   // or when a per-field error flag is set, or when a required field is empty.

@@ -31,9 +31,7 @@ class TimePickerButtonTests {
   @Test
   fun timePickerDialogBranchRunsWithoutCrash() {
     val time = mutableStateOf("")
-    composeTestRule.setContent {
-      TimePickerButton(selectedTime = time, onTimeClick = null)
-    }
+    composeTestRule.setContent { TimePickerButton(selectedTime = time, onTimeClick = null) }
 
     // Clicking should invoke the branch that creates/shows a TimePickerDialog. We can't
     // interact with the platform dialog reliably here, but we at least ensure clicking the

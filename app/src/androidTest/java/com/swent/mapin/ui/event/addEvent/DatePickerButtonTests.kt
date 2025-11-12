@@ -31,9 +31,7 @@ class DatePickerButtonTests {
   fun datePickerDialogBranchRunsWithoutCrash() {
     // Compose a new content where onDateClick is null so the DatePickerDialog branch executes
     val date = mutableStateOf("")
-    composeTestRule.setContent {
-      DatePickerButton(selectedDate = date, onDateClick = null)
-    }
+    composeTestRule.setContent { DatePickerButton(selectedDate = date, onDateClick = null) }
 
     // Clicking should invoke the branch that creates/shows a DatePickerDialog. We can't
     // interact with the platform dialog reliably here, but we at least ensure clicking the
