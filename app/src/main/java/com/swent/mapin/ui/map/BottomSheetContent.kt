@@ -11,13 +11,22 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -27,13 +36,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
@@ -97,12 +110,13 @@ private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
  * @param profileViewModel ViewModel for accessing user profile data, such as avatar URL.
  */
 @SuppressLint("VisibleForTests")
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheetContent(
     state: BottomSheetState,
     fullEntryKey: Int,
     searchBarState: SearchBarState,
+    onModalShown: (Boolean) -> Unit = {},
     // Search results and mode
     searchResults: List<Event> = emptyList(),
     isSearchMode: Boolean = false,
@@ -133,6 +147,7 @@ fun BottomSheetContent(
     // Profile/Filters support
     avatarUrl: String? = null,
     onProfileClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
     profileViewModel: ProfileViewModel
@@ -178,6 +193,11 @@ fun BottomSheetContent(
           }
           BottomSheetScreen.MAIN_CONTENT -> {
             var showAllRecents by remember { mutableStateOf(false) }
+            var showProfileMenu by remember { mutableStateOf(false) }
+
+            // Notify host when modal profile menu opens/closes so the anchored bottom sheet can
+            // hide
+            LaunchedEffect(showProfileMenu) { onModalShown(showProfileMenu) }
 
             AnimatedContent(
                 targetState = showAllRecents,
@@ -224,7 +244,7 @@ fun BottomSheetContent(
                           },
                           onClear = searchBarState.onClear,
                           avatarUrl = avatarUrl ?: userProfile.avatarUrl,
-                          onProfileClick = onProfileClick)
+                          onProfileClick = { showProfileMenu = true })
 
                       Spacer(modifier = Modifier.height(24.dp))
 
@@ -336,6 +356,65 @@ fun BottomSheetContent(
                     }
                   }
                 }
+
+            // Modal bottom sheet for profile menu (larger & scrollable)
+            if (showProfileMenu) {
+              ModalBottomSheet(onDismissRequest = { showProfileMenu = false }) {
+                val sheetScroll = rememberScrollState()
+                Column(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .fillMaxHeight(0.75f)
+                            .verticalScroll(sheetScroll)
+                            .padding(16.dp)) {
+                      // En-tête : photo de profil + message de bienvenue
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(
+                            model = userProfile.avatarUrl ?: avatarUrl,
+                            contentDescription = "Profile picture",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(56.dp).clip(CircleShape))
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Text("Hello ${userProfile.name}!")
+                      }
+
+                      Spacer(modifier = Modifier.height(8.dp))
+
+                      Button(
+                          onClick = {
+                            showProfileMenu = false
+                            onProfileClick()
+                          },
+                          modifier = Modifier.fillMaxWidth()) {
+                            Text("Profile")
+                          }
+
+                      Spacer(modifier = Modifier.height(8.dp))
+
+                      Button(
+                          onClick = {
+                            showProfileMenu = false
+                            onNavigateToFriends()
+                          },
+                          modifier = Modifier.fillMaxWidth()) {
+                            Text("Friends")
+                          }
+
+                      Spacer(modifier = Modifier.height(8.dp))
+
+                      Button(
+                          onClick = {
+                            showProfileMenu = false
+                            onSettingsClick()
+                          },
+                          modifier = Modifier.fillMaxWidth()) {
+                            Text("Settings")
+                          }
+                    }
+              }
+            }
           }
         }
       }
