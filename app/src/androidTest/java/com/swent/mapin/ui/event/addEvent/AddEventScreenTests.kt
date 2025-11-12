@@ -73,6 +73,10 @@ class AddEventScreenTests {
         .performScrollTo()
         .assertIsDisplayed()
     composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performScrollTo()
         .assertIsDisplayed()
@@ -224,6 +228,34 @@ class AddEventScreenTests {
   }
 
   @Test
+  fun validPriceInputWorks() {
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.performScrollTo()
+    tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidPrice")
+    tagNode.performTextClearance()
+    tagNode.performTextInput("3.0")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
+        .assert(!hasText("Price", substring = true, ignoreCase = true))
+  }
+
+  @Test
+  fun invalidPriceInputDoesNotWork() {
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("a")
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextClearance()
+    val tagNode = composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_PRICE)
+    tagNode.performScrollTo()
+    tagNode.assertIsDisplayed()
+    tagNode.performTextInput("InvalidPrice")
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
+        .assert(hasText("Price", substring = true, ignoreCase = true))
+  }
+
+  @Test
   fun invalidInputsKeepSaveButtonDisabled() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("")
     composeTestRule
@@ -243,6 +275,7 @@ class SaveEventTests {
     val testDescription = "Some description"
     val testTags = listOf("tag1", "tag2")
     val isPublic = true
+    val price = 0.0
     val currentUserId = "FakeUserId"
 
     var onDoneCalled = false
@@ -257,7 +290,8 @@ class SaveEventTests {
         currentUserId = currentUserId,
         tags = testTags,
         isPublic = isPublic,
-        onDone = onDone)
+        onDone = onDone,
+        price = price)
 
     verify { mockViewModel.addEvent(any<Event>()) }
     assert(onDoneCalled)
@@ -271,6 +305,7 @@ class SaveEventTests {
     val testDescription = "Some description"
     val testTags = listOf("tag1", "tag2")
     val isPublic = true
+    val price = 0.0
 
     val currentUserId: String? = null // simulate not logged in
 
@@ -286,7 +321,8 @@ class SaveEventTests {
         currentUserId = currentUserId,
         tags = testTags,
         isPublic = isPublic,
-        onDone = onDone)
+        onDone = onDone,
+        price = price)
 
     verify(exactly = 0) { mockViewModel.addEvent(any<Event>()) } // should NOT be called
     assert(!onDoneCalled)

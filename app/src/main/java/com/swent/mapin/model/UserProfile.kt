@@ -14,6 +14,7 @@ package com.swent.mapin.model
  * @property hobbiesVisible Whether the hobbies are visible to others
  * @property participatingEventIds List of event IDs the user is attending/participating in
  * @property ownedEventIds List of event IDs the user has created/organizes
+ * @property fcmToken Firebase Cloud Messaging token for push notifications (optional)
  */
 data class UserProfile(
     val userId: String = "",
@@ -26,5 +27,6 @@ data class UserProfile(
     val bannerUrl: String? = null,
     val hobbiesVisible: Boolean = true,
     val participatingEventIds: List<String> = emptyList(),
-    val ownedEventIds: List<String> = emptyList()
+    val ownedEventIds: List<String> = emptyList(),
+    val fcmToken: String? = null
 )

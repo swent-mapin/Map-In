@@ -391,6 +391,9 @@ class ProfileViewModel(
           // Update local state
           _userProfile.value = defaultProfile
           println("ProfileViewModel - Profile reset to default successfully")
+          // Ensure we exit edit mode and clear any temporary selections so the UI
+          // reflects the reset profile immediately (no need to navigate away).
+          cancelEditing()
         } else {
           println("ProfileViewModel - Failed to reset profile")
         }
