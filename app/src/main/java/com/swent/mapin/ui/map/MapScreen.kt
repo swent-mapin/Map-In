@@ -2,6 +2,7 @@ package com.swent.mapin.ui.map
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -34,8 +35,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +50,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mapbox.geojson.Point
@@ -113,7 +116,8 @@ fun MapScreen(
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
-    onNavigateToFriends: () -> Unit = {}
+    onNavigateToFriends: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -314,7 +318,8 @@ fun MapScreen(
       }
 
   DisposableEffect(view, desiredLightStatusBars, defaultLightStatusBars) {
-    val insetsController = ViewCompat.getWindowInsetsController(view)
+    val window = (view.context as? Activity)?.window
+    val insetsController = window?.let { WindowInsetsControllerCompat(it, view) }
     insetsController?.isAppearanceLightStatusBars = desiredLightStatusBars
     onDispose { insetsController?.isAppearanceLightStatusBars = defaultLightStatusBars }
   }
@@ -423,6 +428,8 @@ fun MapScreen(
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
     // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
+    var modalPrevState by remember { mutableStateOf<BottomSheetState?>(null) }
+
     BottomSheet(
         config = sheetConfig,
         currentState = viewModel.bottomSheetState,
@@ -469,6 +476,17 @@ fun MapScreen(
                   val filterViewModel: FiltersSectionViewModel =
                       viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
+                      onModalShown = { shown ->
+                        if (shown) {
+                          if (modalPrevState == null) modalPrevState = viewModel.bottomSheetState
+                          viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                        } else {
+                          modalPrevState?.let { prev ->
+                            viewModel.setBottomSheetState(prev)
+                            modalPrevState = null
+                          }
+                        }
+                      },
                       state = viewModel.bottomSheetState,
                       fullEntryKey = viewModel.fullEntryKey,
                       searchBarState =
@@ -499,6 +517,7 @@ fun MapScreen(
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
+                      onProfileClick = onNavigateToProfile,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
                       onCreateEventDone = viewModel::onAddEventCancel,
@@ -508,7 +527,7 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
-                      onProfileClick = onNavigateToProfile,
+                      onSettingsClick = onNavigateToSettings,
                       filterViewModel = filterViewModel,
                       locationViewModel = remember { LocationViewModel() },
                       profileViewModel = remember { ProfileViewModel() })
