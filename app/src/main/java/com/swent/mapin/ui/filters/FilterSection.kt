@@ -366,17 +366,16 @@ class FiltersSection {
   ) {
     var selectedOption by rememberSaveable { mutableStateOf(AroundOption.SEARCH) }
 
-    val optionLabels =
-        mapOf(
-            AroundOption.SEARCH to "Search a place",
-            AroundOption.MAP to "Pick on map",
-            AroundOption.USER to "My location")
-
     Column(modifier = Modifier.fillMaxWidth().padding(start = 30.dp, bottom = 8.dp)) {
       Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
         AroundOption.entries.forEach { option ->
           Text(
-              text = optionLabels[option]!!,
+              text =
+                  when (option) {
+                    AroundOption.SEARCH -> "Search"
+                    AroundOption.MAP -> "Map"
+                    AroundOption.USER -> "My location"
+                  },
               modifier =
                   Modifier.clickable { selectedOption = option }
                       .background(
