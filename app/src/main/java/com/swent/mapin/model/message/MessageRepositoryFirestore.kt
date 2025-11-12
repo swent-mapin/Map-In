@@ -4,7 +4,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.swent.mapin.ui.chat.Conversation
 import com.swent.mapin.ui.chat.Message
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -67,30 +66,25 @@ class MessageRepositoryFirestore(
      */
     override suspend fun sendMessage(conversationId: String, text: String) {
         if (text.isBlank()) return
+
+        val currentUser = auth.currentUser ?: return
+        val dbRef = db.collection("conversations").document(conversationId)
+        val messagesRef = dbRef.collection("messages")
+
         val messageData = mapOf(
-            "senderId" to auth.currentUser?.uid,
+            "senderId" to currentUser.uid,
             "text" to text,
-            "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            "timestamp" to System.currentTimeMillis()
         )
-        db.collection("conversations")
-            .document(conversationId)
-            .collection("messages")
-            .add(messageData)
-            .await()
 
-        db.collection("conversations")
-            .document(conversationId)
-            .update("lastMessage", text)
-            .await()
-    }
-
-    override suspend fun getConversationsForCurrentUser(): List<Conversation> {
-        val uid = auth.currentUser?.uid ?: return emptyList()
-        val snapshot = db.collection("conversations")
-            .whereArrayContains("participantIds", uid)
-            .get()
-            .await()
-        return snapshot.documents.mapNotNull { it.toObject(Conversation::class.java) }
+        db.runBatch { batch ->
+            val newMessageRef = messagesRef.document()
+            batch.set(newMessageRef, messageData)
+            batch.update(dbRef, mapOf(
+                "lastMessage" to text,
+                "lastMessageTimestamp" to System.currentTimeMillis()
+            ))
+        }.await()
     }
 
     override suspend fun loadMoreMessages(

@@ -24,8 +24,6 @@ class MessageViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-    private val _userConversations = MutableStateFlow<List<Conversation>>(emptyList())
-    val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
 
     private var messagesJob: Job? = null
 
@@ -42,16 +40,6 @@ class MessageViewModel(
                         _messages.value = messagesList
                         lastVisibleMessage = lastSnapshot
                     }
-            } catch (e: Exception) {
-                _error.value = e.message
-            }
-        }
-    }
-
-    fun getConversationForCurrentUser(){
-        viewModelScope.launch {
-            try {
-                _userConversations.value = messageRepository.getConversationsForCurrentUser()
             } catch (e: Exception) {
                 _error.value = e.message
             }

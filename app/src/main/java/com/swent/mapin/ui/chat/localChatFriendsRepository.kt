@@ -25,9 +25,9 @@ object LocalChatFriendsRepository {
           "")
   val sampleConversations =
       listOf(
-          Conversation("c1", "Nathan", listOf(friend1.userProfile.userId) ,listOf(friend1), "Hey there!", true),
-          Conversation("c2", "Alex", listOf(friend2.userProfile.userId),listOf(friend2), "Shared a photo", false),
-          Conversation("c3", "Zoe", listOf(friend3.userProfile.userId),listOf(friend3), "Let's meet up!", true))
+          Conversation("c1", "Nathan", listOf(friend1.userProfile.userId) ,listOf(friend1.userProfile), "Hey there!"),
+          Conversation("c2", "Alex", listOf(friend2.userProfile.userId),listOf(friend2.userProfile), "Shared a photo"),
+          Conversation("c3", "Zoe", listOf(friend3.userProfile.userId),listOf(friend3.userProfile), "Let's meet up!"))
 
   val friendList = listOf(friend1, friend2, friend3)
 

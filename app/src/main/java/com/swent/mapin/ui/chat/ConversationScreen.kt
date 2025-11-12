@@ -45,6 +45,8 @@ object ConversationScreenTestTags {
   const val INPUT_TEXT_FIELD = "inputTextField"
 }
 
+const val MESSAGE_START = 0
+
 // Data class for messages
 data class Message(val text: String, val isMe: Boolean)
 
@@ -86,7 +88,7 @@ fun ConversationScreen(
 
   // Auto scroll to the Bottom of the LazyColumn when a new message is sent
   LaunchedEffect(messages.size) {
-      listState.animateScrollToItem(0)
+      listState.animateScrollToItem(MESSAGE_START)
   }
 
   Scaffold(
@@ -137,7 +139,7 @@ fun ConversationScreen(
             IconButton(
                 onClick = {
                     coroutineScope.launch {
-                        listState.animateScrollToItem(0)
+                        listState.animateScrollToItem(MESSAGE_START)
                     }
                 },
                 modifier = Modifier

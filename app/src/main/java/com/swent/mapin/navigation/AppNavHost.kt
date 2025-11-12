@@ -105,8 +105,7 @@ fun AppNavHost(
               navController.popBackStack()
               }
           },
-          onConfirm = { selectedFriends
-            -> // TODO Add Logic to navigate to a potential add group name page
+          onConfirm = {
             navController.navigate(Route.Chat.route) {
                 popUpTo(Route.Chat.route) {
                   inclusive = true

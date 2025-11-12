@@ -20,11 +20,6 @@ interface MessageRepository {
     suspend fun sendMessage(conversationId: String, text: String)
 
     /**
-     * Retrieves all conversations of the current logged in user
-     */
-    suspend fun getConversationsForCurrentUser(): List<Conversation>
-
-    /**
      * Load more messages when the user Scrolls up
      * @param conversationId The ID of the conversation
      * @param lastVisible The last visible snapshot in the conversation
