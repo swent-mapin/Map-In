@@ -46,13 +46,6 @@ fun QuickActionsSection(
       QuickActionButton(
           text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
     }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      QuickActionButton(
-          text = "Friends", modifier = Modifier.weight(1f), onClick = onNavigateToFriends)
-    }
   }
 }
 
