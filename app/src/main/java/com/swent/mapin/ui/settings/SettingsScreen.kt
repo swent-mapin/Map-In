@@ -256,6 +256,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
         message = "Are you sure you want to log out?",
         confirmButtonText = "Logout",
         confirmButtonColor = Color(0xFF667eea),
+        confirmTestTag = "logoutConfirmButton", // explicit stable tag
         onConfirm = {
           viewModel.signOut()
           onNavigateToSignIn()
@@ -272,6 +273,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
         confirmButtonText = "Delete Account",
         confirmButtonColor = Color(0xFFef5350),
         isDangerous = true,
+        confirmTestTag = "deleteAccountConfirmButton", // explicit stable tag
         onConfirm = {
           viewModel.deleteAccount()
           onNavigateToSignIn()
@@ -499,7 +501,7 @@ private fun SettingsActionButton(
                       Icon(
                           imageVector = icon,
                           contentDescription = label,
-                          tint = backgroundColor,
+                          tint = contentColor, // use contentColor so the param is used
                           modifier = Modifier.size(20.dp))
                     }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -508,7 +510,7 @@ private fun SettingsActionButton(
                       text = label,
                       style = MaterialTheme.typography.labelLarge,
                       fontWeight = FontWeight.SemiBold,
-                      color = backgroundColor)
+                      color = contentColor) // use contentColor
                   Spacer(modifier = Modifier.height(4.dp))
                   Text(
                       text = description,
@@ -539,8 +541,16 @@ internal fun ConfirmationDialog(
     confirmButtonColor: Color,
     isDangerous: Boolean = false,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    confirmTestTag: String? = null // optional explicit stable test tag
 ) {
+  // Prefer an explicit tag; otherwise use a single stable generic tag (do not derive from localized
+  // text)
+  val resolvedTestTag = confirmTestTag ?: "genericConfirmButton"
+
+  // Use isDangerous to optionally override the confirm button color
+  val finalConfirmColor = if (isDangerous) MaterialTheme.colorScheme.error else confirmButtonColor
+
   AlertDialog(
       onDismissRequest = onDismiss,
       title = {
@@ -554,18 +564,10 @@ internal fun ConfirmationDialog(
             color = MaterialTheme.colorScheme.onSurface)
       },
       confirmButton = {
-        // Provide a stable test tag for dialog confirm buttons so tests can target them reliably
-        val confirmTestTag =
-            when (confirmButtonText) {
-              "Logout" -> "logoutConfirmButton"
-              "Delete Account" -> "deleteAccountConfirmButton"
-              else -> "${confirmButtonText.replace(" ", "").lowercase()}ConfirmButton"
-            }
-
         Button(
             onClick = onConfirm,
-            modifier = Modifier.testTag(confirmTestTag),
-            colors = ButtonDefaults.buttonColors(containerColor = confirmButtonColor)) {
+            modifier = Modifier.testTag(resolvedTestTag),
+            colors = ButtonDefaults.buttonColors(containerColor = finalConfirmColor)) {
               Text(confirmButtonText, color = Color.White, fontWeight = FontWeight.Bold)
             }
       },

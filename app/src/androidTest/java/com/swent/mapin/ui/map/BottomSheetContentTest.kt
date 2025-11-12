@@ -1032,7 +1032,8 @@ class BottomSheetContentTest {
             onProfileClick = { profileClicked = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel) // added missing param
       }
     }
 
@@ -1078,7 +1079,8 @@ class BottomSheetContentTest {
             onSettingsClick = { settingsClicked = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel) // added missing param
       }
     }
 
@@ -1125,7 +1127,8 @@ class BottomSheetContentTest {
                     onClear = {}),
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel) // added missing param
       }
     }
 
@@ -1172,7 +1175,8 @@ class BottomSheetContentTest {
             onClearRecentSearches = { cleared = true },
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel)
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel) // added missing param
       }
     }
 
