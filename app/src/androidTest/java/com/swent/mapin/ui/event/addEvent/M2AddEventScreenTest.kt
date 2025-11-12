@@ -181,6 +181,14 @@ class M2AddEventScreenTest {
   fun addEventScreen_partial_inputs_still_triggers_missing_fields() {
     compose.setContent { AddEventScreen() }
 
+    // Wait for the date/time inline error to be present initially (some CI devices are slow)
+    compose.waitUntil(timeoutMillis = 10000) {
+      runCatching {
+        compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
+        true
+      }.getOrDefault(false)
+    }
+
     // Fill some required text fields to clear their individual error flags
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("Title")
     compose.waitForIdle()
@@ -195,11 +203,36 @@ class M2AddEventScreenTest {
     // (LocationDropDownMenu behavior may vary; we only assert banner still appears due to
     // date/time)
 
+    // Ensure the save button exists before clicking (avoid flaky click on CI)
+    compose.waitUntil(timeoutMillis = 10000) {
+      runCatching {
+        compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertExists()
+        true
+      }.getOrDefault(false)
+    }
+
+    // Click Save and wait explicitly for the validation banner to appear to avoid timing flakes
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     compose.waitForIdle()
-    // Still missing/invalid date & time -> banner present
-    compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
-    // And the inline date/time error helper should still be visible
-    compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
+
+    // Wait until the error banner exists (up to a longer timeout) before asserting it's displayed
+    compose.waitUntil(timeoutMillis = 10000) {
+      runCatching {
+        compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertExists()
+        true
+      }.getOrDefault(false)
+    }
+
+    compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertExists()
+
+    // And the inline date/time error helper should still be visible — wait for it too
+    compose.waitUntil(timeoutMillis = 10000) {
+      runCatching {
+        compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
+        true
+      }.getOrDefault(false)
+    }
+
+    compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
   }
 }
