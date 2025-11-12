@@ -37,6 +37,7 @@ fun AppNavHost(
     composable(Route.Map.route) {
       MapScreen(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
+          onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap)
@@ -52,7 +53,8 @@ fun AppNavHost(
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              popUpTo(0) { inclusive = true }
+              // Clear the whole back stack by popping up to the nav graph's start destination
+              popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
           },
@@ -68,7 +70,8 @@ fun AppNavHost(
           },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              popUpTo(0) { inclusive = true }
+              // Clear the whole back stack by popping up to the nav graph's start destination
+              popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
           })
