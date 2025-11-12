@@ -48,6 +48,7 @@ object ChatScreenTestTags {
 data class Conversation(
     val id: String,
     val name: String,
+    val participantIds: List<String>,
     val participants: List<FriendWithProfile>,
     val lastMessage: String = "",
     val createdByCurrentUser: Boolean = false
