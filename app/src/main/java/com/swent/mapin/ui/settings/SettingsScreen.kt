@@ -381,7 +381,7 @@ private fun SettingsSectionTitle(title: String, icon: ImageVector) {
 
 /** Toggle item for boolean settings */
 @Composable
-private fun SettingsToggleItem(
+internal fun SettingsToggleItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -532,7 +532,7 @@ private fun SettingsActionButton(
 
 /** Generic confirmation dialog */
 @Composable
-private fun ConfirmationDialog(
+internal fun ConfirmationDialog(
     title: String,
     message: String,
     confirmButtonText: String,
@@ -554,8 +554,17 @@ private fun ConfirmationDialog(
             color = MaterialTheme.colorScheme.onSurface)
       },
       confirmButton = {
+        // Provide a stable test tag for dialog confirm buttons so tests can target them reliably
+        val confirmTestTag =
+            when (confirmButtonText) {
+              "Logout" -> "logoutConfirmButton"
+              "Delete Account" -> "deleteAccountConfirmButton"
+              else -> "${confirmButtonText.replace(" ", "").lowercase()}ConfirmButton"
+            }
+
         Button(
             onClick = onConfirm,
+            modifier = Modifier.testTag(confirmTestTag),
             colors = ButtonDefaults.buttonColors(containerColor = confirmButtonColor)) {
               Text(confirmButtonText, color = Color.White, fontWeight = FontWeight.Bold)
             }
