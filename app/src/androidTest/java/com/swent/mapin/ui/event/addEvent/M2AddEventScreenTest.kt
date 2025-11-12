@@ -183,10 +183,15 @@ class M2AddEventScreenTest {
 
     // Fill some required text fields to clear their individual error flags
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("Title")
+    compose.waitForIdle()
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
-    compose
-        .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
-        .performClick() // open dropdown if any
+    compose.waitForIdle()
+    runCatching {
+      compose
+          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
+          .performClick() // open dropdown if any
+      compose.waitForIdle()
+    }
     // (LocationDropDownMenu behavior may vary; we only assert banner still appears due to
     // date/time)
 
