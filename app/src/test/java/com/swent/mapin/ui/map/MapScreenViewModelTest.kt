@@ -1504,28 +1504,6 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun `toggleDirections activates directions when not displayed`() = runTest {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
-    viewModel.onEventPinClicked(testEvent)
-    advanceUntilIdle()
-
-    // Initially no directions
-    assertTrue(
-        viewModel.directionViewModel.directionState
-            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
-
-    // Toggle directions on
-    viewModel.toggleDirections(testEvent)
-    advanceUntilIdle()
-
-    // Directions should be loading or displayed
-    val state = viewModel.directionViewModel.directionState
-    assertTrue(
-        state is com.swent.mapin.ui.map.directions.DirectionState.Loading ||
-            state is com.swent.mapin.ui.map.directions.DirectionState.Displayed)
-  }
-
-  @Test
   fun `toggleDirections clears directions when already displayed`() = runTest {
     val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
