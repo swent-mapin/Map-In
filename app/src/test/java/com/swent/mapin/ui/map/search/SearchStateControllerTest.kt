@@ -8,7 +8,6 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -72,31 +71,7 @@ class SearchStateControllerTest {
   }
 
   private fun createController(testScope: TestScope = TestScope()): SearchStateController {
-    return SearchStateController(
-        applicationContext = mockContext,
-        eventRepository = mockEventRepository,
-        onClearFocus = onClearFocus,
-        scope = testScope,
-        localEventsProvider = { sampleEvents })
-  }
-
-  // Test exception handling when primary repository fails
-  @Test
-  fun loadRemoteEvents_whenPrimaryFails_usesFallbackRepository() = runTest {
-    val selectedTags = emptySet<String>()
-    var capturedEvents: List<Event>? = null
-
-    whenever(mockEventRepository.getAllEvents()).doThrow(RuntimeException("Primary failure"))
-
-    val controller = createController(this)
-
-    controller.loadRemoteEvents(selectedTags) { events -> capturedEvents = events }
-
-    testScheduler.advanceUntilIdle()
-
-    assertNotNull("onEventsUpdated should have been called", capturedEvents)
-    assertTrue(
-        "Should return events from fallback when primary fails", capturedEvents!!.isNotEmpty())
+    return SearchStateController(applicationContext = mockContext, onClearFocus = onClearFocus)
   }
 
   // Test that saveRecentEvent adds event to recent items list
