@@ -18,57 +18,61 @@ import kotlinx.coroutines.tasks.await
 class ConversationRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth
-): ConversationRepository {
+) : ConversationRepository {
 
-    override fun getNewUid(): String {
-        return db.collection("conversations").document().id
-    }
+  override fun getNewUid(): String {
+    return db.collection("conversations").document().id
+  }
 
-    override fun observeConversationsForCurrentUser(): Flow<List<Conversation>> = callbackFlow {
-        val uid = auth.currentUser?.uid ?: run {
-            close()
-            return@callbackFlow
-        }
+  override fun observeConversationsForCurrentUser(): Flow<List<Conversation>> = callbackFlow {
+    val uid =
+        auth.currentUser?.uid
+            ?: run {
+              close()
+              return@callbackFlow
+            }
 
-        val listener = db.collection("conversations")
+    val listener =
+        db.collection("conversations")
             .whereArrayContains("participantIds", uid)
             .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
+              if (error != null) {
+                close(error)
+                return@addSnapshotListener
+              }
 
-                val conversations = snapshot?.documents
-                    ?.mapNotNull { doc ->
-                        val conversation = doc.toObject(Conversation::class.java)
-                        // Fallback ordering: if lastMessageTimestamp is null,
-                        // treat as very old (so it goes to the end)
-                        conversation
-                    }
-                    ?: emptyList()
+              val conversations =
+                  snapshot?.documents?.mapNotNull { doc ->
+                    val conversation = doc.toObject(Conversation::class.java)
+                    // Fallback ordering: if lastMessageTimestamp is null,
+                    // treat as very old (so it goes to the end)
+                    conversation
+                  } ?: emptyList()
 
-                trySend(conversations)
+              trySend(conversations)
             }
 
-        awaitClose { listener.remove() }
-    }
+    awaitClose { listener.remove() }
+  }
 
-    override suspend fun addConversation(conversation: Conversation) {
-        val conversationRef = db.collection("conversations").document(conversation.id)
+  override suspend fun addConversation(conversation: Conversation) {
+    val conversationRef = db.collection("conversations").document(conversation.id)
 
-        // Ensure the conversation includes the creator’s UID if not already added
-        val currentUid = auth.currentUser?.uid
-        val updatedParticipantIds = if (currentUid != null && !conversation.participantIds.contains(currentUid)) {
-            conversation.participantIds + currentUid
+    // Ensure the conversation includes the creator’s UID if not already added
+    val currentUid = auth.currentUser?.uid
+    val updatedParticipantIds =
+        if (currentUid != null && !conversation.participantIds.contains(currentUid)) {
+          conversation.participantIds + currentUid
         } else {
-            conversation.participantIds
+          conversation.participantIds
         }
 
-        val conversationToSave = conversation.copy(
+    val conversationToSave =
+        conversation.copy(
             participantIds = updatedParticipantIds,
         )
 
-        conversationRef.set(conversationToSave).await()
-    }
+    conversationRef.set(conversationToSave).await()
+  }
 }

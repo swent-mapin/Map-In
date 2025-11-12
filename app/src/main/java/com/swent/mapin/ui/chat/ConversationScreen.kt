@@ -67,10 +67,8 @@ fun ConversationScreen(
     conversationName: String,
 ) {
 
-  //loads initial messages
-  LaunchedEffect(conversationId) {
-        messageViewModel.observeMessages(conversationId)
-  }
+  // loads initial messages
+  LaunchedEffect(conversationId) { messageViewModel.observeMessages(conversationId) }
 
   var messageText by remember { mutableStateOf(TextFieldValue("")) }
   val messages by messageViewModel.messages.collectAsState()
@@ -78,18 +76,16 @@ fun ConversationScreen(
   val coroutineScope = rememberCoroutineScope()
 
   val shouldLoadMore by remember {
-      derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
+    derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
   }
 
   // Dynamic loading when scrolling up
   LaunchedEffect(shouldLoadMore) {
-      if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
+    if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
   }
 
   // Auto scroll to the Bottom of the LazyColumn when a new message is sent
-  LaunchedEffect(messages.size) {
-      listState.animateScrollToItem(MESSAGE_START)
-  }
+  LaunchedEffect(messages.size) { listState.animateScrollToItem(MESSAGE_START) }
 
   Scaffold(
       topBar = { ChatTopBar(conversationName, onNavigateBack = onNavigateBack) },
@@ -116,38 +112,27 @@ fun ConversationScreen(
                       messageText = TextFieldValue("")
                     }
                   },
-                  modifier = Modifier.testTag(ConversationScreenTestTags.SEND_BUTTON)
-              ) {
-                  Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
-              }
+                  modifier = Modifier.testTag(ConversationScreenTestTags.SEND_BUTTON)) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                  }
             }
       },
       modifier = modifier.testTag(ConversationScreenTestTags.CONVERSATION_SCREEN)) { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding)
-        ) {
-            // The lazy column to display messages
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                reverseLayout = true
-            ) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+          // The lazy column to display messages
+          LazyColumn(
+              state = listState,
+              modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
+              verticalArrangement = Arrangement.spacedBy(8.dp),
+              reverseLayout = true) {
                 items(messages.reversed()) { message -> MessageBubble(message) }
-            }
-            //Button to scroll down to the newest message
-            IconButton(
-                onClick = {
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(MESSAGE_START)
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
+              }
+          // Button to scroll down to the newest message
+          IconButton(
+              onClick = { coroutineScope.launch { listState.animateScrollToItem(MESSAGE_START) } },
+              modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
                 Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
-            }
+              }
         }
       }
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,8 +61,7 @@ object NewConversationScreenTestTags {
 }
 
 /**
- * Assisted by AI
- * Screen allowing the user to select one or more friends to start a new
+ * Assisted by AI Screen allowing the user to select one or more friends to start a new
  * conversation.
  * - Tapping a friend toggles selection.
  * - A checkmark button appears in the top-right corner once at least one friend is selected.
@@ -82,9 +80,7 @@ fun NewConversationScreen(
     onNavigateBack: () -> Unit = {},
     onConfirm: () -> Unit = {}
 ) {
-  LaunchedEffect(Unit){
-      friendsViewModel.loadFriends()
-  }
+  LaunchedEffect(Unit) { friendsViewModel.loadFriends() }
   val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
   val friends by friendsViewModel.friends.collectAsState()
   val showGroupNameDialog = remember { mutableStateOf(false) }
@@ -105,20 +101,26 @@ fun NewConversationScreen(
               if (selectedFriends.isNotEmpty()) {
                 IconButton(
                     onClick = {
-                        if(selectedFriends.size > 2) {
-                            showGroupNameDialog.value = true
-                        } else {
-                            val friend = selectedFriends.first()
-                            val newConvo = Conversation(
+                      if (selectedFriends.size > 2) {
+                        showGroupNameDialog.value = true
+                      } else {
+                        val friend = selectedFriends.first()
+                        val newConvo =
+                            Conversation(
                                 id = conversationViewModel.getNewUID(),
                                 name = friend.userProfile.name,
-                                participantIds = listOf(Firebase.auth.currentUser?.uid ?: "", friend.userProfile.userId),
-                                participants = listOf(conversationViewModel.currentUserProfile,friend.userProfile),
-                                profilePictureUrl = friend.userProfile.profilePictureUrl
-                            )
-                            conversationViewModel.createConversation(newConvo)
-                            onConfirm()
-                        }
+                                participantIds =
+                                    listOf(
+                                        Firebase.auth.currentUser?.uid ?: "",
+                                        friend.userProfile.userId),
+                                participants =
+                                    listOf(
+                                        conversationViewModel.currentUserProfile,
+                                        friend.userProfile),
+                                profilePictureUrl = friend.userProfile.profilePictureUrl)
+                        conversationViewModel.createConversation(newConvo)
+                        onConfirm()
+                      }
                     },
                     modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
                       Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
@@ -130,75 +132,69 @@ fun NewConversationScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-        )
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
       },
-      modifier = Modifier.testTag(NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN)
-  ) {  paddingValues ->
-
-        if(friends.isEmpty()){
-            Column(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(24.dp)
-                        .testTag(ChatScreenTestTags.CHAT_SCREEN),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center) {
+      modifier = Modifier.testTag(NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN)) {
+          paddingValues ->
+        if (friends.isEmpty()) {
+          Column(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .padding(paddingValues)
+                      .padding(24.dp)
+                      .testTag(ChatScreenTestTags.CHAT_SCREEN),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Center) {
                 Text(
                     stringResource(R.string.empty_friends),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.empty_friends2), color = Color.Gray)
-            }
+              }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)
-            ) {
+          LazyColumn(
+              modifier =
+                  Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
                 items(friends) { friend ->
-                    val isSelected = selectedFriends.contains(friend)
-                    val backgroundColor =
-                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        else Color.Transparent
+                  val isSelected = selectedFriends.contains(friend)
+                  val backgroundColor =
+                      if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                      else Color.Transparent
 
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clickable {
-                                    if (isSelected) selectedFriends.remove(friend)
-                                    else selectedFriends.add(friend)
-                                }
-                                .background(backgroundColor)
-                                .padding(12.dp)
-                                .testTag(
-                                    "${NewConversationScreenTestTags.FRIEND_ITEM}_${friend.userProfile.name}"
-                                ),
-                        verticalAlignment = Alignment.CenterVertically) {
+                  Row(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .clickable {
+                                if (isSelected) selectedFriends.remove(friend)
+                                else selectedFriends.add(friend)
+                              }
+                              .background(backgroundColor)
+                              .padding(12.dp)
+                              .testTag(
+                                  "${NewConversationScreenTestTags.FRIEND_ITEM}_${friend.userProfile.name}"),
+                      verticalAlignment = Alignment.CenterVertically) {
                         if (friend.userProfile.profilePictureUrl.isNullOrBlank()) {
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                tint =
-                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
-                                modifier = Modifier.size(48.dp).clip(CircleShape)
-                            )
+                          Icon(
+                              imageVector = Icons.Default.AccountCircle,
+                              contentDescription = null,
+                              tint =
+                                  if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+                              modifier = Modifier.size(48.dp).clip(CircleShape))
                         } else {
-                            Image(
-                                painter =
-                                    rememberAsyncImagePainter(friend.userProfile.profilePictureUrl),
-                                contentDescription = null,
-                                modifier =
-                                    Modifier.size(48.dp)
-                                        .clip(CircleShape)
-                                        .border(
-                                            width = if (isSelected) 2.dp else 0.dp,
-                                            color =
-                                                if (isSelected) MaterialTheme.colorScheme.primary
-                                                else Color.Transparent,
-                                            shape = CircleShape
-                                        )
-                            )
+                          Image(
+                              painter =
+                                  rememberAsyncImagePainter(friend.userProfile.profilePictureUrl),
+                              contentDescription = null,
+                              modifier =
+                                  Modifier.size(48.dp)
+                                      .clip(CircleShape)
+                                      .border(
+                                          width = if (isSelected) 2.dp else 0.dp,
+                                          color =
+                                              if (isSelected) MaterialTheme.colorScheme.primary
+                                              else Color.Transparent,
+                                          shape = CircleShape))
                         }
 
                         Spacer(Modifier.width(12.dp))
@@ -207,59 +203,55 @@ fun NewConversationScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color =
                                 if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    HorizontalDivider()
-                }
-            }
-        }
-  }
-
-  if(showGroupNameDialog.value) {
-      AlertDialog(
-          onDismissRequest = { showGroupNameDialog.value = false },
-          title = { Text("Enter Group Name") },
-          text = {
-              androidx.compose.material3.TextField(
-                  value = groupName.value,
-                  onValueChange = { groupName.value = it },
-                  placeholder = { Text("Group name") }
-              )
-          },
-          confirmButton = {
-              androidx.compose.material3.TextButton(
-                  onClick = {
-                      if (groupName.value.isNotBlank()) {
-                          val ids = selectedFriends.map { friends -> friends.userProfile.userId }
-                          val profiles = selectedFriends.map { friends -> friends.userProfile }
-                          val newConvo = Conversation(
-                              id = conversationViewModel.getNewUID(),
-                              name = groupName.value,
-                              participantIds = ids + listOf((Firebase.auth.currentUser?.uid ?: "")),
-                              participants = profiles + listOf(conversationViewModel.currentUserProfile),
-                              profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl
-                          )
-                          conversationViewModel.createConversation(newConvo)
-                          onConfirm()
-                          showGroupNameDialog.value = false
-                          groupName.value = ""
+                                else MaterialTheme.colorScheme.onSurface)
                       }
-                  }
-              ) {
-                  Text("OK")
+                  HorizontalDivider()
+                }
               }
-          },
-          dismissButton = {
-              androidx.compose.material3.TextButton(
-                  onClick = {
-                      showGroupNameDialog.value = false
-                      groupName.value = ""
-                  }
-              ) {
-                  Text("Cancel")
+        }
+      }
+
+  if (showGroupNameDialog.value) {
+    AlertDialog(
+        onDismissRequest = { showGroupNameDialog.value = false },
+        title = { Text("Enter Group Name") },
+        text = {
+          androidx.compose.material3.TextField(
+              value = groupName.value,
+              onValueChange = { groupName.value = it },
+              placeholder = { Text("Group name") })
+        },
+        confirmButton = {
+          androidx.compose.material3.TextButton(
+              onClick = {
+                if (groupName.value.isNotBlank()) {
+                  val ids = selectedFriends.map { friends -> friends.userProfile.userId }
+                  val profiles = selectedFriends.map { friends -> friends.userProfile }
+                  val newConvo =
+                      Conversation(
+                          id = conversationViewModel.getNewUID(),
+                          name = groupName.value,
+                          participantIds = ids + listOf((Firebase.auth.currentUser?.uid ?: "")),
+                          participants =
+                              profiles + listOf(conversationViewModel.currentUserProfile),
+                          profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl)
+                  conversationViewModel.createConversation(newConvo)
+                  onConfirm()
+                  showGroupNameDialog.value = false
+                  groupName.value = ""
+                }
+              }) {
+                Text("OK")
               }
-          }
-      )
+        },
+        dismissButton = {
+          androidx.compose.material3.TextButton(
+              onClick = {
+                showGroupNameDialog.value = false
+                groupName.value = ""
+              }) {
+                Text("Cancel")
+              }
+        })
   }
 }

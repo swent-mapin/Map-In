@@ -86,9 +86,9 @@ fun AppNavHost(
     composable(Route.Chat.route) {
       ChatScreen(
           onNavigateBack = {
-              if (navController.previousBackStackEntry != null) {
-                  navController.popBackStack()
-              }
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
           },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
@@ -101,16 +101,14 @@ fun AppNavHost(
     composable(Route.NewConversation.route) {
       NewConversationScreen(
           onNavigateBack = {
-              if (navController.previousBackStackEntry != null) {
+            if (navController.previousBackStackEntry != null) {
               navController.popBackStack()
-              }
+            }
           },
           onConfirm = {
             navController.navigate(Route.Chat.route) {
-                popUpTo(Route.Chat.route) {
-                  inclusive = true
-                }
-                launchSingleTop = true
+              popUpTo(Route.Chat.route) { inclusive = true }
+              launchSingleTop = true
             }
           })
     }

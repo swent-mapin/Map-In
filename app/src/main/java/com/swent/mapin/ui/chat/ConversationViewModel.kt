@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.firestore
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
@@ -18,46 +17,44 @@ import kotlinx.coroutines.launch
 class ConversationViewModel(
     private val conversationRepository: ConversationRepository =
         ConversationRepositoryFirestore(db = Firebase.firestore, auth = Firebase.auth),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository(Firebase.firestore)
-): ViewModel() {
+    private val userProfileRepository: UserProfileRepository =
+        UserProfileRepository(Firebase.firestore)
+) : ViewModel() {
 
-    init {
-        getCurrentUserProfile()
-    }
+  init {
+    getCurrentUserProfile()
+  }
 
-    private val _userConversations = MutableStateFlow<List<Conversation>>(emptyList())
-    val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
+  private val _userConversations = MutableStateFlow<List<Conversation>>(emptyList())
+  val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
 
-    var currentUserProfile: UserProfile = UserProfile()
-    fun getNewUID(): String {
-        return conversationRepository.getNewUid()
-    }
+  var currentUserProfile: UserProfile = UserProfile()
 
-    fun getCurrentUserProfile() {
-        viewModelScope.launch {
-            val userId = Firebase.auth.currentUser?.uid
-            if(userId != null) {
-                val profile = userProfileRepository.getUserProfile(userId)
-                if(profile != null){
-                    currentUserProfile = profile
-                }
-            }
+  fun getNewUID(): String {
+    return conversationRepository.getNewUid()
+  }
+
+  fun getCurrentUserProfile() {
+    viewModelScope.launch {
+      val userId = Firebase.auth.currentUser?.uid
+      if (userId != null) {
+        val profile = userProfileRepository.getUserProfile(userId)
+        if (profile != null) {
+          currentUserProfile = profile
         }
+      }
     }
+  }
 
-    fun observeConversations() {
-        viewModelScope.launch {
-            conversationRepository.observeConversationsForCurrentUser()
-                .collect { conversations ->
-                    _userConversations.value = conversations
-                }
-        }
+  fun observeConversations() {
+    viewModelScope.launch {
+      conversationRepository.observeConversationsForCurrentUser().collect { conversations ->
+        _userConversations.value = conversations
+      }
     }
+  }
 
-    fun createConversation(conversation: Conversation) {
-        viewModelScope.launch {
-            conversationRepository.addConversation(conversation)
-        }
-    }
-
+  fun createConversation(conversation: Conversation) {
+    viewModelScope.launch { conversationRepository.addConversation(conversation) }
+  }
 }

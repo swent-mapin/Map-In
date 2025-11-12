@@ -14,20 +14,36 @@ object LocalChatFriendsRepository {
 
   private val friend2 =
       FriendWithProfile(
-          UserProfile(userId = "u2", name = "Alex", bio = "Photographer", hobbies = listOf("Coffee")),
+          UserProfile(
+              userId = "u2", name = "Alex", bio = "Photographer", hobbies = listOf("Coffee")),
           friendshipStatus = FriendshipStatus.ACCEPTED,
           "")
 
   private val friend3 =
       FriendWithProfile(
-          UserProfile(userId = "u3",name = "Zoe", bio = "Runner", hobbies = listOf("Music")),
+          UserProfile(userId = "u3", name = "Zoe", bio = "Runner", hobbies = listOf("Music")),
           friendshipStatus = FriendshipStatus.ACCEPTED,
           "")
   val sampleConversations =
       listOf(
-          Conversation("c1", "Nathan", listOf(friend1.userProfile.userId) ,listOf(friend1.userProfile), "Hey there!"),
-          Conversation("c2", "Alex", listOf(friend2.userProfile.userId),listOf(friend2.userProfile), "Shared a photo"),
-          Conversation("c3", "Zoe", listOf(friend3.userProfile.userId),listOf(friend3.userProfile), "Let's meet up!"))
+          Conversation(
+              "c1",
+              "Nathan",
+              listOf(friend1.userProfile.userId),
+              listOf(friend1.userProfile),
+              "Hey there!"),
+          Conversation(
+              "c2",
+              "Alex",
+              listOf(friend2.userProfile.userId),
+              listOf(friend2.userProfile),
+              "Shared a photo"),
+          Conversation(
+              "c3",
+              "Zoe",
+              listOf(friend3.userProfile.userId),
+              listOf(friend3.userProfile),
+              "Let's meet up!"))
 
   val friendList = listOf(friend1, friend2, friend3)
 

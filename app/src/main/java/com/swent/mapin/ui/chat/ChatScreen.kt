@@ -47,7 +47,7 @@ object ChatScreenTestTags {
  */
 data class Conversation(
     val id: String = "",
-    val name: String= "",
+    val name: String = "",
     val participantIds: List<String> = emptyList(),
     val participants: List<UserProfile> = emptyList(),
     val lastMessage: String = "",
@@ -115,9 +115,7 @@ fun ConversationItem(
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-          Text(
-              conversation.name,
-              style = MaterialTheme.typography.titleMedium)
+          Text(conversation.name, style = MaterialTheme.typography.titleMedium)
           Text(
               conversation.lastMessage.ifBlank { "No messages yet" },
               style = MaterialTheme.typography.bodyMedium,
@@ -141,7 +139,8 @@ fun ConversationItem(
  * @param onNavigateBack Callback invoked when the back button is pressed.
  * @param onNewConversation Callback invoked when the FAB is clicked.
  * @param onOpenConversation Callback invoked when a conversation item is selected.
- * @param onTabSelected Callback invoked when the user selects a different tab in the bottom navigation bar
+ * @param onTabSelected Callback invoked when the user selects a different tab in the bottom
+ *   navigation bar
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,9 +153,7 @@ fun ChatScreen(
     onOpenConversation: (Conversation) -> Unit = {},
     onTabSelected: (ChatTab) -> Unit = {}
 ) {
-  LaunchedEffect(Unit) {
-    conversationViewModel.observeConversations()
-  }
+  LaunchedEffect(Unit) { conversationViewModel.observeConversations() }
 
   val conversations by conversationViewModel.userConversations.collectAsState()
 
