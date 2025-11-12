@@ -342,74 +342,7 @@ fun AddEventScreen(
 
   // Helper to validate start/end together and set appropriate error flags.
   fun validateStartEnd() {
-    // Basic presence checks
-    dateError.value = date.value.isBlank()
-    timeError.value = time.value.isBlank()
-    endDateError.value = endDate.value.isBlank()
-    endTimeError.value = endTime.value.isBlank()
-
-    // Only proceed if both date strings parse
-    if (date.value.isBlank() || endDate.value.isBlank()) return
-
-    val dateFmt = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    val startDateOnly = runCatching { dateFmt.parse(date.value) }.getOrNull()
-    val endDateOnly = runCatching { dateFmt.parse(endDate.value) }.getOrNull()
-    if (startDateOnly == null) {
-      dateError.value = true
-      return
-    }
-    if (endDateOnly == null) {
-      endDateError.value = true
-      return
-    }
-
-    // If end date is after start date, we're good regardless of time
-    if (endDateOnly.time > startDateOnly.time) {
-      endDateError.value = false
-      endTimeError.value = false
-      return
-    }
-
-    // If end date is before start date -> mark endDate error
-    if (endDateOnly.time < startDateOnly.time) {
-      endDateError.value = true
-      endTimeError.value = false
-      return
-    }
-
-    // Dates equal -> need to validate times
-    if (time.value.isBlank() || endTime.value.isBlank()) {
-      // presence flags already set above
-      return
-    }
-
-    val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
-    val rawEndTime =
-        if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
-
-    // parse HHmm into minutes since midnight
-    val startMinutes =
-        runCatching { rawTime.substring(0, 2).toInt() * 60 + rawTime.substring(2, 4).toInt() }
-            .getOrNull()
-    val endMinutes =
-        runCatching { rawEndTime.substring(0, 2).toInt() * 60 + rawEndTime.substring(2, 4).toInt() }
-            .getOrNull()
-    if (startMinutes == null) {
-      timeError.value = true
-      return
-    }
-    if (endMinutes == null) {
-      endTimeError.value = true
-      return
-    }
-
-    if (endMinutes <= startMinutes) {
-      endDateError.value = true
-      endTimeError.value = false
-    } else {
-      endDateError.value = false
-      endTimeError.value = false
-    }
+    validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
   }
   // Show missing/incorrect fields either when the user requested validation (clicked Save)
   // or when a per-field error flag is set, or when a required field is empty.
