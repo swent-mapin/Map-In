@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map.eventstate
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -30,15 +31,25 @@ class MapEventStateController(
     private val clearErrorMessage: () -> Unit
 ) {
 
-  var allEvents by mutableStateOf<List<Event>>(emptyList())
+  private var _allEvents by mutableStateOf<List<Event>>(emptyList())
+  val allEvents: List<Event>
+    get() = _allEvents
 
-  var searchResults by mutableStateOf<List<Event>>(emptyList())
+  private var _searchResults by mutableStateOf<List<Event>>(emptyList())
+  val searchResults: List<Event>
+    get() = _searchResults
 
-  var availableEvents by mutableStateOf<List<Event>>(emptyList())
+  private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
+  val availableEvents: List<Event>
+    get() = _availableEvents
 
-  var joinedEvents by mutableStateOf<List<Event>>(emptyList())
+  private var _joinedEvents by mutableStateOf<List<Event>>(emptyList())
+  val joinedEvents: List<Event>
+    get() = _joinedEvents
 
-  var savedEvents by mutableStateOf<List<Event>>(emptyList())
+  private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
+  val savedEvents: List<Event>
+    get() = _savedEvents
 
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
@@ -78,7 +89,7 @@ class MapEventStateController(
   fun getFilteredEvents(filters: Filters) {
     scope.launch {
       try {
-        allEvents = eventRepository.getFilteredEvents(filters)
+        _allEvents = eventRepository.getFilteredEvents(filters)
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching events")
       }
@@ -92,15 +103,14 @@ class MapEventStateController(
    */
   fun searchEvents(query: String) {
     val lowerQuery = query.trim().lowercase()
-    searchResults =
+    _searchResults =
         if (lowerQuery.isEmpty()) {
           emptyList()
         } else {
-          allEvents.filter {
-            it.title.trim().lowercase().contains(lowerQuery) ||
-                it.description.trim().lowercase().contains(lowerQuery) ||
-                it.tags.any { tag -> tag.lowercase().contains(lowerQuery) } ||
-                it.location.name.lowercase().contains(lowerQuery)
+          allEvents.filter { event ->
+            listOfNotNull(event.title, event.description, event.location.name).any { field ->
+              field.trim().lowercase().contains(lowerQuery)
+            } || event.tags.any { tag -> tag.lowercase().contains(lowerQuery) }
           }
         }
   }
@@ -131,7 +141,7 @@ class MapEventStateController(
                 "Inconsistent data: User not in participant list for event $eventId but event ID is in user's participatingEventIds")
           }
         }
-        joinedEvents = joinedEventsList
+        _joinedEvents = joinedEventsList
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -148,7 +158,7 @@ class MapEventStateController(
     scope.launch {
       try {
         val currentUserId = getUserId()
-        savedEvents = eventRepository.getSavedEvents(currentUserId)
+        _savedEvents = eventRepository.getSavedEvents(currentUserId)
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
       }
@@ -177,7 +187,7 @@ class MapEventStateController(
           val updatedEvent = event.copy(participantIds = updatedParticipantIds)
 
           // Update locally the event list immediately
-          allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+          _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
 
           try {
             eventRepository.editEvent(event.uid, updatedEvent)
@@ -195,7 +205,7 @@ class MapEventStateController(
             }
           } catch (e: Exception) {
             // Revert local change if remote update fails
-            allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+            _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
             throw e
           }
         }
@@ -223,7 +233,7 @@ class MapEventStateController(
             event.participantIds.toMutableList().apply { remove(currentUserId) }
         val updatedEvent = event.copy(participantIds = updatedParticipantIds)
         // Update locally the event list immediately
-        allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+        _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
 
         try {
           eventRepository.editEvent(event.uid, updatedEvent)
@@ -238,7 +248,7 @@ class MapEventStateController(
           userProfileRepository.saveUserProfile(updatedUserProfile)
         } catch (e: Exception) {
           // Revert local change if remote update fails
-          allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+          _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
           throw e
         }
 
@@ -299,16 +309,16 @@ class MapEventStateController(
 
   /** Clears all user-scoped state (joined, saved, etc.). */
   fun clearUserScopedState() {
-    allEvents = emptyList()
-    searchResults = emptyList()
-    availableEvents = emptyList()
-    joinedEvents = emptyList()
-    savedEvents = emptyList()
+    _allEvents = emptyList()
+    _searchResults = emptyList()
+    _availableEvents = emptyList()
+    _joinedEvents = emptyList()
+    _savedEvents = emptyList()
   }
 
   /** Clears the current search results. */
   fun clearSearchResults() {
-    searchResults = emptyList()
+    _searchResults = emptyList()
   }
 
   /** Clears the current error message. */
@@ -318,5 +328,30 @@ class MapEventStateController(
 
   companion object {
     private const val TAG = "MapEventStateController"
+  }
+
+  @VisibleForTesting
+  fun setAllEventsForTest(events: List<Event>) {
+    _allEvents = events
+  }
+
+  @VisibleForTesting
+  fun setSearchResultForTest(events: List<Event>) {
+    _searchResults = events
+  }
+
+  @VisibleForTesting
+  fun setAvailableEventsForTest(events: List<Event>) {
+    _availableEvents = events
+  }
+
+  @VisibleForTesting
+  fun setJoinedEventsForTest(events: List<Event>) {
+    _joinedEvents = events
+  }
+
+  @VisibleForTesting
+  fun setSavedEventsForTest(events: List<Event>) {
+    _savedEvents = events
   }
 }

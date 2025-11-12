@@ -174,14 +174,14 @@ class MapEventStateControllerTest {
 
   @Test
   fun `refreshSelectedEvent returns event by ID`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     val result = controller.refreshSelectedEvent(testEvent.uid)
     assertEquals(testEvent, result)
   }
 
   @Test
   fun `refreshSelectedEvent returns null for non-existent ID`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     val result = controller.refreshSelectedEvent("nonexistent")
     assertNull(result)
   }
@@ -189,42 +189,42 @@ class MapEventStateControllerTest {
   // ========== Search Tests ==========
   @Test
   fun `searchEvents filters events by title`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     controller.searchEvents("Test")
     assertEquals(listOf(testEvent), controller.searchResults)
   }
 
   @Test
   fun `searchEvents filters events by description`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     controller.searchEvents("Fun")
     assertEquals(listOf(testEvent), controller.searchResults)
   }
 
   @Test
   fun `searchEvents filters events by tags`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     controller.searchEvents("party")
     assertEquals(listOf(testEvent), controller.searchResults)
   }
 
   @Test
   fun `searchEvents filters events by location name`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     controller.searchEvents("Test Location")
     assertEquals(listOf(testEvent), controller.searchResults)
   }
 
   @Test
   fun `searchEvents with empty query clears results`() {
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
     controller.searchEvents("")
     assertTrue(controller.searchResults.isEmpty())
   }
 
   @Test
   fun `clearSearchResults clears search results`() {
-    controller.searchResults = listOf(testEvent)
+    controller.setSearchResultForTest(listOf(testEvent))
     controller.clearSearchResults()
     assertTrue(controller.searchResults.isEmpty())
   }
@@ -360,7 +360,7 @@ class MapEventStateControllerTest {
     val userProfile = UserProfile(userId = testUserId, participatingEventIds = emptyList())
     whenever(mockEventRepository.editEvent(any(), any()))
         .thenThrow(RuntimeException("Network error"))
-    controller.allEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
 
     controller.joinSelectedEvent()
     advanceUntilIdle()
@@ -416,7 +416,7 @@ class MapEventStateControllerTest {
         UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid))
     whenever(mockEventRepository.editEvent(any(), any()))
         .thenThrow(RuntimeException("Network error"))
-    controller.allEvents = listOf(joinedEvent)
+    controller.setAllEventsForTest(listOf(joinedEvent))
 
     controller.leaveSelectedEvent()
     advanceUntilIdle()
@@ -518,11 +518,11 @@ class MapEventStateControllerTest {
   // ========== State Management Tests ==========
   @Test
   fun `clearUserScopedState clears all event lists`() {
-    controller.allEvents = listOf(testEvent)
-    controller.searchResults = listOf(testEvent)
-    controller.availableEvents = listOf(testEvent)
-    controller.joinedEvents = listOf(testEvent)
-    controller.savedEvents = listOf(testEvent)
+    controller.setAllEventsForTest(listOf(testEvent))
+    controller.setJoinedEventsForTest(listOf(testEvent))
+    controller.setAvailableEventsForTest(listOf(testEvent))
+    controller.setJoinedEventsForTest(listOf(testEvent))
+    controller.setSavedEventsForTest(listOf(testEvent))
 
     controller.clearUserScopedState()
 
