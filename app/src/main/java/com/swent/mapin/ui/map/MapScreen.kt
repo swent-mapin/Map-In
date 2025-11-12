@@ -78,11 +78,13 @@ import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.event.EventDetailSheet
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.ShareEventDialog
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
@@ -128,6 +130,8 @@ fun MapScreen(
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
+  val eventViewModel =
+      EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
   val snackbarHostState = remember { SnackbarHostState() }
   val density = LocalDensity.current
   val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
@@ -530,7 +534,8 @@ fun MapScreen(
                       onSettingsClick = onNavigateToSettings,
                       filterViewModel = filterViewModel,
                       locationViewModel = remember { LocationViewModel() },
-                      profileViewModel = remember { ProfileViewModel() })
+                      profileViewModel = remember { ProfileViewModel() },
+                      eventViewModel = eventViewModel)
                 }
               }
         }
