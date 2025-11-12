@@ -1,15 +1,19 @@
 package com.swent.mapin.model
 
+import android.util.Log
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /**
  * Service for sending push notifications.
  *
  * This service provides convenient methods for creating and sending push notifications for various
  * scenarios in the app (friend requests, messages, events, etc.).
+ *
+ * Priority levels:
+ * - 0 = Low (informational notifications)
+ * - 1 = Normal (standard notifications like friend requests)
+ * - 2 = High (important notifications like messages and event invitations)
+ * - 3 = Urgent (critical alerts and reminders)
  *
  * Note: Notifications are saved to Firestore. To send actual push notifications to devices, you
  * need to set up a Firebase Cloud Function that triggers when notifications are created. See
@@ -19,6 +23,10 @@ class NotificationService(
     private val repository: NotificationRepository = NotificationRepository()
 ) {
 
+  companion object {
+    private const val TAG = "NotificationService"
+  }
+
   /**
    * Send a friend request notification.
    *
@@ -27,12 +35,12 @@ class NotificationService(
    * @param senderName Name of the sender
    * @param requestId ID of the friend request for reference
    */
-  fun sendFriendRequestNotification(
+  suspend fun sendFriendRequestNotification(
       recipientId: String,
       senderId: String,
       senderName: String,
       requestId: String
-  ) {
+  ): NotificationResult {
     val notification =
         Notification(
             title = "New Friend Request",
@@ -45,7 +53,7 @@ class NotificationService(
             actionUrl = "mapin://friendRequests/$requestId",
             priority = 1)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
@@ -57,13 +65,13 @@ class NotificationService(
    * @param eventId ID of the event
    * @param eventName Name of the event
    */
-  fun sendEventInvitationNotification(
+  suspend fun sendEventInvitationNotification(
       recipientId: String,
       senderId: String,
       senderName: String,
       eventId: String,
       eventName: String
-  ) {
+  ): NotificationResult {
     val notification =
         Notification(
             title = "Event Invitation",
@@ -77,7 +85,7 @@ class NotificationService(
             actionUrl = "mapin://events/$eventId",
             priority = 2)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
@@ -89,13 +97,13 @@ class NotificationService(
    * @param messagePreview Preview of the message content
    * @param conversationId ID of the conversation
    */
-  fun sendMessageNotification(
+  suspend fun sendMessageNotification(
       recipientId: String,
       senderId: String,
       senderName: String,
       messagePreview: String,
       conversationId: String
-  ) {
+  ): NotificationResult {
     val notification =
         Notification(
             title = "New Message from $senderName",
@@ -108,7 +116,7 @@ class NotificationService(
             actionUrl = "mapin://messages/$conversationId",
             priority = 2)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
@@ -120,13 +128,13 @@ class NotificationService(
    * @param eventTime Time of the event
    * @param minutesBefore How many minutes before the event this reminder is for
    */
-  fun sendEventReminderNotification(
+  suspend fun sendEventReminderNotification(
       recipientId: String,
       eventId: String,
       eventName: String,
       eventTime: Timestamp,
       minutesBefore: Int
-  ) {
+  ): NotificationResult {
     val timeText =
         when (minutesBefore) {
           0 -> "now"
@@ -152,7 +160,7 @@ class NotificationService(
             actionUrl = "mapin://events/$eventId",
             priority = 3)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
@@ -163,12 +171,12 @@ class NotificationService(
    * @param message Message content
    * @param priority Priority level (default: 1)
    */
-  fun sendSystemAlertNotification(
+  suspend fun sendSystemAlertNotification(
       recipientId: String,
       title: String,
       message: String,
       priority: Int = 1
-  ) {
+  ): NotificationResult {
     val notification =
         Notification(
             title = title,
@@ -178,7 +186,7 @@ class NotificationService(
             readStatus = false,
             priority = priority)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
@@ -190,13 +198,13 @@ class NotificationService(
    * @param metadata Optional metadata
    * @param actionUrl Optional action URL
    */
-  fun sendInfoNotification(
+  suspend fun sendInfoNotification(
       recipientId: String,
       title: String,
       message: String,
       metadata: Map<String, String> = emptyMap(),
       actionUrl: String? = null
-  ) {
+  ): NotificationResult {
     val notification =
         Notification(
             title = title,
@@ -208,33 +216,17 @@ class NotificationService(
             actionUrl = actionUrl,
             priority = 0)
 
-    sendNotificationAsync(notification)
+    return repository.send(notification)
   }
 
   /**
    * Send a custom notification.
    *
    * @param notification The notification to send
-   * @param onComplete Callback with the result
+   * @return NotificationResult indicating success or failure
    */
   suspend fun sendNotification(notification: Notification): NotificationResult {
     return repository.send(notification)
-  }
-
-  /**
-   * Send a notification asynchronously (fire and forget). Used internally for convenience methods.
-   *
-   * @param notification The notification to send
-   */
-  private fun sendNotificationAsync(notification: Notification) {
-    CoroutineScope(Dispatchers.IO).launch {
-      try {
-        repository.send(notification)
-      } catch (e: Exception) {
-        // Log error but don't throw
-        println("NotificationService: Failed to send notification - ${e.message}")
-      }
-    }
   }
 
   /**
@@ -248,7 +240,7 @@ class NotificationService(
    * @param metadata Optional metadata
    * @param actionUrl Optional action URL
    */
-  fun sendBulkNotifications(
+  suspend fun sendBulkNotifications(
       recipientIds: List<String>,
       title: String,
       message: String,
@@ -257,24 +249,26 @@ class NotificationService(
       metadata: Map<String, String> = emptyMap(),
       actionUrl: String? = null
   ) {
-    CoroutineScope(Dispatchers.IO).launch {
-      recipientIds.forEach { recipientId ->
-        val notification =
-            Notification(
-                title = title,
-                message = message,
-                type = type,
-                recipientId = recipientId,
-                senderId = senderId,
-                metadata = metadata,
-                actionUrl = actionUrl)
+    if (recipientIds.isEmpty()) {
+      Log.w(TAG, "Empty recipient list")
+      return
+    }
 
-        try {
-          repository.send(notification)
-        } catch (e: Exception) {
-          println(
-              "NotificationService: Failed to send bulk notification to $recipientId - ${e.message}")
-        }
+    recipientIds.forEach { recipientId ->
+      val notification =
+          Notification(
+              title = title,
+              message = message,
+              type = type,
+              recipientId = recipientId,
+              senderId = senderId,
+              metadata = metadata,
+              actionUrl = actionUrl)
+
+      try {
+        repository.send(notification)
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to send bulk notification to $recipientId - ${e.message}", e)
       }
     }
   }
@@ -322,8 +316,13 @@ class NotificationBuilder(private val service: NotificationService) {
    * Build and send the notification.
    *
    * @return NotificationResult indicating success or failure
+   * @throws IllegalArgumentException if required fields are blank
    */
   suspend fun send(): NotificationResult {
+    require(title.isNotBlank()) { "Title cannot be blank" }
+    require(recipientId.isNotBlank()) { "RecipientId cannot be blank" }
+    require(message.isNotBlank()) { "Message cannot be blank" }
+
     val notification =
         Notification(
             title = title,
@@ -341,8 +340,13 @@ class NotificationBuilder(private val service: NotificationService) {
    * Build the notification without sending it.
    *
    * @return The built Notification object
+   * @throws IllegalArgumentException if required fields are blank
    */
   fun build(): Notification {
+    require(title.isNotBlank()) { "Title cannot be blank" }
+    require(recipientId.isNotBlank()) { "RecipientId cannot be blank" }
+    require(message.isNotBlank()) { "Message cannot be blank" }
+
     return Notification(
         title = title,
         message = message,

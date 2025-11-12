@@ -37,10 +37,7 @@ class NotificationServiceTest {
         senderName = "John Doe",
         requestId = "request789")
 
-    // Give async operation time to complete
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertEquals("New Friend Request", notification.title)
@@ -65,9 +62,7 @@ class NotificationServiceTest {
         eventId = "event789",
         eventName = "Birthday Party")
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertEquals("Event Invitation", notification.title)
@@ -94,9 +89,7 @@ class NotificationServiceTest {
         messagePreview = "Hey, how are you?",
         conversationId = "conv789")
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertEquals("New Message from Bob", notification.title)
@@ -121,9 +114,7 @@ class NotificationServiceTest {
         eventTime = Timestamp.now(),
         minutesBefore = 0)
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertTrue(notification.message.contains("now"))
@@ -141,9 +132,7 @@ class NotificationServiceTest {
         eventTime = Timestamp.now(),
         minutesBefore = 1)
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertTrue(notification.message.contains("in 1 minute"))
@@ -161,9 +150,7 @@ class NotificationServiceTest {
         eventTime = Timestamp.now(),
         minutesBefore = 60)
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertTrue(notification.message.contains("in 1 hour"))
@@ -180,9 +167,7 @@ class NotificationServiceTest {
         message = "Please update the app",
         priority = 3)
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertEquals("System Alert", notification.title)
@@ -206,9 +191,7 @@ class NotificationServiceTest {
         metadata = metadata,
         actionUrl = "mapin://info")
 
-    Thread.sleep(100)
-
-    verify(mockRepository, timeout(1000)).send(captor.capture())
+    verify(mockRepository).send(captor.capture())
 
     val notification = captor.firstValue
     assertEquals("Info", notification.title)
@@ -242,9 +225,20 @@ class NotificationServiceTest {
         message = "This is sent to everyone",
         type = NotificationType.INFO)
 
-    Thread.sleep(200)
+    verify(mockRepository, times(3)).send(any())
+  }
 
-    verify(mockRepository, timeout(1000).times(3)).send(any())
+  @Test
+  fun `sendBulkNotifications does nothing when recipient list is empty`() = runTest {
+    whenever(mockRepository.send(any())).thenReturn(NotificationResult.Success(Notification()))
+
+    service.sendBulkNotifications(
+        recipientIds = emptyList(),
+        title = "Bulk Message",
+        message = "This is sent to everyone",
+        type = NotificationType.INFO)
+
+    verify(mockRepository, never()).send(any())
   }
 
   @Test
@@ -285,7 +279,13 @@ class NotificationServiceTest {
   fun `NotificationBuilder metadata method adds all metadata`() = runTest {
     val metadata = mapOf("key1" to "value1", "key2" to "value2")
 
-    val builder = service.createNotification().metadata(metadata)
+    val builder =
+        service
+            .createNotification()
+            .title("Test")
+            .message("Test message")
+            .recipientId("user123")
+            .metadata(metadata)
 
     val notification = builder.build()
 
@@ -297,9 +297,96 @@ class NotificationServiceTest {
   fun `NotificationBuilder send method sends notification`() = runTest {
     whenever(mockRepository.send(any())).thenReturn(NotificationResult.Success(Notification()))
 
-    val result = service.createNotification().title("Test").recipientId("user123").send()
+    val result =
+        service
+            .createNotification()
+            .title("Test")
+            .message("Test message")
+            .recipientId("user123")
+            .send()
 
     assertTrue(result is NotificationResult.Success)
     verify(mockRepository).send(any())
+  }
+
+  @Test
+  fun `NotificationBuilder send throws exception when title is blank`() = runTest {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          kotlinx.coroutines.runBlocking {
+            service
+                .createNotification()
+                .title("")
+                .message("Test message")
+                .recipientId("user123")
+                .send()
+          }
+        }
+
+    assertEquals("Title cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `NotificationBuilder send throws exception when message is blank`() = runTest {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          kotlinx.coroutines.runBlocking {
+            service.createNotification().title("Test").message("").recipientId("user123").send()
+          }
+        }
+
+    assertEquals("Message cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `NotificationBuilder send throws exception when recipientId is blank`() = runTest {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          kotlinx.coroutines.runBlocking {
+            service
+                .createNotification()
+                .title("Test")
+                .message("Test message")
+                .recipientId("")
+                .send()
+          }
+        }
+
+    assertEquals("RecipientId cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `NotificationBuilder build throws exception when title is blank`() {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          service
+              .createNotification()
+              .title("")
+              .message("Test message")
+              .recipientId("user123")
+              .build()
+        }
+
+    assertEquals("Title cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `NotificationBuilder build throws exception when message is blank`() {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          service.createNotification().title("Test").message("").recipientId("user123").build()
+        }
+
+    assertEquals("Message cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `NotificationBuilder build throws exception when recipientId is blank`() {
+    val exception =
+        assertThrows(IllegalArgumentException::class.java) {
+          service.createNotification().title("Test").message("Test message").recipientId("").build()
+        }
+
+    assertEquals("RecipientId cannot be blank", exception.message)
   }
 }
