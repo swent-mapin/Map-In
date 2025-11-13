@@ -700,7 +700,8 @@ class EventRepositoryFirestoreTest {
   @Test
   fun editEvent_throwsException_whenInvalidEvent() = runTest {
     val invalid = createEvent(title = "", ownerId = "")
-    assertFailsWith<IllegalArgumentException> { repo.editEvent("E1", invalid) }
+    val exception = assertFailsWith<Exception> { repo.editEvent("E1", invalid) }
+    assertTrue(exception.message!!.contains("Failed to edit event"))
   }
 
   @Test
