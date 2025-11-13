@@ -38,7 +38,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -118,22 +117,24 @@ class MapScreenViewModelTest {
     whenever(mockEventStateController.joinedEvents).thenAnswer { joinedEvents.toList() }
     whenever(mockEventStateController.searchEvents(any())).then {}
     whenever(mockEventStateController.clearSearchResults()).then {}
-    doAnswer { viewModel.selectedEvent?.let { event -> joinedEvents.add(event) } }
-        .whenever(mockEventStateController)
-        .joinSelectedEvent()
-    doAnswer { viewModel.selectedEvent?.let { event -> savedEvents.add(event) } }
-        .whenever(mockEventStateController)
-        .saveSelectedEvent()
-    doAnswer {
-          viewModel.selectedEvent?.let { event -> savedEvents.removeIf { it.uid == event.uid } }
-        }
-        .whenever(mockEventStateController)
-        .unsaveSelectedEvent()
-    doAnswer {
-          viewModel.selectedEvent?.let { event -> joinedEvents.removeIf { it.uid == event.uid } }
-        }
-        .whenever(mockEventStateController)
-        .leaveSelectedEvent()
+    runBlocking {
+      whenever(mockEventStateController.joinSelectedEvent()).thenAnswer {
+        viewModel.selectedEvent?.let { event -> joinedEvents.add(event) }
+      }
+
+      whenever(mockEventStateController.saveSelectedEvent()).thenAnswer {
+        viewModel.selectedEvent?.let { event -> savedEvents.add(event) }
+      }
+
+      whenever(mockEventStateController.unsaveSelectedEvent()).thenAnswer {
+        viewModel.selectedEvent?.let { event -> savedEvents.removeIf { it.uid == event.uid } }
+      }
+
+      whenever(mockEventStateController.leaveSelectedEvent()).thenAnswer {
+        viewModel.selectedEvent?.let { event -> joinedEvents.removeIf { it.uid == event.uid } }
+      }
+    }
+
     whenever(mockEventStateController.refreshSelectedEvent(any())).thenAnswer { invocation ->
       val eventId = invocation.getArgument<String>(0)
       joinedEvents.find { it.uid == eventId } ?: savedEvents.find { it.uid == eventId }
