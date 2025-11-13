@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,7 +65,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -129,47 +127,21 @@ fun ProfileScreen(
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary))
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White))
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
           Column(
               modifier =
                   Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
-                // Banner Section
-                Box(modifier = Modifier.fillMaxWidth()) {
-                  ProfileBanner(
-                      bannerUrl =
-                          if (viewModel.isEditMode && viewModel.selectedBanner.isNotEmpty()) {
-                            viewModel.selectedBanner
-                          } else {
-                            userProfile.bannerUrl
-                          },
-                      isEditMode = viewModel.isEditMode,
-                      onBannerClick = { viewModel.toggleBannerSelector() })
-
-                  // Avatar positionné en haut, chevauchant la bannière
-                  Box(
-                      modifier = Modifier.align(Alignment.BottomCenter).offset(y = 50.dp),
-                      contentAlignment = Alignment.Center) {
-                        ProfilePicture(
-                            avatarUrl =
-                                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                                  viewModel.selectedAvatar
-                                } else {
-                                  userProfile.avatarUrl
-                                },
-                            isEditMode = viewModel.isEditMode,
-                            onAvatarClick = { viewModel.toggleAvatarSelector() })
-                      }
-                }
+                // Avatar removed from flow — now positioned as an overlay below (see outer Box)
 
                 Column(
                     modifier =
                         Modifier.fillMaxSize()
                             .padding(paddingValues)
                             .padding(horizontal = 20.dp)
-                            .padding(top = 20.dp)
+                            .padding(top = 74.dp)
                             .animateContentSize(
                                 animationSpec =
                                     spring(
@@ -191,6 +163,20 @@ fun ProfileScreen(
                     }
               }
 
+          Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Box(modifier = Modifier.padding(top = 96.dp), contentAlignment = Alignment.Center) {
+              ProfilePicture(
+                  avatarUrl =
+                      if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                        viewModel.selectedAvatar
+                      } else {
+                        userProfile.avatarUrl
+                      },
+                  isEditMode = viewModel.isEditMode,
+                  onAvatarClick = { viewModel.toggleAvatarSelector() })
+            }
+          }
+
           // Avatar Selector Dialog
           if (viewModel.showAvatarSelector) {
             AvatarSelectorDialog(
@@ -201,18 +187,6 @@ fun ProfileScreen(
                   viewModel.toggleAvatarSelector()
                 },
                 onDismiss = { viewModel.toggleAvatarSelector() })
-          }
-
-          // Banner Selector Dialog
-          if (viewModel.showBannerSelector) {
-            BannerSelectorDialog(
-                viewModel = viewModel,
-                selectedBanner = viewModel.selectedBanner,
-                onBannerSelected = { bannerUrl ->
-                  viewModel.updateBannerSelection(bannerUrl)
-                  viewModel.toggleBannerSelector()
-                },
-                onDismiss = { viewModel.toggleBannerSelector() })
           }
 
           // Delete Confirmation Dialog
@@ -228,92 +202,32 @@ fun ProfileScreen(
 /** Displays the user's profile picture or a placeholder. */
 @Composable
 internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
-  Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
-    // Outer glow effect
+  // Simplified minimal avatar: plain circle, smaller size, no heavy effects
+  Box(modifier = Modifier.size(88.dp), contentAlignment = Alignment.Center) {
     Box(
         modifier =
-            Modifier.size(106.dp)
+            Modifier.size(88.dp)
                 .clip(CircleShape)
-                .background(
-                    brush =
-                        Brush.radialGradient(
-                            colors =
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                    Color.Transparent))))
-
-    // Gradient border with rainbow effect
-    Box(
-        modifier =
-            Modifier.size(100.dp)
-                .shadow(8.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    brush =
-                        Brush.sweepGradient(
-                            colors =
-                                listOf(
-                                    Color(0xFF667eea), // Purple
-                                    Color(0xFF764ba2), // Dark purple
-                                    Color(0xFFf093fb), // Pink
-                                    Color(0xFF4facfe), // Blue
-                                    Color(0xFF00f2fe), // Cyan
-                                    Color(0xFFfa709a), // Rose
-                                    Color(0xFF667eea) // Back to purple
-                                    )))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .testTag("profilePicture")
                 .then(if (isEditMode) Modifier.clickable { onAvatarClick() } else Modifier),
         contentAlignment = Alignment.Center) {
-          // Inner circle with profile picture
-          Box(
-              modifier =
-                  Modifier.size(92.dp)
-                      .clip(CircleShape)
-                      .background(
-                          brush =
-                              Brush.linearGradient(
-                                  colors =
-                                      listOf(
-                                          MaterialTheme.colorScheme.primaryContainer,
-                                          MaterialTheme.colorScheme.tertiaryContainer))),
-              contentAlignment = Alignment.Center) {
-                // Check if avatarUrl is an HTTP URL (uploaded image) or an icon ID
-                if (avatarUrl != null && avatarUrl.startsWith("http")) {
-                  // Display uploaded image from Firebase Storage
-                  AsyncImage(
-                      model = avatarUrl,
-                      contentDescription = "Profile Picture",
-                      modifier = Modifier.fillMaxSize().clip(CircleShape))
-                } else {
-                  // Display icon for preset avatars
-                  Icon(
-                      imageVector = getAvatarIcon(avatarUrl),
-                      contentDescription = "Profile Picture",
-                      modifier = Modifier.size(46.dp),
-                      tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-              }
-        }
-
-    // Edit indicator - positioned outside for better visibility
-    if (isEditMode) {
-      Box(
-          modifier =
-              Modifier.align(Alignment.BottomEnd)
-                  .padding(4.dp)
-                  .size(28.dp)
-                  .shadow(4.dp, CircleShape)
-                  .clip(CircleShape)
-                  .background(Color(0xFF667eea))
-                  .testTag("editIndicator"),
-          contentAlignment = Alignment.Center) {
+          // Support both remote URLs and content URIs (picked images)
+          if (avatarUrl != null &&
+              (avatarUrl.startsWith("http") || avatarUrl.startsWith("content"))) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = "Profile Picture",
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(CircleShape))
+          } else {
             Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Change Avatar",
-                tint = Color.White,
-                modifier = Modifier.size(14.dp))
+                imageVector = getAvatarIcon(avatarUrl),
+                contentDescription = "Profile Picture",
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
           }
-    }
+        }
   }
 }
 
@@ -324,123 +238,78 @@ internal fun ViewProfileContent(
     viewModel: ProfileViewModel,
     onNavigateToSettings: () -> Unit = {}
 ) {
-  // Name card with gradient and large prominence
+  // Name simple card
   Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .shadow(6.dp, RoundedCornerShape(16.dp))
-              .testTag("profileCard_Name"),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+      modifier = Modifier.fillMaxWidth().testTag("profileCard_Name"),
+      shape = RoundedCornerShape(12.dp),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        brush =
-                            Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))))
-                    .padding(16.dp),
-            contentAlignment = Alignment.Center) {
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            contentAlignment = Alignment.CenterStart) {
               Text(
                   text = userProfile.name,
                   style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White)
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.onSurface)
             }
       }
 
-  Spacer(modifier = Modifier.height(12.dp))
+  Spacer(modifier = Modifier.height(8.dp))
 
   // Bio
   ProfileInfoCard(
       title = "Bio",
       content = if (userProfile.bio.isEmpty()) "No bio added" else userProfile.bio,
       icon = Icons.Default.Face,
-      gradientColors = listOf(Color(0xFFfa709a), Color(0xFFfee140)))
+      gradientColors = listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
 
-  Spacer(modifier = Modifier.height(12.dp))
+  Spacer(modifier = Modifier.height(8.dp))
 
   // Location
   ProfileInfoCard(
       title = "Location",
       content = userProfile.location,
       icon = Icons.Default.LocationOn,
-      gradientColors = listOf(Color(0xFF30cfd0), Color(0xFF330867)))
+      gradientColors = listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
+
+  Spacer(modifier = Modifier.height(8.dp))
+
+  // Hobbies - simplified
+  Card(
+      modifier = Modifier.fillMaxWidth().testTag("profileCard_Hobbies"),
+      shape = RoundedCornerShape(12.dp),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                  text = "Hobbies",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(
+                  text =
+                      if (userProfile.hobbies.isEmpty()) "No hobbies added"
+                      else userProfile.hobbies.joinToString(", "),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface)
+            }
+          }
+        }
+      }
 
   Spacer(modifier = Modifier.height(12.dp))
 
-  // Hobbies with special styling
-  Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .shadow(4.dp, RoundedCornerShape(16.dp))
-              .testTag("profileCard_Hobbies"),
-      shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        brush =
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFFf093fb), Color(0xFFf5576c))))) {
-              Row(
-                  modifier = Modifier.padding(16.dp),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier =
-                            Modifier.size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center) {
-                          Icon(
-                              imageVector = Icons.Default.FavoriteBorder,
-                              contentDescription = null,
-                              tint = Color.White,
-                              modifier = Modifier.size(20.dp))
-                        }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                      Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Hobbies",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector =
-                                if (userProfile.hobbiesVisible) Icons.Default.Face
-                                else Icons.Default.Lock,
-                            contentDescription =
-                                if (userProfile.hobbiesVisible) "Public" else "Private",
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp))
-                      }
-                      Spacer(modifier = Modifier.height(4.dp))
-                      Text(
-                          text =
-                              if (userProfile.hobbies.isEmpty()) "No hobbies added"
-                              else userProfile.hobbies.joinToString(", "),
-                          style = MaterialTheme.typography.bodyMedium,
-                          color = Color.White,
-                          fontWeight = FontWeight.Medium)
-                    }
-                  }
-            }
-      }
-
-  Spacer(modifier = Modifier.height(24.dp))
-
-  // Settings button used by navigation tests (has testTag "settingsButton")
-  OutlinedButton(
-      onClick = onNavigateToSettings,
-      modifier = Modifier.fillMaxWidth().height(50.dp).testTag("settingsButton"),
-      shape = RoundedCornerShape(12.dp)) {
-        Text("Settings")
-      }
+  // Settings button removed as requested by user
+  // (previously an OutlinedButton with testTag "settingsButton")
 }
 
 /** Reusable card component for displaying profile information. */
@@ -452,57 +321,31 @@ internal fun ProfileInfoCard(
     gradientColors: List<Color>,
     isVisible: Boolean = true
 ) {
+  // Simplified info card for minimal UI
   Card(
-      modifier =
-          Modifier.fillMaxWidth()
-              .shadow(6.dp, RoundedCornerShape(20.dp))
-              .testTag("profileCard_$title"),
-      shape = RoundedCornerShape(20.dp),
-      colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+      modifier = Modifier.fillMaxWidth().testTag("profileCard_$title"),
+      shape = RoundedCornerShape(12.dp),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(brush = Brush.linearGradient(colors = gradientColors))) {
-              Row(
-                  modifier = Modifier.padding(16.dp),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier =
-                            Modifier.size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center) {
-                          Icon(
-                              imageVector = icon,
-                              contentDescription = null,
-                              tint = Color.White,
-                              modifier = Modifier.size(24.dp))
-                        }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                      Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = if (isVisible) Icons.Default.Face else Icons.Default.Lock,
-                            contentDescription = if (isVisible) "Public" else "Private",
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp))
-                      }
-                      Spacer(modifier = Modifier.height(4.dp))
-                      Text(
-                          text = content,
-                          style = MaterialTheme.typography.bodyLarge,
-                          color = Color.White,
-                          fontWeight = FontWeight.Medium)
-                    }
-                  }
-            }
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+              imageVector = icon,
+              contentDescription = null,
+              modifier = Modifier.size(20.dp),
+              tint = MaterialTheme.colorScheme.onSurfaceVariant)
+          Spacer(modifier = Modifier.width(12.dp))
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface)
+          }
+        }
       }
 }
 
@@ -520,10 +363,7 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                 modifier =
                     Modifier.size(28.dp)
                         .clip(CircleShape)
-                        .background(
-                            brush =
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))),
+                        .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center) {
                   Icon(
                       imageVector = Icons.Default.Edit,
@@ -744,17 +584,14 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                           style = MaterialTheme.typography.bodySmall)
                     }
 
-                // Save button with gradient background
+                // Save button with solid background
                 Box(
                     modifier =
                         Modifier.weight(1f)
                             .height(40.dp)
                             .shadow(6.dp, RoundedCornerShape(12.dp))
                             .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                brush =
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))))) {
+                            .background(MaterialTheme.colorScheme.primary)) {
                       Button(
                           onClick = { viewModel.saveProfile() },
                           modifier = Modifier.fillMaxSize().testTag("saveButton"),
@@ -811,9 +648,6 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
 /** Data class for avatar options */
 data class AvatarOption(val id: String, val icon: ImageVector)
 
-/** Data class for banner options with color gradients */
-data class BannerOption(val id: String, val colors: List<Color>, val name: String)
-
 /** List of available avatars */
 private val availableAvatars =
     listOf(
@@ -821,56 +655,6 @@ private val availableAvatars =
         AvatarOption("face", Icons.Default.Face),
         AvatarOption("star", Icons.Default.Star),
         AvatarOption("favorite", Icons.Default.Favorite))
-
-/** List of available banner gradients */
-private val availableBanners =
-    listOf(
-        BannerOption(
-            id = "purple_blue",
-            colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)),
-            name = "Purple Blue"),
-        BannerOption(
-            id = "pink_orange",
-            colors = listOf(Color(0xFFfa709a), Color(0xFFfee140)),
-            name = "Pink Orange"),
-        BannerOption(
-            id = "cyan_purple",
-            colors = listOf(Color(0xFF30cfd0), Color(0xFF330867)),
-            name = "Cyan Purple"),
-        BannerOption(
-            id = "pink_red",
-            colors = listOf(Color(0xFFf093fb), Color(0xFFf5576c)),
-            name = "Pink Red"),
-        BannerOption(
-            id = "blue_cyan",
-            colors = listOf(Color(0xFF4facfe), Color(0xFF00f2fe)),
-            name = "Blue Cyan"),
-        BannerOption(
-            id = "green_blue",
-            colors = listOf(Color(0xFF43e97b), Color(0xFF38f9d7)),
-            name = "Green Blue"),
-        BannerOption(
-            id = "orange_red",
-            colors = listOf(Color(0xFFfa8231), Color(0xFFf7464a)),
-            name = "Orange Red"),
-        BannerOption(
-            id = "purple_pink",
-            colors = listOf(Color(0xFFa8edea), Color(0xFFfed6e3)),
-            name = "Purple Pink"),
-        BannerOption(
-            id = "yellow_orange",
-            colors = listOf(Color(0xFFffecd2), Color(0xFFfcb69f)),
-            name = "Yellow Orange"),
-        BannerOption(
-            id = "blue_indigo",
-            colors = listOf(Color(0xFF667eea), Color(0xFF8e9eef)),
-            name = "Blue Indigo"),
-        BannerOption(
-            id = "rose_gold",
-            colors = listOf(Color(0xFFf857a6), Color(0xFFff5858)),
-            name = "Rose Gold"),
-        BannerOption(
-            id = "ocean", colors = listOf(Color(0xFF2e3192), Color(0xFF1bffff)), name = "Ocean"))
 
 /** Get avatar icon from URL/ID */
 private fun getAvatarIcon(avatarUrl: String?): ImageVector {
@@ -929,134 +713,6 @@ internal fun AvatarSelectorDialog(
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(24.dp))
-}
-
-/** Banner section at the top of the profile screen. */
-@Composable
-fun ProfileBanner(bannerUrl: String?, isEditMode: Boolean, onBannerClick: () -> Unit) {
-  // Check if bannerUrl is an HTTP URL (uploaded image) or a preset ID
-  val isUploadedImage = bannerUrl != null && bannerUrl.startsWith("http")
-
-  // Find the selected banner gradient for presets
-  val selectedBannerGradient =
-      if (!isUploadedImage) availableBanners.find { it.id == bannerUrl } else null
-
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(180.dp)
-              .clickable(enabled = isEditMode, onClick = onBannerClick)
-              .testTag("profileBanner")) {
-
-        // Display uploaded image or gradient
-        if (isUploadedImage) {
-          // Display uploaded image from Firebase Storage
-          AsyncImage(
-              model = bannerUrl,
-              contentDescription = "Profile Banner",
-              modifier = Modifier.fillMaxSize())
-        } else {
-          // Display gradient for preset banners
-          val backgroundBrush =
-              if (selectedBannerGradient != null) {
-                Brush.horizontalGradient(colors = selectedBannerGradient.colors)
-              } else {
-                Brush.verticalGradient(
-                    colors =
-                        listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)))
-              }
-
-          Box(modifier = Modifier.fillMaxSize().background(brush = backgroundBrush)) {
-            // Optional overlay for better text visibility
-            if (bannerUrl.isNullOrEmpty()) {
-              Box(
-                  modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)),
-                  contentAlignment = Alignment.Center) {
-                    if (isEditMode) {
-                      Text(
-                          text = "Tap to choose a banner",
-                          style = MaterialTheme.typography.bodyMedium,
-                          color = Color.White.copy(alpha = 0.7f),
-                          fontWeight = FontWeight.SemiBold)
-                    }
-                  }
-            }
-          }
-        }
-
-        // Edit icon overlay
-        if (isEditMode) {
-          Box(
-              modifier =
-                  Modifier.align(Alignment.BottomEnd)
-                      .padding(16.dp)
-                      .size(40.dp)
-                      .clip(CircleShape)
-                      .background(Color.White.copy(alpha = 0.9f))
-                      .shadow(4.dp, CircleShape),
-              contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Change Banner",
-                    tint = Color(0xFF667eea),
-                    modifier = Modifier.size(20.dp))
-              }
-        }
-      }
-}
-
-/** Banner selector dialog */
-@Composable
-internal fun BannerSelectorDialog(
-    viewModel: ProfileViewModel,
-    selectedBanner: String,
-    onBannerSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-  // Image picker launcher for banner
-  val bannerPickerLauncher =
-      rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
-        ->
-        uri?.let {
-          viewModel.uploadBannerImage(it)
-          onDismiss()
-        }
-      }
-
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      title = {
-        Text(
-            text = "Choose Your Banner",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold)
-      },
-      text = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          // Import from gallery button
-          ImportFromGalleryButton(onClick = { bannerPickerLauncher.launch("image/*") })
-
-          // Preset selection label
-          PresetSelectionLabel(itemType = "banner")
-
-          // Banner selection grid
-          BannerSelectionGrid(
-              availableBanners = availableBanners,
-              selectedBanner = selectedBanner,
-              onBannerSelected = onBannerSelected)
-        }
-      },
-      confirmButton = {
-        Button(
-            onClick = onDismiss,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF667eea))) {
-              Text("Close")
-            }
-      },
-      containerColor = MaterialTheme.colorScheme.surface,
-      shape = RoundedCornerShape(20.dp))
 }
 
 /** Confirmation dialog for profile deletion */
@@ -1134,83 +790,60 @@ private fun AvatarSelectionGrid(
     selectedAvatar: String,
     onAvatarSelected: (String) -> Unit
 ) {
+  // If the currently selected avatar is an uploaded image (http/content/file), show it first in the
+  // grid
+  val gridAvatars =
+      if (selectedAvatar.isNotEmpty() &&
+          (selectedAvatar.startsWith("http") ||
+              selectedAvatar.startsWith("content") ||
+              selectedAvatar.startsWith("file"))) {
+        listOf(AvatarOption(selectedAvatar, Icons.Default.Person)) + availableAvatars
+      } else {
+        availableAvatars
+      }
+
   LazyVerticalGrid(
       columns = GridCells.Fixed(4),
       horizontalArrangement = Arrangement.spacedBy(12.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
       modifier = Modifier.fillMaxWidth().height(300.dp)) {
-        items(availableAvatars) { avatar ->
+        items(gridAvatars) { avatar ->
           val isSelected = selectedAvatar == avatar.id
+
+          // detect if avatar.id is a uri (http/content/file/etc.)
+          val isImage =
+              try {
+                Uri.parse(avatar.id).scheme != null
+              } catch (_: Exception) {
+                false
+              }
+
           Box(
               modifier =
                   Modifier.size(70.dp)
                       .clip(CircleShape)
                       .background(
-                          if (isSelected) {
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFF667eea), Color(0xFF764ba2)))
-                          } else {
-                            Brush.linearGradient(
-                                colors =
-                                    listOf(
-                                        MaterialTheme.colorScheme.surfaceVariant,
-                                        MaterialTheme.colorScheme.surfaceVariant))
-                          })
+                          if (isSelected) MaterialTheme.colorScheme.primary
+                          else MaterialTheme.colorScheme.surfaceVariant)
                       .clickable { onAvatarSelected(avatar.id) }
                       .testTag("avatar_${avatar.id}"),
               contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = avatar.icon,
-                    contentDescription = avatar.id,
-                    modifier = Modifier.size(40.dp),
-                    tint =
-                        if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-        }
-      }
-}
-
-/** Reusable grid for banner selection */
-@Composable
-internal fun BannerSelectionGrid(
-    availableBanners: List<BannerOption>,
-    selectedBanner: String,
-    onBannerSelected: (String) -> Unit
-) {
-  LazyVerticalGrid(
-      columns = GridCells.Fixed(2),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      modifier = Modifier.fillMaxWidth().height(250.dp)) {
-        items(availableBanners) { banner ->
-          val isSelected = selectedBanner == banner.id
-          Column(
-              horizontalAlignment = Alignment.CenterHorizontally,
-              modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(50.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(brush = Brush.horizontalGradient(colors = banner.colors))
-                            .clickable { onBannerSelected(banner.id) }
-                            .testTag("banner_${banner.id}"),
-                    contentAlignment = Alignment.Center) {
-                      if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp))
-                      }
-                    }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = banner.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.85)
+                if (isImage) {
+                  // Fill the entire circular button with the image
+                  AsyncImage(
+                      model = avatar.id,
+                      contentDescription = avatar.id,
+                      contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                      modifier = Modifier.fillMaxSize().clip(CircleShape))
+                } else {
+                  Icon(
+                      imageVector = avatar.icon,
+                      contentDescription = avatar.id,
+                      modifier = Modifier.size(40.dp),
+                      tint =
+                          if (isSelected) Color.White
+                          else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
               }
         }
       }
