@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,6 +27,7 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.event.LocalEventRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
@@ -45,15 +47,22 @@ import kotlinx.coroutines.launch
 class MapScreenViewModel(
     initialSheetState: BottomSheetState,
     private val sheetConfig: BottomSheetConfig,
-    private val onClearFocus: () -> Unit,
+    onClearFocus: () -> Unit,
     private val applicationContext: Context,
     private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
         MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
-    private val locationManager: LocationManager = LocationManager(applicationContext)
+    private val locationManager: LocationManager = LocationManager(applicationContext),
+    val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
 ) : ViewModel() {
+
+  private var clearFocusCallback: (() -> Unit) = onClearFocus
+
+  private fun clearSearchFieldFocus() {
+    clearFocusCallback()
+  }
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
   private val cameraController = MapCameraController(viewModelScope)
@@ -61,24 +70,21 @@ class MapScreenViewModel(
       SearchStateController(
           applicationContext = applicationContext,
           eventRepository = eventRepository,
-          onClearFocus = onClearFocus,
+          onClearFocus = ::clearSearchFieldFocus,
           scope = viewModelScope)
   private val bottomSheetStateController =
       BottomSheetStateController(
           sheetConfig = sheetConfig,
           initialState = initialSheetState,
           isProgrammaticZoom = { cameraController.isProgrammaticZoom })
-  private val eventStateController =
+  val eventStateController =
       MapEventStateController(
           eventRepository = eventRepository,
+          userProfileRepository = userProfileRepository,
           auth = auth,
           scope = viewModelScope,
-          replaceEventInSearch = { event ->
-            searchStateController.replaceEvent(event, _selectedTags)
-          },
-          updateEventsState = ::applyEvents,
+          filterViewModel = filterViewModel,
           getSelectedEvent = { _selectedEvent },
-          setSelectedEvent = { _selectedEvent = it },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
   private val memoryActionController =
@@ -194,10 +200,6 @@ class MapScreenViewModel(
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents
 
-  // Saved events ids for quick lookup
-  private val savedEventIds: Set<String>
-    get() = eventStateController.savedEventIds
-
   enum class BottomSheetTab {
     SAVED_EVENTS,
     JOINED_EVENTS
@@ -222,7 +224,7 @@ class MapScreenViewModel(
   // Track if we came from search mode to return to it after closing event detail
   private var _cameFromSearch by mutableStateOf(false)
   // Track the sheet state before opening event to restore it correctly
-  private var _sheetStateBeforeEvent by mutableStateOf(BottomSheetState.COLLAPSED)
+  private var _sheetStateBeforeEvent by mutableStateOf<BottomSheetState?>(null)
 
   // Tag filtering
   private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
@@ -266,10 +268,17 @@ class MapScreenViewModel(
   val avatarUrl: String?
     get() = _avatarUrl
 
-  val directionViewModel = DirectionViewModel()
+  val directionViewModel: DirectionViewModel by lazy {
+    val accessToken =
+        com.swent.mapin.ui.map.directions.ApiKeyProvider.getMapboxAccessToken(applicationContext)
+    val directionsService =
+        if (accessToken.isNotEmpty()) {
+          com.swent.mapin.ui.map.directions.MapboxDirectionsService(accessToken)
+        } else null
+    DirectionViewModel(directionsService)
+  }
 
   init {
-    eventStateController.updateBaseEvents(_events)
     // Load map style preference
     loadMapStylePreference()
 
@@ -277,8 +286,8 @@ class MapScreenViewModel(
     loadInitialSamples()
     // Preload events so the form has immediate data
     refreshEventsDataset()
+    eventStateController.refreshEventsList()
     eventStateController.loadSavedEvents()
-    eventStateController.loadSavedEventIds()
     _topTags = getTopTags()
     // Preload events both for searching and memory linking
     loadUserProfile()
@@ -336,8 +345,7 @@ class MapScreenViewModel(
           } else {
             // Signed in → (re)load user-scoped data
             eventStateController.loadSavedEvents()
-            eventStateController.loadSavedEventIds()
-            eventStateController.updateBaseEvents(_events)
+            eventStateController.refreshEventsList()
             loadUserProfile()
           }
         }
@@ -367,7 +375,7 @@ class MapScreenViewModel(
 
   private fun applyEvents(newEvents: List<Event>) {
     _events = newEvents
-    eventStateController.updateBaseEvents(newEvents)
+    eventStateController.refreshEventsList()
   }
 
   fun onZoomChange(newZoom: Float) {
@@ -457,6 +465,10 @@ class MapScreenViewModel(
   fun onClearSearch() {
     _events = searchStateController.resetSearchState(_selectedTags)
     setBottomSheetState(BottomSheetState.MEDIUM)
+  }
+
+  fun updateFocusClearer(onClearFocus: () -> Unit) {
+    clearFocusCallback = onClearFocus
   }
 
   fun setMapStyle(style: MapStyle) {
@@ -613,6 +625,9 @@ class MapScreenViewModel(
     // Clear directions when closing event detail
     directionViewModel.clearDirection()
 
+    val previousSheetState = _sheetStateBeforeEvent
+    _sheetStateBeforeEvent = null
+
     if (_cameFromSearch) {
       // Return to search mode without clearing the current query
       _cameFromSearch = false
@@ -628,16 +643,20 @@ class MapScreenViewModel(
       applyEvents(searchStateController.refreshFilters(_selectedTags))
       // Return to FULL if user was editing, otherwise restore previous sheet state
       // (FULL for recents, MEDIUM for search results)
-      val targetState = if (wasEditing) BottomSheetState.FULL else _sheetStateBeforeEvent
+      val targetState =
+          if (wasEditing) BottomSheetState.FULL
+          else previousSheetState ?: BottomSheetState.COLLAPSED
       setBottomSheetState(targetState, resetSearch = false)
     } else {
-      setBottomSheetState(BottomSheetState.COLLAPSED)
+      val targetState = previousSheetState ?: BottomSheetState.COLLAPSED
+      setBottomSheetState(targetState)
     }
   }
 
   /**
-   * Toggle directions display for the given event. Uses a default user location (EPFL campus) for
-   * demo purposes. Next week: integrate with actual user location from GPS/profile.
+   * Toggle directions display for the given event.
+   *
+   * Uses the user's current location if available, otherwise falls back to a default location.
    */
   fun toggleDirections(event: Event) {
     val currentState = directionViewModel.directionState
@@ -645,9 +664,13 @@ class MapScreenViewModel(
     if (currentState is DirectionState.Displayed) {
       directionViewModel.clearDirection()
     } else {
-      // Default user location: EPFL (for demo purposes)
+      val userLoc = currentLocation
       val userLocation =
-          Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+          if (userLoc != null) {
+            Point.fromLngLat(userLoc.longitude, userLoc.latitude)
+          } else {
+            Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+          }
       val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
       directionViewModel.requestDirections(userLocation, eventLocation)
@@ -673,7 +696,7 @@ class MapScreenViewModel(
   }
 
   fun isEventSaved(event: Event): Boolean {
-    return savedEventIds.contains(event.uid)
+    return savedEvents.contains(event)
   }
 
   fun joinEvent() {
@@ -681,7 +704,7 @@ class MapScreenViewModel(
   }
 
   fun unregisterFromEvent() {
-    eventStateController.unregisterSelectedEvent()
+    eventStateController.leaveSelectedEvent()
   }
 
   /**
@@ -689,7 +712,7 @@ class MapScreenViewModel(
    * generated code.
    */
   fun saveEventForLater() {
-    eventStateController.saveSelectedEventForLater()
+    eventStateController.saveSelectedEvent()
   }
 
   /**
@@ -749,13 +772,20 @@ fun rememberMapScreenViewModel(
   val context = LocalContext.current
   val appContext = context.applicationContext
 
-  return viewModel {
+  val mapScreenViewModel: MapScreenViewModel = viewModel {
     MapScreenViewModel(
         initialSheetState = initialSheetState,
         sheetConfig = sheetConfig,
         onClearFocus = { focusManager.clearFocus(force = true) },
         applicationContext = appContext)
   }
+
+  DisposableEffect(focusManager, mapScreenViewModel) {
+    mapScreenViewModel.updateFocusClearer { focusManager.clearFocus(force = true) }
+    onDispose { mapScreenViewModel.updateFocusClearer {} }
+  }
+
+  return mapScreenViewModel
 }
 
 fun eventsToGeoJson(events: List<Event>): String {

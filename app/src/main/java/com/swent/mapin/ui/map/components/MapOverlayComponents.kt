@@ -4,31 +4,14 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.MapConstants
-
-/** Top gradient overlay for better visibility of status bar icons on map */
-@Composable
-fun TopGradient() {
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(100.dp)
-              .background(
-                  brush =
-                      Brush.verticalGradient(
-                          colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent))))
-}
 
 /** Scrim that fades in once the sheet passes MEDIUM, dimming the map underneath. */
 @Composable

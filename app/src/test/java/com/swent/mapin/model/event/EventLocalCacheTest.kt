@@ -44,6 +44,7 @@ class EventLocalCacheTest {
             title = "Title",
             description = "Desc",
             date = Timestamp(1000, 0),
+            endDate = Timestamp(1000, 0),
             location = com.swent.mapin.model.Location("L", 1.0, 2.0),
             tags = listOf("t1", "t2"),
             public = true,

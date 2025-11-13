@@ -399,7 +399,7 @@ class ProfileScreenTest {
     }
 
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithText("Delete Profile").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Clear Profile").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -484,7 +484,7 @@ class ProfileScreenTest {
 
     // Verify the delete icon is present in the button
     composeTestRule.onNodeWithTag("deleteProfileButton").performScrollTo()
-    composeTestRule.onNodeWithText("Delete Profile").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Clear Profile").assertIsDisplayed()
   }
 
   @Test
@@ -686,7 +686,7 @@ class ProfileScreenTest {
       MaterialTheme { DeleteProfileConfirmationDialog(onConfirm = {}, onDismiss = {}) }
     }
 
-    composeTestRule.onNodeWithText("Delete Profile").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Clear Profile").assertIsDisplayed()
   }
 
   @Test
@@ -707,7 +707,7 @@ class ProfileScreenTest {
       }
     }
 
-    composeTestRule.onNodeWithText("Delete Profile").performClick()
+    composeTestRule.onNodeWithText("Clear Profile").performClick()
     assert(confirmed)
   }
 

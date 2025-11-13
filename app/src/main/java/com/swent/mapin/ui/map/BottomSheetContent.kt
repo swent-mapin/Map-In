@@ -38,6 +38,7 @@ import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSection
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
@@ -135,7 +136,8 @@ fun BottomSheetContent(
     onProfileClick: () -> Unit = {},
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
-    profileViewModel: ProfileViewModel
+    profileViewModel: ProfileViewModel,
+    eventViewModel: EventViewModel
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -173,6 +175,7 @@ fun BottomSheetContent(
           BottomSheetScreen.ADD_EVENT -> {
             AddEventScreen(
                 modifier = Modifier.testTag(AddEventScreenTestTags.SCREEN),
+                eventViewModel = eventViewModel,
                 onCancel = onCreateEventDone,
                 onDone = onCreateEventDone)
           }

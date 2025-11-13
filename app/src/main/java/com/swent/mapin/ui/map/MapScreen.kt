@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,9 +43,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mapbox.geojson.Point
@@ -72,11 +75,13 @@ import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.event.EventDetailSheet
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.ShareEventDialog
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
@@ -86,7 +91,6 @@ import com.swent.mapin.ui.map.components.ObserveSheetStateForZoomUpdate
 import com.swent.mapin.ui.map.components.ObserveZoomForSheetCollapse
 import com.swent.mapin.ui.map.components.ScrimOverlay
 import com.swent.mapin.ui.map.components.SheetInteractionMetrics
-import com.swent.mapin.ui.map.components.TopGradient
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
 import com.swent.mapin.ui.map.components.createEventAnnotations
@@ -122,6 +126,8 @@ fun MapScreen(
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
+  val eventViewModel =
+      EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
   val snackbarHostState = remember { SnackbarHostState() }
   val density = LocalDensity.current
   val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
@@ -300,6 +306,22 @@ fun MapScreen(
         else -> isSystemInDark // "system" or default
       }
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
+  val view = LocalView.current
+
+  // Force white status bar icons on light-mode satellite maps for readability
+  val defaultLightStatusBars = !isDarkTheme
+  val desiredLightStatusBars =
+      if (defaultLightStatusBars && viewModel.useSatelliteStyle) {
+        false
+      } else {
+        defaultLightStatusBars
+      }
+
+  DisposableEffect(view, desiredLightStatusBars, defaultLightStatusBars) {
+    val insetsController = ViewCompat.getWindowInsetsController(view)
+    insetsController?.isAppearanceLightStatusBars = desiredLightStatusBars
+    onDispose { insetsController?.isAppearanceLightStatusBars = defaultLightStatusBars }
+  }
 
   // Initialize standard style state with light preset only
   val standardStyleState = rememberStandardStyleState {
@@ -358,8 +380,6 @@ fun MapScreen(
     }
 
     // Overlays et contrôles au-dessus de la carte
-    TopGradient()
-
     Box(
         modifier =
             Modifier.align(Alignment.BottomStart)
@@ -495,7 +515,8 @@ fun MapScreen(
                       onProfileClick = onNavigateToProfile,
                       filterViewModel = filterViewModel,
                       locationViewModel = remember { LocationViewModel() },
-                      profileViewModel = remember { ProfileViewModel() })
+                      profileViewModel = remember { ProfileViewModel() },
+                      eventViewModel = eventViewModel)
                 }
               }
         }
