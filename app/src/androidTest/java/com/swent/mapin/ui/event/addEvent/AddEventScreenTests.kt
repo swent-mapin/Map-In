@@ -24,11 +24,15 @@ class AddEventScreenTests {
   private var cancelClicked = false
 
   @get:Rule val composeTestRule = createComposeRule()
+  val eventViewModel = mockk<EventViewModel>(relaxed = true)
 
   @Before
   fun setUp() {
     composeTestRule.setContent {
-      AddEventScreen(onDone = { saveClicked = true }, onCancel = { cancelClicked = true })
+      AddEventScreen(
+          onDone = { saveClicked = true },
+          eventViewModel = eventViewModel,
+          onCancel = { cancelClicked = true })
     }
   }
 
