@@ -294,8 +294,7 @@ fun BottomSheetContent(
                               Column(modifier = contentModifier) {
                                 QuickActionsSection(
                                     onCreateMemoryClick = onCreateMemoryClick,
-                                    onCreateEventClick = onCreateEventClick,
-                                    onNavigateToFriends = onNavigateToFriends)
+                                    onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))

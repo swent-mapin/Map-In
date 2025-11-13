@@ -41,8 +41,7 @@ fun QuickActionsSection(
     modifier: Modifier = Modifier,
     // Accept optional Event to prefill memory form (null = create generic memory)
     onCreateMemoryClick: (Event?) -> Unit,
-    onCreateEventClick: () -> Unit,
-    onNavigateToFriends: () -> Unit
+    onCreateEventClick: () -> Unit
 ) {
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
