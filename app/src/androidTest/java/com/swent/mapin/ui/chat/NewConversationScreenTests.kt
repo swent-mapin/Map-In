@@ -8,6 +8,7 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -72,26 +73,37 @@ class NewConversationScreenTest {
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).assertDoesNotExist()
   }
 
-  @Test
-  fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
-    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    @Test
+    fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
+        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-    var confirmed = false
+        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
 
-    composeTestRule.setContent {
-      NewConversationScreen(
-          friendsViewModel = mockFriendsViewModel, onConfirm = { confirmed = true })
+        var confirmed = false
+
+        composeTestRule.setContent {
+            NewConversationScreen(
+                friendsViewModel = mockFriendsViewModel,
+                conversationViewModel = mockConversationViewModel, // inject mock
+                onConfirm = { confirmed = true }
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Select Alice and confirm
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+            .performClick()
+        composeTestRule
+            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
+            .performClick()
+
+        // Verify callback and repository call
+        assert(confirmed)
+        verify { mockConversationViewModel.createConversation(any()) }
     }
-
-    // Select Alice and confirm
-    composeTestRule
-        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-        .performClick()
-    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
-
-    assert(confirmed)
-  }
 
   @Test
   fun confirmMultipleFriends_opensDialog_andCanCancel() {
