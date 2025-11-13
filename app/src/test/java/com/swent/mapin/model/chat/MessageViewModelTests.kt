@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.*
 import org.junit.*
 import org.mockito.kotlin.*
 
+// Assisted by AI
 @ExperimentalCoroutinesApi
 class MessageViewModelTest {
 

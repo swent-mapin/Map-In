@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 
+// Assisted by AI
 class ConversationRepositoryFirestoreTest {
 
   private lateinit var mockDb: FirebaseFirestore

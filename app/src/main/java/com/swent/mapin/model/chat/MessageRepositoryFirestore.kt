@@ -94,7 +94,12 @@ class MessageRepositoryFirestore(
         }
         .await()
   }
-
+  /**
+   * Load more messages when the user Scrolls up
+   *
+   * @param conversationId The ID of the conversation
+   * @param lastVisible The last visible snapshot in the conversation
+   */
   override suspend fun loadMoreMessages(
       conversationId: String,
       lastVisible: DocumentSnapshot

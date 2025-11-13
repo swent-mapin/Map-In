@@ -30,11 +30,12 @@ class ConversationViewModel(
   val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
 
   var currentUserProfile: UserProfile = UserProfile()
-
+  /** Get a new unique identifier for a conversation. */
   fun getNewUID(): String {
     return conversationRepository.getNewUid()
   }
 
+  /** Fetches the current user's profile from the repository. */
   fun getCurrentUserProfile() {
     viewModelScope.launch {
       val userId = currentUserIdProvider()
@@ -47,6 +48,7 @@ class ConversationViewModel(
     }
   }
 
+  /** Observes conversations for the current user with live updates. */
   fun observeConversations() {
     viewModelScope.launch {
       conversationRepository.observeConversationsForCurrentUser().collect { conversations ->
@@ -54,7 +56,11 @@ class ConversationViewModel(
       }
     }
   }
-
+  /**
+   * Creates a new conversation in the repository.
+   *
+   * @param conversation The conversation to be created
+   */
   fun createConversation(conversation: Conversation) {
     viewModelScope.launch { conversationRepository.addConversation(conversation) }
   }

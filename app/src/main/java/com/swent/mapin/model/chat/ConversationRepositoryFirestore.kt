@@ -19,11 +19,15 @@ class ConversationRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ConversationRepository {
-
+  /** Generates a new unique identifier for a conversation. */
   override fun getNewUid(): String {
     return db.collection("conversations").document().id
   }
-
+  /**
+   * Observes conversations for the current user with live updates.
+   *
+   * @return A Flow emitting lists of [Conversation] objects.
+   */
   override fun observeConversationsForCurrentUser(): Flow<List<Conversation>> = callbackFlow {
     val uid =
         auth.currentUser?.uid
@@ -55,7 +59,11 @@ class ConversationRepositoryFirestore(
 
     awaitClose { listener.remove() }
   }
-
+  /**
+   * Adds a new conversation to Firestore.
+   *
+   * @param conversation The [Conversation] object to add.
+   */
   override suspend fun addConversation(conversation: Conversation) {
     val conversationRef = db.collection("conversations").document(conversation.id)
 
