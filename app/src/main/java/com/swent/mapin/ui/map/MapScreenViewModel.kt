@@ -24,7 +24,7 @@ import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
-import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -41,6 +41,8 @@ import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+// Assisted by AI tools
+
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
@@ -49,8 +51,7 @@ class MapScreenViewModel(
     private val sheetConfig: BottomSheetConfig,
     onClearFocus: () -> Unit,
     private val applicationContext: Context,
-    private val memoryRepository: com.swent.mapin.model.memory.MemoryRepository =
-        MemoryRepositoryProvider.getRepository(),
+    private val memoryRepository: MemoryRepository = MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
@@ -68,10 +69,7 @@ class MapScreenViewModel(
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
-          applicationContext = applicationContext,
-          eventRepository = eventRepository,
-          onClearFocus = ::clearSearchFieldFocus,
-          scope = viewModelScope)
+          applicationContext = applicationContext, onClearFocus = ::clearSearchFieldFocus)
   private val bottomSheetStateController =
       BottomSheetStateController(
           sheetConfig = sheetConfig,
@@ -122,12 +120,11 @@ class MapScreenViewModel(
     get() = searchStateController.shouldFocusSearch
 
   // Visible events for map (after filtering)
-  private var _events by mutableStateOf(LocalEventRepository.defaultSampleEvents())
   val events: List<Event>
-    get() = _events
+    get() = eventStateController.allEvents
 
   val searchResults: List<Event>
-    get() = searchStateController.searchResults
+    get() = eventStateController.searchResults
 
   fun setCenterCameraCallback(callback: (Event, Boolean) -> Unit) {
     cameraController.centerCameraCallback = callback
@@ -226,15 +223,6 @@ class MapScreenViewModel(
   // Track the sheet state before opening event to restore it correctly
   private var _sheetStateBeforeEvent by mutableStateOf<BottomSheetState?>(null)
 
-  // Tag filtering
-  private var _selectedTags by mutableStateOf<Set<String>>(emptySet())
-  val selectedTags: Set<String>
-    get() = _selectedTags
-
-  private var _topTags by mutableStateOf<List<String>>(emptyList())
-  val topTags: List<String>
-    get() = _topTags
-
   val recentItems: List<RecentItem>
     get() = searchStateController.recentItems
 
@@ -279,17 +267,16 @@ class MapScreenViewModel(
   }
 
   init {
+    eventStateController.observeFilters()
     // Load map style preference
     loadMapStylePreference()
 
-    // Initialize with sample events quickly, then load remote data
-    loadInitialSamples()
-    // Preload events so the form has immediate data
-    refreshEventsDataset()
+    // Load events
     eventStateController.refreshEventsList()
     eventStateController.loadSavedEvents()
-    _topTags = getTopTags()
-    // Preload events both for searching and memory linking
+    eventStateController.loadJoinedEvents()
+
+    // Load user profile
     loadUserProfile()
 
     registerAuthStateListener()
@@ -344,38 +331,13 @@ class MapScreenViewModel(
             _avatarUrl = null
           } else {
             // Signed in → (re)load user-scoped data
-            eventStateController.loadSavedEvents()
             eventStateController.refreshEventsList()
+            eventStateController.loadSavedEvents()
+            eventStateController.loadJoinedEvents()
             loadUserProfile()
           }
         }
     auth.addAuthStateListener(authListener!!)
-  }
-
-  /** Loads initial sample events synchronously for immediate UI responsiveness. */
-  private fun loadInitialSamples() {
-    applyEvents(searchStateController.initializeWithSamples(_selectedTags))
-  }
-
-  /** Returns the top 5 most frequent tags across all events. */
-  private fun getTopTags(count: Int = 5): List<String> {
-    val events = LocalEventRepository.defaultSampleEvents()
-    val tagCounts = mutableMapOf<String, Int>()
-
-    events.forEach { event ->
-      event.tags.forEach { tag -> tagCounts[tag] = tagCounts.getOrDefault(tag, 0) + 1 }
-    }
-
-    return tagCounts.entries.sortedByDescending { it.value }.take(count).map { it.key }
-  }
-
-  private fun refreshEventsDataset() {
-    searchStateController.loadRemoteEvents(_selectedTags) { filtered -> applyEvents(filtered) }
-  }
-
-  private fun applyEvents(newEvents: List<Event>) {
-    _events = newEvents
-    eventStateController.refreshEventsList()
   }
 
   fun onZoomChange(newZoom: Float) {
@@ -415,7 +377,8 @@ class MapScreenViewModel(
     val shouldClear = transition.leftFull && !hasCommittedSearch
 
     if (resetSearch && shouldClear && !_showMemoryForm) {
-      applyEvents(searchStateController.resetSearchState(_selectedTags))
+      searchStateController.resetSearchState()
+      eventStateController.clearSearchResults()
     }
   }
 
@@ -424,7 +387,8 @@ class MapScreenViewModel(
       searchStateController.requestFocus()
       setBottomSheetState(BottomSheetState.FULL)
     }
-    applyEvents(searchStateController.onSearchQueryChange(query, _selectedTags))
+    searchStateController.onSearchQueryChange(query)
+    eventStateController.searchEvents(query)
   }
 
   fun onSearchTap() {
@@ -441,16 +405,15 @@ class MapScreenViewModel(
 
   /** Called when user submits a search (presses enter or search button). */
   fun onSearchSubmit() {
-    val filteredEvents = searchStateController.onSearchSubmit(_selectedTags) ?: return
-    applyEvents(filteredEvents)
+    searchStateController.onSearchSubmit()
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
 
   /** Applies a recent search query from history. */
   fun applyRecentSearch(query: String) {
-    val filteredEvents = searchStateController.applyRecentSearch(query, _selectedTags) ?: return
-    applyEvents(filteredEvents)
+    searchStateController.applyRecentSearch(query)
+    eventStateController.searchEvents(query)
     setBottomSheetState(BottomSheetState.MEDIUM, resetSearch = false)
     focusCameraOnSearchResults()
   }
@@ -463,7 +426,8 @@ class MapScreenViewModel(
   }
 
   fun onClearSearch() {
-    _events = searchStateController.resetSearchState(_selectedTags)
+    searchStateController.resetSearchState()
+    eventStateController.clearSearchResults()
     setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
@@ -568,15 +532,6 @@ class MapScreenViewModel(
     _previousSheetState = null
   }
 
-  fun setEvents(newEvents: List<Event>) {
-    applyEvents(searchStateController.setEventsFromExternalSource(newEvents, _selectedTags))
-  }
-
-  fun toggleTagSelection(tag: String) {
-    _selectedTags = if (_selectedTags.contains(tag)) _selectedTags - tag else _selectedTags + tag
-    applyEvents(searchStateController.refreshFilters(_selectedTags))
-  }
-
   fun setBottomSheetTab(tab: BottomSheetTab) {
     _selectedBottomSheetTab = tab
   }
@@ -608,7 +563,7 @@ class MapScreenViewModel(
 
   /** Handles event click from recent items by finding the event and showing details. */
   fun onRecentEventClicked(eventId: String) {
-    val event = searchStateController.findEventById(eventId)
+    val event = eventStateController.allEvents.find { it.uid == eventId }
     if (event != null) {
       _cameFromSearch = true
       // Recent events are always committed searches (not editing)
@@ -640,7 +595,7 @@ class MapScreenViewModel(
       // Restore focus if user was typing (editing), otherwise just show search results
       searchStateController.setFocusRequested(wasEditing)
       wasEditingBeforeEvent = false // Reset for next time
-      applyEvents(searchStateController.refreshFilters(_selectedTags))
+
       // Return to FULL if user was editing, otherwise restore previous sheet state
       // (FULL for recents, MEDIUM for search results)
       val targetState =
@@ -685,42 +640,60 @@ class MapScreenViewModel(
     _showShareDialog = false
   }
 
-  fun isUserParticipating(): Boolean {
-    val currentUserId = auth.currentUser?.uid ?: return false
-    return _selectedEvent?.participantIds?.contains(currentUserId) ?: false
+  fun isEventJoined(event: Event? = _selectedEvent): Boolean {
+    return if (event == null) {
+      false
+    } else {
+      joinedEvents.any { it.uid == event.uid }
+    }
   }
 
-  fun isUserParticipating(event: Event): Boolean {
-    val currentUserId = auth.currentUser?.uid ?: return false
-    return event.participantIds.contains(currentUserId)
+  fun isEventSaved(event: Event? = _selectedEvent): Boolean {
+    return if (event == null) {
+      false
+    } else {
+      savedEvents.any { it.uid == event.uid }
+    }
   }
 
-  fun isEventSaved(event: Event): Boolean {
-    return savedEvents.contains(event)
-  }
-
+  /** Add the selected event to the current user's joined events. */
   fun joinEvent() {
-    eventStateController.joinSelectedEvent()
+    val currentEvent = _selectedEvent ?: return
+
+    viewModelScope.launch {
+      eventStateController.joinSelectedEvent()
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+    }
   }
 
+  /** Remove the selected event from the current user's joined events. */
   fun unregisterFromEvent() {
-    eventStateController.leaveSelectedEvent()
+    val currentEvent = _selectedEvent ?: return
+
+    viewModelScope.launch {
+      eventStateController.leaveSelectedEvent()
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+    }
   }
 
-  /**
-   * Saves the selected event for later by the current user. Implemented with the help of AI
-   * generated code.
-   */
+  /** Saves the selected event for later by the current user. */
   fun saveEventForLater() {
-    eventStateController.saveSelectedEvent()
+    val currentEvent = _selectedEvent ?: return
+
+    viewModelScope.launch {
+      eventStateController.saveSelectedEvent()
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+    }
   }
 
-  /**
-   * Unsaves the selected event for later by the current user. Implemented with the help of AI
-   * generated code.
-   */
+  /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
-    eventStateController.unsaveSelectedEvent()
+    val currentEvent = _selectedEvent ?: return
+
+    viewModelScope.launch {
+      eventStateController.unsaveSelectedEvent()
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+    }
   }
 
   /**

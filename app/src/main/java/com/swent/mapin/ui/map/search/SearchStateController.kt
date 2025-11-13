@@ -7,42 +7,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import com.google.gson.Gson
-import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.event.EventRepositoryProvider
-import com.swent.mapin.model.event.LocalEventRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
-/** Recent item shown in the search section: either a past query or a clicked event. */
+/** Represents an item in recent searches — now only text queries. */
 sealed class RecentItem {
   data class Search(val query: String) : RecentItem()
 
   data class ClickedEvent(val eventId: String, val eventTitle: String) : RecentItem()
 }
 
-/**
- * Encapsulates all search-related state (query, filtering, recents and event dataset). The
- * controller owns the current event list used for search, exposes Compose-friendly state for the
- * UI, and persists recent items to SharedPreferences.
- */
+/** Handles search query text, focus state, and persistence of recent searches. */
 class SearchStateController(
     private val applicationContext: Context,
-    private val eventRepository: EventRepository,
     private val onClearFocus: () -> Unit,
-    private val scope: CoroutineScope,
-    private val localEventsProvider: () -> List<Event> = {
-      LocalEventRepository.defaultSampleEvents()
-    }
 ) {
 
   private var _searchQuery by mutableStateOf("")
   val searchQuery: String
     get() = _searchQuery
-
-  private var _searchResults by mutableStateOf<List<Event>>(emptyList())
-  val searchResults: List<Event>
-    get() = _searchResults
 
   private var _recentItems by mutableStateOf<List<RecentItem>>(emptyList())
   val recentItems: List<RecentItem>
@@ -60,61 +41,13 @@ class SearchStateController(
   val clearSearchOnExitFull: Boolean
     get() = _clearSearchOnExitFull
 
-  private var allEvents: List<Event> = emptyList()
-
   init {
     loadRecentSearches()
   }
 
-  fun initializeWithSamples(selectedTags: Set<String>): List<Event> {
-    allEvents = localEventsProvider()
-    return applyFilters(selectedTags)
-  }
-
-  fun loadRemoteEvents(selectedTags: Set<String>, onEventsUpdated: (List<Event>) -> Unit) {
-    scope.launch {
-      try {
-        val events = eventRepository.getAllEvents()
-        val filtered = setEvents(events, selectedTags)
-        onEventsUpdated(filtered)
-      } catch (primary: Exception) {
-        Log.e(TAG, "Error loading events from repository", primary)
-        try {
-          val fallback = EventRepositoryProvider.createLocalRepository().getAllEvents()
-          val filtered = setEvents(fallback, selectedTags)
-          onEventsUpdated(filtered)
-        } catch (fallbackError: Exception) {
-          Log.e(TAG, "Failed to load fallback events", fallbackError)
-          allEvents = emptyList()
-          onEventsUpdated(applyFilters(selectedTags))
-        }
-      }
-    }
-  }
-
-  fun refreshFilters(selectedTags: Set<String>): List<Event> = applyFilters(selectedTags)
-
-  fun setEventsFromExternalSource(events: List<Event>, selectedTags: Set<String>): List<Event> =
-      setEvents(events, selectedTags)
-
-  fun replaceEvent(updatedEvent: Event, selectedTags: Set<String>): List<Event> {
-    if (allEvents.isEmpty()) {
-      allEvents = localEventsProvider()
-    }
-    val existingIndex = allEvents.indexOfFirst { it.uid == updatedEvent.uid }
-    allEvents =
-        if (existingIndex >= 0) {
-          allEvents.toMutableList().also { it[existingIndex] = updatedEvent }
-        } else {
-          allEvents + updatedEvent
-        }
-    return applyFilters(selectedTags)
-  }
-
-  fun onSearchQueryChange(query: String, selectedTags: Set<String>): List<Event> {
+  fun onSearchQueryChange(query: String) {
     _searchQuery = query
     markSearchEditing()
-    return applyFilters(selectedTags)
   }
 
   fun requestFocus() {
@@ -129,9 +62,10 @@ class SearchStateController(
     _shouldFocusSearch = false
   }
 
-  fun onSearchSubmit(selectedTags: Set<String>): List<Event>? {
+  /** Called when the user submits the search — just trims and logs the query. */
+  fun onSearchSubmit() {
     val trimmed = _searchQuery.trim()
-    if (trimmed.isEmpty()) return null
+    if (trimmed.isEmpty()) return
 
     if (trimmed != _searchQuery) {
       _searchQuery = trimmed
@@ -140,20 +74,19 @@ class SearchStateController(
     markSearchCommitted()
     saveRecentSearch(trimmed)
     onClearFocus()
-    return applyFilters(selectedTags)
   }
 
-  fun applyRecentSearch(query: String, selectedTags: Set<String>): List<Event>? {
+  /** Called when a user taps a recent search item. */
+  fun applyRecentSearch(query: String) {
     val trimmed = query.trim()
-    if (trimmed.isEmpty()) return null
+    if (trimmed.isEmpty()) return
     _searchQuery = trimmed
     markSearchCommitted()
     saveRecentSearch(trimmed)
     onClearFocus()
-    return applyFilters(selectedTags)
   }
 
-  fun resetSearchState(selectedTags: Set<String>): List<Event> {
+  fun resetSearchState() {
     isSearchActivated = false
     _shouldFocusSearch = false
     onClearFocus()
@@ -161,7 +94,6 @@ class SearchStateController(
     if (_searchQuery.isNotEmpty()) {
       _searchQuery = ""
     }
-    return applyFilters(selectedTags)
   }
 
   fun saveRecentEvent(eventId: String, eventTitle: String) {
@@ -190,8 +122,6 @@ class SearchStateController(
       Log.e(TAG, "Failed to clear recent items", e)
     }
   }
-
-  fun findEventById(eventId: String): Event? = allEvents.find { it.uid == eventId }
 
   fun hasQuery(): Boolean = _searchQuery.isNotBlank()
 
@@ -224,48 +154,6 @@ class SearchStateController(
   fun markSearchCommitted() {
     isSearchActivated = true
     _clearSearchOnExitFull = false
-  }
-
-  private fun setEvents(events: List<Event>, selectedTags: Set<String>): List<Event> {
-    allEvents = events
-    return applyFilters(selectedTags)
-  }
-
-  private fun applyFilters(selectedTags: Set<String>): List<Event> {
-    val base = allEvents.ifEmpty { localEventsProvider() }
-
-    val tagFiltered =
-        if (selectedTags.isEmpty()) {
-          base
-        } else {
-          base.filter { event ->
-            event.tags.any { tag -> selectedTags.any { sel -> tag.equals(sel, ignoreCase = true) } }
-          }
-        }
-
-    val finalList =
-        if (_searchQuery.isBlank()) {
-          tagFiltered
-        } else {
-          filterEvents(_searchQuery, tagFiltered)
-        }
-
-    _searchResults = if (_searchQuery.isBlank()) emptyList() else finalList
-    return finalList
-  }
-
-  private fun filterEvents(query: String, source: List<Event>): List<Event> {
-    val trimmed = query.trim()
-    if (trimmed.isEmpty()) return source
-
-    val normalized = trimmed.lowercase()
-    return source.filter { event ->
-      val titleMatch = event.title.lowercase().contains(normalized)
-      val descriptionMatch = event.description.lowercase().contains(normalized)
-      val tagsMatch = event.tags.any { tag -> tag.lowercase().contains(normalized) }
-      val locationMatch = event.location.name.lowercase().contains(normalized)
-      titleMatch || descriptionMatch || tagsMatch || locationMatch
-    }
   }
 
   private fun saveRecentSearch(query: String) {

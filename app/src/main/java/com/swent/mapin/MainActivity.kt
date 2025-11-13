@@ -32,11 +32,11 @@ class MainActivity : ComponentActivity() {
     MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
 
     // Initialize EventRepositoryFirestore (uncomment to use Firestore backend)
-    // EventRepositoryProvider.init(this)
-    // EventRepositoryProvider.setRepository(EventRepositoryProvider.getRepository())
+    EventRepositoryProvider.init(this)
+    EventRepositoryProvider.getRepository()
 
     // Initialize LocalEventRepository
-    EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
+    // EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }

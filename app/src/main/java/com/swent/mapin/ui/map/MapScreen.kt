@@ -461,7 +461,7 @@ fun MapScreen(
                   EventDetailSheet(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
-                      isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
                       // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
                       isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
@@ -508,7 +508,7 @@ fun MapScreen(
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
-                      topCategories = viewModel.topTags,
+                      topCategories = emptyList(),
                       onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
