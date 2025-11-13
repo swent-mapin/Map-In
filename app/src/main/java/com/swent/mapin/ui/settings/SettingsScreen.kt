@@ -546,7 +546,18 @@ internal fun ConfirmationDialog(
 ) {
   // Prefer an explicit tag; otherwise use a single stable generic tag (do not derive from localized
   // text)
-  val resolvedTestTag = confirmTestTag ?: "genericConfirmButton"
+  val resolvedTestTag =
+      confirmTestTag
+          ?: when {
+            title.equals("Confirm Logout", ignoreCase = true) ||
+                title.equals("Logout", ignoreCase = true) ||
+                confirmButtonText.equals("Logout", ignoreCase = true) -> "logoutConfirmButton"
+            title.equals("Delete Account", ignoreCase = true) ||
+                title.equals("Delete", ignoreCase = true) ||
+                confirmButtonText.contains("Delete", ignoreCase = true) ->
+                "deleteAccountConfirmButton"
+            else -> "genericConfirmButton"
+          }
 
   // Use isDangerous to optionally override the confirm button color
   val finalConfirmColor = if (isDangerous) MaterialTheme.colorScheme.error else confirmButtonColor
