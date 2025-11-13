@@ -23,7 +23,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Instrumented test, which will execute on an Android device. */
+/**
+ * Tests for the [AttendedEventsSection] composable.
+ * Assisted with AI.
+ */
 @RunWith(AndroidJUnit4::class)
 class AttendedEventsSectionTest {
 

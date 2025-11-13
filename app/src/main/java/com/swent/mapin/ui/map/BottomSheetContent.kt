@@ -346,6 +346,7 @@ fun BottomSheetContent(
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // Attended events section
                                 AttendedEventsSection(
                                     availableEvents, userProfile, onEventClick, onCreateMemoryClick)
 
