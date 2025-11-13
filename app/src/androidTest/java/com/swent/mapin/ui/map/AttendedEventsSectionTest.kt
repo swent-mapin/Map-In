@@ -14,7 +14,6 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.memory.MemoryFormScreen
@@ -31,15 +30,10 @@ class AttendedEventsSectionTest {
 
   @Test
   fun attendedEventsSection_showsEmptyMessage_whenNoAttendedEvents() {
-    val userProfile = UserProfile(userId = "testUser", participatingEventIds = emptyList())
-
     composeTestRule.setContent {
       MaterialTheme {
         AttendedEventsSection(
-            availableEvents = emptyList(),
-            userProfile = userProfile,
-            onEventClick = {},
-            onCreateMemoryClick = {})
+            attendedEvents = emptyList(), onEventClick = {}, onCreateMemoryClick = {})
       }
     }
 
@@ -70,15 +64,10 @@ class AttendedEventsSectionTest {
             participantIds = listOf("testUser"),
             price = 0.0)
 
-    val userProfile = UserProfile(userId = "testUser", participatingEventIds = listOf(uid))
-
     composeTestRule.setContent {
       MaterialTheme {
         AttendedEventsSection(
-            availableEvents = listOf(event),
-            userProfile = userProfile,
-            onEventClick = {},
-            onCreateMemoryClick = {})
+            attendedEvents = listOf(event), onEventClick = {}, onCreateMemoryClick = {})
       }
     }
 
@@ -111,8 +100,6 @@ class AttendedEventsSectionTest {
             participantIds = listOf("testUser"),
             price = 0.0)
 
-    val userProfile = UserProfile(userId = "testUser", participatingEventIds = listOf(uid))
-
     composeTestRule.setContent {
       MaterialTheme {
         val memoryEvent = remember { mutableStateOf<Event?>(null) }
@@ -121,8 +108,7 @@ class AttendedEventsSectionTest {
         val selected = memoryEvent.value
         if (selected == null) {
           AttendedEventsSection(
-              availableEvents = listOf(event),
-              userProfile = userProfile,
+              attendedEvents = listOf(event),
               onEventClick = {},
               onCreateMemoryClick = { memoryEvent.value = it })
         } else {
