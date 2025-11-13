@@ -1,4 +1,4 @@
-package com.swent.mapin.model.message
+package com.swent.mapin.model.chat
 
 import com.swent.mapin.ui.chat.Conversation
 import kotlinx.coroutines.flow.Flow

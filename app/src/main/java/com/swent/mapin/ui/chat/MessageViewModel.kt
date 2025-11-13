@@ -6,8 +6,8 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.firestore
-import com.swent.mapin.model.message.MessageRepository
-import com.swent.mapin.model.message.MessageRepositoryFirestore
+import com.swent.mapin.model.chat.MessageRepository
+import com.swent.mapin.model.chat.MessageRepositoryFirestore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

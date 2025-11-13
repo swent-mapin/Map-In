@@ -58,6 +58,7 @@ object NewConversationScreenTestTags {
   const val CONFIRM_BUTTON = "confirmButton"
   const val BACK_BUTTON = "backButton"
   const val FRIEND_ITEM = "friend"
+  const val GROUP_NAME_DIALOG_TEXT = "groupText"
 }
 
 /**
@@ -101,7 +102,7 @@ fun NewConversationScreen(
               if (selectedFriends.isNotEmpty()) {
                 IconButton(
                     onClick = {
-                      if (selectedFriends.size > 2) {
+                      if (selectedFriends.size >= 2) {
                         showGroupNameDialog.value = true
                       } else {
                         val friend = selectedFriends.first()
@@ -214,7 +215,11 @@ fun NewConversationScreen(
   if (showGroupNameDialog.value) {
     AlertDialog(
         onDismissRequest = { showGroupNameDialog.value = false },
-        title = { Text("Enter Group Name") },
+        title = {
+          Text(
+              "Enter Group Name",
+              modifier = Modifier.testTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT))
+        },
         text = {
           androidx.compose.material3.TextField(
               value = groupName.value,

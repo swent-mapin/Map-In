@@ -7,8 +7,8 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
-import com.swent.mapin.model.message.ConversationRepository
-import com.swent.mapin.model.message.ConversationRepositoryFirestore
+import com.swent.mapin.model.chat.ConversationRepository
+import com.swent.mapin.model.chat.ConversationRepositoryFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +18,8 @@ class ConversationViewModel(
     private val conversationRepository: ConversationRepository =
         ConversationRepositoryFirestore(db = Firebase.firestore, auth = Firebase.auth),
     private val userProfileRepository: UserProfileRepository =
-        UserProfileRepository(Firebase.firestore)
+        UserProfileRepository(Firebase.firestore),
+    private val currentUserIdProvider: () -> String? = { Firebase.auth.currentUser?.uid }
 ) : ViewModel() {
 
   init {
@@ -36,7 +37,7 @@ class ConversationViewModel(
 
   fun getCurrentUserProfile() {
     viewModelScope.launch {
-      val userId = Firebase.auth.currentUser?.uid
+      val userId = currentUserIdProvider()
       if (userId != null) {
         val profile = userProfileRepository.getUserProfile(userId)
         if (profile != null) {

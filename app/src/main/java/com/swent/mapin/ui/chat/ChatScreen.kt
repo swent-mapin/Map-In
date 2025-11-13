@@ -102,13 +102,13 @@ fun ConversationItem(
         if (conversation.profilePictureUrl.isNullOrBlank()) {
           Icon(
               imageVector = Icons.Default.AccountCircle,
-              contentDescription = null,
+              contentDescription = "DefaultProfile",
               tint = Color.Gray,
               modifier = Modifier.size(48.dp).clip(CircleShape))
         } else {
           Image(
               painter = rememberAsyncImagePainter(conversation.profilePictureUrl),
-              contentDescription = null,
+              contentDescription = "CustomProfile",
               modifier = Modifier.size(48.dp).clip(CircleShape))
         }
 

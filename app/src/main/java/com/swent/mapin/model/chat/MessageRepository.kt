@@ -1,4 +1,4 @@
-package com.swent.mapin.model.message
+package com.swent.mapin.model.chat
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.swent.mapin.ui.chat.Message
