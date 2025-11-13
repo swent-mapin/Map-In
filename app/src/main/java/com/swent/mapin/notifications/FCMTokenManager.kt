@@ -9,10 +9,23 @@ import kotlinx.coroutines.tasks.await
 /**
  * Manager for FCM (Firebase Cloud Messaging) tokens and push notifications.
  *
+ * **Multi-Device Approach:** This manager uses a multi-device token storage strategy, storing FCM
+ * tokens in an array (`fcmTokens`) in Firestore rather than a single token field. This allows users
+ * to receive push notifications on all their devices (phone, tablet, etc.) simultaneously.
+ *
+ * When a user logs in on a new device, the token is added to the array. When they log out or
+ * disable notifications, only that device's token is removed from the array, preserving tokens for
+ * other devices.
+ *
  * This class handles:
- * - Getting and refreshing FCM tokens
- * - Saving tokens to Firestore for the current user
- * - Subscribing to notification topics
+ * - Getting and refreshing FCM tokens for the current device
+ * - Adding tokens to the user's fcmTokens array in Firestore (multi-device support)
+ * - Removing tokens from the array on logout or when notifications are disabled
+ * - Subscribing/unsubscribing to notification topics for group messaging
+ *
+ * @property messaging FirebaseMessaging instance for FCM operations
+ * @property firestore FirebaseFirestore instance for token persistence
+ * @property auth FirebaseAuth instance for user identification
  */
 class FCMTokenManager(
     private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance(),
@@ -23,7 +36,6 @@ class FCMTokenManager(
   companion object {
     private const val TAG = "FCMTokenManager"
     private const val COLLECTION_USERS = "users"
-    private const val FIELD_FCM_TOKEN = "fcmToken"
     private const val FIELD_FCM_TOKENS = "fcmTokens" // For multi-device support
   }
 
@@ -41,54 +53,21 @@ class FCMTokenManager(
   }
 
   /**
-   * Save the FCM token to Firestore for the current user. This allows sending push notifications to
-   * this user's device(s).
-   *
-   * @param token The FCM token to save (if null, gets current token)
-   * @return Boolean indicating success
-   */
-  suspend fun saveTokenForCurrentUser(token: String? = null): Boolean {
-    val userId = auth.currentUser?.uid ?: return false
-    val fcmToken = token ?: getToken() ?: return false
-
-    return try {
-      // Option 1: Single token (replaces old token)
-      firestore
-          .collection(COLLECTION_USERS)
-          .document(userId)
-          .update(FIELD_FCM_TOKEN, fcmToken)
-          .await()
-
-      println("FCMTokenManager: Token saved successfully for user $userId")
-      true
-    } catch (e: Exception) {
-      // If update fails, try set (for new users)
-      try {
-        firestore
-            .collection(COLLECTION_USERS)
-            .document(userId)
-            .set(
-                mapOf(FIELD_FCM_TOKEN to fcmToken),
-                com.google.firebase.firestore.SetOptions.merge())
-            .await()
-        true
-      } catch (e2: Exception) {
-        Log.e(TAG, "Failed to save FCM token for user: $userId", e2)
-        false
-      }
-    }
-  }
-
-  /**
    * Save FCM token to support multiple devices per user. Stores tokens in an array instead of
-   * replacing.
+   * replacing. This allows users to receive notifications on all their devices (phone, tablet,
+   * etc.).
    *
-   * @param token The FCM token to add
+   * @param token The FCM token to add (if null, gets current token)
    * @return Boolean indicating success
    */
   suspend fun addTokenForCurrentUser(token: String? = null): Boolean {
     val userId = auth.currentUser?.uid ?: return false
     val fcmToken = token ?: getToken() ?: return false
+
+    if (fcmToken.isBlank()) {
+      Log.e(TAG, "Cannot save empty FCM token")
+      return false
+    }
 
     return try {
       firestore
@@ -96,6 +75,7 @@ class FCMTokenManager(
           .document(userId)
           .update(FIELD_FCM_TOKENS, com.google.firebase.firestore.FieldValue.arrayUnion(fcmToken))
           .await()
+      Log.d(TAG, "FCM token added successfully for user: $userId")
       true
     } catch (e: Exception) {
       // If update fails, try set with merge
@@ -107,9 +87,13 @@ class FCMTokenManager(
                 mapOf(FIELD_FCM_TOKENS to listOf(fcmToken)),
                 com.google.firebase.firestore.SetOptions.merge())
             .await()
+        Log.d(TAG, "FCM token added successfully for user: $userId (via set)")
         true
       } catch (e2: Exception) {
-        Log.e(TAG, "Failed to add FCM token for user: $userId", e2)
+        Log.e(
+            TAG,
+            "Failed to add FCM token for user: $userId. Update error: ${e.message}, Set error: ${e2.message}",
+            e2)
         false
       }
     }
@@ -129,6 +113,7 @@ class FCMTokenManager(
           .document(userId)
           .update(FIELD_FCM_TOKENS, com.google.firebase.firestore.FieldValue.arrayRemove(fcmToken))
           .await()
+      Log.d(TAG, "FCM token removed successfully for user: $userId")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to remove FCM token for user: $userId", e)
@@ -145,7 +130,7 @@ class FCMTokenManager(
   suspend fun subscribeToTopic(topic: String): Boolean {
     return try {
       messaging.subscribeToTopic(topic).await()
-      println("FCMTokenManager: Subscribed to topic: $topic")
+      Log.d(TAG, "Subscribed to topic: $topic")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to subscribe to topic: $topic", e)
@@ -161,7 +146,7 @@ class FCMTokenManager(
   suspend fun unsubscribeFromTopic(topic: String): Boolean {
     return try {
       messaging.unsubscribeFromTopic(topic).await()
-      println("FCMTokenManager: Unsubscribed from topic: $topic")
+      Log.d(TAG, "Unsubscribed from topic: $topic")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to unsubscribe from topic: $topic", e)
@@ -176,7 +161,7 @@ class FCMTokenManager(
   suspend fun deleteToken(): Boolean {
     return try {
       messaging.deleteToken().await()
-      println("FCMTokenManager: Token deleted")
+      Log.d(TAG, "Token deleted")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to delete FCM token", e)
@@ -187,6 +172,6 @@ class FCMTokenManager(
   /** Initialize FCM for the current user. Call this after user logs in. */
   suspend fun initializeForCurrentUser(): Boolean {
     val token = getToken() ?: return false
-    return saveTokenForCurrentUser(token)
+    return addTokenForCurrentUser(token)
   }
 }
