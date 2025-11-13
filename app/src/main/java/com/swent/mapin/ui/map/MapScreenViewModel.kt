@@ -41,6 +41,8 @@ import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+// Assisted by AI tools
+
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
@@ -641,6 +643,7 @@ class MapScreenViewModel(
     }
   }
 
+  /** Add the selected event to the current user's joined events. */
   fun joinEvent() {
     val currentEvent = _selectedEvent ?: return
 
@@ -650,6 +653,7 @@ class MapScreenViewModel(
     }
   }
 
+  /** Remove the selected event from the current user's joined events. */
   fun unregisterFromEvent() {
     val currentEvent = _selectedEvent ?: return
 
@@ -659,10 +663,7 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Saves the selected event for later by the current user. Implemented with the help of AI
-   * generated code.
-   */
+  /** Saves the selected event for later by the current user. */
   fun saveEventForLater() {
     val currentEvent = _selectedEvent ?: return
 
@@ -672,10 +673,7 @@ class MapScreenViewModel(
     }
   }
 
-  /**
-   * Unsaves the selected event for later by the current user. Implemented with the help of AI
-   * generated code.
-   */
+  /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
     val currentEvent = _selectedEvent ?: return
 
