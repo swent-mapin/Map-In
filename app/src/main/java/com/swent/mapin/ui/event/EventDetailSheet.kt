@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.R.attr.timeZone
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
@@ -46,6 +47,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Composable that displays event details in the bottom sheet. Content changes based on the sheet
@@ -568,14 +570,17 @@ private fun AttendeeInfo(event: Event, testTagSuffix: String) {
 /** Format helpers for smart start-end date/time display. */
 @VisibleForTesting
 internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): String {
+  val zone = TimeZone.getDefault()
+  val locale = Locale.getDefault()
+
   val startDate = start.toDate()
   // Treat end equal to start as no end
   val endDateRaw = end?.toDate()
   val endDate = if (endDateRaw != null && endDateRaw.time == startDate.time) null else endDateRaw
 
-  val calStart = Calendar.getInstance().apply { time = startDate }
+  val calStart = Calendar.getInstance(zone, locale).apply { time = startDate }
   // Determine if we should show year for single events
-  val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+  val currentYear = Calendar.getInstance(zone, locale).get(Calendar.YEAR)
   val startYear = calStart.get(Calendar.YEAR)
   val showYearSingle = startYear != currentYear
 
@@ -583,7 +588,7 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
   val sameYearRange: Boolean
   val sameDayRange: Boolean
   if (endDate != null) {
-    val calEndLocal = Calendar.getInstance().apply { time = endDate }
+    val calEndLocal = Calendar.getInstance(zone, locale).apply { time = endDate }
     sameYearRange = calStart.get(Calendar.YEAR) == calEndLocal.get(Calendar.YEAR)
     sameDayRange =
         sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEndLocal.get(Calendar.DAY_OF_YEAR)
@@ -592,12 +597,13 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
     sameDayRange = false
   }
 
-  val dateFmtNoYear = SimpleDateFormat("MMM d", Locale.getDefault())
-  val dateFmtWithYear = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+  val dateFmtNoYear = SimpleDateFormat("MMM d", locale).apply { timeZone = zone }
+  val dateFmtWithYear = SimpleDateFormat("MMM d, yyyy", locale).apply { timeZone = zone }
 
   // 24-hour format always showing minutes (e.g., 13:00 or 13:30)
-  fun timeShort(d: Date): String {
-    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
+  fun timeShort(date: Date, tz: TimeZone = TimeZone.getDefault()): String {
+    val sdf = SimpleDateFormat("HH:mm", Locale.ROOT).apply { timeZone = tz }
+    return sdf.format(date)
   }
 
   return if (endDate == null) {
