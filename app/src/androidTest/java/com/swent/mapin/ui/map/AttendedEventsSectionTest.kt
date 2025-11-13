@@ -23,10 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Tests for the [AttendedEventsSection] composable.
- * Assisted with AI.
- */
+/** Tests for the [AttendedEventsSection] composable. Assisted with AI. */
 @RunWith(AndroidJUnit4::class)
 class AttendedEventsSectionTest {
 
