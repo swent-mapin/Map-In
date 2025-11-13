@@ -193,6 +193,10 @@ class MapScreenViewModel(
   val joinedEvents: List<Event>
     get() = eventStateController.joinedEvents
 
+  // New: Attended events for bottom sheet display
+  val attendedEvents: List<Event>
+    get() = eventStateController.attendedEvents
+
   // Saved events for bottom sheet display
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents

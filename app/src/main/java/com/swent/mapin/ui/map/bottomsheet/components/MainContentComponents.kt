@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
 import java.time.Instant
 import java.time.ZoneId
@@ -112,30 +111,14 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
   }
 }
 
-/**
- * Attended Events: events where the current user was a participant and the event has already ended.
- * Sorted newest first.
- */
+/** Attended Events section consuming a pre-filtered list of attended events (newest first). */
 @Composable
 fun AttendedEventsSection(
-    availableEvents: List<Event>,
-    userProfile: UserProfile,
+    attendedEvents: List<Event>,
     onEventClick: (Event) -> Unit,
     // Accepts the selected event to prefill memory creation (or null)
     onCreateMemoryClick: (Event?) -> Unit
 ) {
-  val now = System.currentTimeMillis()
-  val attendedEvents =
-      remember(availableEvents, userProfile) {
-        availableEvents
-            .filter { ev ->
-              val userId = userProfile.userId
-              val ended = ev.endDate?.toDate()?.time?.let { millis -> millis <= now } ?: false
-              ev.participantIds.contains(userId) && ended
-            }
-            .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
-      }
-
   var expanded by remember { mutableStateOf(false) }
   val visible = if (expanded) attendedEvents else attendedEvents.take(3)
 

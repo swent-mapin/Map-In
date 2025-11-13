@@ -522,6 +522,7 @@ fun MapScreen(
                       onCreateEventDone = viewModel::onAddEventCancel,
                       onTabChange = viewModel::setBottomSheetTab,
                       joinedEvents = viewModel.joinedEvents,
+                      attendedEvents = viewModel.attendedEvents,
                       savedEvents = viewModel.savedEvents,
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,

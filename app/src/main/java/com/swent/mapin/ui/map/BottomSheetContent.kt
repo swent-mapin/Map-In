@@ -95,6 +95,7 @@ private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
  * @param availableEvents List of events available for memory creation.
  * @param joinedEvents List of events the user has joined.
  * @param savedEvents List of events the user has saved.
+ * @param attendedEvents List of events the user has attended.
  * @param selectedTab Currently selected tab (SAVED_EVENTS or JOINED_EVENTS).
  * @param onEventClick Callback invoked when an event is clicked in search results.
  * @param onCreateMemoryClick Callback to show the memory creation form.
@@ -133,8 +134,9 @@ fun BottomSheetContent(
     availableEvents: List<Event> = emptyList(),
     // Optional initial event to prefill memory form when opening it
     initialMemoryEvent: Event? = null,
-    // Joined/Saved events
+    // Joined/Saved/Attended events
     joinedEvents: List<Event> = emptyList(),
+    attendedEvents: List<Event> = emptyList(),
     savedEvents: List<Event> = emptyList(),
     // Tabs & tags
     selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
@@ -345,9 +347,11 @@ fun BottomSheetContent(
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Attended events section
+                                // Attended events section (now provided from controller)
                                 AttendedEventsSection(
-                                    availableEvents, userProfile, onEventClick, onCreateMemoryClick)
+                                    attendedEvents = attendedEvents,
+                                    onEventClick = onEventClick,
+                                    onCreateMemoryClick = onCreateMemoryClick)
 
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
