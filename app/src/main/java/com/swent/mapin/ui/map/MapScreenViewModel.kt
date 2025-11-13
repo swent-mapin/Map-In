@@ -268,7 +268,15 @@ class MapScreenViewModel(
   val avatarUrl: String?
     get() = _avatarUrl
 
-  val directionViewModel = DirectionViewModel()
+  val directionViewModel: DirectionViewModel by lazy {
+    val accessToken =
+        com.swent.mapin.ui.map.directions.ApiKeyProvider.getMapboxAccessToken(applicationContext)
+    val directionsService =
+        if (accessToken.isNotEmpty()) {
+          com.swent.mapin.ui.map.directions.MapboxDirectionsService(accessToken)
+        } else null
+    DirectionViewModel(directionsService)
+  }
 
   init {
     // Load map style preference
@@ -646,8 +654,9 @@ class MapScreenViewModel(
   }
 
   /**
-   * Toggle directions display for the given event. Uses a default user location (EPFL campus) for
-   * demo purposes. Next week: integrate with actual user location from GPS/profile.
+   * Toggle directions display for the given event.
+   *
+   * Uses the user's current location if available, otherwise falls back to a default location.
    */
   fun toggleDirections(event: Event) {
     val currentState = directionViewModel.directionState
@@ -655,9 +664,13 @@ class MapScreenViewModel(
     if (currentState is DirectionState.Displayed) {
       directionViewModel.clearDirection()
     } else {
-      // Default user location: EPFL (for demo purposes)
+      val userLoc = currentLocation
       val userLocation =
-          Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+          if (userLoc != null) {
+            Point.fromLngLat(userLoc.longitude, userLoc.latitude)
+          } else {
+            Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+          }
       val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
       directionViewModel.requestDirections(userLocation, eventLocation)
