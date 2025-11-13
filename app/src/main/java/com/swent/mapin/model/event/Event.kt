@@ -8,6 +8,7 @@ import com.swent.mapin.model.Location
  * @property title event title
  * @property description event description
  * @property date event date
+ * @property endDate event end date
  * @property location location of the event (name, latitude, longitude)
  * @property tags list of event types
  * @property public is event public or private
@@ -22,6 +23,7 @@ data class Event(
     val url: String? = null,
     val description: String = "",
     val date: Timestamp? = null,
+    val endDate: Timestamp? = null,
     val location: Location = Location("", 0.0, 0.0),
     val tags: List<String> = emptyList(),
     val public: Boolean = true,
@@ -32,10 +34,17 @@ data class Event(
     val price: Double = 0.0
 ) {
   fun isValidEvent(): Boolean {
-    return ownerId.isNotBlank() &&
-        title.isNotBlank() &&
-        description.isNotBlank() &&
-        date != null &&
-        location.name.isNotBlank()
+    if (ownerId.isBlank() ||
+        title.isBlank() ||
+        description.isBlank() ||
+        date == null ||
+        location.name.isBlank()) {
+      return false
+    }
+    // if endDate is provided it must be the same or after start date
+    if (endDate != null) {
+      if (endDate.toDate().before(date.toDate())) return false
+    }
+    return true
   }
 }

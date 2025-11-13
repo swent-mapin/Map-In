@@ -42,6 +42,8 @@ class EventsDatabaseIntegrationTest {
             description = "DescX",
             dateSeconds = 10L,
             dateNanoseconds = 0,
+            endDateNanoseconds = null,
+            endDateSeconds = null,
             locationName = "LocX",
             locationLat = 0.1,
             locationLng = 0.2,
