@@ -44,7 +44,6 @@ import java.util.*
  */
 enum class AroundOption {
   SEARCH,
-  MAP,
   USER
 }
 
@@ -214,7 +213,7 @@ class FiltersSection {
                 checked = isChecked,
                 onCheckedChange = {
                   onCheckedChange(it)
-                  if (!it) expanded = false
+                  expanded = it
                 },
                 modifier =
                     Modifier.testTag(
@@ -367,13 +366,12 @@ class FiltersSection {
     var selectedOption by rememberSaveable { mutableStateOf(AroundOption.SEARCH) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(start = 30.dp, bottom = 8.dp)) {
-      Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+      Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
         AroundOption.entries.forEach { option ->
           Text(
               text =
                   when (option) {
                     AroundOption.SEARCH -> "Search"
-                    AroundOption.MAP -> "Map"
                     AroundOption.USER -> "My location"
                   },
               modifier =
@@ -388,7 +386,6 @@ class FiltersSection {
                       .testTag(
                           when (option) {
                             AroundOption.SEARCH -> FiltersSectionTestTags.AROUND_SEARCH
-                            AroundOption.MAP -> FiltersSectionTestTags.AROUND_MAP
                             AroundOption.USER -> FiltersSectionTestTags.AROUND_USER
                           }))
         }
@@ -398,7 +395,6 @@ class FiltersSection {
 
       when (selectedOption) {
         AroundOption.SEARCH -> SearchPlacePicker(locationViewModel, filterViewModel)
-        AroundOption.MAP -> MapPicker()
         AroundOption.USER -> UserLocationPicker(filterViewModel, userProfile)
       }
 
@@ -558,24 +554,7 @@ class FiltersSection {
   @OptIn(ExperimentalLayoutApi::class)
   @Composable
   fun TagsPicker(filterViewModel: FiltersSectionViewModel, selectedTags: Set<String>) {
-    val allTags =
-        listOf(
-            "Music",
-            "Party",
-            "Sport",
-            "Food",
-            "Nature",
-            "Art",
-            "Tech",
-            "Dance",
-            "Cinema",
-            "Festival",
-            "Workshop",
-            "Club",
-            "Volunteering",
-            "Travel",
-            "Fitness",
-            "Board Games")
+    val allTags = Tags.allTags
 
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),

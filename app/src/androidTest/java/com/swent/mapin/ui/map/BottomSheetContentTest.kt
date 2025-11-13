@@ -22,7 +22,6 @@ import com.swent.mapin.ui.filters.FiltersSectionTestTags
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
-import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.profile.ProfileViewModel
 import io.mockk.mockk
@@ -38,10 +37,7 @@ class BottomSheetContentTest {
   val filterViewModel = FiltersSectionViewModel()
   val locationViewModel = LocationViewModel()
   val profileViewModel = ProfileViewModel()
-  val eventStateController = mockk<MapEventStateController>()
-  val eventViewModel =
-      EventViewModel(
-          eventRepository = LocalEventRepository(), stateController = eventStateController)
+  val eventViewModel = mockk<EventViewModel>(relaxed = true)
 
   @Composable
   private fun TestContent(
