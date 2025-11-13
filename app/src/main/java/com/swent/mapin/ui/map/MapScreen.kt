@@ -2,10 +2,12 @@ package com.swent.mapin.ui.map
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -34,8 +36,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,10 +51,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.view.WindowInsetsControllerCompat
 import com.mapbox.geojson.Point
+import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
 import com.mapbox.maps.extension.compose.MapEffect
@@ -74,6 +77,7 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
@@ -83,7 +87,6 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.event.EventDetailSheet
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.ShareEventDialog
-import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.components.ConditionalMapBlocker
 import com.swent.mapin.ui.map.components.CreateHeatmapLayer
@@ -115,7 +118,8 @@ fun MapScreen(
     renderMap: Boolean = true,
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
-    onNavigateToFriends: () -> Unit = {}
+    onNavigateToFriends: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -210,7 +214,7 @@ fun MapScreen(
           cameraOptions {
             center(Point.fromLngLat(event.location.longitude, event.location.latitude))
             zoom(targetZoom)
-            padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
+            padding(EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
     }
@@ -238,8 +242,7 @@ fun MapScreen(
                 center(Point.fromLngLat(location.longitude, location.latitude))
                 zoom(16.0)
                 bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
-                padding(
-                    com.mapbox.maps.EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
+                padding(EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
               },
               animationOptions = animationOptions)
         }
@@ -258,7 +261,7 @@ fun MapScreen(
             }
 
         val padding =
-            com.mapbox.maps.EdgeInsets(
+            EdgeInsets(
                 edgePaddingPx.toDouble(),
                 edgePaddingPx.toDouble(),
                 bottomPaddingPx.toDouble(),
@@ -288,9 +291,7 @@ fun MapScreen(
 
   // Get map preferences and theme from PreferencesRepository
   val context = LocalContext.current
-  val preferencesRepository = remember {
-    com.swent.mapin.model.PreferencesRepositoryProvider.getInstance(context)
-  }
+  val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
   val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
   val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
   val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
@@ -318,7 +319,8 @@ fun MapScreen(
       }
 
   DisposableEffect(view, desiredLightStatusBars, defaultLightStatusBars) {
-    val insetsController = ViewCompat.getWindowInsetsController(view)
+    val window = (view.context as? Activity)?.window
+    val insetsController = window?.let { WindowInsetsControllerCompat(it, view) }
     insetsController?.isAppearanceLightStatusBars = desiredLightStatusBars
     onDispose { insetsController?.isAppearanceLightStatusBars = defaultLightStatusBars }
   }
@@ -427,6 +429,8 @@ fun MapScreen(
     ConditionalMapBlocker(bottomSheetState = viewModel.bottomSheetState)
 
     // BottomSheet unique : montre soit le détail d'événement soit le contenu normal
+    var modalPrevState by remember { mutableStateOf<BottomSheetState?>(null) }
+
     BottomSheet(
         config = sheetConfig,
         currentState = viewModel.bottomSheetState,
@@ -439,14 +443,13 @@ fun MapScreen(
               targetState = viewModel.selectedEvent,
               transitionSpec = {
                 val direction = if (targetState != null) 1 else -1
-                (fadeIn(animationSpec = androidx.compose.animation.core.tween(260)) +
+                (fadeIn(animationSpec = tween(260)) +
                         slideInVertically(
-                            animationSpec = androidx.compose.animation.core.tween(260),
-                            initialOffsetY = { direction * it / 6 }))
+                            animationSpec = tween(260), initialOffsetY = { direction * it / 6 }))
                     .togetherWith(
-                        fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                        fadeOut(animationSpec = tween(200)) +
                             slideOutVertically(
-                                animationSpec = androidx.compose.animation.core.tween(200),
+                                animationSpec = tween(200),
                                 targetOffsetY = { -direction * it / 6 }))
               },
               label = "eventSheetTransition") { selectedEvent ->
@@ -454,7 +457,7 @@ fun MapScreen(
                   EventDetailSheet(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
-                      isParticipating = viewModel.isUserParticipating(selectedEvent),
+                      isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
                       // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
                       isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
@@ -468,11 +471,18 @@ fun MapScreen(
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
-                  val owner =
-                      LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
-                  val filterViewModel: FiltersSectionViewModel =
-                      viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
+                      onModalShown = { shown ->
+                        if (shown) {
+                          if (modalPrevState == null) modalPrevState = viewModel.bottomSheetState
+                          viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                        } else {
+                          modalPrevState?.let { prev ->
+                            viewModel.setBottomSheetState(prev)
+                            modalPrevState = null
+                          }
+                        }
+                      },
                       state = viewModel.bottomSheetState,
                       fullEntryKey = viewModel.fullEntryKey,
                       searchBarState =
@@ -490,7 +500,9 @@ fun MapScreen(
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
-                      topCategories = viewModel.topTags,
+                      // I will fully remove topCategories in the next PR but started
+                      // with just MapScreenVm as i worked a lot on it
+                      topCategories = emptyList(),
                       onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
@@ -503,6 +515,7 @@ fun MapScreen(
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
+                      onProfileClick = onNavigateToProfile,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
                       onCreateEventDone = viewModel::onAddEventCancel,
@@ -512,8 +525,8 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
-                      onProfileClick = onNavigateToProfile,
-                      filterViewModel = filterViewModel,
+                      filterViewModel = viewModel.filterViewModel,
+                      onSettingsClick = onNavigateToSettings,
                       locationViewModel = remember { LocationViewModel() },
                       profileViewModel = remember { ProfileViewModel() },
                       eventViewModel = eventViewModel)

@@ -171,49 +171,47 @@ class MapEventStateController(
    * Updates the event in the repository and refreshes [allEvents] and [joinedEvents]. Any
    * exceptions encountered are transmitted to caller.
    */
-  fun joinSelectedEvent() {
+  suspend fun joinSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    scope.launch {
-      try {
-        val currentUserId = getUserId()
-        if (!event.participantIds.contains(currentUserId)) {
-          require(event.capacity == null || event.capacity > event.participantIds.size) {
-            "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}"
-          }
-
-          // Update event's participant list
-          val updatedParticipantIds =
-              event.participantIds.toMutableList().apply { add(currentUserId) }
-          val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-
-          // Update locally the event list immediately
-          _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
-
-          try {
-            eventRepository.editEvent(event.uid, updatedEvent)
-
-            // Update user's participatingEventIds
-            val userProfile =
-                userProfileRepository.getUserProfile(currentUserId)
-                    ?: throw Exception("User profile not found")
-            if (!userProfile.participatingEventIds.contains(event.uid)) {
-              val updatedParticipatingEventIds =
-                  userProfile.participatingEventIds.toMutableList().apply { add(event.uid) }
-              val updatedUserProfile =
-                  userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
-              userProfileRepository.saveUserProfile(updatedUserProfile)
-            }
-          } catch (e: Exception) {
-            // Revert local change if remote update fails
-            _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
-            throw e
-          }
+    try {
+      val currentUserId = getUserId()
+      if (!event.participantIds.contains(currentUserId)) {
+        require(event.capacity == null || event.capacity > event.participantIds.size) {
+          "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}"
         }
 
-        refreshEventsList()
-      } catch (e: Exception) {
-        setErrorMessage(e.message ?: "Unknown error occurred while joining event")
+        // Update event's participant list
+        val updatedParticipantIds =
+            event.participantIds.toMutableList().apply { add(currentUserId) }
+        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
+
+        // Update locally the event list immediately
+        _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+
+        try {
+          eventRepository.editEvent(event.uid, updatedEvent)
+
+          // Update user's participatingEventIds
+          val userProfile =
+              userProfileRepository.getUserProfile(currentUserId)
+                  ?: throw Exception("User profile not found")
+          if (!userProfile.participatingEventIds.contains(event.uid)) {
+            val updatedParticipatingEventIds =
+                userProfile.participatingEventIds.toMutableList().apply { add(event.uid) }
+            val updatedUserProfile =
+                userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
+            userProfileRepository.saveUserProfile(updatedUserProfile)
+          }
+        } catch (e: Exception) {
+          // Revert local change if remote update fails
+          _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+          throw e
+        }
       }
+
+      refreshEventsList()
+    } catch (e: Exception) {
+      setErrorMessage(e.message ?: "Unknown error occurred while joining event")
     }
   }
 
@@ -223,39 +221,37 @@ class MapEventStateController(
    * Updates the event in the repository and refreshes [allEvents] and [joinedEvents]. Any
    * exceptions encountered are transmitted to caller.
    */
-  fun leaveSelectedEvent() {
+  suspend fun leaveSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    scope.launch {
+    try {
+      val currentUserId = getUserId()
+      // Update event's participant list
+      val updatedParticipantIds =
+          event.participantIds.toMutableList().apply { remove(currentUserId) }
+      val updatedEvent = event.copy(participantIds = updatedParticipantIds)
+      // Update locally the event list immediately
+      _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+
       try {
-        val currentUserId = getUserId()
-        // Update event's participant list
-        val updatedParticipantIds =
-            event.participantIds.toMutableList().apply { remove(currentUserId) }
-        val updatedEvent = event.copy(participantIds = updatedParticipantIds)
-        // Update locally the event list immediately
-        _allEvents = allEvents.map { if (it.uid == event.uid) updatedEvent else it }
+        eventRepository.editEvent(event.uid, updatedEvent)
 
-        try {
-          eventRepository.editEvent(event.uid, updatedEvent)
-
-          val userProfile =
-              userProfileRepository.getUserProfile(currentUserId)
-                  ?: throw Exception("User profile not found")
-          val updatedParticipatingEventIds =
-              userProfile.participatingEventIds.toMutableList().apply { remove(event.uid) }
-          val updatedUserProfile =
-              userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
-          userProfileRepository.saveUserProfile(updatedUserProfile)
-        } catch (e: Exception) {
-          // Revert local change if remote update fails
-          _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
-          throw e
-        }
-
-        refreshEventsList()
+        val userProfile =
+            userProfileRepository.getUserProfile(currentUserId)
+                ?: throw Exception("User profile not found")
+        val updatedParticipatingEventIds =
+            userProfile.participatingEventIds.toMutableList().apply { remove(event.uid) }
+        val updatedUserProfile =
+            userProfile.copy(participatingEventIds = updatedParticipatingEventIds)
+        userProfileRepository.saveUserProfile(updatedUserProfile)
       } catch (e: Exception) {
-        setErrorMessage(e.message ?: "Unknown error occurred while unregistering from event")
+        // Revert local change if remote update fails
+        _allEvents = allEvents.map { if (it.uid == event.uid) event else it }
+        throw e
       }
+
+      refreshEventsList()
+    } catch (e: Exception) {
+      setErrorMessage(e.message ?: "Unknown error occurred while unregistering from event")
     }
   }
 
@@ -265,16 +261,14 @@ class MapEventStateController(
    * Updates the repository and refreshes [savedEvents] to include the newly saved event. Any
    * exceptions encountered are transmitted to caller.
    */
-  fun saveSelectedEvent() {
+  suspend fun saveSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    scope.launch {
-      try {
-        val currentUserId = getUserId()
-        eventRepository.saveEventForUser(currentUserId, event.uid)
-        loadSavedEvents()
-      } catch (e: Exception) {
-        setErrorMessage(e.message ?: "Unknown error occurred while saving event")
-      }
+    try {
+      val currentUserId = getUserId()
+      eventRepository.saveEventForUser(currentUserId, event.uid)
+      loadSavedEvents()
+    } catch (e: Exception) {
+      setErrorMessage(e.message ?: "Unknown error occurred while saving event")
     }
   }
 
@@ -284,16 +278,14 @@ class MapEventStateController(
    * Updates the repository and refreshes [savedEvents] to remove the event. Any exceptions
    * encountered are transmitted to caller.
    */
-  fun unsaveSelectedEvent() {
+  suspend fun unsaveSelectedEvent() {
     val event = getSelectedEvent() ?: return
-    scope.launch {
-      try {
-        val currentUserId = getUserId()
-        eventRepository.unsaveEventForUser(currentUserId, event.uid)
-        loadSavedEvents()
-      } catch (e: Exception) {
-        setErrorMessage(e.message ?: "Unknown error occurred while unsaving event")
-      }
+    try {
+      val currentUserId = getUserId()
+      eventRepository.unsaveEventForUser(currentUserId, event.uid)
+      loadSavedEvents()
+    } catch (e: Exception) {
+      setErrorMessage(e.message ?: "Unknown error occurred while unsaving event")
     }
   }
 

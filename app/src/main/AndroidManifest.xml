@@ -9,6 +9,9 @@
 
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
+    <!-- Permission for push notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -61,6 +64,26 @@
                     android:host="firebase" />
             </intent-filter>
         </activity>
+
+        <!-- Firebase Cloud Messaging Service for Push Notifications -->
+        <!-- TODO: Uncomment in PR #5 (Background Service) when NotificationBackgroundManager is implemented
+        <service
+            android:name=".notifications.NotificationBackgroundManager"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        -->
+
+        <!-- Default notification icon and color -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/logo" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/purple_500" />
+
     </application>
 
 </manifest>

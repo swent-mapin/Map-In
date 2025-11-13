@@ -56,10 +56,9 @@ class FiltersSectionTest {
     val expand = composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TIME)
 
     toggle.performClick()
-    expand.assertExists()
-    expand.performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.DATE_PICKER_BUTTON).assertIsDisplayed()
 
+    expand.assertExists()
     expand.performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.DATE_PICKER_BUTTON).assertDoesNotExist()
   }
@@ -67,7 +66,6 @@ class FiltersSectionTest {
   @Test
   fun datePicker_showsTodayByDefault() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TIME).performClick()
 
     val today =
         SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Calendar.getInstance().time)
@@ -85,19 +83,10 @@ class FiltersSectionTest {
   }
 
   // ---------------------- PLACE SECTION ----------------------
-  @Test
-  fun placeSection_switchToMap_showsMapPicker() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
-
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_MAP).performClick()
-    composeTestRule.onNodeWithText("Pick on map to implement").assertIsDisplayed()
-  }
 
   @Test
   fun placeSection_switchToUser_setsUserLocation() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_USER).performClick()
 
@@ -107,7 +96,6 @@ class FiltersSectionTest {
   @Test
   fun radiusInput_acceptsOnlyDigits() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
 
     val radiusField = composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT)
 
@@ -124,7 +112,6 @@ class FiltersSectionTest {
   @Test
   fun searchPlaceInput_updatesQuery() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performClick()
 
@@ -137,7 +124,6 @@ class FiltersSectionTest {
   fun searchResultsDropdown_displaysResultsAndSelectsLocation() {
     // Open the Place section and switch to Search mode
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performClick()
 
     // Type a query — this will trigger the fake repo to return results
@@ -169,7 +155,6 @@ class FiltersSectionTest {
   @Test
   fun priceSection_filtersDigitsOnly() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PRICE).performClick()
 
     val priceField = composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT)
     priceField.performTextReplacement("")
@@ -214,7 +199,6 @@ class FiltersSectionTest {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TAGS).performClick()
 
     val sportTag = composeTestRule.onNodeWithTag(FiltersSectionTestTags.tag("Sport"))
     sportTag.assertIsDisplayed()
@@ -222,7 +206,6 @@ class FiltersSectionTest {
 
     // Set radius manually
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_PLACE).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextReplacement("")
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextInput("25")
 

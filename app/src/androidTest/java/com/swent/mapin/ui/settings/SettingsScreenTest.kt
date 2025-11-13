@@ -511,4 +511,42 @@ class SettingsScreenTest {
     composeTestRule.onNodeWithTag("roadNumbersToggle").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Road Labels").assertIsDisplayed()
   }
+
+  @Test
+  fun confirmationDialog_logoutGeneratesLogoutConfirmTag_andCallsOnConfirm() {
+    var confirmed = false
+    composeTestRule.setContent {
+      ConfirmationDialog(
+          title = "Logout",
+          message = "Confirm logout?",
+          confirmButtonText = "Logout",
+          confirmButtonColor = androidx.compose.ui.graphics.Color(0xFF667eea),
+          onConfirm = { confirmed = true },
+          onDismiss = {})
+    }
+
+    composeTestRule.onNodeWithTag("logoutConfirmButton").assertIsDisplayed().performClick()
+    composeTestRule.waitForIdle()
+
+    assert(confirmed)
+  }
+
+  @Test
+  fun confirmationDialog_deleteAccountGeneratesDeleteConfirmTag_andCallsOnConfirm() {
+    var confirmed = false
+    composeTestRule.setContent {
+      ConfirmationDialog(
+          title = "Delete",
+          message = "Confirm delete?",
+          confirmButtonText = "Delete Account",
+          confirmButtonColor = androidx.compose.ui.graphics.Color(0xFFef5350),
+          onConfirm = { confirmed = true },
+          onDismiss = {})
+    }
+
+    composeTestRule.onNodeWithTag("deleteAccountConfirmButton").assertIsDisplayed().performClick()
+    composeTestRule.waitForIdle()
+
+    assert(confirmed)
+  }
 }

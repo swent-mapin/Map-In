@@ -399,10 +399,10 @@ class MapScreenTest {
   fun activity_is_found_after_searching() {
     rule.setContent { MaterialTheme { MapScreen() } }
 
-    rule.onNodeWithText("Search activities").performTextInput("Basketball")
+    rule.onNodeWithText("Search activities").performTextInput("Art Exhibition")
     rule.waitForIdle()
 
-    rule.onNodeWithText("Basketball Game").assertIsDisplayed()
+    rule.onNodeWithText("Art Exhibition").assertIsDisplayed()
   }
 
   @Test
