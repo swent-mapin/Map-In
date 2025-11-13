@@ -11,7 +11,9 @@ import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.DatePickerButton
+import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.TimePickerButton
+import io.mockk.mockk
 import org.junit.Rule
 import org.junit.Test
 
@@ -24,6 +26,7 @@ import org.junit.Test
 class M2AddEventScreenTest {
 
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+  val eventViewModel = mockk<EventViewModel>(relaxed = true)
 
   // -------------------------------------------------------------------------
   // Date & Time picker buttons
@@ -162,14 +165,14 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_shows_date_time_error_when_empty() {
-    compose.setContent { AddEventScreen() }
+    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
     // With initial blank date/time, the red helper message must be visible
     compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
   }
 
   @Test
   fun addEventScreen_click_save_with_missing_fields_shows_validation_banner() {
-    compose.setContent { AddEventScreen() }
+    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
 
     // Tap Save immediately: everything is blank -> shouldShowMissingFields banner appears
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
@@ -179,7 +182,7 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_partial_inputs_still_triggers_missing_fields() {
-    compose.setContent { AddEventScreen() }
+    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
 
     // Wait for the date/time inline error to be present initially (some CI devices are slow)
     compose.waitUntil(timeoutMillis = 10000) {
