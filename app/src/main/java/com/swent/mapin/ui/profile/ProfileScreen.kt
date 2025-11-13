@@ -69,7 +69,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,13 +90,12 @@ import com.swent.mapin.model.UserProfile
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit = {},
     onNavigateToSignIn: () -> Unit,
     onNavigateToFriends: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
   val userProfile by viewModel.userProfile.collectAsState()
-  val isLoading by viewModel.isLoading.collectAsState()
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("profileScreen"),
@@ -181,33 +179,12 @@ fun ProfileScreen(
                       if (viewModel.isEditMode) {
                         EditProfileContent(viewModel = viewModel)
                       } else {
-                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+                        ViewProfileContent(
+                            userProfile = userProfile,
+                            viewModel = viewModel,
+                            onNavigateToSettings = onNavigateToSettings)
 
-                        // Logout button
                         Spacer(modifier = Modifier.height(24.dp))
-
-                        OutlinedButton(
-                            onClick = onNavigateToSettings,
-                            modifier =
-                                Modifier.fillMaxWidth().height(50.dp).testTag("settingsButton"),
-                            shape = RoundedCornerShape(12.dp),
-                            colors =
-                                ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.primary)) {
-                              Row(
-                                  verticalAlignment = Alignment.CenterVertically,
-                                  horizontalArrangement = Arrangement.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = "Settings",
-                                        modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Settings",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.bodyLarge)
-                                  }
-                            }
                       }
 
                       Spacer(modifier = Modifier.height(16.dp))
@@ -342,7 +319,11 @@ internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarCli
 
 /** View mode: displays profile information in cards. */
 @Composable
-internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
+internal fun ViewProfileContent(
+    userProfile: UserProfile,
+    viewModel: ProfileViewModel,
+    onNavigateToSettings: () -> Unit = {}
+) {
   // Name card with gradient and large prominence
   Card(
       modifier =
@@ -452,6 +433,14 @@ internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileView
       }
 
   Spacer(modifier = Modifier.height(24.dp))
+
+  // Settings button used by navigation tests (has testTag "settingsButton")
+  OutlinedButton(
+      onClick = onNavigateToSettings,
+      modifier = Modifier.fillMaxWidth().height(50.dp).testTag("settingsButton"),
+      shape = RoundedCornerShape(12.dp)) {
+        Text("Settings")
+      }
 }
 
 /** Reusable card component for displaying profile information. */
@@ -898,8 +887,6 @@ internal fun AvatarSelectorDialog(
     onAvatarSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-  val context = LocalContext.current
-
   // Image picker launcher
   val imagePickerLauncher =
       rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?
@@ -1028,8 +1015,6 @@ internal fun BannerSelectorDialog(
     onBannerSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-  val context = LocalContext.current
-
   // Image picker launcher for banner
   val bannerPickerLauncher =
       rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri?

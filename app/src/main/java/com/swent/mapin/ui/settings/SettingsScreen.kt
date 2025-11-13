@@ -256,6 +256,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
         message = "Are you sure you want to log out?",
         confirmButtonText = "Logout",
         confirmButtonColor = Color(0xFF667eea),
+        confirmTestTag = "logoutConfirmButton", // explicit stable tag
         onConfirm = {
           viewModel.signOut()
           onNavigateToSignIn()
@@ -272,6 +273,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
         confirmButtonText = "Delete Account",
         confirmButtonColor = Color(0xFFef5350),
         isDangerous = true,
+        confirmTestTag = "deleteAccountConfirmButton", // explicit stable tag
         onConfirm = {
           viewModel.deleteAccount()
           onNavigateToSignIn()
@@ -381,7 +383,7 @@ private fun SettingsSectionTitle(title: String, icon: ImageVector) {
 
 /** Toggle item for boolean settings */
 @Composable
-private fun SettingsToggleItem(
+internal fun SettingsToggleItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -499,7 +501,7 @@ private fun SettingsActionButton(
                       Icon(
                           imageVector = icon,
                           contentDescription = label,
-                          tint = backgroundColor,
+                          tint = contentColor, // use contentColor so the param is used
                           modifier = Modifier.size(20.dp))
                     }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -508,7 +510,7 @@ private fun SettingsActionButton(
                       text = label,
                       style = MaterialTheme.typography.labelLarge,
                       fontWeight = FontWeight.SemiBold,
-                      color = backgroundColor)
+                      color = contentColor) // use contentColor
                   Spacer(modifier = Modifier.height(4.dp))
                   Text(
                       text = description,
@@ -532,15 +534,34 @@ private fun SettingsActionButton(
 
 /** Generic confirmation dialog */
 @Composable
-private fun ConfirmationDialog(
+internal fun ConfirmationDialog(
     title: String,
     message: String,
     confirmButtonText: String,
     confirmButtonColor: Color,
     isDangerous: Boolean = false,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    confirmTestTag: String? = null // optional explicit stable test tag
 ) {
+  // Prefer an explicit tag; otherwise use a single stable generic tag (do not derive from localized
+  // text)
+  val resolvedTestTag =
+      confirmTestTag
+          ?: when {
+            title.equals("Confirm Logout", ignoreCase = true) ||
+                title.equals("Logout", ignoreCase = true) ||
+                confirmButtonText.equals("Logout", ignoreCase = true) -> "logoutConfirmButton"
+            title.equals("Delete Account", ignoreCase = true) ||
+                title.equals("Delete", ignoreCase = true) ||
+                confirmButtonText.contains("Delete", ignoreCase = true) ->
+                "deleteAccountConfirmButton"
+            else -> "genericConfirmButton"
+          }
+
+  // Use isDangerous to optionally override the confirm button color
+  val finalConfirmColor = if (isDangerous) MaterialTheme.colorScheme.error else confirmButtonColor
+
   AlertDialog(
       onDismissRequest = onDismiss,
       title = {
@@ -556,7 +577,8 @@ private fun ConfirmationDialog(
       confirmButton = {
         Button(
             onClick = onConfirm,
-            colors = ButtonDefaults.buttonColors(containerColor = confirmButtonColor)) {
+            modifier = Modifier.testTag(resolvedTestTag),
+            colors = ButtonDefaults.buttonColors(containerColor = finalConfirmColor)) {
               Text(confirmButtonText, color = Color.White, fontWeight = FontWeight.Bold)
             }
       },
