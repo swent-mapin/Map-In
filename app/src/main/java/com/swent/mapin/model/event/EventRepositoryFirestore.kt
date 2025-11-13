@@ -236,8 +236,8 @@ class EventRepositoryFirestore(
    * @throws NoSuchElementException if the Event item is not found.
    */
   override suspend fun editEvent(eventId: String, newValue: Event) {
-    require(newValue.isValidEvent()) { "Invalid event data" }
     try {
+      require(newValue.isValidEvent()) { "Invalid event data" }
       val snapshot = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
       if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
       val oldValue = documentToEvent(snapshot)!!
@@ -357,7 +357,6 @@ class EventRepositoryFirestore(
       val ids = getSavedEventIds(userId).toList()
       if (ids.isEmpty()) return emptyList()
 
-      // Firestore whereIn limit is 10; chunk and merge, then sort locally by date.
       val chunks = ids.chunked(FIRESTORE_QUERY_LIMIT)
       val results = mutableListOf<Event>()
       for (chunk in chunks) {
