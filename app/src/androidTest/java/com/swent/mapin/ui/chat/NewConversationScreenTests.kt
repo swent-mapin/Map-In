@@ -73,37 +73,34 @@ class NewConversationScreenTest {
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).assertDoesNotExist()
   }
 
-    @Test
-    fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
-        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+  @Test
+  fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
 
-        var confirmed = false
+    var confirmed = false
 
-        composeTestRule.setContent {
-            NewConversationScreen(
-                friendsViewModel = mockFriendsViewModel,
-                conversationViewModel = mockConversationViewModel, // inject mock
-                onConfirm = { confirmed = true }
-            )
-        }
-
-        composeTestRule.waitForIdle()
-
-        // Select Alice and confirm
-        composeTestRule
-            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-            .performClick()
-        composeTestRule
-            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
-            .performClick()
-
-        // Verify callback and repository call
-        assert(confirmed)
-        verify { mockConversationViewModel.createConversation(any()) }
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel, // inject mock
+          onConfirm = { confirmed = true })
     }
+
+    composeTestRule.waitForIdle()
+
+    // Select Alice and confirm
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    // Verify callback and repository call
+    assert(confirmed)
+    verify { mockConversationViewModel.createConversation(any()) }
+  }
 
   @Test
   fun confirmMultipleFriends_opensDialog_andCanCancel() {
