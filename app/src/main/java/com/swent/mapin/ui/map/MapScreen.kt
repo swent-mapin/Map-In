@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -51,9 +52,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mapbox.geojson.Point
+import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapboxDelicateApi
 import com.mapbox.maps.dsl.cameraOptions
 import com.mapbox.maps.extension.compose.MapEffect
@@ -77,6 +77,7 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.R
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
@@ -86,7 +87,6 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.event.EventDetailSheet
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.ShareEventDialog
-import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.components.ConditionalMapBlocker
 import com.swent.mapin.ui.map.components.CreateHeatmapLayer
@@ -214,7 +214,7 @@ fun MapScreen(
           cameraOptions {
             center(Point.fromLngLat(event.location.longitude, event.location.latitude))
             zoom(targetZoom)
-            padding(com.mapbox.maps.EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
+            padding(EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
           },
           animationOptions = animationOptions)
     }
@@ -243,7 +243,7 @@ fun MapScreen(
                 zoom(16.0)
                 bearing(if (location.hasBearing()) location.bearing.toDouble() else 0.0)
                 padding(
-                    com.mapbox.maps.EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
+                    EdgeInsets(0.0, 0.0, locationBottomPaddingPx.toDouble(), 0.0))
               },
               animationOptions = animationOptions)
         }
@@ -262,7 +262,7 @@ fun MapScreen(
             }
 
         val padding =
-            com.mapbox.maps.EdgeInsets(
+            EdgeInsets(
                 edgePaddingPx.toDouble(),
                 edgePaddingPx.toDouble(),
                 bottomPaddingPx.toDouble(),
@@ -292,9 +292,7 @@ fun MapScreen(
 
   // Get map preferences and theme from PreferencesRepository
   val context = LocalContext.current
-  val preferencesRepository = remember {
-    com.swent.mapin.model.PreferencesRepositoryProvider.getInstance(context)
-  }
+  val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
   val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
   val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
   val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
@@ -446,14 +444,13 @@ fun MapScreen(
               targetState = viewModel.selectedEvent,
               transitionSpec = {
                 val direction = if (targetState != null) 1 else -1
-                (fadeIn(animationSpec = androidx.compose.animation.core.tween(260)) +
+                (fadeIn(animationSpec = tween(260)) +
                         slideInVertically(
-                            animationSpec = androidx.compose.animation.core.tween(260),
-                            initialOffsetY = { direction * it / 6 }))
+                            animationSpec = tween(260), initialOffsetY = { direction * it / 6 }))
                     .togetherWith(
-                        fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) +
+                        fadeOut(animationSpec = tween(200)) +
                             slideOutVertically(
-                                animationSpec = androidx.compose.animation.core.tween(200),
+                                animationSpec = tween(200),
                                 targetOffsetY = { -direction * it / 6 }))
               },
               label = "eventSheetTransition") { selectedEvent ->
@@ -475,10 +472,6 @@ fun MapScreen(
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed)
                 } else {
-                  val owner =
-                      LocalViewModelStoreOwner.current ?: error("No ViewModelStoreOwner provided")
-                  val filterViewModel: FiltersSectionViewModel =
-                      viewModel(viewModelStoreOwner = owner, key = "FiltersSectionViewModel")
                   BottomSheetContent(
                       onModalShown = { shown ->
                         if (shown) {
@@ -508,6 +501,8 @@ fun MapScreen(
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
+                      // I will fully remove topCategories in the next PR but started
+                      // with just MapScreenVm as i worked a lot on it
                       topCategories = emptyList(),
                       onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
@@ -531,8 +526,8 @@ fun MapScreen(
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
+                      filterViewModel = viewModel.filterViewModel,
                       onSettingsClick = onNavigateToSettings,
-                      filterViewModel = filterViewModel,
                       locationViewModel = remember { LocationViewModel() },
                       profileViewModel = remember { ProfileViewModel() },
                       eventViewModel = eventViewModel)
