@@ -537,11 +537,8 @@ fun AddEventScreen(
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
                       text =
-                          "The following fields are missing/incorrect: ${
-                                errorFields.joinToString(
-                                    ", "
-                                )
-                            }",
+                          stringResource(
+                              R.string.validation_banner_prefix, errorFields.joinToString(", ")),
                       color = Color.White,
                       style = MaterialTheme.typography.bodySmall,
                       modifier = Modifier.testTag(AddEventScreenTestTags.ERROR_MESSAGE))

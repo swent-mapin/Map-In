@@ -34,4 +34,5 @@
     <string name="chats">Chats</string>
     <string name="empty_conversation">No conversations yet</string>
     <string name="empty_conversation_button">Tap + to start chatting with a friend!</string>
+    <string name="validation_banner_prefix">The following fields are missing/incorrect: %1$s</string>
 </resources>
