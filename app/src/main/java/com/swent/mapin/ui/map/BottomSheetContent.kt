@@ -30,6 +30,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -376,7 +377,7 @@ fun BottomSheetContent(
                             model = userProfile.avatarUrl ?: avatarUrl,
                             contentDescription = "Profile picture",
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(56.dp).clip(CircleShape))
+                            modifier = Modifier.size(TextFieldDefaults.MinHeight).clip(CircleShape))
 
                         Spacer(modifier = Modifier.width(12.dp))
 
@@ -387,8 +388,10 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Navigate immediately, then dismiss the sheet to avoid waiting for the
+                            // sheet close animation which causes perceived latency.
                             onProfileClick()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Profile")
@@ -398,8 +401,9 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Navigate first so the target screen starts loading immediately.
                             onNavigateToFriends()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Friends")
@@ -409,8 +413,9 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Same for settings: start navigation immediately, then close sheet.
                             onSettingsClick()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Settings")
