@@ -387,8 +387,10 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Navigate immediately, then dismiss the sheet to avoid waiting for the
+                            // sheet close animation which causes perceived latency.
                             onProfileClick()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Profile")
@@ -398,8 +400,9 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Navigate first so the target screen starts loading immediately.
                             onNavigateToFriends()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Friends")
@@ -409,8 +412,9 @@ fun BottomSheetContent(
 
                       Button(
                           onClick = {
-                            showProfileMenu = false
+                            // Same for settings: start navigation immediately, then close sheet.
                             onSettingsClick()
+                            showProfileMenu = false
                           },
                           modifier = Modifier.fillMaxWidth()) {
                             Text("Settings")
