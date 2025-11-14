@@ -32,8 +32,8 @@ class LocalChatFriendsRepositoryTest {
     assertEquals("Shared a photo", conversations[1].lastMessage)
     assertEquals("Let's meet up!", conversations[2].lastMessage)
 
-    assertEquals("Nathan", conversations[0].participants.first().userProfile.name)
-    assertEquals("Alex", conversations[1].participants.first().userProfile.name)
-    assertEquals("Zoe", conversations[2].participants.first().userProfile.name)
+    assertEquals("Nathan", conversations[0].participants.first().name)
+    assertEquals("Alex", conversations[1].participants.first().name)
+    assertEquals("Zoe", conversations[2].participants.first().name)
   }
 }
