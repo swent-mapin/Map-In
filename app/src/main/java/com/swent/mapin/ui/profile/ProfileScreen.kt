@@ -151,10 +151,7 @@ fun ProfileScreen(
                       if (viewModel.isEditMode) {
                         EditProfileContent(viewModel = viewModel)
                       } else {
-                        ViewProfileContent(
-                            userProfile = userProfile,
-                            viewModel = viewModel,
-                            onNavigateToSettings = onNavigateToSettings)
+                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
 
                         Spacer(modifier = Modifier.height(24.dp))
                       }
@@ -245,11 +242,7 @@ internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarCli
 
 /** View mode: displays profile information in cards. */
 @Composable
-internal fun ViewProfileContent(
-    userProfile: UserProfile,
-    viewModel: ProfileViewModel,
-    onNavigateToSettings: () -> Unit = {}
-) {
+internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
   // Name simple card
   Card(
       modifier = Modifier.fillMaxWidth().testTag("profileCard_Name"),
@@ -316,18 +309,6 @@ internal fun ViewProfileContent(
             }
           }
         }
-      }
-
-  Spacer(modifier = Modifier.height(12.dp))
-
-  // Settings button re-added so tests can navigate to Settings screen
-  OutlinedButton(
-      onClick = onNavigateToSettings,
-      modifier = Modifier.fillMaxWidth().height(48.dp).testTag("settingsButton"),
-      shape = RoundedCornerShape(12.dp),
-      colors =
-          ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
-        Text("Settings", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
       }
 }
 
