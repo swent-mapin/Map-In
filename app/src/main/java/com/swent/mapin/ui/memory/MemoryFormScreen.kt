@@ -109,6 +109,7 @@ private fun EventSelectionSection(
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
                       text = selectedEvent.title,
+                      modifier = Modifier.testTag("memoryForm_selectedEventTitle"),
                       style = MaterialTheme.typography.bodyLarge,
                       color = MaterialTheme.colorScheme.onSurface)
                   Spacer(modifier = Modifier.height(4.dp))
@@ -374,10 +375,12 @@ fun MemoryFormScreen(
     availableEvents: List<Event>,
     onSave: (MemoryFormData) -> Unit,
     onCancel: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Optional initial event to prefill the form
+    initialSelectedEvent: Event? = null,
 ) {
   // Form state
-  var selectedEvent by remember { mutableStateOf<Event?>(null) }
+  var selectedEvent by remember { mutableStateOf<Event?>(initialSelectedEvent) }
   var showEventPicker by remember { mutableStateOf(false) }
   var title by remember { mutableStateOf("") }
   var description by remember { mutableStateOf("") }

@@ -506,13 +506,14 @@ fun MapScreen(
                       onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
+                      initialMemoryEvent = viewModel.memoryFormInitialEvent,
                       onEventClick = { event ->
                         // Handle event click from search - focus pin, show details, remember
                         // search mode
                         viewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
                       },
-                      onCreateMemoryClick = viewModel::showMemoryForm,
+                      onCreateMemoryClick = viewModel::showMemoryFormForEvent,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
                       onProfileClick = onNavigateToProfile,
@@ -521,6 +522,7 @@ fun MapScreen(
                       onCreateEventDone = viewModel::onAddEventCancel,
                       onTabChange = viewModel::setBottomSheetTab,
                       joinedEvents = viewModel.joinedEvents,
+                      attendedEvents = viewModel.attendedEvents,
                       savedEvents = viewModel.savedEvents,
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,

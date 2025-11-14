@@ -56,6 +56,7 @@ import com.swent.mapin.ui.filters.FiltersSection
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
+import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.EventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.QuickActionsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SearchBar
@@ -94,6 +95,7 @@ private const val TRANSITION_SLIDE_OFFSET_DIVISOR = 6
  * @param availableEvents List of events available for memory creation.
  * @param joinedEvents List of events the user has joined.
  * @param savedEvents List of events the user has saved.
+ * @param attendedEvents List of events the user has attended.
  * @param selectedTab Currently selected tab (SAVED_EVENTS or JOINED_EVENTS).
  * @param onEventClick Callback invoked when an event is clicked in search results.
  * @param onCreateMemoryClick Callback to show the memory creation form.
@@ -130,14 +132,18 @@ fun BottomSheetContent(
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
-    // Joined/Saved events
+    // Optional initial event to prefill memory form when opening it
+    initialMemoryEvent: Event? = null,
+    // Joined/Saved/Attended events
     joinedEvents: List<Event> = emptyList(),
+    attendedEvents: List<Event> = emptyList(),
     savedEvents: List<Event> = emptyList(),
     // Tabs & tags
     selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
     // Callbacks
     onEventClick: (Event) -> Unit = {},
-    onCreateMemoryClick: () -> Unit = {},
+    // now accepts an optional Event to prefill the memory form (null = new memory without event)
+    onCreateMemoryClick: (Event?) -> Unit = {},
     onCreateEventClick: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
@@ -185,7 +191,8 @@ fun BottomSheetContent(
                 scrollState = memoryFormScrollState,
                 availableEvents = availableEvents,
                 onSave = onMemorySave,
-                onCancel = onMemoryCancel)
+                onCancel = onMemoryCancel,
+                initialSelectedEvent = initialMemoryEvent)
           }
           BottomSheetScreen.ADD_EVENT -> {
             AddEventScreen(
@@ -289,8 +296,7 @@ fun BottomSheetContent(
                               Column(modifier = contentModifier) {
                                 QuickActionsSection(
                                     onCreateMemoryClick = onCreateMemoryClick,
-                                    onCreateEventClick = onCreateEventClick,
-                                    onNavigateToFriends = onNavigateToFriends)
+                                    onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
@@ -336,6 +342,16 @@ fun BottomSheetContent(
                                         events = joinedEvents, onEventClick = onTabEventClick)
                                   }
                                 }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Attended events section (now provided from controller)
+                                AttendedEventsSection(
+                                    attendedEvents = attendedEvents,
+                                    onEventClick = onEventClick,
+                                    onCreateMemoryClick = onCreateMemoryClick)
 
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
