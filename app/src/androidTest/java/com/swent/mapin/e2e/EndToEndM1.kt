@@ -31,7 +31,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 
 /**
- * End-to-End Test: Complete User Profile Management Flow
+ * End-to-End Test: Complete User Profile Management Flow (Milestone 1)
  *
  * This test verifies that a user can successfully complete the following flow:
  * 1. Login with valid credentials (email/password)
@@ -41,6 +41,11 @@ import org.junit.runners.MethodSorters
  * 5. Verify the changes persist (by checking the UI displays updated values)
  * 6. Logout from the profile screen
  * 7. Confirm redirection to the login screen
+ *
+ * Implementation note: The original M1 version used a Settings button inside the Profile screen.
+ * That button has since been removed from the UI. This test now navigates to the Settings screen
+ * directly via the NavController (Route.Settings) instead of clicking a UI button. No assertions
+ * rely on the removed button.
  *
  * This test uses MockK to mock Firebase authentication and Firestore operations, simulating a real
  * user journey through the app.
@@ -52,7 +57,7 @@ import org.junit.runners.MethodSorters
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-class UserProfileEndToEndTest {
+class EndToEndM1 {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
   private lateinit var navController: androidx.navigation.NavHostController
@@ -287,10 +292,9 @@ class UserProfileEndToEndTest {
     composeTestRule.onNodeWithText(updatedBio, useUnmergedTree = true).assertExists()
 
     // ============================================
-    // STEP 7: Navigate to Settings
+    // STEP 7: Navigate to Settings (directly via navigation)
     // ============================================
-    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+    composeTestRule.runOnIdle { navController.navigate(Route.Settings.route) }
 
     composeTestRule.waitForIdle()
 
