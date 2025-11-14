@@ -2,8 +2,11 @@
 
 This document provides a comprehensive overview of the Map'In application architecture, detailing the flows between UI, ViewModel, Repository, and Firestore layers.
 
+**📊 Start with the [Complete Application Architecture Diagram](#complete-application-architecture-diagram) to see all flows in one unified view.**
+
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
+   - [Complete Application Architecture Diagram](#complete-application-architecture-diagram) - **Unified diagram showing all flows**
 2. [Layer Responsibilities](#layer-responsibilities)
 3. [Component Flows](#component-flows)
 4. [Data Flow Patterns](#data-flow-patterns)
@@ -12,7 +15,169 @@ This document provides a comprehensive overview of the Map'In application archit
 
 ## Architecture Overview
 
-Map'In follows the **MVVM (Model-View-ViewModel)** architecture pattern with a clean separation of concerns:
+Map'In follows the **MVVM (Model-View-ViewModel)** architecture pattern with a clean separation of concerns.
+
+### Complete Application Architecture Diagram
+
+This comprehensive diagram shows all major flows in the Map'In application, including Events, Memories, User Profiles, Friends, Notifications, and the Map Screen coordination:
+
+```mermaid
+graph TB
+    subgraph "UI Layer - Jetpack Compose"
+        UI1[EventScreen]
+        UI2[MemoryFormScreen]
+        UI3[ProfileScreen]
+        UI4[FriendsScreen]
+        UI5[MapScreen]
+        UI6[SettingsScreen]
+    end
+    
+    subgraph "ViewModel Layer - Business Logic & State Management"
+        VM1[EventViewModel]
+        VM2[MemoryActionController]
+        VM3[ProfileViewModel]
+        VM4[FriendsViewModel]
+        VM5[MapScreenViewModel]
+        VM6[FiltersSectionViewModel]
+        VM7[DirectionViewModel]
+        VM8[SignInViewModel]
+        VM9[SettingsViewModel]
+    end
+    
+    subgraph "Repository Layer - Data Access Abstraction"
+        R1[EventRepository]
+        R2[MemoryRepository]
+        R3[UserProfileRepository]
+        R4[FriendRequestRepository]
+        R5[NotificationRepository]
+        R6[LocationRepository]
+        R7[PreferencesRepository]
+        
+        R1_IMPL[EventRepositoryFirestore]
+        R2_IMPL[MemoryRepositoryFirestore]
+        R1_LOCAL[LocalEventRepository]
+        R2_LOCAL[LocalMemoryRepository]
+    end
+    
+    subgraph "Helper Services"
+        H1[ImageUploadHelper]
+        H2[NotificationService]
+    end
+    
+    subgraph "Firestore Database - Cloud Storage"
+        FS1[(events collection)]
+        FS2[(memories collection)]
+        FS3[(users collection)]
+        FS4[(friendRequests collection)]
+        FS5[(notifications collection)]
+    end
+    
+    subgraph "Local Storage"
+        LOCAL1[(Room DB - EventLocalCache)]
+        LOCAL2[(DataStore - Preferences)]
+    end
+    
+    subgraph "External Services"
+        EXT1[Firebase Storage]
+        EXT2[Nominatim API - OpenStreetMap]
+    end
+    
+    %% Event Flow
+    UI1 -->|user actions| VM1
+    VM1 -->|CRUD operations| R1
+    R1 -.->|interface| R1_IMPL
+    R1_IMPL -->|read/write| FS1
+    FS1 -.->|real-time updates| R1_IMPL
+    R1 -.->|offline cache| R1_LOCAL
+    R1_LOCAL -.->|Room DB| LOCAL1
+    
+    %% Memory Flow
+    UI2 -->|create memory| VM2
+    VM2 -->|addMemory| R2
+    R2 -.->|interface| R2_IMPL
+    R2_IMPL -->|write| FS2
+    FS2 -.->|query by event| R2_IMPL
+    R2 -.->|offline access| R2_LOCAL
+    
+    %% Profile Flow
+    UI3 -->|edit profile| VM3
+    VM3 -->|saveUserProfile| R3
+    R3 -->|write| FS3
+    FS3 -.->|read profile| R3
+    VM3 -->|upload images| H1
+    H1 -->|store media| EXT1
+    EXT1 -.->|return URLs| H1
+    
+    %% Friends Flow
+    UI4 -->|send request| VM4
+    VM4 -->|sendFriendRequest| R4
+    R4 -->|create/update| FS4
+    FS4 -.->|real-time listener| R4
+    R4 -->|enrich with profiles| R3
+    R3 -->|fetch user data| FS3
+    
+    %% Notification Flow
+    R4 -.->|friend events| H2
+    R1_IMPL -.->|event updates| H2
+    R2_IMPL -.->|memory tags| H2
+    H2 -->|send notification| R5
+    R5 -->|create| FS5
+    FS5 -.->|real-time updates| R5
+    
+    %% Map Screen Coordination
+    UI5 -->|coordinates all| VM5
+    VM5 -->|get events| R1
+    VM5 -->|get memories| R2
+    VM5 -->|apply filters| VM6
+    VM5 -->|search locations| R6
+    VM5 -->|navigation| VM7
+    R6 -->|geocoding| EXT2
+    
+    %% Settings Flow
+    UI6 -->|user preferences| VM9
+    VM9 -->|save settings| R7
+    R7 -->|persist| LOCAL2
+    
+    %% Auth Flow
+    UI1 -.->|authentication| VM8
+    UI3 -.->|authentication| VM8
+    UI4 -.->|authentication| VM8
+    UI5 -.->|authentication| VM8
+    
+    %% Cross-cutting flows
+    VM5 -.->|uses| VM2
+    VM1 -.->|refresh map| VM5
+    
+    classDef uiClass fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef vmClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef repoClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef fsClass fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef localClass fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef helperClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef extClass fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    
+    class UI1,UI2,UI3,UI4,UI5,UI6 uiClass
+    class VM1,VM2,VM3,VM4,VM5,VM6,VM7,VM8,VM9 vmClass
+    class R1,R2,R3,R4,R5,R6,R7,R1_IMPL,R2_IMPL,R1_LOCAL,R2_LOCAL repoClass
+    class FS1,FS2,FS3,FS4,FS5 fsClass
+    class LOCAL1,LOCAL2 localClass
+    class H1,H2 helperClass
+    class EXT1,EXT2 extClass
+```
+
+**Legend:**
+- **Solid arrows (→)**: Direct method calls and data flow
+- **Dashed arrows (-.->)**: Interface implementations, real-time listeners, or optional flows
+- **Color coding**:
+  - 🔵 Blue: UI Layer (Jetpack Compose screens)
+  - 🟠 Orange: ViewModel Layer (business logic)
+  - 🟣 Purple: Repository Layer (data access)
+  - 🟢 Green: Firestore Collections (cloud storage)
+  - 🟡 Yellow: Local Storage (Room DB, DataStore)
+  - 🔴 Pink: Helper Services
+  - 🟦 Teal: External Services (Firebase Storage, APIs)
+
+### Layer Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
