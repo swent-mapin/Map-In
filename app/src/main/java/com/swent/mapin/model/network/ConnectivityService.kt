@@ -61,41 +61,40 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
   private val connectivityManager =
       context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-  override val connectivityState: Flow<ConnectivityState> by lazy {
-    callbackFlow {
-          // Send initial state
-          trySend(getCurrentConnectivityState())
+  override val connectivityState: Flow<ConnectivityState> =
+      callbackFlow {
+            // Send initial state
+            trySend(getCurrentConnectivityState())
 
-          val networkCallback =
-              object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                  trySend(getCurrentConnectivityState())
+            val networkCallback =
+                object : ConnectivityManager.NetworkCallback() {
+                  override fun onAvailable(network: Network) {
+                    trySend(getCurrentConnectivityState())
+                  }
+
+                  override fun onLost(network: Network) {
+                    trySend(getCurrentConnectivityState())
+                  }
+
+                  override fun onCapabilitiesChanged(
+                      network: Network,
+                      networkCapabilities: NetworkCapabilities
+                  ) {
+                    trySend(getCurrentConnectivityState())
+                  }
                 }
 
-                override fun onLost(network: Network) {
-                  trySend(getCurrentConnectivityState())
-                }
+            val networkRequest =
+                NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    .build()
 
-                override fun onCapabilitiesChanged(
-                    network: Network,
-                    networkCapabilities: NetworkCapabilities
-                ) {
-                  trySend(getCurrentConnectivityState())
-                }
-              }
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
 
-          val networkRequest =
-              NetworkRequest.Builder()
-                  .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                  .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                  .build()
-
-          connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-
-          awaitClose { connectivityManager.unregisterNetworkCallback(networkCallback) }
-        }
-        .distinctUntilChanged()
-  }
+            awaitClose { connectivityManager.unregisterNetworkCallback(networkCallback) }
+          }
+          .distinctUntilChanged()
 
   override fun isConnected(): Boolean {
     return getCurrentConnectivityState().isConnected
