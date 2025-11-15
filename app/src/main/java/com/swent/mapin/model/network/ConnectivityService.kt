@@ -116,7 +116,7 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
     val networkType =
-        if (isConnected && capabilities != null) {
+        if (isConnected) {
           when {
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ->
