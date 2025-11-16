@@ -47,6 +47,29 @@ class ConnectivityServiceTest {
     ConnectivityServiceProvider.clearInstance()
   }
 
+  /** Helper function to setup connected network with default capabilities */
+  private fun setupConnectedNetwork(
+      hasInternet: Boolean = true,
+      isValidated: Boolean = true,
+      hasWifi: Boolean = false,
+      hasCellular: Boolean = false,
+      hasEthernet: Boolean = false
+  ) {
+    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
+    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
+        .thenReturn(mockNetworkCapabilities)
+    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+        .thenReturn(hasInternet)
+    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+        .thenReturn(isValidated)
+    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
+        .thenReturn(hasWifi)
+    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+        .thenReturn(hasCellular)
+    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
+        .thenReturn(hasEthernet)
+  }
+
   @Test
   fun `getCurrentConnectivityState returns disconnected when no active network`() {
     `when`(mockConnectivityManager.activeNetwork).thenReturn(null)
@@ -70,13 +93,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `getCurrentConnectivityState returns disconnected when network not validated`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(false)
+    setupConnectedNetwork(hasInternet = true, isValidated = false)
 
     val state = service.getCurrentConnectivityState()
 
@@ -86,19 +103,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `getCurrentConnectivityState returns connected WIFI when WiFi is available and validated`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-        .thenReturn(false)
+    setupConnectedNetwork(hasWifi = true)
 
     val state = service.getCurrentConnectivityState()
 
@@ -108,19 +113,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `getCurrentConnectivityState returns connected CELLULAR when cellular is available and validated`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-        .thenReturn(false)
+    setupConnectedNetwork(hasCellular = true)
 
     val state = service.getCurrentConnectivityState()
 
@@ -130,19 +123,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `getCurrentConnectivityState returns connected ETHERNET when ethernet is available and validated`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-        .thenReturn(true)
+    setupConnectedNetwork(hasEthernet = true)
 
     val state = service.getCurrentConnectivityState()
 
@@ -152,19 +133,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `getCurrentConnectivityState returns connected OTHER when unknown transport type`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-        .thenReturn(false)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-        .thenReturn(false)
+    setupConnectedNetwork() // No specific transport = OTHER
 
     val state = service.getCurrentConnectivityState()
 
@@ -174,13 +143,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `isConnected returns true when network is connected`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
+    setupConnectedNetwork(hasWifi = true)
 
     assertTrue(service.isConnected())
   }
@@ -194,15 +157,7 @@ class ConnectivityServiceTest {
 
   @Test
   fun `connectivityState flow emits initial state`() = runTest {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
-        .thenReturn(true)
-    `when`(mockNetworkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-        .thenReturn(true)
+    setupConnectedNetwork(hasWifi = true)
 
     val state = service.connectivityState.first()
 
@@ -296,6 +251,19 @@ class ConnectivityServiceTest {
 
     val state = service.getCurrentConnectivityState()
 
+    assertFalse(state.isConnected)
+    assertNull(state.networkType)
+  }
+
+  @Test
+  fun `connectivityState flow handles errors gracefully and emits disconnected state`() = runTest {
+    // Simulate ConnectivityManager throwing an exception
+    `when`(mockConnectivityManager.activeNetwork)
+        .thenThrow(RuntimeException("ConnectivityManager error"))
+
+    val state = service.connectivityState.first()
+
+    // Should fall back to disconnected state on error
     assertFalse(state.isConnected)
     assertNull(state.networkType)
   }

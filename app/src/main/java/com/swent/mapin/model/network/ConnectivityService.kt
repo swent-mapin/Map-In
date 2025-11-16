@@ -63,24 +63,41 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
 
   override val connectivityState: Flow<ConnectivityState> =
       callbackFlow {
-            // Send initial state
-            trySend(getCurrentConnectivityState())
+            // Send initial state with error handling
+            try {
+              trySend(getCurrentConnectivityState())
+            } catch (e: Exception) {
+              // If we can't determine initial state, assume disconnected
+              trySend(ConnectivityState(isConnected = false, networkType = null))
+            }
 
             val networkCallback =
                 object : ConnectivityManager.NetworkCallback() {
                   override fun onAvailable(network: Network) {
-                    trySend(getCurrentConnectivityState())
+                    try {
+                      trySend(getCurrentConnectivityState())
+                    } catch (e: Exception) {
+                      // Ignore state update errors - previous state remains
+                    }
                   }
 
                   override fun onLost(network: Network) {
-                    trySend(getCurrentConnectivityState())
+                    try {
+                      trySend(getCurrentConnectivityState())
+                    } catch (e: Exception) {
+                      // Ignore state update errors - previous state remains
+                    }
                   }
 
                   override fun onCapabilitiesChanged(
                       network: Network,
                       networkCapabilities: NetworkCapabilities
                   ) {
-                    trySend(getCurrentConnectivityState())
+                    try {
+                      trySend(getCurrentConnectivityState())
+                    } catch (e: Exception) {
+                      // Ignore state update errors - previous state remains
+                    }
                   }
                 }
 
