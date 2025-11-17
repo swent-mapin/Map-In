@@ -131,17 +131,6 @@ class OfflineRegionManager(
   }
 
   /**
-   * Cancels any in-progress download.
-   *
-   * Safe to call even if no download is active.
-   */
-  fun cancelDownload() {
-    currentDownload?.cancel()
-    currentDownload = null
-    Log.d(TAG, "Download canceled")
-  }
-
-  /**
    * Generates a unique region ID based on bounds.
    *
    * @param bounds The coordinate bounds
