@@ -39,7 +39,7 @@ object TileStoreManagerProvider {
    */
   @VisibleForTesting
   fun setInstance(manager: TileStoreManager) {
-    instance = manager
+    synchronized(this) { instance = manager }
   }
 
   /**
@@ -50,6 +50,6 @@ object TileStoreManagerProvider {
    */
   @VisibleForTesting
   fun clearInstance() {
-    instance = null
+    synchronized(this) { instance = null }
   }
 }

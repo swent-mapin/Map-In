@@ -18,6 +18,9 @@ class TileStoreManager(
     private val tileStore: TileStore = TileStore.create(),
     private val diskQuotaMB: Long = DEFAULT_DISK_QUOTA_MB
 ) {
+  init {
+    require(diskQuotaMB > 0) { "Disk quota must be positive, got $diskQuotaMB MB" }
+  }
 
   companion object {
     /** Default disk quota for tile storage: 50 MB as per offline map requirements */

@@ -85,4 +85,14 @@ class TileStoreManagerTest {
     assertEquals(customQuota, tileStoreManager.getDiskQuotaMB())
     assertEquals(customQuota * 1024L * 1024L, tileStoreManager.getDiskQuotaBytes())
   }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `constructor throws on zero disk quota`() {
+    TileStoreManager(tileStore = mockTileStore, diskQuotaMB = 0L)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `constructor throws on negative disk quota`() {
+    TileStoreManager(tileStore = mockTileStore, diskQuotaMB = -10L)
+  }
 }
