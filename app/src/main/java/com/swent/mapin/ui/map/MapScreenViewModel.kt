@@ -42,6 +42,7 @@ import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -64,6 +65,8 @@ class MapScreenViewModel(
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
     private val locationManager: LocationManager = LocationManager(applicationContext),
     val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
 
   private var clearFocusCallback: (() -> Unit) = onClearFocus
@@ -495,13 +498,13 @@ class MapScreenViewModel(
 
   /** Initializes the TileStore for offline map caching. */
   fun initializeTileStore() {
-    viewModelScope.launch(Dispatchers.IO) {
+    viewModelScope.launch(ioDispatcher) {
       try {
         TileStoreManagerProvider.getInstance()
         // TileStore is initialized in the provider's getInstance()
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
-        withContext(Dispatchers.Main) { _errorMessage = "Failed to initialize offline map storage" }
+        withContext(mainDispatcher) { _errorMessage = "Failed to initialize offline map storage" }
       }
     }
   }
@@ -515,7 +518,7 @@ class MapScreenViewModel(
    * @param bounds The coordinate bounds to download tiles for
    */
   fun downloadOfflineRegion(bounds: CoordinateBounds) {
-    viewModelScope.launch(Dispatchers.IO) {
+    viewModelScope.launch(ioDispatcher) {
       try {
         offlineRegionManager.downloadRegion(
             bounds = bounds,
