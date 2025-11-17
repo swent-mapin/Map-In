@@ -34,6 +34,7 @@ import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
+import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import com.swent.mapin.ui.memory.MemoryActionController
@@ -472,6 +473,19 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Error loading user profile", e)
         _avatarUrl = null
+      }
+    }
+  }
+
+  /** Initializes the TileStore for offline map caching. */
+  fun initializeTileStore() {
+    viewModelScope.launch {
+      try {
+        TileStoreManagerProvider.getInstance()
+        // TileStore is initialized in the provider's getInstance()
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
+        _errorMessage = "Failed to initialize offline map storage"
       }
     }
   }

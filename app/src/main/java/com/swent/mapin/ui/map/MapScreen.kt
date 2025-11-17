@@ -160,6 +160,9 @@ fun MapScreen(
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
 
+  // Initialize TileStore for offline map caching
+  LaunchedEffect(Unit) { viewModel.initializeTileStore() }
+
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
