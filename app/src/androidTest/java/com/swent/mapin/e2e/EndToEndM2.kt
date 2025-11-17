@@ -315,7 +315,9 @@ class EndToEndM2 {
   @After
   fun tearDown() {
     try {
-      unmockkAll()
+      unmockkStatic(FirebaseAuth::class)
+      unmockkStatic(FirebaseFirestore::class)
+      clearAllMocks()
     } finally {
       if (isLocked && globalLock.isHeldByCurrentThread) {
         globalLock.unlock()
