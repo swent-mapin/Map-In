@@ -26,6 +26,7 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
+import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
@@ -34,6 +35,8 @@ import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
+import com.swent.mapin.ui.map.offline.CoordinateBounds
+import com.swent.mapin.ui.map.offline.OfflineRegionManager
 import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
@@ -41,6 +44,7 @@ import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -103,6 +107,16 @@ class MapScreenViewModel(
           locationManager = locationManager,
           scope = viewModelScope,
           setErrorMessage = { _errorMessage = it })
+
+  private val offlineRegionManager: OfflineRegionManager by lazy {
+    val tileStore = TileStoreManagerProvider.getInstance().getTileStore()
+    val connectivityFlow = {
+      ConnectivityServiceProvider.getInstance(applicationContext).connectivityState.map {
+        it.isConnected
+      }
+    }
+    OfflineRegionManager(tileStore, connectivityFlow)
+  }
 
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
@@ -488,6 +502,35 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
         withContext(Dispatchers.Main) { _errorMessage = "Failed to initialize offline map storage" }
+      }
+    }
+  }
+
+  /**
+   * Triggers download of map tiles for the specified viewport bounds.
+   *
+   * Downloads only occur when the device is online. Downloads are asynchronous and do not block the
+   * UI thread.
+   *
+   * @param bounds The coordinate bounds to download tiles for
+   */
+  fun downloadOfflineRegion(bounds: CoordinateBounds) {
+    viewModelScope.launch(Dispatchers.IO) {
+      try {
+        offlineRegionManager.downloadRegion(
+            bounds = bounds,
+            onProgress = { progress ->
+              Log.d("MapScreenViewModel", "Download progress: ${(progress * 100).toInt()}%")
+            },
+            onComplete = { result ->
+              result.fold(
+                  onSuccess = { Log.d("MapScreenViewModel", "Offline region download completed") },
+                  onFailure = { error ->
+                    Log.e("MapScreenViewModel", "Offline region download failed", error)
+                  })
+            })
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to trigger offline download", e)
       }
     }
   }

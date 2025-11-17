@@ -104,6 +104,7 @@ import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -584,6 +585,25 @@ private fun MapboxLayer(
         .collect { cameraState ->
           val center = cameraState.center
           viewModel.updateCenteredState(center.latitude(), center.longitude())
+        }
+  }
+
+  // Trigger offline region downloads when camera settles
+  val configuration = LocalConfiguration.current
+  val screenWidthPx = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx().toInt() }
+  val screenHeightPx = with(LocalDensity.current) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .debounce(2000L) // Wait 2 seconds after camera stops moving
+        .collect { cameraState ->
+          val center = cameraState.center
+          val zoom = cameraState.zoom
+          val bounds =
+              com.swent.mapin.ui.map.offline.ViewportBoundsCalculator.calculateBounds(
+                  center, zoom, screenWidthPx, screenHeightPx)
+          viewModel.downloadOfflineRegion(bounds)
         }
   }
 
