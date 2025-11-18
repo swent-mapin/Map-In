@@ -47,11 +47,7 @@ fun AppNavHost(
 
     composable(Route.Profile.route) {
       ProfileScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          },
+          onNavigateBack = { navController.popBackStack() },
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
@@ -64,12 +60,12 @@ fun AppNavHost(
     }
 
     composable(Route.Settings.route) {
+      // Check if returning from password change with success result
+      val passwordChangeResult =
+          navController.currentBackStackEntry?.savedStateHandle?.get<Boolean>("password_changed")
+
       SettingsScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          },
+          onNavigateBack = { navController.popBackStack() },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
               // Clear the whole back stack by popping up to the nav graph's start destination
@@ -77,38 +73,33 @@ fun AppNavHost(
               launchSingleTop = true
             }
           },
-          onNavigateToChangePassword = { navController.navigate(Route.ChangePassword.route) })
+          onNavigateToChangePassword = { navController.navigate(Route.ChangePassword.route) },
+          passwordChangeSuccess = passwordChangeResult)
+
+      // Clear the result after reading it
+      if (passwordChangeResult != null) {
+        navController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("password_changed")
+      }
     }
 
     composable(Route.ChangePassword.route) {
       ChangePasswordScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          },
+          onNavigateBack = { navController.popBackStack() },
           onPasswordChanged = {
-            // After successfully changing password, navigate back to settings
+            // Set result to communicate success back to settings
+            navController.previousBackStackEntry?.savedStateHandle?.set("password_changed", true)
+            // Navigate back to settings
             navController.popBackStack()
           })
     }
 
     composable(Route.Friends.route) {
-      FriendsScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          })
+      FriendsScreen(onNavigateBack = { navController.popBackStack() })
     }
 
     composable(Route.Chat.route) {
       ChatScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          },
+          onNavigateBack = { navController.popBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
             val encodedName = Uri.encode(conversation.name)
@@ -119,11 +110,7 @@ fun AppNavHost(
 
     composable(Route.NewConversation.route) {
       NewConversationScreen(
-          onNavigateBack = {
-            if (navController.previousBackStackEntry != null) {
-              navController.popBackStack()
-            }
-          },
+          onNavigateBack = { navController.popBackStack() },
           onConfirm = {
             navController.navigate(Route.Chat.route) {
               popUpTo(Route.Chat.route) { inclusive = true }
