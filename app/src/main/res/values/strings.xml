@@ -37,4 +37,8 @@
     <string name="empty_friends">No friends yet</string>
     <string name="empty_friends2">Add some to start a conversation!</string>
     <string name="validation_banner_prefix">The following fields are missing/incorrect: %1$s</string>
+    <string name="password_show">Show password</string>
+    <string name="password_hide">Hide password</string>
+    <string name="change_password">Change Password</string>
+    <string name="change_password_description">Update your account password</string>
 </resources>
