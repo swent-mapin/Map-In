@@ -23,11 +23,15 @@ import kotlinx.coroutines.launch
  *
  * @property directionsService Service for fetching directions from Mapbox API
  * @property currentTimeMillis Function to get current time in milliseconds (injectable for testing)
+ * @property minDistanceThreshold Minimum distance in meters user must move before route updates
+ * @property minTimeThreshold Minimum time in milliseconds that must pass before route updates
  * @see DirectionState for possible states
  */
 class DirectionViewModel(
     private val directionsService: MapboxDirectionsService? = null,
-    private val currentTimeMillis: () -> Long = { System.currentTimeMillis() }
+    private val currentTimeMillis: () -> Long = { System.currentTimeMillis() },
+    private val minDistanceThreshold: Float = 10.0f,
+    private val minTimeThreshold: Long = 10000L
 ) : ViewModel() {
 
   private var _directionState by mutableStateOf<DirectionState>(DirectionState.Cleared)
@@ -40,8 +44,7 @@ class DirectionViewModel(
   private var lastUpdateTime: Long = 0L
   private var rateLimitJob: Job? = null
 
-  private val minDistanceThreshold = 10.0f
-  private val minTimeThreshold = 10000L
+  private val rateLimitDelayMillis = 1000L
 
   /**
    * Requests walking directions from origin to destination.
@@ -107,21 +110,29 @@ class DirectionViewModel(
     if (shouldUpdate && rateLimitJob == null) {
       rateLimitJob =
           viewModelScope.launch {
-            delay(1000)
-            rateLimitJob = null
+            delay(rateLimitDelayMillis)
+
+            // Re-check state after delay to avoid race conditions
+            val state = _directionState
+            if (state !is DirectionState.Displayed) {
+              rateLimitJob = null
+              return@launch
+            }
 
             val newOrigin = Point.fromLngLat(location.longitude, location.latitude)
-            val routePoints = directionsService?.getDirections(newOrigin, currentState.destination)
+            val routePoints = directionsService?.getDirections(newOrigin, state.destination)
 
             if (routePoints != null && routePoints.isNotEmpty()) {
               _directionState =
                   DirectionState.Displayed(
                       routePoints = routePoints,
                       origin = newOrigin,
-                      destination = currentState.destination)
+                      destination = state.destination)
               lastUpdateLocation = location
               lastUpdateTime = currentTimeMillis()
             }
+
+            rateLimitJob = null
           }
     }
   }
