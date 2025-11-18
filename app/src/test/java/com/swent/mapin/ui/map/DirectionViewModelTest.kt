@@ -324,7 +324,7 @@ class DirectionViewModelTest {
     verify(mockDirectionsService, times(1)).getDirections(any(), any())
 
     // Second update at 12 seconds total - should trigger (both thresholds met)
-    testTime += 7000  // Total = 12 seconds
+    testTime += 7000 // Total = 12 seconds
     val location2 = createMockLocation(46.5199, 6.5670)
     `when`(initialLocation.distanceTo(location2)).thenReturn(15f)
     viewModel.onLocationUpdate(location2)
@@ -359,15 +359,15 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    val newRoutePoints = listOf(
-        Point.fromLngLat(6.5669, 46.5198),
-        Point.fromLngLat(6.5690, 46.5215),
-        Point.fromLngLat(6.5700, 46.5220))
+    val newRoutePoints =
+        listOf(
+            Point.fromLngLat(6.5669, 46.5198),
+            Point.fromLngLat(6.5690, 46.5215),
+            Point.fromLngLat(6.5700, 46.5220))
 
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
         .thenReturn(mockRoutePoints)
-    `when`(mockDirectionsService.getDirections(any(), any()))
-        .thenReturn(newRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(newRoutePoints)
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()

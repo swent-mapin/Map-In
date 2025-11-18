@@ -18,8 +18,8 @@ import kotlinx.coroutines.launch
  * location and event destinations. It follows MVVM architecture principles, exposing an observable
  * state that the UI layer can react to.
  *
- * Uses the Mapbox Directions API to fetch walking routes between two points.
- * Supports live tracking to update routes as the user moves.
+ * Uses the Mapbox Directions API to fetch walking routes between two points. Supports live tracking
+ * to update routes as the user moves.
  *
  * @property directionsService Service for fetching directions from Mapbox API
  * @property currentTimeMillis Function to get current time in milliseconds (injectable for testing)
@@ -116,7 +116,9 @@ class DirectionViewModel(
             if (routePoints != null && routePoints.isNotEmpty()) {
               _directionState =
                   DirectionState.Displayed(
-                      routePoints = routePoints, origin = newOrigin, destination = currentState.destination)
+                      routePoints = routePoints,
+                      origin = newOrigin,
+                      destination = currentState.destination)
               lastUpdateLocation = location
               lastUpdateTime = currentTimeMillis()
             }
