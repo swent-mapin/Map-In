@@ -89,7 +89,8 @@ import com.swent.mapin.model.PreferencesRepositoryProvider
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSignIn: () -> Unit,
-    onNavigateToChangePassword: () -> Unit = {}
+    onNavigateToChangePassword: () -> Unit,
+    passwordChangeSuccess: Boolean? = null
 ) {
   val context = LocalContext.current
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
@@ -107,6 +108,13 @@ fun SettingsScreen(
     errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
       viewModel.clearErrorMessage()
+    }
+  }
+
+  // Display success message when password is changed
+  LaunchedEffect(passwordChangeSuccess) {
+    if (passwordChangeSuccess == true) {
+      snackbarHostState.showSnackbar("Password changed successfully")
     }
   }
 
