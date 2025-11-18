@@ -308,19 +308,22 @@ fun BottomSheetContent(
                                       Tab(
                                           selected = selectedTab.ordinal == 0,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.entries[0])
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.entries[0])
                                           },
                                           text = { Text("Saved Events") })
                                       Tab(
                                           selected = selectedTab.ordinal == 1,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.entries[1])
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.entries[1])
                                           },
                                           text = { Text("Joined Events") })
                                       Tab(
                                           selected = selectedTab.ordinal == 2,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.entries[2])
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.entries[2])
                                           },
                                           text = { Text("Owned Events") })
                                     }

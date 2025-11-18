@@ -112,15 +112,14 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
  * - Error: Displays error message with retry button
  * - Success: Shows list of events or empty state message
  *
- * The event list reuses EventsSection for consistent UI with other tabs.
- * Each event item is clickable and displays key details (name, date, location).
+ * The event list reuses EventsSection for consistent UI with other tabs. Each event item is
+ * clickable and displays key details (name, date, location).
  *
  * @param events List of events owned by the current user
  * @param loading Whether events are currently being loaded
  * @param error Error message to display, or null if no error
  * @param onEventClick Callback invoked when user taps an event item
  * @param onRetry Callback invoked when user taps the retry button in error state
- *
  * @see EventsSection for the list rendering implementation
  * @see SearchResultItem for individual event item display
  */
@@ -135,52 +134,51 @@ fun OwnedEventsSection(
   when {
     loading -> {
       Column(
-          modifier = Modifier.fillMaxWidth().padding(16.dp).semantics {
-            contentDescription = "Loading owned events"
-          },
+          modifier =
+              Modifier.fillMaxWidth().padding(16.dp).semantics {
+                contentDescription = "Loading owned events"
+              },
           verticalArrangement = Arrangement.Center) {
-        CircularProgressIndicator(
-            modifier = Modifier.semantics {
-              contentDescription = "Loading indicator for owned events"
-            }
-        )
-      }
+            CircularProgressIndicator(
+                modifier =
+                    Modifier.semantics {
+                      contentDescription = "Loading indicator for owned events"
+                    })
+          }
     }
     error != null -> {
       Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(
             text = "Error: $error",
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.semantics {
-              contentDescription = "Error loading owned events: $error"
-            }
-        )
+            modifier =
+                Modifier.semantics { contentDescription = "Error loading owned events: $error" })
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onRetry,
-            modifier = Modifier.fillMaxWidth().semantics {
-              contentDescription = "Retry loading owned events"
+            modifier =
+                Modifier.fillMaxWidth().semantics {
+                  contentDescription = "Retry loading owned events"
+                }) {
+              Text("Retry")
             }
-        ) {
-          Text("Retry")
-        }
       }
     }
     events.isEmpty() -> {
       NoResultsMessage(
           query = "You have not created any events yet.",
-          modifier = Modifier.semantics {
-            contentDescription = "No owned events. You have not created any events yet."
-          }
-      )
+          modifier =
+              Modifier.semantics {
+                contentDescription = "No owned events. You have not created any events yet."
+              })
     }
     else -> {
       // Reuse EventsSection behaviour for listing
-      Column(modifier = Modifier.semantics {
-        contentDescription = "List of ${events.size} owned events"
-      }) {
-        EventsSection(events = events, onEventClick = onEventClick)
-      }
+      Column(
+          modifier =
+              Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
+            EventsSection(events = events, onEventClick = onEventClick)
+          }
     }
   }
 }

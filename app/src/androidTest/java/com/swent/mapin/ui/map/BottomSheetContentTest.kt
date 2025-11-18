@@ -1334,15 +1334,24 @@ class BottomSheetContentTest {
     val visibleInitially = testEvents.reversed().take(3)
     val hiddenInitially = testEvents.reversed().drop(3)
 
-    visibleInitially.forEach { e -> rule.onNodeWithText(e.title, substring = true).assertIsDisplayed() }
-    hiddenInitially.forEach { e -> rule.onNodeWithText(e.title, substring = true).assertDoesNotExist() }
+    visibleInitially.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).assertIsDisplayed()
+    }
+    hiddenInitially.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+    }
 
     // Expand
-    rule.onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true).performScrollTo().performClick()
+    rule
+        .onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+        .performScrollTo()
+        .performClick()
     rule.waitForIdle()
 
     // Now all should be visible
-    testEvents.forEach { e -> rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed() }
+    testEvents.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
+    }
 
     // Click top-most visible event and ensure callback
     val toClick = testEvents.reversed().first()

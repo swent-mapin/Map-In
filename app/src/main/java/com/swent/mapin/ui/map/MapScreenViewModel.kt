@@ -220,8 +220,10 @@ class MapScreenViewModel(
   // Owned events for bottom sheet display
   val ownedEvents: List<Event>
     get() = eventStateController.ownedEvents
+
   val ownedEventsLoading: Boolean
     get() = eventStateController.ownedLoading
+
   val ownedEventsError: String?
     get() = eventStateController.ownedError
 

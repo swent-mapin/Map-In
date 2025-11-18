@@ -55,9 +55,11 @@ class MapEventStateController(
   private var _ownedEvents by mutableStateOf<List<Event>>(emptyList())
   val ownedEvents: List<Event>
     get() = _ownedEvents
+
   private var _ownedLoading by mutableStateOf(false)
   val ownedLoading: Boolean
     get() = _ownedLoading
+
   private var _ownedError by mutableStateOf<String?>(null)
   val ownedError: String?
     get() = _ownedError
@@ -178,11 +180,11 @@ class MapEventStateController(
   }
 
   /**
-   * Loads events owned by the current authenticated user. Repository doesn't provide a direct
-   * query so we fetch all events and filter by ownerId. Errors are surfaced via setErrorMessage.
+   * Loads events owned by the current authenticated user. Repository doesn't provide a direct query
+   * so we fetch all events and filter by ownerId. Errors are surfaced via setErrorMessage.
    */
-   fun loadOwnedEvents() {
-     scope.launch {
+  fun loadOwnedEvents() {
+    scope.launch {
       _ownedLoading = true
       _ownedError = null
       try {
@@ -196,8 +198,8 @@ class MapEventStateController(
       } finally {
         _ownedLoading = false
       }
-     }
-   }
+    }
+  }
 
   /**
    * Adds the current user as a participant to the selected event.
