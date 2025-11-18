@@ -19,7 +19,7 @@ import com.swent.mapin.ui.settings.SettingsScreen
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
-    renderMap: Boolean = true
+    renderMap: Boolean = true // Set to false in instrumented tests to skip Mapbox rendering
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
