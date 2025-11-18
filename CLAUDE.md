@@ -1,6 +1,3 @@
-# auto format - first time setup
-Run this once after cloning the repository to install git hooks: `./scripts/setup-hooks.sh`
-
 # Testing guide
 
 ## Formatting
@@ -12,6 +9,9 @@ Run this once after cloning the repository to install git hooks: `./scripts/setu
 ## Instrumentation tests
 - Start an emulator or plug in a device.
 - `./gradlew connectedDebugAndroidTest`
+
+### Map rendering flag in tests
+- Instrumented/E2E tests run with `renderMap = false` to skip the Mapbox satellite map on CI emulators (avoids native crashes). Keep this disabled in tests; only enable when you explicitly need to exercise Mapbox rendering locally.
 
 ## Full suite
 - `./gradlew testDebugUnitTest connectedDebugAndroidTest`
@@ -30,3 +30,13 @@ Run this once after cloning the repository to install git hooks: `./scripts/setu
 
 # Build APK
 - `./gradlew assembleDebug`: build APK
+
+# Commits 
+
+- Be concise and precise.
+- Use normal commit style (Imperative, Upper case first letter)
+
+# PRs
+
+- Follow the pull_request_template.md
+- Always push the PR in draft.
