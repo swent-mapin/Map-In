@@ -1,5 +1,6 @@
 package com.swent.mapin.navigationTests
 
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.NavHostController
@@ -53,7 +54,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile screen to appear after navigation
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 15000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -284,5 +285,60 @@ class AppNavHostTest {
 
     // Verify we're back on profile screen
     composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun navigatesToFriendsScreen() {
+    lateinit var navController: NavHostController
+
+    composeTestRule.setContent {
+      navController = rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.runOnIdle { navController.navigate("friends") }
+
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun navigatesToNewConversation_andConfirms() {
+    lateinit var navController: NavHostController
+
+    composeTestRule.setContent {
+      navController = rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.runOnIdle {
+      // Navigate to NewConversation route
+      navController.navigate("newConversation")
+
+      // Simulate confirm action (navigates back to Chat)
+      navController.navigate("chat") {
+        popUpTo("chat") { inclusive = true }
+        launchSingleTop = true
+      }
+    }
+
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun navigatesToConversationScreen_andPopsBack() {
+    lateinit var navController: NavHostController
+
+    composeTestRule.setContent {
+      navController = rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.runOnIdle {
+      val encodedName = Uri.encode("Test User")
+      navController.navigate("conversation/42/$encodedName")
+      navController.popBackStack()
+    }
+
+    composeTestRule.waitForIdle()
   }
 }

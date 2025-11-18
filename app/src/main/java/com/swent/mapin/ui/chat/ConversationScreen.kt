@@ -1,15 +1,19 @@
 package com.swent.mapin.ui.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,21 +23,29 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 object ConversationScreenTestTags {
   const val CONVERSATION_SCREEN = "conversationScreen"
   const val SEND_BUTTON = "sendButton"
   const val INPUT_TEXT_FIELD = "inputTextField"
 }
+
+const val MESSAGE_START = 0
 
 // Data class for messages
 data class Message(val text: String, val isMe: Boolean)
@@ -48,20 +60,32 @@ data class Message(val text: String, val isMe: Boolean)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationScreen(
+    modifier: Modifier = Modifier,
+    onNavigateBack: () -> Unit = {},
+    messageViewModel: MessageViewModel = viewModel(),
     conversationId: String,
     conversationName: String,
-    modifier: Modifier = Modifier,
-    onNavigateBack: () -> Unit = {}
 ) {
-  var messageText by remember { mutableStateOf(TextFieldValue("")) }
 
-  // Mock conversation data
-  var messages by remember {
-    mutableStateOf(
-        listOf(
-            Message("Hey, how are you?", isMe = false),
-            Message("Doing great, thanks!", isMe = true)))
+  // loads initial messages
+  LaunchedEffect(conversationId) { messageViewModel.observeMessages(conversationId) }
+
+  var messageText by remember { mutableStateOf(TextFieldValue("")) }
+  val messages by messageViewModel.messages.collectAsState()
+  val listState = rememberLazyListState()
+  val coroutineScope = rememberCoroutineScope()
+
+  val shouldLoadMore by remember {
+    derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
   }
+
+  // Dynamic loading when scrolling up
+  LaunchedEffect(shouldLoadMore) {
+    if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
+  }
+
+  // Auto scroll to the Bottom of the LazyColumn when a new message is sent
+  LaunchedEffect(messages.size) { listState.animateScrollToItem(MESSAGE_START) }
 
   Scaffold(
       topBar = { ChatTopBar(conversationName, onNavigateBack = onNavigateBack) },
@@ -70,6 +94,7 @@ fun ConversationScreen(
             modifier =
                 Modifier.fillMaxWidth()
                     .imePadding() // ensures it moves above the keyboard
+                    .navigationBarsPadding()
                     .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
               TextField(
@@ -83,7 +108,7 @@ fun ConversationScreen(
               IconButton(
                   onClick = {
                     if (messageText.text.isNotBlank()) {
-                      messages = messages + Message(messageText.text, isMe = true)
+                      messageViewModel.sendMessage(conversationId, messageText.text)
                       messageText = TextFieldValue("")
                     }
                   },
@@ -93,13 +118,22 @@ fun ConversationScreen(
             }
       },
       modifier = modifier.testTag(ConversationScreenTestTags.CONVERSATION_SCREEN)) { padding ->
-        // Message list
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            reverseLayout = true) {
-              items(messages.reversed()) { message -> MessageBubble(message) }
-            }
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+          // The lazy column to display messages
+          LazyColumn(
+              state = listState,
+              modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
+              verticalArrangement = Arrangement.spacedBy(8.dp),
+              reverseLayout = true) {
+                items(messages.reversed()) { message -> MessageBubble(message) }
+              }
+          // Button to scroll down to the newest message
+          IconButton(
+              onClick = { coroutineScope.launch { listState.animateScrollToItem(MESSAGE_START) } },
+              modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+                Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
+              }
+        }
       }
 }
 

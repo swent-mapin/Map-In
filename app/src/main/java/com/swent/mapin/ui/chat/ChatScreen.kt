@@ -21,9 +21,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.swent.mapin.R
-import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.UserProfile
 
 object ChatScreenTestTags {
   const val CHAT_SCREEN = "Chats"
@@ -43,14 +44,15 @@ object ChatScreenTestTags {
  * @property id Unique identifier for the conversation.
  * @property participants The list of friends included in the conversation.
  * @property lastMessage The latest message in the conversation, if any.
- * @property createdByCurrentUser Whether the current user initiated the conversation.
  */
 data class Conversation(
-    val id: String,
-    val name: String,
-    val participants: List<FriendWithProfile>,
+    val id: String = "",
+    val name: String = "",
+    val participantIds: List<String> = emptyList(),
+    val participants: List<UserProfile> = emptyList(),
     val lastMessage: String = "",
-    val createdByCurrentUser: Boolean = false
+    val lastMessageTimestamp: Long = 0L,
+    val profilePictureUrl: String? = null
 )
 
 /**
@@ -93,30 +95,27 @@ fun ConversationItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-  val primaryParticipant = conversation.participants.firstOrNull()
 
   Row(
       modifier = modifier.fillMaxWidth().clickable { onClick() }.padding(12.dp),
       verticalAlignment = Alignment.CenterVertically) {
-        if (primaryParticipant?.userProfile?.profilePictureUrl.isNullOrBlank()) {
+        if (conversation.profilePictureUrl.isNullOrBlank()) {
           Icon(
               imageVector = Icons.Default.AccountCircle,
-              contentDescription = null,
+              contentDescription = "DefaultProfile",
               tint = Color.Gray,
               modifier = Modifier.size(48.dp).clip(CircleShape))
         } else {
           Image(
-              painter = rememberAsyncImagePainter(primaryParticipant.userProfile.profilePictureUrl),
-              contentDescription = null,
+              painter = rememberAsyncImagePainter(conversation.profilePictureUrl),
+              contentDescription = "CustomProfile",
               modifier = Modifier.size(48.dp).clip(CircleShape))
         }
 
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-          Text(
-              primaryParticipant?.userProfile?.name ?: "Unknown",
-              style = MaterialTheme.typography.titleMedium)
+          Text(conversation.name, style = MaterialTheme.typography.titleMedium)
           Text(
               conversation.lastMessage.ifBlank { "No messages yet" },
               style = MaterialTheme.typography.bodyMedium,
@@ -136,22 +135,27 @@ fun ConversationItem(
  * - A floating action button to start a new conversation.
  *
  * @param modifier Modifier for styling or layout adjustments.
- * @param allConversations The full list of available conversations.
+ * @param messageViewModel The viewModel for accessing messages and conversations.
  * @param onNavigateBack Callback invoked when the back button is pressed.
  * @param onNewConversation Callback invoked when the FAB is clicked.
  * @param onOpenConversation Callback invoked when a conversation item is selected.
+ * @param onTabSelected Callback invoked when the user selects a different tab in the bottom
+ *   navigation bar
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    allConversations: List<Conversation> = LocalChatFriendsRepository.getAllConversations(),
+    messageViewModel: MessageViewModel = viewModel(),
+    conversationViewModel: ConversationViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onNewConversation: () -> Unit = {},
     onOpenConversation: (Conversation) -> Unit = {},
     onTabSelected: (ChatTab) -> Unit = {}
 ) {
-  val createdConversations = allConversations.filter { it.createdByCurrentUser }
+  LaunchedEffect(Unit) { conversationViewModel.observeConversations() }
+
+  val conversations by conversationViewModel.userConversations.collectAsState()
 
   Scaffold(
       topBar = {
@@ -169,7 +173,7 @@ fun ChatScreen(
       },
       floatingActionButtonPosition = FabPosition.End,
   ) { paddingValues ->
-    if (createdConversations.isEmpty()) {
+    if (conversations.isEmpty()) {
       Column(
           modifier =
               Modifier.fillMaxSize()
@@ -188,7 +192,7 @@ fun ChatScreen(
     } else {
       LazyColumn(
           modifier = Modifier.padding(paddingValues).testTag(ChatScreenTestTags.CHAT_SCREEN)) {
-            items(createdConversations) { conversation ->
+            items(conversations) { conversation ->
               ConversationItem(
                   conversation,
                   onClick = { onOpenConversation(conversation) },

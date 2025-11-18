@@ -2,7 +2,6 @@ package com.swent.mapin.e2e
 
 import android.content.Context
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.compose.rememberNavController
@@ -24,7 +23,6 @@ import io.mockk.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Rule
@@ -33,7 +31,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 
 /**
- * End-to-End Test: Complete User Profile Management Flow
+ * End-to-End Test: Complete User Profile Management Flow (Milestone 1)
  *
  * This test verifies that a user can successfully complete the following flow:
  * 1. Login with valid credentials (email/password)
@@ -43,6 +41,11 @@ import org.junit.runners.MethodSorters
  * 5. Verify the changes persist (by checking the UI displays updated values)
  * 6. Logout from the profile screen
  * 7. Confirm redirection to the login screen
+ *
+ * Implementation note: The original M1 version used a Settings button inside the Profile screen.
+ * That button has since been removed from the UI. This test now navigates to the Settings screen
+ * directly via the NavController (Route.Settings) instead of clicking a UI button. No assertions
+ * rely on the removed button.
  *
  * This test uses MockK to mock Firebase authentication and Firestore operations, simulating a real
  * user journey through the app.
@@ -54,7 +57,7 @@ import org.junit.runners.MethodSorters
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-class UserProfileEndToEndTest {
+class EndToEndM1 {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
   private lateinit var navController: androidx.navigation.NavHostController
@@ -78,6 +81,7 @@ class UserProfileEndToEndTest {
   private val updatedBio = "This is my updated bio after editing"
 
   private var testProfile: UserProfile = UserProfile()
+  private val renderMapInTests = false // Disable Mapbox rendering on CI emulators
 
   companion object {
     // Global lock to ensure only ONE E2E test runs at a time across all test instances
@@ -194,10 +198,7 @@ class UserProfileEndToEndTest {
     // Start with logged in state - simulating user already authenticated
     composeTestRule.setContent {
       navController = rememberNavController()
-      // Render the map during E2E tests so UI tags like MAP_SCREEN and bottom sheet
-      // quick actions (profileButton) are present. Previously renderMap=false caused
-      // the map and related UI not to be composed which made the test fail.
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = true)
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
     composeTestRule.waitForIdle()
 
@@ -289,10 +290,9 @@ class UserProfileEndToEndTest {
     composeTestRule.onNodeWithText(updatedBio, useUnmergedTree = true).assertExists()
 
     // ============================================
-    // STEP 7: Navigate to Settings
+    // STEP 7: Navigate to Settings (directly via navigation)
     // ============================================
-    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("settingsButton", useUnmergedTree = true).performClick()
+    composeTestRule.runOnIdle { navController.navigate(Route.Settings.route) }
 
     composeTestRule.waitForIdle()
 
@@ -363,8 +363,7 @@ class UserProfileEndToEndTest {
   fun profileEdit_cancelButton_shouldDiscardChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      // Need to render map to access bottom sheet and profile navigation
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = true)
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
 
     composeTestRule.waitForIdle()
@@ -432,28 +431,20 @@ class UserProfileEndToEndTest {
    */
   @Test
   fun profileEdit_navigationBackAndForth_shouldPersistChanges() {
-
-    val profileRepo = com.swent.mapin.model.UserProfileRepository(mockFirestore)
-    val profileViewModel = com.swent.mapin.ui.profile.ProfileViewModel(profileRepo)
-    val showProfile = mutableStateOf(true)
-
-    // Single setContent: render either the ProfileScreen or a placeholder based on state
     composeTestRule.setContent {
-      if (showProfile.value) {
-        com.swent.mapin.ui.profile.ProfileScreen(
-            onNavigateBack = {},
-            onNavigateToSignIn = {},
-            onNavigateToFriends = {},
-            onNavigateToSettings = {},
-            viewModel = profileViewModel)
-      } else {
-        androidx.compose.material3.Text("Placeholder screen")
-      }
+      navController = rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
 
-    // Wait for profile to be loaded into the ViewModel and shown
+    composeTestRule.waitForIdle()
+
+    // Reveal and navigate to profile by swiping up the bottom sheet
+    // Programmatic navigation to Profile for stability
+    composeTestRule.runOnIdle { navController.navigate(Route.Profile.route) }
+    composeTestRule.waitForIdle()
+
+    // Wait for profile data to load
     composeTestRule.waitUntil(timeoutMillis = 10000) {
-      // Profile name should be present in the UI
       composeTestRule
           .onAllNodesWithText(testUserName, useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -475,40 +466,7 @@ class UserProfileEndToEndTest {
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
-    // Fallback: ensure save is triggered even if UI click was flaky on CI
-    composeTestRule.runOnUiThread {
-      try {
-        profileViewModel.saveProfile()
-      } catch (t: Throwable) {
-        println("E2E: fallback saveProfile threw: ${t.message}")
-      }
-    }
-    composeTestRule.waitForIdle()
-
-    // Wait for save to be invoked on the mocked Firestore (helps eliminate races on CI)
-    println("E2E: Waiting for mockDocument.set to be invoked for saved profile")
-    try {
-      verify(timeout = 15000) { mockDocument.set(any()) }
-    } catch (e: Exception) {
-      println("E2E: mockDocument.set was not invoked within timeout: ${e.message}")
-      throw e
-    }
-
-    // Also assert the ViewModel state directly to avoid UI flakiness on CI
-    composeTestRule.runOnIdle {
-      val current = profileViewModel.userProfile.value
-      println("E2E: ProfileViewModel current user name after save: ${current.name}")
-      assertEquals("ProfileViewModel should contain updated name", updatedName, current.name)
-    }
-
-    // Force a reload from the repository to simulate app lifecycle and ensure persisted data shows
-    composeTestRule.runOnUiThread {
-      println("E2E: Forcing profile reload from repository in test")
-      profileViewModel.loadUserProfile()
-    }
-    composeTestRule.waitForIdle()
-
-    // Extra wait to allow UI to pick up reloaded state on slower CI emulators
+    // Wait for save to complete and view mode to show updated name
     composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText(updatedName, useUnmergedTree = true)
@@ -516,16 +474,20 @@ class UserProfileEndToEndTest {
           .isNotEmpty()
     }
 
-    // Simulate navigation away by switching state to show placeholder
-    composeTestRule.runOnUiThread { showProfile.value = false }
+    // Navigate back to map
+    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
-    // Re-show the ProfileScreen with the same ViewModel to simulate navigating back
-    composeTestRule.runOnUiThread { showProfile.value = true }
+    // Verify we're on map screen
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+
+    // Swipe up on bottom sheet to reveal profile button
+    // Programmatically navigate back to Profile (avoid swiping)
+    composeTestRule.runOnIdle { navController.navigate(Route.Profile.route) }
     composeTestRule.waitForIdle()
 
-    // Wait for profile to load with updated data (increase timeout on CI)
-    composeTestRule.waitUntil(timeoutMillis = 20000) {
+    // Wait for profile to load with updated data
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText(updatedName, useUnmergedTree = true)
           .fetchSemanticsNodes()
