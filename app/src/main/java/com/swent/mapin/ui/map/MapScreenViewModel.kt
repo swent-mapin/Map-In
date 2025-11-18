@@ -283,6 +283,10 @@ class MapScreenViewModel(
     loadUserProfile()
 
     registerAuthStateListener()
+
+    locationController.onLocationUpdate = { location ->
+      directionViewModel.onLocationUpdate(location)
+    }
   }
 
   /**
@@ -644,7 +648,7 @@ class MapScreenViewModel(
           }
       val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
-      directionViewModel.requestDirections(userLocation, eventLocation)
+      directionViewModel.requestDirections(userLocation, eventLocation, userLoc)
     }
   }
 
