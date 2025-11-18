@@ -147,7 +147,6 @@ class MapEventStateController(
           }
         }
         _joinedEvents = joinedEventsList
-        loadAttendedEvents()
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -303,15 +302,6 @@ class MapEventStateController(
    */
   fun getUserId(): String {
     return auth.currentUser?.uid ?: throw Exception("User not authenticated")
-  }
-
-  // Compute attended events from joined events (ended ones), sorted newest first
-  private fun loadAttendedEvents() {
-    val now = System.currentTimeMillis()
-    _attendedEvents =
-        _joinedEvents
-            .filter { ev -> ev.endDate?.toDate()?.time?.let { it <= now } ?: false }
-            .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
   }
 
   /** Clears all user-scoped state (joined, saved, etc.). */
