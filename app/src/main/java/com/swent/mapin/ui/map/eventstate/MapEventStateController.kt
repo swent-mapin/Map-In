@@ -51,6 +51,17 @@ class MapEventStateController(
   val savedEvents: List<Event>
     get() = _savedEvents
 
+  // Owned events (events created by current authenticated user)
+  private var _ownedEvents by mutableStateOf<List<Event>>(emptyList())
+  val ownedEvents: List<Event>
+    get() = _ownedEvents
+  private var _ownedLoading by mutableStateOf(false)
+  val ownedLoading: Boolean
+    get() = _ownedLoading
+  private var _ownedError by mutableStateOf<String?>(null)
+  val ownedError: String?
+    get() = _ownedError
+
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
    * accordingly.
@@ -69,6 +80,7 @@ class MapEventStateController(
     getFilteredEvents(filterViewModel.filters.value)
     loadJoinedEvents()
     loadSavedEvents()
+    loadOwnedEvents()
   }
 
   /**
@@ -164,6 +176,28 @@ class MapEventStateController(
       }
     }
   }
+
+  /**
+   * Loads events owned by the current authenticated user. Repository doesn't provide a direct
+   * query so we fetch all events and filter by ownerId. Errors are surfaced via setErrorMessage.
+   */
+   fun loadOwnedEvents() {
+     scope.launch {
+      _ownedLoading = true
+      _ownedError = null
+      try {
+        val currentUserId = getUserId()
+        val all = eventRepository.getAllEvents()
+        _ownedEvents = all.filter { it.ownerId == currentUserId }
+      } catch (e: Exception) {
+        val msg = e.message ?: "Unknown error occurred while fetching owned events"
+        _ownedError = msg
+        setErrorMessage(msg)
+      } finally {
+        _ownedLoading = false
+      }
+     }
+   }
 
   /**
    * Adds the current user as a participant to the selected event.
@@ -318,10 +352,6 @@ class MapEventStateController(
     clearErrorMessage()
   }
 
-  companion object {
-    private const val TAG = "MapEventStateController"
-  }
-
   @VisibleForTesting
   fun setAllEventsForTest(events: List<Event>) {
     _allEvents = events
@@ -345,5 +375,10 @@ class MapEventStateController(
   @VisibleForTesting
   fun setSavedEventsForTest(events: List<Event>) {
     _savedEvents = events
+  }
+
+  @VisibleForTesting
+  fun setOwnedEventsForTest(events: List<Event>) {
+    _ownedEvents = events
   }
 }
