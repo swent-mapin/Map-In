@@ -9,6 +9,8 @@ sealed class Route(val route: String) {
 
   object Settings : Route("settings")
 
+  object ChangePassword : Route("changePassword")
+
   object Friends : Route("friends")
 
   object Chat : Route("chat")

@@ -13,6 +13,7 @@ import com.swent.mapin.ui.chat.NewConversationScreen
 import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
+import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
 
 @Composable
@@ -75,6 +76,20 @@ fun AppNavHost(
               popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
+          },
+          onNavigateToChangePassword = { navController.navigate(Route.ChangePassword.route) })
+    }
+
+    composable(Route.ChangePassword.route) {
+      ChangePasswordScreen(
+          onNavigateBack = {
+            if (navController.previousBackStackEntry != null) {
+              navController.popBackStack()
+            }
+          },
+          onPasswordChanged = {
+            // After successfully changing password, navigate back to settings
+            navController.popBackStack()
           })
     }
 
