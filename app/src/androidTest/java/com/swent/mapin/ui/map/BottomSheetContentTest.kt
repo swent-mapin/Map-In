@@ -1189,33 +1189,43 @@ class BottomSheetContentTest {
     assertTrue(cleared)
   }
 
+  // Helper function to reduce boilerplate for Owned Events tests
+  @Composable
+  private fun OwnedEventsContent(
+      events: List<Event> = emptyList(),
+      loading: Boolean = false,
+      error: String? = null,
+      onRetry: () -> Unit = {},
+      onTabEventClick: (Event) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+          ownedEvents = events,
+          ownedLoading = loading,
+          ownedError = error,
+          onRetryOwnedEvents = onRetry,
+          onTabEventClick = onTabEventClick,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
+    }
+  }
+
   @Test
   fun ownedEvents_loading_showsLoaderAndHidesOtherStates() {
-    val events = LocalEventRepository.defaultSampleEvents().take(0)
-
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
-            ownedEvents = events,
-            ownedLoading = true,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel,
-            eventViewModel = eventViewModel)
-      }
-    }
-
+    rule.setContent { OwnedEventsContent(loading = true) }
     rule.waitForIdle()
 
     // When loading we shouldn't see Retry or No results text
@@ -1226,33 +1236,8 @@ class BottomSheetContentTest {
   @Test
   fun ownedEvents_error_displaysErrorAndCallsRetry() {
     var retried = false
-    val events = LocalEventRepository.defaultSampleEvents().take(0)
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
-            ownedEvents = events,
-            ownedLoading = false,
-            ownedError = "Network",
-            onRetryOwnedEvents = { retried = true },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel,
-            eventViewModel = eventViewModel)
-      }
-    }
-
+    rule.setContent { OwnedEventsContent(error = "Network", onRetry = { retried = true }) }
     rule.waitForIdle()
 
     rule.onNodeWithText("Error: Network").assertIsDisplayed()
@@ -1264,32 +1249,7 @@ class BottomSheetContentTest {
 
   @Test
   fun ownedEvents_empty_showsNoResultsMessage() {
-    val events = emptyList<Event>()
-
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
-            ownedEvents = events,
-            ownedLoading = false,
-            ownedError = null,
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel,
-            eventViewModel = eventViewModel)
-      }
-    }
-
+    rule.setContent { OwnedEventsContent(events = emptyList()) }
     rule.waitForIdle()
 
     // NoResultsMessage for owned events uses the non-blank query path and therefore shows
@@ -1303,31 +1263,7 @@ class BottomSheetContentTest {
     val testEvents = LocalEventRepository.defaultSampleEvents().take(4)
     var clicked: Event? = null
 
-    rule.setContent {
-      MaterialTheme {
-        BottomSheetContent(
-            state = BottomSheetState.FULL,
-            fullEntryKey = 0,
-            searchBarState =
-                SearchBarState(
-                    query = "",
-                    shouldRequestFocus = false,
-                    onQueryChange = {},
-                    onTap = {},
-                    onFocusHandled = {},
-                    onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
-            ownedEvents = testEvents,
-            ownedLoading = false,
-            ownedError = null,
-            onTabEventClick = { clicked = it },
-            filterViewModel = filterViewModel,
-            locationViewModel = locationViewModel,
-            profileViewModel = profileViewModel,
-            eventViewModel = eventViewModel)
-      }
-    }
-
+    rule.setContent { OwnedEventsContent(events = testEvents, onTabEventClick = { clicked = it }) }
     rule.waitForIdle()
 
     // Initially only 3 most recent (reversed) should be shown
