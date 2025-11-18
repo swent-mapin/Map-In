@@ -38,8 +38,16 @@ class ChangePasswordScreenTest {
   fun changePasswordScreen_hasActionButtons() {
     composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
 
-    composeTestRule.onNodeWithTag("cancelButton").assertIsDisplayed().assertHasClickAction()
-    composeTestRule.onNodeWithTag("saveButton").assertIsDisplayed().assertHasClickAction()
+    composeTestRule
+        .onNodeWithTag("cancelButton")
+        .performScrollTo()
+        .assertIsDisplayed()
+        .assertHasClickAction()
+    composeTestRule
+        .onNodeWithTag("saveButton")
+        .performScrollTo()
+        .assertIsDisplayed()
+        .assertHasClickAction()
   }
 
   @Test
@@ -56,8 +64,8 @@ class ChangePasswordScreenTest {
   fun changePasswordScreen_displaysPasswordRequirements() {
     composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
 
-    // Verify requirements card is displayed
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").assertIsDisplayed()
+    // Scroll to requirements card and verify it's displayed
+    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Password Requirements").assertIsDisplayed()
 
     // Verify all requirements are listed
@@ -88,7 +96,7 @@ class ChangePasswordScreenTest {
       ChangePasswordScreen(onNavigateBack = { backPressed = true }, onPasswordChanged = {})
     }
 
-    composeTestRule.onNodeWithTag("cancelButton").performClick()
+    composeTestRule.onNodeWithTag("cancelButton").performScrollTo().performClick()
     assert(backPressed)
   }
 
@@ -100,7 +108,7 @@ class ChangePasswordScreenTest {
       ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = { passwordChanged = true })
     }
 
-    composeTestRule.onNodeWithTag("saveButton").performClick()
+    composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
     assert(passwordChanged)
   }
 
