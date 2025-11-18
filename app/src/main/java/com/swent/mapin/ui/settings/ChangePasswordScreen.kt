@@ -1,7 +1,9 @@
 // Assisted by AI
 package com.swent.mapin.ui.settings
 
+import android.os.Parcelable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,18 +41,94 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.password
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.parcelize.Parcelize
+
+/**
+ * Custom semantic property to expose password visibility state. This allows tests and accessibility
+ * services to detect whether the password is currently visible.
+ */
+val PasswordVisibleKey = SemanticsPropertyKey<Boolean>("PasswordVisible")
+var SemanticsPropertyReceiver.passwordVisible by PasswordVisibleKey
+
+/**
+ * Data class to hold password change form state. Survives configuration changes and process death
+ * via Parcelable.
+ */
+@Parcelize
+data class PasswordChangeState(
+    val currentPassword: String = "",
+    val newPassword: String = "",
+    val confirmNewPassword: String = "",
+    val currentPasswordVisible: Boolean = false,
+    val newPasswordVisible: Boolean = false,
+    val confirmPasswordVisible: Boolean = false,
+    val errorMessage: String? = null
+) : Parcelable
+
+/**
+ * Validates password strength according to requirements:
+ * - At least 8 characters
+ * - Contains uppercase letter
+ * - Contains lowercase letter
+ * - Contains number
+ * - Contains special character
+ */
+private fun validatePasswordStrength(password: String): String? {
+  if (password.length < 8) return "Password must be at least 8 characters long"
+  if (!password.any { it.isUpperCase() })
+      return "Password must contain at least one uppercase letter"
+  if (!password.any { it.isLowerCase() })
+      return "Password must contain at least one lowercase letter"
+  if (!password.any { it.isDigit() }) return "Password must contain at least one number"
+  if (!password.any { !it.isLetterOrDigit() })
+      return "Password must contain at least one special character"
+  return null
+}
+
+/**
+ * Validates the complete password change form. Returns error message if validation fails, null if
+ * valid.
+ */
+private fun validatePasswordForm(state: PasswordChangeState): String? {
+  if (state.currentPassword.isEmpty()) return "Current password is required"
+  if (state.newPassword.isEmpty()) return "New password is required"
+  if (state.confirmNewPassword.isEmpty()) return "Please confirm your new password"
+
+  validatePasswordStrength(state.newPassword)?.let {
+    return it
+  }
+
+  if (state.newPassword != state.confirmNewPassword) {
+    return "New password and confirmation do not match"
+  }
+
+  if (state.currentPassword == state.newPassword) {
+    return "New password must be different from current password"
+  }
+
+  return null
+}
 
 /**
  * Change Password screen allowing users to update their password.
@@ -62,12 +142,9 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(onNavigateBack: () -> Unit, onPasswordChanged: () -> Unit = {}) {
-  var currentPassword by remember { mutableStateOf("") }
-  var newPassword by remember { mutableStateOf("") }
-  var confirmNewPassword by remember { mutableStateOf("") }
-  var currentPasswordVisible by remember { mutableStateOf(false) }
-  var newPasswordVisible by remember { mutableStateOf(false) }
-  var confirmPasswordVisible by remember { mutableStateOf(false) }
+  var state by rememberSaveable { mutableStateOf(PasswordChangeState()) }
+  val isDarkTheme = isSystemInDarkTheme()
+  val focusManager = LocalFocusManager.current
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("changePasswordScreen"),
@@ -99,13 +176,12 @@ fun ChangePasswordScreen(onNavigateBack: () -> Unit, onPasswordChanged: () -> Un
                 Modifier.fillMaxSize()
                     .background(
                         color =
-                            if (MaterialTheme.colorScheme.background ==
-                                MaterialTheme.colorScheme.surface) {
-                              // Light theme: use a slightly gray background
-                              MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            } else {
-                              // Dark theme: use a darker background
+                            if (isDarkTheme) {
+                              // Dark theme: use darker background
                               MaterialTheme.colorScheme.background
+                            } else {
+                              // Light theme: use slightly gray background
+                              MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                             })
                     .padding(paddingValues)) {
               Column(
@@ -156,39 +232,85 @@ fun ChangePasswordScreen(onNavigateBack: () -> Unit, onPasswordChanged: () -> Un
 
                     // Current Password Field
                     PasswordInputField(
-                        value = currentPassword,
-                        onValueChange = { currentPassword = it },
+                        value = state.currentPassword,
+                        onValueChange = {
+                          state = state.copy(currentPassword = it, errorMessage = null)
+                        },
                         label = "Current Password",
                         placeholder = "Enter your current password",
-                        isPasswordVisible = currentPasswordVisible,
-                        onVisibilityToggle = { currentPasswordVisible = !currentPasswordVisible },
+                        isPasswordVisible = state.currentPasswordVisible,
+                        onVisibilityToggle = {
+                          state = state.copy(currentPasswordVisible = !state.currentPasswordVisible)
+                        },
+                        imeAction = ImeAction.Next,
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                         testTag = "currentPasswordField")
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // New Password Field
                     PasswordInputField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
+                        value = state.newPassword,
+                        onValueChange = {
+                          state = state.copy(newPassword = it, errorMessage = null)
+                        },
                         label = "New Password",
                         placeholder = "Enter your new password",
-                        isPasswordVisible = newPasswordVisible,
-                        onVisibilityToggle = { newPasswordVisible = !newPasswordVisible },
+                        isPasswordVisible = state.newPasswordVisible,
+                        onVisibilityToggle = {
+                          state = state.copy(newPasswordVisible = !state.newPasswordVisible)
+                        },
+                        imeAction = ImeAction.Next,
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                         testTag = "newPasswordField")
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Confirm New Password Field
                     PasswordInputField(
-                        value = confirmNewPassword,
-                        onValueChange = { confirmNewPassword = it },
+                        value = state.confirmNewPassword,
+                        onValueChange = {
+                          state = state.copy(confirmNewPassword = it, errorMessage = null)
+                        },
                         label = "Confirm New Password",
                         placeholder = "Re-enter your new password",
-                        isPasswordVisible = confirmPasswordVisible,
-                        onVisibilityToggle = { confirmPasswordVisible = !confirmPasswordVisible },
+                        isPasswordVisible = state.confirmPasswordVisible,
+                        onVisibilityToggle = {
+                          state = state.copy(confirmPasswordVisible = !state.confirmPasswordVisible)
+                        },
+                        imeAction = ImeAction.Done,
+                        onImeAction = {
+                          focusManager.clearFocus()
+                          // Trigger validation on Done
+                          val validationError = validatePasswordForm(state)
+                          if (validationError != null) {
+                            state = state.copy(errorMessage = validationError)
+                          } else {
+                            state = state.copy(errorMessage = null)
+                            onPasswordChanged()
+                          }
+                        },
                         testTag = "confirmPasswordField")
 
                     Spacer(modifier = Modifier.height(32.dp))
+
+                    // Validation Error Message
+                    state.errorMessage?.let { error ->
+                      Box(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .clip(RoundedCornerShape(12.dp))
+                                  .background(MaterialTheme.colorScheme.errorContainer)
+                                  .padding(16.dp)
+                                  .testTag("errorMessage")) {
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontWeight = FontWeight.Medium)
+                          }
+                      Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     // Action Buttons
                     Row(
@@ -206,8 +328,16 @@ fun ChangePasswordScreen(onNavigateBack: () -> Unit, onPasswordChanged: () -> Un
 
                           Button(
                               onClick = {
-                                // TODO: Implement password change logic
-                                onPasswordChanged()
+                                // Validate form before proceeding
+                                val validationError = validatePasswordForm(state)
+                                if (validationError != null) {
+                                  // Show validation error
+                                  state = state.copy(errorMessage = validationError)
+                                } else {
+                                  // Clear any previous errors and proceed
+                                  state = state.copy(errorMessage = null)
+                                  onPasswordChanged()
+                                }
                               },
                               modifier = Modifier.weight(1f).height(48.dp).testTag("saveButton"),
                               shape = RoundedCornerShape(12.dp),
@@ -237,6 +367,8 @@ private fun PasswordInputField(
     placeholder: String,
     isPasswordVisible: Boolean,
     onVisibilityToggle: () -> Unit,
+    imeAction: ImeAction,
+    onImeAction: () -> Unit,
     testTag: String
 ) {
   OutlinedTextField(
@@ -246,6 +378,9 @@ private fun PasswordInputField(
       placeholder = { Text(placeholder) },
       visualTransformation =
           if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+      keyboardOptions =
+          KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
+      keyboardActions = KeyboardActions(onAny = { onImeAction() }),
       trailingIcon = {
         IconButton(
             onClick = onVisibilityToggle,
@@ -254,11 +389,21 @@ private fun PasswordInputField(
                   imageVector =
                       if (isPasswordVisible) Icons.Default.Visibility
                       else Icons.Default.VisibilityOff,
-                  contentDescription = if (isPasswordVisible) "Hide password" else "Show password")
+                  contentDescription =
+                      stringResource(
+                          if (isPasswordVisible) com.swent.mapin.R.string.password_hide
+                          else com.swent.mapin.R.string.password_show))
             }
       },
       singleLine = true,
-      modifier = Modifier.fillMaxWidth().testTag(testTag),
+      modifier =
+          Modifier.fillMaxWidth().testTag(testTag).semantics {
+            // Mark as password field for accessibility
+            password()
+            // Add custom semantic property for password visibility state
+            // This helps tests and accessibility services detect the current state
+            set(PasswordVisibleKey, isPasswordVisible)
+          },
       shape = RoundedCornerShape(12.dp),
       colors =
           OutlinedTextFieldDefaults.colors(
@@ -271,17 +416,17 @@ private fun PasswordInputField(
 /** Card showing password requirements */
 @Composable
 private fun PasswordRequirementsCard() {
+  val isDarkTheme = isSystemInDarkTheme()
   Column(
       modifier =
           Modifier.fillMaxWidth()
               .clip(RoundedCornerShape(12.dp))
               .background(
                   color =
-                      if (MaterialTheme.colorScheme.background ==
-                          MaterialTheme.colorScheme.surface) {
-                        MaterialTheme.colorScheme.surface
-                      } else {
+                      if (isDarkTheme) {
                         MaterialTheme.colorScheme.surfaceContainerHigh
+                      } else {
+                        MaterialTheme.colorScheme.surface
                       })
               .padding(16.dp)
               .testTag("passwordRequirementsCard")) {
@@ -305,13 +450,22 @@ private fun PasswordRequirementItem(requirement: String) {
   Row(
       modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
       verticalAlignment = Alignment.CenterVertically) {
+        // Increased marker size from 6.dp to 8.dp for better visibility
         Box(
             modifier =
-                Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-        Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+                Modifier.size(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .semantics(mergeDescendants = true) {
+                      // Add semantic label for screen readers
+                      // This helps accessibility services understand this is a requirement item
+                    })
+        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
         Text(
             text = requirement,
-            style = MaterialTheme.typography.bodySmall,
+            style =
+                MaterialTheme.typography
+                    .bodyMedium, // Changed from bodySmall for better readability
             color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
 }
