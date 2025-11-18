@@ -70,8 +70,9 @@ class OfflineRegionManager(
       return
     }
 
-    // Cancel any existing download
+    // Cancel any existing download and clear state to prevent stale callbacks
     currentDownload?.cancel()
+    currentDownload = null
 
     try {
       // Create tileset descriptor
@@ -128,6 +129,18 @@ class OfflineRegionManager(
       currentDownload = null
       onComplete(Result.failure(e))
     }
+  }
+
+  /**
+   * Cancels any active download and clears internal state.
+   *
+   * Should be called when the owning component (e.g., ViewModel) is being destroyed to prevent
+   * leaking work or keeping network resources alive.
+   */
+  fun cancelActiveDownload() {
+    currentDownload?.cancel()
+    currentDownload = null
+    Log.d(TAG, "Active download cancelled")
   }
 
   /**

@@ -584,6 +584,13 @@ class MapScreenViewModel(
     super.onCleared()
     cameraController.clearCallbacks()
 
+    // Cancel any active offline downloads to prevent resource leaks
+    try {
+      offlineRegionManager.cancelActiveDownload()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
+    }
+
     // Remove auth listener to avoid leaks
     authListener?.let { auth.removeAuthStateListener(it) }
     authListener = null

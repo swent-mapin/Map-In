@@ -111,6 +111,9 @@ import kotlinx.coroutines.launch
 // Maximum zoom level when fitting camera to search results
 private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
 
+// Debounce duration in milliseconds for offline region downloads
+private const val OFFLINE_DOWNLOAD_DEBOUNCE_MS = 2000L
+
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
 @Composable
@@ -593,17 +596,27 @@ private fun MapboxLayer(
   val screenWidthPx = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx().toInt() }
   val screenHeightPx = with(LocalDensity.current) { configuration.screenHeightDp.dp.toPx().toInt() }
 
+  // Track last downloaded bounds to avoid repeated downloads for the same viewport
+  var lastDownloadedBounds by remember {
+    mutableStateOf<com.swent.mapin.ui.map.offline.CoordinateBounds?>(null)
+  }
+
   LaunchedEffect(mapViewportState) {
     snapshotFlow { mapViewportState.cameraState }
         .filterNotNull()
-        .debounce(2000L) // Wait 2 seconds after camera stops moving
+        .debounce(OFFLINE_DOWNLOAD_DEBOUNCE_MS)
         .collect { cameraState ->
           val center = cameraState.center
           val zoom = cameraState.zoom
           val bounds =
               com.swent.mapin.ui.map.offline.ViewportBoundsCalculator.calculateBounds(
                   center, zoom, screenWidthPx, screenHeightPx)
-          viewModel.downloadOfflineRegion(bounds)
+
+          // Only download if bounds changed to avoid unnecessary downloads
+          if (lastDownloadedBounds != bounds) {
+            lastDownloadedBounds = bounds
+            viewModel.downloadOfflineRegion(bounds)
+          }
         }
   }
 
