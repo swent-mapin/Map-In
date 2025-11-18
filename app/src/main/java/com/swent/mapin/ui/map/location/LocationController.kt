@@ -42,6 +42,7 @@ class LocationController(
 
   var onCenterOnUserLocation: (() -> Unit)? = null
   var onRequestLocationPermission: (() -> Unit)? = null
+  var onLocationUpdate: ((Location) -> Unit)? = null
 
   /** Checks and updates the location permission status. */
   fun checkLocationPermission() {
@@ -69,6 +70,7 @@ class LocationController(
             if (location.hasBearing()) {
               _locationBearing = location.bearing
             }
+            onLocationUpdate?.invoke(location)
           }
     }
   }
