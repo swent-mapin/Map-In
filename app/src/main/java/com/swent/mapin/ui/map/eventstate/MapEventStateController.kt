@@ -180,8 +180,9 @@ class MapEventStateController(
   }
 
   /**
-   * Loads events owned by the current authenticated user. Repository doesn't provide a direct query
-   * so we fetch all events and filter by ownerId. Errors are surfaced via setErrorMessage.
+   * Loads events owned by the current authenticated user. Uses direct repository query
+   * (getEventsByOwner) to avoid fetching all events and filtering client-side, which improves
+   * performance and reduces data transfer. Errors are surfaced via setErrorMessage.
    */
   fun loadOwnedEvents() {
     scope.launch {
@@ -189,8 +190,7 @@ class MapEventStateController(
       _ownedError = null
       try {
         val currentUserId = getUserId()
-        val all = eventRepository.getAllEvents()
-        _ownedEvents = all.filter { it.ownerId == currentUserId }
+        _ownedEvents = eventRepository.getEventsByOwner(currentUserId)
       } catch (e: Exception) {
         val msg = e.message ?: "Unknown error occurred while fetching owned events"
         _ownedError = msg

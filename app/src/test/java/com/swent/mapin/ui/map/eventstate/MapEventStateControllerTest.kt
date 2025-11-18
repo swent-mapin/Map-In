@@ -357,7 +357,6 @@ class MapEventStateControllerTest {
   @Test
   fun `joinSelectedEvent reverts local changes on repository error`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
-    val userProfile = UserProfile(userId = testUserId, participatingEventIds = emptyList())
     whenever(mockEventRepository.editEvent(any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(testEvent))
@@ -412,8 +411,6 @@ class MapEventStateControllerTest {
   fun `leaveSelectedEvent reverts local changes on repository error`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
-    val userProfile =
-        UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid))
     whenever(mockEventRepository.editEvent(any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(joinedEvent))
@@ -537,5 +534,104 @@ class MapEventStateControllerTest {
   fun `clearError calls clearErrorMessage lambda`() {
     controller.clearError()
     verify(mockClearErrorMessage).invoke()
+  }
+
+  // ========== Owned Events Tests ==========
+  @Test
+  fun `loadOwnedEvents populates ownedEvents for user`() = runTest {
+    val ownedEvent1 = testEvent.copy(uid = "E1", ownerId = testUserId)
+    val ownedEvent2 = testEvent.copy(uid = "E2", ownerId = testUserId)
+    val ownedEvents = listOf(ownedEvent1, ownedEvent2)
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
+
+    controller.loadOwnedEvents()
+    advanceUntilIdle()
+
+    assertEquals(ownedEvents, controller.ownedEvents)
+    assertFalse(controller.ownedLoading)
+    assertEquals(null, controller.ownedError)
+  }
+
+  @Test
+  fun `loadOwnedEvents returns empty list when user has no owned events`() = runTest {
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(emptyList())
+
+    controller.loadOwnedEvents()
+    advanceUntilIdle()
+
+    assertTrue(controller.ownedEvents.isEmpty())
+    assertFalse(controller.ownedLoading)
+    assertEquals(null, controller.ownedError)
+  }
+
+  @Test
+  fun `loadOwnedEvents sets loading state correctly`() = runTest {
+    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
+
+    controller.loadOwnedEvents()
+    // Loading state should be true during execution
+    advanceUntilIdle()
+
+    assertFalse(controller.ownedLoading) // Should be false after completion
+    assertEquals(ownedEvents, controller.ownedEvents)
+  }
+
+  @Test
+  fun `loadOwnedEvents handles repository error`() = runTest {
+    val errorMessage = "Network error while fetching owned events"
+    whenever(mockEventRepository.getEventsByOwner(testUserId))
+        .thenThrow(RuntimeException(errorMessage))
+
+    controller.loadOwnedEvents()
+    advanceUntilIdle()
+
+    verify(mockSetErrorMessage).invoke(errorMessage)
+    assertEquals(errorMessage, controller.ownedError)
+    assertFalse(controller.ownedLoading)
+    assertTrue(controller.ownedEvents.isEmpty())
+  }
+
+  @Test
+  fun `loadOwnedEvents handles unknown error`() = runTest {
+    whenever(mockEventRepository.getEventsByOwner(testUserId))
+        .thenThrow(RuntimeException())
+
+    controller.loadOwnedEvents()
+    advanceUntilIdle()
+
+    verify(mockSetErrorMessage).invoke("Unknown error occurred while fetching owned events")
+    assertEquals("Unknown error occurred while fetching owned events", controller.ownedError)
+    assertFalse(controller.ownedLoading)
+  }
+
+  @Test
+  fun `loadOwnedEvents uses getEventsByOwner instead of getAllEvents`() = runTest {
+    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
+
+    controller.loadOwnedEvents()
+    advanceUntilIdle()
+
+    // Verify that getEventsByOwner is called
+    verify(mockEventRepository).getEventsByOwner(testUserId)
+    assertEquals(ownedEvents, controller.ownedEvents)
+  }
+
+  @Test
+  fun `refreshEventsList includes loadOwnedEvents`() = runTest {
+    val filteredEvents = listOf(testEvent)
+    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
+    whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(filteredEvents)
+    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
+    whenever(mockUserProfileRepository.getUserProfile(testUserId))
+        .thenReturn(UserProfile(userId = testUserId, participatingEventIds = emptyList()))
+
+    controller.refreshEventsList()
+    advanceUntilIdle()
+
+    verify(mockEventRepository).getEventsByOwner(testUserId)
+    assertEquals(ownedEvents, controller.ownedEvents)
   }
 }

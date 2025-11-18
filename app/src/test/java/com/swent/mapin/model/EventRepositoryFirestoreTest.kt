@@ -52,7 +52,8 @@ class EventRepositoryFirestoreTest {
         mock<CollectionReference>().apply {
           whenever(this.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
               .thenReturn(mock())
-          whenever(this.orderBy(any<String>())).thenReturn(mock())
+          whenever(this.orderBy(any<String>())).thenReturn(mock()
+          )
         }
     usersCollection = mock()
     savedCollection = mock()
@@ -775,5 +776,79 @@ class EventRepositoryFirestoreTest {
 
     val result = repo.unsaveEventForUser("user123", "E1")
     assertFalse(result)
+  }
+
+  @Test
+  fun getEventsByOwner_returnsEventsForSpecificOwner() = runTest {
+    val ownerId = "owner123"
+    val ownedEvent1 = createEvent(uid = "E1", title = "Event 1", ownerId = ownerId)
+    val ownedEvent2 = createEvent(uid = "E2", title = "Event 2", ownerId = ownerId)
+
+    val doc1 = doc("E1", ownedEvent1)
+    val doc2 = doc("E2", ownedEvent2)
+    val snap = qs(doc1, doc2)
+
+    val ownerQuery = mock<Query>()
+    val orderedQuery = mock<Query>()
+    whenever(collection.whereEqualTo("ownerId", ownerId)).thenReturn(ownerQuery)
+    whenever(ownerQuery.orderBy("date")).thenReturn(orderedQuery)
+    whenever(orderedQuery.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByOwner(ownerId)
+
+    assertEquals(2, result.size)
+    assertTrue(result.all { it.ownerId == ownerId })
+    assertEquals("Event 1", result[0].title)
+    assertEquals("Event 2", result[1].title)
+  }
+
+  @Test
+  fun getEventsByOwner_returnsEmptyList_whenNoEventsOwned() = runTest {
+    val ownerId = "owner123"
+    val snap = qs()
+
+    val ownerQuery = mock<Query>()
+    val orderedQuery = mock<Query>()
+    whenever(collection.whereEqualTo("ownerId", ownerId)).thenReturn(ownerQuery)
+    whenever(ownerQuery.orderBy("date")).thenReturn(orderedQuery)
+    whenever(orderedQuery.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByOwner(ownerId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun getEventsByOwner_throwsException_whenFirestoreFails() = runTest {
+    val ownerId = "owner123"
+    val ownerQuery = mock<Query>()
+    val orderedQuery = mock<Query>()
+    whenever(collection.whereEqualTo("ownerId", ownerId)).thenReturn(ownerQuery)
+    whenever(ownerQuery.orderBy("date")).thenReturn(orderedQuery)
+    whenever(orderedQuery.get()).thenReturn(Tasks.forException(RuntimeException("firestore error")))
+
+    val exception = assertFailsWith<Exception> { repo.getEventsByOwner(ownerId) }
+
+    assertTrue(exception.message!!.contains("Failed to fetch events by owner"))
+  }
+
+  @Test
+  fun getEventsByOwner_filtersCorrectly_withMultipleOwners() = runTest {
+    val ownerId = "owner123"
+    val ownedEvent = createEvent(uid = "E1", title = "My Event", ownerId = ownerId)
+    val doc1 = doc("E1", ownedEvent)
+    val snap = qs(doc1)
+
+    val ownerQuery = mock<Query>()
+    val orderedQuery = mock<Query>()
+    whenever(collection.whereEqualTo("ownerId", ownerId)).thenReturn(ownerQuery)
+    whenever(ownerQuery.orderBy("date")).thenReturn(orderedQuery)
+    whenever(orderedQuery.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getEventsByOwner(ownerId)
+
+    assertEquals(1, result.size)
+    assertEquals(ownerId, result[0].ownerId)
+    assertEquals("My Event", result[0].title)
   }
 }

@@ -103,4 +103,12 @@ interface EventRepository {
    * @throws NoSuchElementException if the Event item is not found.
    */
   suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
+
+  /**
+   * Retrieves Event items owned by the specified user.
+   *
+   * @param ownerId The unique identifier of the owner.
+   * @return A list of Event items owned by the user.
+   */
+  suspend fun getEventsByOwner(ownerId: String): List<Event>
 }
