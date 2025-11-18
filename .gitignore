@@ -48,6 +48,3 @@ google-services.json
 app/src/main/res/values/mapbox_access_token.xml
 android/gradle.properties
 *.b64
-
-# Internal docs
-CLAUDE.md
