@@ -52,8 +52,7 @@ class EventRepositoryFirestoreTest {
         mock<CollectionReference>().apply {
           whenever(this.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
               .thenReturn(mock())
-          whenever(this.orderBy(any<String>())).thenReturn(mock()
-          )
+          whenever(this.orderBy(any<String>())).thenReturn(mock())
         }
     usersCollection = mock()
     savedCollection = mock()

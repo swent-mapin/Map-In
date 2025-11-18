@@ -594,8 +594,7 @@ class MapEventStateControllerTest {
 
   @Test
   fun `loadOwnedEvents handles unknown error`() = runTest {
-    whenever(mockEventRepository.getEventsByOwner(testUserId))
-        .thenThrow(RuntimeException())
+    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenThrow(RuntimeException())
 
     controller.loadOwnedEvents()
     advanceUntilIdle()

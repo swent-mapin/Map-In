@@ -306,21 +306,30 @@ fun BottomSheetContent(
                                     selectedTabIndex = selectedTab.ordinal,
                                     modifier = Modifier.fillMaxWidth()) {
                                       Tab(
-                                          selected = selectedTab == MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
                                           },
                                           text = { Text("Saved Events") })
                                       Tab(
-                                          selected = selectedTab == MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
                                           },
                                           text = { Text("Joined Events") })
                                       Tab(
-                                          selected = selectedTab == MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
                                           onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.OWNED_EVENTS)
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.OWNED_EVENTS)
                                           },
                                           text = { Text("Owned Events") })
                                     }
