@@ -26,7 +26,9 @@ object HashUtils {
    * @throws IllegalArgumentException if the list contains fewer than 2 elements.
    */
   fun hashUserIds(userIds: List<String>): String {
-    require(userIds.size >= 2) { "User ID list must contain at least 2 elements, got ${userIds.size}" }
+    require(userIds.size >= 2) {
+      "User ID list must contain at least 2 elements, got ${userIds.size}"
+    }
 
     // Sort the list to ensure consistent hashing regardless of input order
     val sortedIds = userIds.sorted()

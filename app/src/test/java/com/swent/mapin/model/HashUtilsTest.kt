@@ -276,9 +276,7 @@ class HashUtilsTest {
     val hashes = (1..10).map { HashUtils.hashUserIds(userIds) }
 
     // All hashes should be identical
-    hashes.forEach { hash ->
-      assertEquals(hashes[0], hash)
-    }
+    hashes.forEach { hash -> assertEquals(hashes[0], hash) }
   }
 
   @Test
