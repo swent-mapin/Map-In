@@ -166,7 +166,7 @@ class ConversationRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
 
     // Create a completed Task<Void>
-    val tcs = com.google.android.gms.tasks.TaskCompletionSource<Void>()
+    val tcs = TaskCompletionSource<Void>()
     tcs.setResult(null)
     val task: Task<Void> = tcs.task
 
@@ -192,14 +192,14 @@ class ConversationRepositoryFirestoreTest {
       runTest {
         // Mock FirebaseAuth
         val auth = mock<FirebaseAuth>()
-        val currentUser = mock<com.google.firebase.auth.FirebaseUser>()
+        val currentUser = mock<FirebaseUser>()
         whenever(currentUser.uid).thenReturn("user123")
         whenever(auth.currentUser).thenReturn(currentUser)
 
         // Mock Firestore
         val db = mock<FirebaseFirestore>()
-        val collectionRef = mock<com.google.firebase.firestore.CollectionReference>()
-        val query = mock<com.google.firebase.firestore.Query>()
+        val collectionRef = mock<CollectionReference>()
+        val query = mock<Query>()
 
         whenever(db.collection("conversations")).thenReturn(collectionRef)
         whenever(collectionRef.whereArrayContains("participantIds", "user123")).thenReturn(query)
@@ -231,17 +231,16 @@ class ConversationRepositoryFirestoreTest {
         whenever(query.addSnapshotListener(any())).thenAnswer { invocation ->
           val listener =
               invocation.getArgument<
-                  com.google.firebase.firestore.EventListener<
-                      com.google.firebase.firestore.QuerySnapshot>>(
+                  EventListener<QuerySnapshot>>(
                   0)
 
-          val snapshot = mock<com.google.firebase.firestore.QuerySnapshot>()
-          val doc = mock<com.google.firebase.firestore.DocumentSnapshot>()
+          val snapshot = mock<QuerySnapshot>()
+          val doc = mock<DocumentSnapshot>()
           whenever(snapshot.documents).thenReturn(listOf(doc))
           whenever(doc.toObject(Conversation::class.java)).thenReturn(conversation)
 
           listener.onEvent(snapshot, null)
-          mock<com.google.firebase.firestore.ListenerRegistration>()
+          mock<ListenerRegistration>()
         }
 
         val repo = ConversationRepositoryFirestore(db, auth)
