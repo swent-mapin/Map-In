@@ -112,9 +112,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
   }
 
   override suspend fun deleteEvent(eventId: String) {
-    val event =
-        events[eventId]
-            ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
+    events[eventId]
+        ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     events.remove(eventId)
     // Remove from all users' savedEventIds, joinedEventIds, and owner's ownedEventIds
     userData.forEach { (_, data) ->

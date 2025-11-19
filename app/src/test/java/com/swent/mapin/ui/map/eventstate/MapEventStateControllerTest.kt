@@ -230,7 +230,6 @@ class MapEventStateControllerTest {
   // ========== Joined Events Tests ==========
   @Test
   fun `loadJoinedEvents populates joinedEvents for user`() = runTest {
-    val userProfile = UserProfile(userId = testUserId, joinedEventIds = listOf(testEvent.uid))
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(listOf(joinedEvent))
 
@@ -325,7 +324,6 @@ class MapEventStateControllerTest {
   @Test
   fun `joinSelectedEvent reverts local changes on repository error`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
-    val userProfile = UserProfile(userId = testUserId, joinedEventIds = emptyList())
     whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(testEvent))
@@ -371,7 +369,6 @@ class MapEventStateControllerTest {
   fun `leaveSelectedEvent reverts local changes on repository error`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
-    val userProfile = UserProfile(userId = testUserId, joinedEventIds = listOf(testEvent.uid))
     whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(joinedEvent))
