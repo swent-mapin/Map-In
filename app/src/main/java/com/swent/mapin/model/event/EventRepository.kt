@@ -46,8 +46,13 @@ interface EventRepository {
   suspend fun unsaveEventForUser(eventId: String, userId: String)
 
   /**
-   * Edits an existing Event content in the repository. This is limited to the event owner and to
-   * not restrict other users.
+   * Updates an existing event as its owner.
+   *
+   * Only the event owner is allowed to call this method. It can modify any event field except:
+   * - uid (ignored)
+   * - participantIds (cannot be changed by owner)
+   * - public flag (cannot be changed from `true` to `false`)
+   * - capacity cannot be reduced below the current number of participants
    *
    * @param eventId The unique identifier of the Event item to edit.
    * @param newValue The updated Event item.

@@ -120,12 +120,6 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
         events[eventId] = event.copy(participantIds = updatedParticipants)
         userEventData.joinedEventIds.remove(eventId)
       }
-      // Simulate saving/unsaving by toggling savedEventIds
-      if (userEventData.savedEventIds.contains(eventId)) {
-        userEventData.savedEventIds.remove(eventId)
-      } else {
-        userEventData.savedEventIds.add(eventId)
-      }
     }
   }
 
@@ -266,7 +260,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               uid = "event1",
               title = "Music Festival",
               description = "Live music and food",
-              date = ts(2025, 1, 1, 10, 0),
+              date = ts(2026, 1, 1, 10, 0),
               endDate = ts(2025, 1, 2, 11, 0),
               location = Location("EPFL Campus", 46.5197, 6.5668),
               tags = listOf("Music", "Festival"),
