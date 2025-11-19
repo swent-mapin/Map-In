@@ -36,6 +36,15 @@ interface EventRepository {
    */
   suspend fun addEvent(event: Event)
 
+  // Deprecated but kept for CI validation until next PR
+  suspend fun editEvent(eventId: String, newValue: Event)
+
+  // Deprecated but kept for CI validation until next PR
+  suspend fun saveEventForUser(eventId: String, userId: String)
+
+  // Deprecated but kept for CI validation until next PR
+  suspend fun unsaveEventForUser(eventId: String, userId: String)
+
   /**
    * Edits an existing Event content in the repository. This is limited to the event owner and to
    * not restrict other users.

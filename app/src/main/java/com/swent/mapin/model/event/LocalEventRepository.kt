@@ -67,6 +67,18 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     }
   }
 
+  override suspend fun editEvent(eventId: String, newValue: Event) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
+  override suspend fun saveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
+  override suspend fun unsaveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
   override suspend fun editEventAsOwner(eventId: String, newValue: Event) {
     if (!events.containsKey(eventId)) {
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
