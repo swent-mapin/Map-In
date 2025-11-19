@@ -56,8 +56,6 @@ class MapScreenViewModelAuthListenerTest {
 
     // Stub all suspend repository calls inside a coroutine
     runBlocking {
-      whenever(mockRepo.getAllEvents()).thenReturn(LocalEventRepository.defaultSampleEvents())
-      whenever(mockRepo.getSavedEventIds(any())).thenReturn(emptySet())
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
     }
@@ -112,7 +110,6 @@ class MapScreenViewModelAuthListenerTest {
     whenever(mockUser.uid).thenReturn("testUserId")
 
     // Update repo responses for this user
-    whenever(mockRepo.getSavedEventIds("testUserId")).thenReturn(setOf(e.uid))
     whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
     // Joined events are derived from _allEvents + uid; not required for this assertion,
     // but you could also stub getEventsByParticipant if your VM uses it here.

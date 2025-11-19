@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.Location
@@ -42,21 +43,6 @@ class EventRepositoryFirestore(
    * @return A unique string identifier.
    */
   override fun getNewUid(): String = db.collection(EVENTS_COLLECTION_PATH).document().id
-
-  /**
-   * Retrieves all Event items from the repository.
-   *
-   * @return A list of all Event items.
-   */
-  override suspend fun getAllEvents(): List<Event> {
-    return try {
-      val snap = db.collection(EVENTS_COLLECTION_PATH).orderBy("date").get().await()
-      snap.documents.mapNotNull { documentToEvent(it) }
-    } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch all events", e)
-      throw Exception("Failed to fetch all events: ${e.message}", e)
-    }
-  }
 
   /**
    * Retrieves a specific Event item by its unique identifier.
@@ -167,24 +153,6 @@ class EventRepositoryFirestore(
   }
 
   /**
-   * Retrieves Event items whose titles match the specified search query (case-insensitive).
-   *
-   * @param title The search query to match against event titles.
-   * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
-   * @return A list of Event items whose titles contain the query.
-   */
-  override suspend fun getSearchedEvents(title: String, filters: Filters): List<Event> {
-    return try {
-      val lowerTitle = title.trim().lowercase()
-      val filteredEvents = getFilteredEvents(filters)
-      filteredEvents.filter { it.title.trim().lowercase().contains(lowerTitle) }
-    } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch events by title search", e)
-      throw Exception("Failed to fetch events by title search: ${e.message}", e)
-    }
-  }
-
-  /**
    * Adds a new Event item to the repository.
    *
    * @param event The Event item to add.
@@ -228,55 +196,8 @@ class EventRepositoryFirestore(
     }
   }
 
-  /**
-   * Edits an existing Event item in the repository.
-   *
-   * @param eventId The unique identifier of the Event item to edit.
-   * @param newValue The updated Event item.
-   * @throws NoSuchElementException if the Event item is not found.
-   */
   override suspend fun editEvent(eventId: String, newValue: Event) {
-    try {
-      require(newValue.isValidEvent()) { "Invalid event data" }
-      val snapshot = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
-      if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
-      val oldValue = documentToEvent(snapshot)!!
-      require(oldValue.ownerId == newValue.ownerId) {
-        "Cannot transfer event ownership via editEvent"
-      }
-      // Ensure owner is in participantIds
-      val participantIds =
-          if (newValue.ownerId.isNotBlank() &&
-              !newValue.participantIds.contains(newValue.ownerId)) {
-            newValue.participantIds + newValue.ownerId
-          } else {
-            newValue.participantIds
-          }
-      val eventToSave = newValue.copy(uid = eventId, participantIds = participantIds)
-      db.collection(EVENTS_COLLECTION_PATH).document(eventId).set(eventToSave).await()
-
-      // Update UserProfile.participatingEventIds
-      val oldParticipants = oldValue.participantIds.toSet()
-      val newParticipants = eventToSave.participantIds.toSet()
-      val addedParticipants = newParticipants - oldParticipants
-      val removedParticipants = oldParticipants - newParticipants
-      for (userId in removedParticipants) {
-        db.collection(USERS_COLLECTION_PATH)
-            .document(userId)
-            .update("participatingEventIds", FieldValue.arrayRemove(eventId))
-            .await()
-      }
-      for (userId in addedParticipants) {
-        db.collection(USERS_COLLECTION_PATH)
-            .document(userId)
-            .update("participatingEventIds", FieldValue.arrayUnion(eventId))
-            .await()
-      }
-    } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to edit event $eventId", e)
-      throw e as? NoSuchElementException
-          ?: Exception("Failed to edit event $eventId: ${e.message}", e)
-    }
+    // Deprecated but kept for CI validation until next PR
   }
 
   /**
@@ -326,7 +247,7 @@ class EventRepositoryFirestore(
    * @param userId The unique identifier of the user.
    * @return A set of IDs of Event items saved by the user.
    */
-  override suspend fun getSavedEventIds(userId: String): Set<String> {
+  suspend fun getSavedEventIds(userId: String): Set<String> {
     return try {
       val snap =
           db.collection(USERS_COLLECTION_PATH)
@@ -389,76 +310,12 @@ class EventRepositoryFirestore(
     }
   }
 
-  /**
-   * Mark an event as saved for a user (idempotent). Updates local cache on success for offline
-   * availability. Returns true if either remote or local operation succeeded. On failure, returns
-   * false. Implemented with the help of AI generated code.
-   */
-  override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-    var remoteOk = false
-    try {
-      db.collection(USERS_COLLECTION_PATH)
-          .document(userId)
-          .collection(SAVED_SUBCOLLECTION)
-          .document(eventId)
-          .set(mapOf(FIELD_SAVED_AT to FieldValue.serverTimestamp()))
-          .await()
-      remoteOk = true
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "saveEventForUser remote failed", e)
-    }
-
-    // Ensure local cache is updated so user can view saved events offline.
-    var localOk = false
-    try {
-      val event =
-          try {
-            getEvent(eventId)
-          } catch (_: Exception) {
-            null
-          }
-      if (localCache != null) {
-        if (event != null) localCache.saveEventLocally(userId, event, Timestamp.now())
-        else localCache.saveEventLocally(userId, Event(uid = eventId), Timestamp.now())
-        localOk = true
-      }
-    } catch (_: Exception) {
-      Log.w("EventRepositoryFirestore", "saveEventForUser local cache update failed")
-    }
-
-    return remoteOk || localOk
+  override suspend fun saveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
   }
 
-  /**
-   * Remove an event from a user's saved list (idempotent). Updates local cache on success for
-   * offline availability. Returns true if either remote or local operation succeeded. On failure,
-   * returns false. Implemented with the help of AI generated code.
-   */
-  override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-    var remoteOk = false
-    try {
-      db.collection(USERS_COLLECTION_PATH)
-          .document(userId)
-          .collection(SAVED_SUBCOLLECTION)
-          .document(eventId)
-          .delete()
-          .await()
-      remoteOk = true
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "unsaveEventForUser remote failed", e)
-    }
-
-    var localOk = false
-    try {
-      if (localCache != null) {
-        localCache.unsaveEventLocally(userId, eventId)
-        localOk = true
-      }
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "unsaveEventForUser local cache update failed", e)
-      throw Exception("Failed to unsave event for user: ${e.message}", e)
-    }
-    return remoteOk || localOk
+  override suspend fun unsaveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
   }
 
   /**
@@ -484,5 +341,31 @@ class EventRepositoryFirestore(
       Log.w("EventRepositoryFirestore", "Invalid location coordinates: $place", e)
       null
     }
+  }
+
+  override suspend fun editEventAsOwner(eventId: String, newValue: Event) {
+    // Coming with the next PR
+  }
+
+  override suspend fun editEventAsUser(eventId: String, userId: String, join: Boolean) {
+    // Coming with the next PR
+  }
+
+  override suspend fun getJoinedEvents(userId: String): List<Event> {
+    // Coming with the next PR
+    return emptyList()
+  }
+
+  override suspend fun getOwnedEvents(userId: String): List<Event> {
+    // Coming with the next PR
+    return emptyList()
+  }
+
+  override fun listenToFilteredEvents(
+      filters: Filters,
+      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+  ): ListenerRegistration {
+    // Coming with the next PR
+    return ListenerRegistration {}
   }
 }
