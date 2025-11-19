@@ -34,7 +34,7 @@ class EventViewModel(
   fun editEvent(eventID: String, event: Event) {
     viewModelScope.launch {
       try {
-        eventRepository.editEvent(eventID, event)
+        eventRepository.editEventAsOwner(eventID, event)
         stateController.refreshEventsList()
       } catch (e: Exception) {
         _error.value = e.message
