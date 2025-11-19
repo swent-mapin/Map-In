@@ -12,7 +12,8 @@ package com.swent.mapin.model
  * @property avatarUrl URL to the user's avatar (optional)
  * @property bannerUrl URL to the user's banner image (optional)
  * @property hobbiesVisible Whether the hobbies are visible to others
- * @property participatingEventIds List of event IDs the user is attending/participating in
+ * @property joinedEventIds List of event IDs the user is attending/participating in
+ * @property savedEventIds List of event IDs the user has saved/bookmarked
  * @property ownedEventIds List of event IDs the user has created/organizes
  * @property fcmToken Firebase Cloud Messaging token for push notifications (optional)
  */
@@ -26,7 +27,8 @@ data class UserProfile(
     val avatarUrl: String? = null,
     val bannerUrl: String? = null,
     val hobbiesVisible: Boolean = true,
-    val participatingEventIds: List<String> = emptyList(),
+    val joinedEventIds: List<String> = emptyList(),
+    val savedEventIds: List<String> = emptyList(),
     val ownedEventIds: List<String> = emptyList(),
     val fcmToken: String? = null
 )

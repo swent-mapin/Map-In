@@ -36,15 +36,6 @@ interface EventRepository {
    */
   suspend fun addEvent(event: Event)
 
-  // Deprecated but kept for CI validation until next PR
-  suspend fun editEvent(eventId: String, newValue: Event)
-
-  // Deprecated but kept for CI validation until next PR
-  suspend fun saveEventForUser(eventId: String, userId: String)
-
-  // Deprecated but kept for CI validation until next PR
-  suspend fun unsaveEventForUser(eventId: String, userId: String)
-
   /**
    * Updates an existing event as its owner.
    *
@@ -102,14 +93,6 @@ interface EventRepository {
    * @return A list of Event items owned by the user.
    */
   suspend fun getOwnedEvents(userId: String): List<Event>
-
-  /**
-   * Retrieves Event items owned by the specified user.
-   *
-   * @param ownerId The unique identifier of the owner.
-   * @return A list of Event items owned by the user.
-   */
-  suspend fun getEventsByOwner(ownerId: String): List<Event>
 
   /**
    * Listens for real-time updates to Event items based on the specified filters.
