@@ -16,8 +16,10 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
+import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.memory.MemoryFormScreen
 import java.util.Date
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -146,5 +148,109 @@ class AttendedEventsSectionTest {
     composeTestRule
         .onNodeWithTag("memoryForm_selectedEventTitle", useUnmergedTree = true)
         .assertExists()
+  }
+
+  @Test
+  fun computeAttendedEvents_filtersOutFutureAndNullEndDates_andSorts() {
+    val now = System.currentTimeMillis()
+
+    val past1 = Date(now - 1000L * 60L * 60L * 24L * 2) // 2 days ago
+    val past2 = Date(now - 1000L * 60L * 60L * 24L) // 1 day ago
+    val future = Date(now + 1000L * 60L * 60L * 24L) // 1 day in future
+
+    val e1 =
+        Event(
+            uid = "e1",
+            title = "E1",
+            description = "",
+            date = Timestamp(past1),
+            endDate = Timestamp(past1),
+            location = Location("L1", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 0,
+            participantIds = emptyList(),
+            price = 0.0)
+
+    val e2 =
+        Event(
+            uid = "e2",
+            title = "E2",
+            description = "",
+            date = Timestamp(past2),
+            endDate = Timestamp(past2),
+            location = Location("L2", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 0,
+            participantIds = emptyList(),
+            price = 0.0)
+
+    val eFuture =
+        Event(
+            uid = "ef",
+            title = "Future",
+            description = "",
+            date = Timestamp(future),
+            endDate = Timestamp(future),
+            location = Location("Lf", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 0,
+            participantIds = emptyList(),
+            price = 0.0)
+
+    val enull =
+        Event(
+            uid = "en",
+            title = "NoEnd",
+            description = "",
+            date = Timestamp(past1),
+            endDate = null,
+            location = Location("Ln", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 0,
+            participantIds = emptyList(),
+            price = 0.0)
+
+    val input = listOf(eFuture, enull, e1, e2)
+
+    val result = MapEventStateController.computeAttendedEvents(input, now)
+
+    // Should include only e1 and e2 (past events), sorted by most recent end date first => e2, e1
+    assertEquals(listOf(e2.uid, e1.uid), result.map { it.uid })
+  }
+
+  @Test
+  fun computeAttendedEvents_returnsEmpty_whenNoPastEvents() {
+    val now = System.currentTimeMillis()
+    val future = Date(now + 1000L * 60L * 60L * 24L)
+    val ef =
+        Event(
+            uid = "ef",
+            title = "Future",
+            description = "",
+            date = Timestamp(future),
+            endDate = Timestamp(future),
+            location = Location("Lf", 0.0, 0.0),
+            tags = emptyList(),
+            public = true,
+            ownerId = "o",
+            imageUrl = null,
+            capacity = 0,
+            participantIds = emptyList(),
+            price = 0.0)
+
+    val result = MapEventStateController.computeAttendedEvents(listOf(ef), now)
+    assertEquals(0, result.size)
   }
 }
