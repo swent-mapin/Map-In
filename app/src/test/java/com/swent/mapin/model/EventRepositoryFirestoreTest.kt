@@ -15,7 +15,6 @@ import com.swent.mapin.model.event.USERS_COLLECTION_PATH
 import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
 import java.time.ZoneId
-import junit.framework.TestCase.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
