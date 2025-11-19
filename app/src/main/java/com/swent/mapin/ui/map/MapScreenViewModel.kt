@@ -213,6 +213,10 @@ class MapScreenViewModel(
   val joinedEvents: List<Event>
     get() = eventStateController.joinedEvents
 
+  // New: Attended events for bottom sheet display
+  val attendedEvents: List<Event>
+    get() = eventStateController.attendedEvents
+
   // Saved events for bottom sheet display
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents
@@ -240,6 +244,10 @@ class MapScreenViewModel(
   private var _selectedEvent by mutableStateOf<Event?>(null)
   val selectedEvent: Event?
     get() = _selectedEvent
+  // Initial event to prefill the memory form when opening it via the '+' button
+  private var _memoryFormInitialEvent by mutableStateOf<Event?>(null)
+  val memoryFormInitialEvent: Event?
+    get() = _memoryFormInitialEvent
 
   private var _organizerName by mutableStateOf("")
   val organizerName: String
@@ -570,6 +578,14 @@ class MapScreenViewModel(
   fun hideMemoryForm() {
     _showMemoryForm = false
     _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+    // clear any prefilled event selection
+    _memoryFormInitialEvent = null
+  }
+
+  /** Open memory form and prefill it with an optional event. */
+  fun showMemoryFormForEvent(event: Event?) {
+    _memoryFormInitialEvent = event
+    showMemoryForm()
   }
 
   fun showAddEventForm() {

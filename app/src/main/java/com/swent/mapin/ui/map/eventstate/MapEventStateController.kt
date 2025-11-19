@@ -47,6 +47,11 @@ class MapEventStateController(
   val joinedEvents: List<Event>
     get() = _joinedEvents
 
+  // New: events the user has attended (joined + finished)
+  private var _attendedEvents by mutableStateOf<List<Event>>(emptyList())
+  val attendedEvents: List<Event>
+    get() = _attendedEvents
+
   private var _savedEvents by mutableStateOf<List<Event>>(emptyList())
   val savedEvents: List<Event>
     get() = _savedEvents
@@ -341,6 +346,7 @@ class MapEventStateController(
     _searchResults = emptyList()
     _availableEvents = emptyList()
     _joinedEvents = emptyList()
+    _attendedEvents = emptyList()
     _savedEvents = emptyList()
   }
 
