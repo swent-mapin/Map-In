@@ -229,10 +229,7 @@ class ConversationRepositoryFirestoreTest {
 
         // Stub addSnapshotListener to immediately call the listener
         whenever(query.addSnapshotListener(any())).thenAnswer { invocation ->
-          val listener =
-              invocation.getArgument<
-                  EventListener<QuerySnapshot>>(
-                  0)
+          val listener = invocation.getArgument<EventListener<QuerySnapshot>>(0)
 
           val snapshot = mock<QuerySnapshot>()
           val doc = mock<DocumentSnapshot>()
