@@ -81,6 +81,7 @@ class EndToEndM1 {
   private val updatedBio = "This is my updated bio after editing"
 
   private var testProfile: UserProfile = UserProfile()
+  private val renderMapInTests = false // Disable Mapbox rendering on CI emulators
 
   companion object {
     // Global lock to ensure only ONE E2E test runs at a time across all test instances
@@ -197,10 +198,7 @@ class EndToEndM1 {
     // Start with logged in state - simulating user already authenticated
     composeTestRule.setContent {
       navController = rememberNavController()
-      // Render the map during E2E tests so UI tags like MAP_SCREEN and bottom sheet
-      // quick actions (profileButton) are present. Previously renderMap=false caused
-      // the map and related UI not to be composed which made the test fail.
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = true)
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
     composeTestRule.waitForIdle()
 
@@ -365,8 +363,7 @@ class EndToEndM1 {
   fun profileEdit_cancelButton_shouldDiscardChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      // Need to render map to access bottom sheet and profile navigation
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = true)
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
 
     composeTestRule.waitForIdle()
@@ -436,8 +433,7 @@ class EndToEndM1 {
   fun profileEdit_navigationBackAndForth_shouldPersistChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      // Render map so profile button and bottom sheet are available for navigation
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = true)
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
     }
 
     composeTestRule.waitForIdle()

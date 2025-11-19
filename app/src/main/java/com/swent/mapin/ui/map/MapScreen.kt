@@ -104,11 +104,15 @@ import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 // Maximum zoom level when fitting camera to search results
 private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
+
+// Debounce duration in milliseconds for offline region downloads
+private const val OFFLINE_DOWNLOAD_DEBOUNCE_MS = 2000L
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
 @OptIn(MapboxDelicateApi::class)
@@ -159,6 +163,9 @@ fun MapScreen(
 
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
+
+  // Initialize TileStore for offline map caching
+  LaunchedEffect(Unit) { viewModel.initializeTileStore() }
 
   LaunchedEffect(viewModel.errorMessage) {
     viewModel.errorMessage?.let { message ->
@@ -522,6 +529,10 @@ fun MapScreen(
                       onTabChange = viewModel::setBottomSheetTab,
                       joinedEvents = viewModel.joinedEvents,
                       savedEvents = viewModel.savedEvents,
+                      ownedEvents = viewModel.ownedEvents,
+                      ownedLoading = viewModel.ownedEventsLoading,
+                      ownedError = viewModel.ownedEventsError,
+                      onRetryOwnedEvents = viewModel::loadOwnedEvents,
                       selectedTab = viewModel.selectedBottomSheetTab,
                       onTabEventClick = viewModel::onTabEventClicked,
                       avatarUrl = viewModel.avatarUrl,
@@ -581,6 +592,35 @@ private fun MapboxLayer(
         .collect { cameraState ->
           val center = cameraState.center
           viewModel.updateCenteredState(center.latitude(), center.longitude())
+        }
+  }
+
+  // Trigger offline region downloads when camera settles
+  val configuration = LocalConfiguration.current
+  val screenWidthPx = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx().toInt() }
+  val screenHeightPx = with(LocalDensity.current) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+  // Track last downloaded bounds to avoid repeated downloads for the same viewport
+  var lastDownloadedBounds by remember {
+    mutableStateOf<com.swent.mapin.ui.map.offline.CoordinateBounds?>(null)
+  }
+
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .debounce(OFFLINE_DOWNLOAD_DEBOUNCE_MS)
+        .collect { cameraState ->
+          val center = cameraState.center
+          val zoom = cameraState.zoom
+          val bounds =
+              com.swent.mapin.ui.map.offline.ViewportBoundsCalculator.calculateBounds(
+                  center, zoom, screenWidthPx, screenHeightPx)
+
+          // Only download if bounds changed to avoid unnecessary downloads
+          if (lastDownloadedBounds != bounds) {
+            lastDownloadedBounds = bounds
+            viewModel.downloadOfflineRegion(bounds)
+          }
         }
   }
 

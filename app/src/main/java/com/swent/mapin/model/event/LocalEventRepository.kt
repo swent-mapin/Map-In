@@ -230,6 +230,10 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     }
   }
 
+  override suspend fun getEventsByOwner(ownerId: String): List<Event> {
+    return events.values.filter { it.ownerId == ownerId }.sortedBy { it.date }
+  }
+
   private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
     return try {
       place?.let { GeoPoint(it.latitude, it.longitude) }

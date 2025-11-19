@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -85,7 +86,12 @@ import com.swent.mapin.model.PreferencesRepositoryProvider
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
+fun SettingsScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToSignIn: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
+    passwordChangeSuccess: Boolean? = null
+) {
   val context = LocalContext.current
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
   val viewModel: SettingsViewModel =
@@ -102,6 +108,13 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
     errorMessage?.let { message ->
       snackbarHostState.showSnackbar(message)
       viewModel.clearErrorMessage()
+    }
+  }
+
+  // Display success message when password is changed
+  LaunchedEffect(passwordChangeSuccess) {
+    if (passwordChangeSuccess == true) {
+      snackbarHostState.showSnackbar("Password changed successfully")
     }
   }
 
@@ -219,6 +232,18 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onNavigateToSignIn: () -> Unit) {
 
                     // Account Settings Section
                     SettingsSectionTitle(title = "Account", icon = Icons.Default.Settings)
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Change Password Button
+                    SettingsActionButton(
+                        label = "Change Password",
+                        description = "Update your account password",
+                        icon = Icons.Default.Key,
+                        backgroundColor = Color(0xFF667eea),
+                        contentColor = Color.White,
+                        onAction = onNavigateToChangePassword,
+                        testTag = "changePasswordButton")
 
                     Spacer(modifier = Modifier.height(12.dp))
 

@@ -26,6 +26,7 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
+import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
@@ -34,12 +35,19 @@ import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
+import com.swent.mapin.ui.map.offline.CoordinateBounds
+import com.swent.mapin.ui.map.offline.OfflineRegionManager
+import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.map.search.SearchStateController
 import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // Assisted by AI tools
 
@@ -57,6 +65,8 @@ class MapScreenViewModel(
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
     private val locationManager: LocationManager = LocationManager(applicationContext),
     val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
 
   private var clearFocusCallback: (() -> Unit) = onClearFocus
@@ -100,6 +110,16 @@ class MapScreenViewModel(
           locationManager = locationManager,
           scope = viewModelScope,
           setErrorMessage = { _errorMessage = it })
+
+  private val offlineRegionManager: OfflineRegionManager by lazy {
+    val tileStore = TileStoreManagerProvider.getInstance().getTileStore()
+    val connectivityFlow = {
+      ConnectivityServiceProvider.getInstance(applicationContext).connectivityState.map {
+        it.isConnected
+      }
+    }
+    OfflineRegionManager(tileStore, connectivityFlow)
+  }
 
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
@@ -197,9 +217,20 @@ class MapScreenViewModel(
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents
 
+  // Owned events for bottom sheet display
+  val ownedEvents: List<Event>
+    get() = eventStateController.ownedEvents
+
+  val ownedEventsLoading: Boolean
+    get() = eventStateController.ownedLoading
+
+  val ownedEventsError: String?
+    get() = eventStateController.ownedError
+
   enum class BottomSheetTab {
     SAVED_EVENTS,
-    JOINED_EVENTS
+    JOINED_EVENTS,
+    OWNED_EVENTS
   }
 
   private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.SAVED_EVENTS)
@@ -280,6 +311,10 @@ class MapScreenViewModel(
     loadUserProfile()
 
     registerAuthStateListener()
+
+    locationController.onLocationUpdate = { location ->
+      directionViewModel.onLocationUpdate(location)
+    }
   }
 
   /**
@@ -334,12 +369,14 @@ class MapScreenViewModel(
             eventStateController.refreshEventsList()
             eventStateController.loadSavedEvents()
             eventStateController.loadJoinedEvents()
+            eventStateController.loadOwnedEvents()
             loadUserProfile()
           }
         }
     auth.addAuthStateListener(authListener!!)
   }
 
+  // ...existing code...
   fun onZoomChange(newZoom: Float) {
     cameraController.onZoomChange(newZoom)
   }
@@ -476,6 +513,48 @@ class MapScreenViewModel(
     }
   }
 
+  /** Initializes the TileStore for offline map caching. */
+  fun initializeTileStore() {
+    viewModelScope.launch(ioDispatcher) {
+      try {
+        TileStoreManagerProvider.getInstance()
+        // TileStore is initialized in the provider's getInstance()
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
+        withContext(mainDispatcher) { _errorMessage = "Failed to initialize offline map storage" }
+      }
+    }
+  }
+
+  /**
+   * Triggers download of map tiles for the specified viewport bounds.
+   *
+   * Downloads only occur when the device is online. Downloads are asynchronous and do not block the
+   * UI thread.
+   *
+   * @param bounds The coordinate bounds to download tiles for
+   */
+  fun downloadOfflineRegion(bounds: CoordinateBounds) {
+    viewModelScope.launch(ioDispatcher) {
+      try {
+        offlineRegionManager.downloadRegion(
+            bounds = bounds,
+            onProgress = { progress ->
+              Log.d("MapScreenViewModel", "Download progress: ${(progress * 100).toInt()}%")
+            },
+            onComplete = { result ->
+              result.fold(
+                  onSuccess = { Log.d("MapScreenViewModel", "Offline region download completed") },
+                  onFailure = { error ->
+                    Log.e("MapScreenViewModel", "Offline region download failed", error)
+                  })
+            })
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to trigger offline download", e)
+      }
+    }
+  }
+
   /** Clears all recent items history. */
   fun clearRecentSearches() {
     searchStateController.clearRecentSearches()
@@ -521,6 +600,13 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
     cameraController.clearCallbacks()
+
+    // Cancel any active offline downloads to prevent resource leaks
+    try {
+      offlineRegionManager.cancelActiveDownload()
+    } catch (e: Exception) {
+      Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
+    }
 
     // Remove auth listener to avoid leaks
     authListener?.let { auth.removeAuthStateListener(it) }
@@ -628,7 +714,7 @@ class MapScreenViewModel(
           }
       val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
-      directionViewModel.requestDirections(userLocation, eventLocation)
+      directionViewModel.requestDirections(userLocation, eventLocation, userLoc)
     }
   }
 
@@ -734,6 +820,10 @@ class MapScreenViewModel(
    * moves the map.
    */
   fun onMapMoved() = locationController.onMapMoved()
+
+  fun loadOwnedEvents() {
+    eventStateController.loadOwnedEvents()
+  }
 }
 
 @Composable
