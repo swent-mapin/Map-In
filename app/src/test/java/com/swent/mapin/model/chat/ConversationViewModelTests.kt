@@ -1,8 +1,5 @@
 package com.swent.mapin.model.chat
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.ui.chat.Conversation
@@ -10,7 +7,6 @@ import com.swent.mapin.ui.chat.ConversationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.*
 import org.mockito.kotlin.*
