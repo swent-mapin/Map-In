@@ -27,6 +27,37 @@ import org.junit.runner.RunWith
 /** Tests for the [AttendedEventsSection] composable. Assisted with AI. */
 @RunWith(AndroidJUnit4::class)
 class AttendedEventsSectionTest {
+  /**
+   * Creates an [Event] with the given parameters.
+   *
+   * @param uid The unique identifier for the event.
+   * @param title The title of the event.
+   * @param endDate The end date of the event.
+   * @param date The date of the event.
+   * @param ownerId The owner ID of the event.
+   */
+  private fun makeEvent(
+      uid: String,
+      title: String,
+      endDate: Date?,
+      date: Date = endDate ?: Date(),
+      ownerId: String = "o"
+  ): Event {
+    return Event(
+        uid = uid,
+        title = title,
+        description = "",
+        date = Timestamp(date),
+        endDate = endDate?.let { Timestamp(it) },
+        location = Location("L", 0.0, 0.0),
+        tags = emptyList(),
+        public = true,
+        ownerId = ownerId,
+        imageUrl = null,
+        capacity = 0,
+        participantIds = emptyList(),
+        price = 0.0)
+  }
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -158,71 +189,12 @@ class AttendedEventsSectionTest {
     val past2 = Date(now - 1000L * 60L * 60L * 24L) // 1 day ago
     val future = Date(now + 1000L * 60L * 60L * 24L) // 1 day in future
 
-    val e1 =
-        Event(
-            uid = "e1",
-            title = "E1",
-            description = "",
-            date = Timestamp(past1),
-            endDate = Timestamp(past1),
-            location = Location("L1", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 0,
-            participantIds = emptyList(),
-            price = 0.0)
+    val e1 = makeEvent("e1", "E1", past1)
+    val e2 = makeEvent("e2", "E2", past2)
+    val eFuture = makeEvent("ef", "Future", future)
+    val eNull = makeEvent("en", "NoEnd", null)
 
-    val e2 =
-        Event(
-            uid = "e2",
-            title = "E2",
-            description = "",
-            date = Timestamp(past2),
-            endDate = Timestamp(past2),
-            location = Location("L2", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 0,
-            participantIds = emptyList(),
-            price = 0.0)
-
-    val eFuture =
-        Event(
-            uid = "ef",
-            title = "Future",
-            description = "",
-            date = Timestamp(future),
-            endDate = Timestamp(future),
-            location = Location("Lf", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 0,
-            participantIds = emptyList(),
-            price = 0.0)
-
-    val enull =
-        Event(
-            uid = "en",
-            title = "NoEnd",
-            description = "",
-            date = Timestamp(past1),
-            endDate = null,
-            location = Location("Ln", 0.0, 0.0),
-            tags = emptyList(),
-            public = true,
-            ownerId = "o",
-            imageUrl = null,
-            capacity = 0,
-            participantIds = emptyList(),
-            price = 0.0)
-
-    val input = listOf(eFuture, enull, e1, e2)
+    val input = listOf(eFuture, eNull, e1, e2)
 
     val result = MapEventStateController.computeAttendedEvents(input, now)
 
