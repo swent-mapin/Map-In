@@ -99,6 +99,14 @@ interface EventRepository {
   suspend fun getOwnedEvents(userId: String): List<Event>
 
   /**
+   * Retrieves Event items owned by the specified user.
+   *
+   * @param ownerId The unique identifier of the owner.
+   * @return A list of Event items owned by the user.
+   */
+  suspend fun getEventsByOwner(ownerId: String): List<Event>
+
+  /**
    * Listens for real-time updates to Event items based on the specified filters.
    *
    * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
