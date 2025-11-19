@@ -35,6 +35,7 @@ import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
+import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
 import com.swent.mapin.ui.map.offline.OfflineRegionManager
 import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
@@ -118,6 +119,21 @@ class MapScreenViewModel(
       }
     }
     OfflineRegionManager(tileStore, connectivityFlow)
+  }
+
+  // Event-based offline region manager (remains unused in initial implementation)
+  // TODO: Integrate this properly to start observation without breaking unit tests
+  private val eventBasedOfflineRegionManager: EventBasedOfflineRegionManager? by lazy {
+    try {
+      EventBasedOfflineRegionManager(
+          eventRepository = eventRepository,
+          offlineRegionManager = offlineRegionManager,
+          connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
+          scope = viewModelScope)
+    } catch (e: Exception) {
+      Log.w("MapScreenViewModel", "EventBasedOfflineRegionManager not available", e)
+      null
+    }
   }
 
   val bottomSheetState: BottomSheetState
