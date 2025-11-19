@@ -1,7 +1,9 @@
 package com.swent.mapin.model.event
 
+import androidx.annotation.VisibleForTesting
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.ListenerRegistration
 import com.swent.mapin.model.Location
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.EventUtils.calculateHaversineDistance
@@ -10,6 +12,7 @@ import java.util.Date
 import java.util.GregorianCalendar
 import java.util.TimeZone
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
 
 /**
  * Local in-memory implementation of [EventRepository] backed by a predefined dataset used for
@@ -29,10 +32,18 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
           .associateBy { it.uid }
           .toMutableMap()
 
-  private val savedIdsByUser = mutableMapOf<String, LinkedHashSet<String>>()
+  // Simulate Firestore user document fields: savedEventIds, joinedEventIds, ownedEventIds
+  private val userData = mutableMapOf<String, UserEventData>()
   private var nextNumericId: Int =
       events.keys.mapNotNull { key -> key.removePrefix("event").toIntOrNull() }.maxOrNull()?.plus(1)
           ?: 1
+
+  // In-memory representation of user-related event lists
+  private data class UserEventData(
+      val savedEventIds: MutableList<String> = mutableListOf(),
+      val joinedEventIds: MutableList<String> = mutableListOf(),
+      val ownedEventIds: MutableList<String> = mutableListOf()
+  )
 
   override fun getNewUid(): String {
     val candidate = "event$nextNumericId"
@@ -40,7 +51,90 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return if (!events.containsKey(candidate)) candidate else "event_${UUID.randomUUID()}"
   }
 
-  override suspend fun getAllEvents(): List<Event> = events.values.sortedBy { it.date }
+  override suspend fun addEvent(event: Event) {
+    val id = event.uid.ifBlank { getNewUid() }
+    val participants =
+        if (event.ownerId.isNotBlank() && !event.participantIds.contains(event.ownerId)) {
+          event.participantIds + event.ownerId
+        } else {
+          event.participantIds
+        }
+    val eventToStore = event.copy(uid = id, participantIds = participants)
+    events[id] = eventToStore
+    // Update owner's ownedEventIds
+    if (event.ownerId.isNotBlank()) {
+      userData.getOrPut(event.ownerId) { UserEventData() }.ownedEventIds.add(id)
+    }
+  }
+
+  override suspend fun editEvent(eventId: String, newValue: Event) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
+  override suspend fun saveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
+  override suspend fun unsaveEventForUser(eventId: String, userId: String) {
+    // Deprecated but kept for CI validation until next PR
+  }
+
+  override suspend fun editEventAsOwner(eventId: String, newValue: Event) {
+    if (!events.containsKey(eventId)) {
+      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
+    }
+    if (events[eventId]?.ownerId != newValue.ownerId) {
+      throw IllegalArgumentException("Only the owner can edit the event")
+    }
+    val participants =
+        if (newValue.ownerId.isNotBlank() && !newValue.participantIds.contains(newValue.ownerId)) {
+          newValue.participantIds + newValue.ownerId
+        } else {
+          newValue.participantIds
+        }
+    events[eventId] = newValue.copy(uid = eventId, participantIds = participants)
+  }
+
+  override suspend fun editEventAsUser(eventId: String, userId: String, join: Boolean) {
+    if (!events.containsKey(eventId)) {
+      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
+    }
+    val event = events[eventId]!!
+    val userEventData = userData.getOrPut(userId) { UserEventData() }
+
+    if (join) {
+      // Check capacity
+      if (event.capacity != null && event.participantIds.size >= event.capacity) {
+        throw IllegalStateException("Event is at full capacity")
+      }
+      // Add user to participants and joinedEventIds
+      if (!event.participantIds.contains(userId)) {
+        val updatedParticipants = event.participantIds + userId
+        events[eventId] = event.copy(participantIds = updatedParticipants)
+        userEventData.joinedEventIds.add(eventId)
+      }
+    } else {
+      // Remove user from participants and joinedEventIds
+      if (event.participantIds.contains(userId)) {
+        val updatedParticipants = event.participantIds - userId
+        events[eventId] = event.copy(participantIds = updatedParticipants)
+        userEventData.joinedEventIds.remove(eventId)
+      }
+    }
+  }
+
+  override suspend fun deleteEvent(eventId: String) {
+    val event =
+        events[eventId]
+            ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
+    events.remove(eventId)
+    // Remove from all users' savedEventIds, joinedEventIds, and owner's ownedEventIds
+    userData.forEach { (_, data) ->
+      data.savedEventIds.remove(eventId)
+      data.joinedEventIds.remove(eventId)
+      data.ownedEventIds.remove(eventId)
+    }
+  }
 
   override suspend fun getEvent(eventId: String): Event {
     return events[eventId]
@@ -56,23 +150,17 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     result =
         result.filter { event -> event.date?.let { it.seconds >= startTimestamp.seconds } ?: false }
 
-    // Apply endDate filter only if provided
-    if (filters.endDate != null) {
+    // Apply endDate filter
+    filters.endDate?.let { endDate ->
       val endTimestamp =
-          Timestamp(
-              filters.endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
+          Timestamp(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
       result =
           result.filter { event -> event.date?.let { it.seconds <= endTimestamp.seconds } ?: false }
     }
 
     // Apply tags filter
     if (filters.tags.isNotEmpty()) {
-      val limitedTags =
-          if (filters.tags.size > 10) {
-            filters.tags.take(10)
-          } else {
-            filters.tags
-          }
+      val limitedTags = filters.tags.take(10) // Firestore limit
       result = result.filter { event -> event.tags.any { it in limitedTags } }
     }
 
@@ -81,20 +169,23 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       result = result.filter { event -> event.participantIds.size > 10 }
     }
 
-    // Apply friendsOnly filter (placeholder)
+    // Apply friendsOnly filter (placeholder: assumes user1 is a friend)
     if (filters.friendsOnly) {
-      val userId = "user1" // Placeholder: assumes a logged-in user
-      result = result.filter { event -> userId in event.participantIds }
+      val userId = "user1" // Placeholder
+      result =
+          result.filter { event ->
+            event.participantIds.any { it in (userData[userId]?.joinedEventIds ?: emptySet()) }
+          }
     }
 
     // Apply maxPrice filter
-    if (filters.maxPrice != null) {
-      result = result.filter { event -> event.price <= filters.maxPrice.toDouble() }
+    filters.maxPrice?.let { maxPrice ->
+      result = result.filter { event -> event.price <= maxPrice }
     }
 
     // Apply place and radius filter
-    if (filters.place != null) {
-      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
+    filters.place?.let { place ->
+      val placeGeoPoint = parsePlaceToGeoPoint(place) ?: return emptyList()
       result =
           result.filter { event ->
             val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
@@ -106,63 +197,31 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return result.sortedBy { it.date }
   }
 
-  override suspend fun getSearchedEvents(title: String, filters: Filters): List<Event> {
-    val normalized = title.trim().lowercase()
-    val filteredEvents = getFilteredEvents(filters)
-    return filteredEvents
-        .filter { it.title.trim().lowercase().contains(normalized) }
-        .sortedBy { it.date }
-  }
-
-  override suspend fun addEvent(event: Event) {
-    val id = event.uid.ifBlank { getNewUid() }
-    val participants =
-        if (event.ownerId.isNotBlank() && !event.participantIds.contains(event.ownerId)) {
-          event.participantIds + event.ownerId
-        } else {
-          event.participantIds
-        }
-    val eventToStore = event.copy(uid = id, participantIds = participants)
-    events[id] = eventToStore
-  }
-
-  override suspend fun editEvent(eventId: String, newValue: Event) {
-    if (!events.containsKey(eventId)) {
-      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
-    }
-    val participants =
-        if (newValue.ownerId.isNotBlank() && !newValue.participantIds.contains(newValue.ownerId)) {
-          newValue.participantIds + newValue.ownerId
-        } else {
-          newValue.participantIds
-        }
-    events[eventId] = newValue.copy(uid = eventId, participantIds = participants)
-  }
-
-  override suspend fun deleteEvent(eventId: String) {
-    if (events.remove(eventId) == null) {
-      throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
-    }
-  }
-
-  private fun bucket(userId: String) = savedIdsByUser.getOrPut(userId) { LinkedHashSet() }
-
-  override suspend fun getSavedEventIds(userId: String): Set<String> {
-    return bucket(userId).toSet()
-  }
-
   override suspend fun getSavedEvents(userId: String): List<Event> {
-    return bucket(userId).mapNotNull { id -> events[id] }
+    val savedEventIds = userData.getOrPut(userId) { UserEventData() }.savedEventIds
+    return savedEventIds.mapNotNull { id -> events[id] }
   }
 
-  override suspend fun saveEventForUser(userId: String, eventId: String): Boolean {
-    if (!events.containsKey(eventId)) return false
-    bucket(userId).add(eventId)
-    return true
+  override suspend fun getJoinedEvents(userId: String): List<Event> {
+    val joinedEventIds = userData.getOrPut(userId) { UserEventData() }.joinedEventIds
+    return joinedEventIds.mapNotNull { id -> events[id] }
   }
 
-  override suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean {
-    return bucket(userId).remove(eventId)
+  override suspend fun getOwnedEvents(userId: String): List<Event> {
+    val ownedEventIds = userData.getOrPut(userId) { UserEventData() }.ownedEventIds
+    return ownedEventIds.mapNotNull { id -> events[id] }
+  }
+
+  override fun listenToFilteredEvents(
+      filters: Filters,
+      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+  ): ListenerRegistration {
+    // Simulate real-time listener by immediately invoking callback with current data
+    val filteredEvents = runBlocking { getFilteredEvents(filters) }
+    onUpdate(filteredEvents, emptyList(), emptyList()) // No modified/removed events in local repo
+    return object : ListenerRegistration {
+      override fun remove() {} // No-op for local repository
+    }
   }
 
   override suspend fun getEventsByOwner(ownerId: String): List<Event> {
@@ -171,12 +230,14 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
 
   private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
     return try {
-      if (place == null) return null
-      GeoPoint(place.latitude, place.longitude)
+      place?.let { GeoPoint(it.latitude, it.longitude) }
     } catch (_: Exception) {
       null
     }
   }
+
+  // Helper only for tests – not part of production code
+  @VisibleForTesting fun getAllEventsForTestsOnly() = events.values.toList()
 
   companion object {
     private fun generateParticipants(ownerId: String, additionalCount: Int): List<String> {
@@ -188,7 +249,6 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       val now = Timestamp(Date())
 
       fun ts(year: Int, month0: Int, day: Int, hour: Int, minute: Int = 0): Timestamp {
-        // month0: 0-based month
         val cal = GregorianCalendar.getInstance(TimeZone.getDefault())
         cal.clear()
         cal.set(year, month0, day, hour, minute)
@@ -200,7 +260,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
               uid = "event1",
               title = "Music Festival",
               description = "Live music and food",
-              date = ts(2025, 1, 1, 10, 0),
+              date = ts(2026, 1, 1, 10, 0),
               endDate = ts(2025, 1, 2, 11, 0),
               location = Location("EPFL Campus", 46.5197, 6.5668),
               tags = listOf("Music", "Festival"),

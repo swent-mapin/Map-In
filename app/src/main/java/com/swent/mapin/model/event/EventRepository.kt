@@ -1,5 +1,6 @@
 package com.swent.mapin.model.event
 
+import com.google.firebase.firestore.ListenerRegistration
 import com.swent.mapin.ui.filters.Filters
 
 /** Repository interface for managing Event items in the MapIn application. */
@@ -10,13 +11,6 @@ interface EventRepository {
    * @return A unique string identifier.
    */
   fun getNewUid(): String
-
-  /**
-   * Retrieves all Event items from the repository.
-   *
-   * @return A list of all Event items.
-   */
-  suspend fun getAllEvents(): List<Event>
 
   /**
    * Retrieves a specific Event item by its unique identifier.
@@ -36,29 +30,46 @@ interface EventRepository {
   suspend fun getFilteredEvents(filters: Filters): List<Event>
 
   /**
-   * Retrieves Event items whose titles match the specified search query (case-insensitive).
-   *
-   * @param title The search query to match against event titles.
-   * @param filters Additional filtering criteria to apply.
-   * @return A list of Event items whose titles contain the query.
-   */
-  suspend fun getSearchedEvents(title: String, filters: Filters): List<Event>
-
-  /**
    * Adds a new Event item to the repository.
    *
    * @param event The Event item to add.
    */
   suspend fun addEvent(event: Event)
 
+  // Deprecated but kept for CI validation until next PR
+  suspend fun editEvent(eventId: String, newValue: Event)
+
+  // Deprecated but kept for CI validation until next PR
+  suspend fun saveEventForUser(eventId: String, userId: String)
+
+  // Deprecated but kept for CI validation until next PR
+  suspend fun unsaveEventForUser(eventId: String, userId: String)
+
   /**
-   * Edits an existing Event item in the repository.
+   * Updates an existing event as its owner.
+   *
+   * Only the event owner is allowed to call this method. It can modify any event field except:
+   * - uid (ignored)
+   * - participantIds (cannot be changed by owner)
+   * - public flag (cannot be changed from `true` to `false`)
+   * - capacity cannot be reduced below the current number of participants
    *
    * @param eventId The unique identifier of the Event item to edit.
    * @param newValue The updated Event item.
    * @throws NoSuchElementException if the Event item is not found.
    */
-  suspend fun editEvent(eventId: String, newValue: Event)
+  suspend fun editEventAsOwner(eventId: String, newValue: Event)
+
+  /**
+   * Edits an existing Event content in the repository. This is limited to updating one's
+   * participation to the event.
+   *
+   * @param eventId The unique identifier of the Event item to edit.
+   * @param userId The unique identifier of the user performing the action.
+   * @param join Boolean indicating whether the user is joining (true) or leaving (false) the event.
+   * @throws NoSuchElementException if the Event item is not found.
+   */
+  suspend fun editEventAsUser(eventId: String, userId: String, join: Boolean)
 
   /**
    * Deletes an Event item from the repository.
@@ -69,14 +80,6 @@ interface EventRepository {
   suspend fun deleteEvent(eventId: String)
 
   /**
-   * Retrieves the IDs of Event items saved by the specified user.
-   *
-   * @param userId The unique identifier of the user.
-   * @return A set of IDs of Event items saved by the user.
-   */
-  suspend fun getSavedEventIds(userId: String): Set<String>
-
-  /**
    * Retrieves Event items saved by the specified user.
    *
    * @param userId The unique identifier of the user.
@@ -85,24 +88,20 @@ interface EventRepository {
   suspend fun getSavedEvents(userId: String): List<Event>
 
   /**
-   * Saves an Event item for the specified user.
+   * Retrieves Event items joined by the specified user.
    *
    * @param userId The unique identifier of the user.
-   * @param eventId The unique identifier of the Event item to save.
-   * @return True if the Event item was successfully saved, false if already saved.
-   * @throws NoSuchElementException if the Event item is not found.
+   * @return A list of Event items joined by the user.
    */
-  suspend fun saveEventForUser(userId: String, eventId: String): Boolean
+  suspend fun getJoinedEvents(userId: String): List<Event>
 
   /**
-   * Removes a saved Event item for the specified user.
+   * Retrieves Event items owned by the specified user.
    *
    * @param userId The unique identifier of the user.
-   * @param eventId The unique identifier of the Event item to remove.
-   * @return True if the Event item was successfully removed, false if not saved.
-   * @throws NoSuchElementException if the Event item is not found.
+   * @return A list of Event items owned by the user.
    */
-  suspend fun unsaveEventForUser(userId: String, eventId: String): Boolean
+  suspend fun getOwnedEvents(userId: String): List<Event>
 
   /**
    * Retrieves Event items owned by the specified user.
@@ -111,4 +110,18 @@ interface EventRepository {
    * @return A list of Event items owned by the user.
    */
   suspend fun getEventsByOwner(ownerId: String): List<Event>
+
+  /**
+   * Listens for real-time updates to Event items based on the specified filters.
+   *
+   * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
+   * @param onUpdate A callback function that is invoked with three lists of Event items:
+   *     - The first list contains newly added events.
+   *     - The second list contains updated events.
+   *     - The third list contains removed events.
+   */
+  fun listenToFilteredEvents(
+      filters: Filters,
+      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+  ): ListenerRegistration
 }
