@@ -56,6 +56,19 @@ class MapEventStateController(
   val savedEvents: List<Event>
     get() = _savedEvents
 
+  // Owned events (events created by current authenticated user)
+  private var _ownedEvents by mutableStateOf<List<Event>>(emptyList())
+  val ownedEvents: List<Event>
+    get() = _ownedEvents
+
+  private var _ownedLoading by mutableStateOf(false)
+  val ownedLoading: Boolean
+    get() = _ownedLoading
+
+  private var _ownedError by mutableStateOf<String?>(null)
+  val ownedError: String?
+    get() = _ownedError
+
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
    * accordingly.
@@ -74,6 +87,7 @@ class MapEventStateController(
     getFilteredEvents(filterViewModel.filters.value)
     loadJoinedEvents()
     loadSavedEvents()
+    loadOwnedEvents()
   }
 
   /**
@@ -166,6 +180,28 @@ class MapEventStateController(
         _savedEvents = eventRepository.getSavedEvents(currentUserId)
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
+      }
+    }
+  }
+
+  /**
+   * Loads events owned by the current authenticated user. Uses direct repository query
+   * (getEventsByOwner) to avoid fetching all events and filtering client-side, which improves
+   * performance and reduces data transfer. Errors are surfaced via setErrorMessage.
+   */
+  fun loadOwnedEvents() {
+    scope.launch {
+      _ownedLoading = true
+      _ownedError = null
+      try {
+        val currentUserId = getUserId()
+        _ownedEvents = eventRepository.getEventsByOwner(currentUserId)
+      } catch (e: Exception) {
+        val msg = e.message ?: "Unknown error occurred while fetching owned events"
+        _ownedError = msg
+        setErrorMessage(msg)
+      } finally {
+        _ownedLoading = false
       }
     }
   }
@@ -324,10 +360,6 @@ class MapEventStateController(
     clearErrorMessage()
   }
 
-  companion object {
-    private const val TAG = "MapEventStateController"
-  }
-
   @VisibleForTesting
   fun setAllEventsForTest(events: List<Event>) {
     _allEvents = events
@@ -351,5 +383,10 @@ class MapEventStateController(
   @VisibleForTesting
   fun setSavedEventsForTest(events: List<Event>) {
     _savedEvents = events
+  }
+
+  @VisibleForTesting
+  fun setOwnedEventsForTest(events: List<Event>) {
+    _ownedEvents = events
   }
 }

@@ -221,9 +221,20 @@ class MapScreenViewModel(
   val savedEvents: List<Event>
     get() = eventStateController.savedEvents
 
+  // Owned events for bottom sheet display
+  val ownedEvents: List<Event>
+    get() = eventStateController.ownedEvents
+
+  val ownedEventsLoading: Boolean
+    get() = eventStateController.ownedLoading
+
+  val ownedEventsError: String?
+    get() = eventStateController.ownedError
+
   enum class BottomSheetTab {
     SAVED_EVENTS,
-    JOINED_EVENTS
+    JOINED_EVENTS,
+    OWNED_EVENTS
   }
 
   private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.SAVED_EVENTS)
@@ -366,12 +377,14 @@ class MapScreenViewModel(
             eventStateController.refreshEventsList()
             eventStateController.loadSavedEvents()
             eventStateController.loadJoinedEvents()
+            eventStateController.loadOwnedEvents()
             loadUserProfile()
           }
         }
     auth.addAuthStateListener(authListener!!)
   }
 
+  // ...existing code...
   fun onZoomChange(newZoom: Float) {
     cameraController.onZoomChange(newZoom)
   }
@@ -823,6 +836,10 @@ class MapScreenViewModel(
    * moves the map.
    */
   fun onMapMoved() = locationController.onMapMoved()
+
+  fun loadOwnedEvents() {
+    eventStateController.loadOwnedEvents()
+  }
 }
 
 @Composable

@@ -58,6 +58,7 @@ import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.EventsSection
+import com.swent.mapin.ui.map.bottomsheet.components.OwnedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.QuickActionsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SearchBar
 import com.swent.mapin.ui.map.bottomsheet.components.SearchResultsSection
@@ -135,9 +136,14 @@ fun BottomSheetContent(
     // Optional initial event to prefill memory form when opening it
     initialMemoryEvent: Event? = null,
     // Joined/Saved/Attended events
+    // Joined/Saved/Owned events
     joinedEvents: List<Event> = emptyList(),
     attendedEvents: List<Event> = emptyList(),
     savedEvents: List<Event> = emptyList(),
+    ownedEvents: List<Event> = emptyList(),
+    ownedLoading: Boolean = false,
+    ownedError: String? = null,
+    onRetryOwnedEvents: () -> Unit = {},
     // Tabs & tags
     selectedTab: MapScreenViewModel.BottomSheetTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
     // Callbacks
@@ -304,11 +310,7 @@ fun BottomSheetContent(
 
                                 // Tabs
                                 TabRow(
-                                    selectedTabIndex =
-                                        if (selectedTab ==
-                                            MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-                                            0
-                                        else 1,
+                                    selectedTabIndex = selectedTab.ordinal,
                                     modifier = Modifier.fillMaxWidth()) {
                                       Tab(
                                           selected =
@@ -328,8 +330,16 @@ fun BottomSheetContent(
                                                 MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
                                           },
                                           text = { Text("Joined Events") })
+                                      Tab(
+                                          selected =
+                                              selectedTab ==
+                                                  MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+                                          onClick = {
+                                            onTabChange(
+                                                MapScreenViewModel.BottomSheetTab.OWNED_EVENTS)
+                                          },
+                                          text = { Text("Owned Events") })
                                     }
-
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 when (selectedTab) {
@@ -340,6 +350,14 @@ fun BottomSheetContent(
                                   MapScreenViewModel.BottomSheetTab.JOINED_EVENTS -> {
                                     EventsSection(
                                         events = joinedEvents, onEventClick = onTabEventClick)
+                                  }
+                                  MapScreenViewModel.BottomSheetTab.OWNED_EVENTS -> {
+                                    OwnedEventsSection(
+                                        events = ownedEvents,
+                                        loading = ownedLoading,
+                                        error = ownedError,
+                                        onEventClick = onTabEventClick,
+                                        onRetry = onRetryOwnedEvents)
                                   }
                                 }
 

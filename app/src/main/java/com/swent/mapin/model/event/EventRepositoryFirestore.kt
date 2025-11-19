@@ -462,6 +462,30 @@ class EventRepositoryFirestore(
   }
 
   /**
+   * Retrieves Event items owned by the specified user.
+   *
+   * This method uses a direct Firestore query to fetch events where ownerId matches the specified
+   * user, avoiding the need to fetch all events and filter client-side.
+   *
+   * @param ownerId The unique identifier of the owner.
+   * @return A list of Event items owned by the user.
+   */
+  override suspend fun getEventsByOwner(ownerId: String): List<Event> {
+    return try {
+      val snap =
+          db.collection(EVENTS_COLLECTION_PATH)
+              .whereEqualTo("ownerId", ownerId)
+              .orderBy("date")
+              .get()
+              .await()
+      snap.documents.mapNotNull { documentToEvent(it) }
+    } catch (e: Exception) {
+      Log.e("EventRepositoryFirestore", "Failed to fetch events by owner $ownerId", e)
+      throw Exception("Failed to fetch events by owner: ${e.message}", e)
+    }
+  }
+
+  /**
    * Converts a Firestore DocumentSnapshot to an Event object.
    *
    * @param document The Firestore DocumentSnapshot to convert.
