@@ -165,6 +165,10 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return bucket(userId).remove(eventId)
   }
 
+  override suspend fun getEventsByOwner(ownerId: String): List<Event> {
+    return events.values.filter { it.ownerId == ownerId }.sortedBy { it.date }
+  }
+
   private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
     return try {
       if (place == null) return null

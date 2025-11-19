@@ -1188,4 +1188,112 @@ class BottomSheetContentTest {
 
     assertTrue(cleared)
   }
+
+  // Helper function to reduce boilerplate for Owned Events tests
+  @Composable
+  private fun OwnedEventsContent(
+      events: List<Event> = emptyList(),
+      loading: Boolean = false,
+      error: String? = null,
+      onRetry: () -> Unit = {},
+      onTabEventClick: (Event) -> Unit = {}
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+          ownedEvents = events,
+          ownedLoading = loading,
+          ownedError = error,
+          onRetryOwnedEvents = onRetry,
+          onTabEventClick = onTabEventClick,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
+    }
+  }
+
+  @Test
+  fun ownedEvents_loading_showsLoaderAndHidesOtherStates() {
+    rule.setContent { OwnedEventsContent(loading = true) }
+    rule.waitForIdle()
+
+    // When loading we shouldn't see Retry or No results text
+    rule.onNodeWithText("Retry").assertDoesNotExist()
+    rule.onNodeWithText("No results found").assertDoesNotExist()
+  }
+
+  @Test
+  fun ownedEvents_error_displaysErrorAndCallsRetry() {
+    var retried = false
+
+    rule.setContent { OwnedEventsContent(error = "Network", onRetry = { retried = true }) }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Error: Network").assertIsDisplayed()
+    rule.onNodeWithText("Retry").performClick()
+    rule.waitForIdle()
+
+    assertTrue(retried)
+  }
+
+  @Test
+  fun ownedEvents_empty_showsNoResultsMessage() {
+    rule.setContent { OwnedEventsContent(events = emptyList()) }
+    rule.waitForIdle()
+
+    // NoResultsMessage for owned events uses the non-blank query path and therefore shows
+    // the generic "No results found" copy
+    rule.onNodeWithText("No results found").assertIsDisplayed()
+    rule.onNodeWithText("Try a different keyword or check the spelling.").assertIsDisplayed()
+  }
+
+  @Test
+  fun ownedEvents_list_showsItems_showMore_and_handlesClick() {
+    val testEvents = LocalEventRepository.defaultSampleEvents().take(4)
+    var clicked: Event? = null
+
+    rule.setContent { OwnedEventsContent(events = testEvents, onTabEventClick = { clicked = it }) }
+    rule.waitForIdle()
+
+    // Initially only 3 most recent (reversed) should be shown
+    val visibleInitially = testEvents.reversed().take(3)
+    val hiddenInitially = testEvents.reversed().drop(3)
+
+    visibleInitially.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).assertIsDisplayed()
+    }
+    hiddenInitially.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).assertDoesNotExist()
+    }
+
+    // Expand
+    rule
+        .onNodeWithTag("eventsShowMoreButton", useUnmergedTree = true)
+        .performScrollTo()
+        .performClick()
+    rule.waitForIdle()
+
+    // Now all should be visible
+    testEvents.forEach { e ->
+      rule.onNodeWithText(e.title, substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    // Click top-most visible event and ensure callback
+    val toClick = testEvents.reversed().first()
+    rule.onNodeWithText(toClick.title).performClick()
+    rule.waitForIdle()
+
+    assertEquals(toClick, clicked)
+  }
 }

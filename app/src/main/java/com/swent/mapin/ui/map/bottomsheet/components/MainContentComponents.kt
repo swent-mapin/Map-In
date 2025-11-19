@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
@@ -96,6 +99,85 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
           modifier =
               Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
             Text(if (expanded) "Show less" else "Show more (${events.size - 3} more)")
+          }
+    }
+  }
+}
+
+/**
+ * Displays a section for owned events with proper state handling.
+ *
+ * This composable handles three main states:
+ * - Loading: Shows a progress indicator while fetching events
+ * - Error: Displays error message with retry button
+ * - Success: Shows list of events or empty state message
+ *
+ * The event list reuses EventsSection for consistent UI with other tabs. Each event item is
+ * clickable and displays key details (name, date, location).
+ *
+ * @param events List of events owned by the current user
+ * @param loading Whether events are currently being loaded
+ * @param error Error message to display, or null if no error
+ * @param onEventClick Callback invoked when user taps an event item
+ * @param onRetry Callback invoked when user taps the retry button in error state
+ * @see EventsSection for the list rendering implementation
+ * @see SearchResultItem for individual event item display
+ */
+@Composable
+fun OwnedEventsSection(
+    events: List<Event>,
+    loading: Boolean,
+    error: String?,
+    onEventClick: (Event) -> Unit,
+    onRetry: () -> Unit
+) {
+  when {
+    loading -> {
+      Column(
+          modifier =
+              Modifier.fillMaxWidth().padding(16.dp).semantics {
+                contentDescription = "Loading owned events"
+              },
+          verticalArrangement = Arrangement.Center) {
+            CircularProgressIndicator(
+                modifier =
+                    Modifier.semantics {
+                      contentDescription = "Loading indicator for owned events"
+                    })
+          }
+    }
+    error != null -> {
+      Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Text(
+            text = "Error: $error",
+            color = MaterialTheme.colorScheme.error,
+            modifier =
+                Modifier.semantics { contentDescription = "Error loading owned events: $error" })
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onRetry,
+            modifier =
+                Modifier.fillMaxWidth().semantics {
+                  contentDescription = "Retry loading owned events"
+                }) {
+              Text("Retry")
+            }
+      }
+    }
+    events.isEmpty() -> {
+      NoResultsMessage(
+          query = "You have not created any events yet.",
+          modifier =
+              Modifier.semantics {
+                contentDescription = "No owned events. You have not created any events yet."
+              })
+    }
+    else -> {
+      // Reuse EventsSection behaviour for listing
+      Column(
+          modifier =
+              Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
+            EventsSection(events = events, onEventClick = onEventClick)
           }
     }
   }
