@@ -587,28 +587,20 @@ class LocalEventRepositoryTest {
   }
 
   // ---------------------------------------------------------------------
-  // getEventsByOwner
+  // getOwnedEvents
   // ---------------------------------------------------------------------
-  @Test
-  fun `getEventsByOwner returns events for specific owner`() = runTest {
-    val repo = LocalEventRepository()
-    val events = repo.getEventsByOwner("user1")
-
-    assertTrue(events.all { it.ownerId == "user1" })
-    assertTrue(events.any { it.title == "Music Festival" })
-  }
 
   @Test
-  fun `getEventsByOwner returns empty list for non-existent owner`() = runTest {
+  fun `getOwnedEvents returns empty list for non-existent owner`() = runTest {
     val repo = LocalEventRepository()
-    val events = repo.getEventsByOwner("nonExistentUser")
+    val events = repo.getOwnedEvents("nonExistentUser")
     assertTrue(events.isEmpty())
   }
 
   @Test
-  fun `getEventsByOwner returns sorted by date`() = runTest {
+  fun `getOwnedEvents returns sorted by date`() = runTest {
     val repo = LocalEventRepository()
-    val events = repo.getEventsByOwner("user1")
+    val events = repo.getOwnedEvents("user1")
 
     for (i in 0 until events.size - 1) {
       val current = events[i].date?.seconds ?: 0

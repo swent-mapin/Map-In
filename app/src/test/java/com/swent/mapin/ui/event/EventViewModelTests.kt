@@ -59,7 +59,7 @@ class EventViewModelTests {
     val event = Event("1")
     viewModel.editEvent("1", event)
     advanceUntilIdle()
-    Mockito.verify(repository).editEvent("1", event)
+    Mockito.verify(repository).editEventAsOwner("1", event)
   }
 
   // 4. deleteEvent
@@ -84,7 +84,7 @@ class EventViewModelTests {
   @Test
   fun `editEvent sets error when repository throws`() = runTest {
     val event = Event("1")
-    Mockito.doThrow(RuntimeException("Edit failed")).`when`(repository).editEvent("1", event)
+    Mockito.doThrow(RuntimeException("Edit failed")).`when`(repository).editEventAsOwner("1", event)
     viewModel.editEvent("1", event)
     advanceUntilIdle()
     assertEquals("Edit failed", viewModel.error.value)

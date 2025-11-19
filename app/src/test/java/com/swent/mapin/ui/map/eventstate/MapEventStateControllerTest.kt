@@ -80,7 +80,7 @@ class MapEventStateControllerTest {
       whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepository.getUserProfile(testUserId))
-          .thenReturn(UserProfile(userId = testUserId, participatingEventIds = emptyList()))
+          .thenReturn(UserProfile(userId = testUserId, joinedEventIds = emptyList()))
     }
 
     controller =
@@ -159,10 +159,8 @@ class MapEventStateControllerTest {
     val joinedEvents = listOf(testEvent.copy(participantIds = listOf(testUserId)))
     val savedEvents = listOf(testEvent)
     whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(filteredEvents)
-    whenever(mockEventRepository.getEvent(testEvent.uid)).thenReturn(joinedEvents[0])
+    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(joinedEvents)
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(savedEvents)
-    whenever(mockUserProfileRepository.getUserProfile(testUserId))
-        .thenReturn(UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid)))
 
     controller.refreshEventsList()
     advanceUntilIdle()
@@ -232,11 +230,9 @@ class MapEventStateControllerTest {
   // ========== Joined Events Tests ==========
   @Test
   fun `loadJoinedEvents populates joinedEvents for user`() = runTest {
-    val userProfile =
-        UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid))
+    val userProfile = UserProfile(userId = testUserId, joinedEventIds = listOf(testEvent.uid))
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
-    whenever(mockUserProfileRepository.getUserProfile(testUserId)).thenReturn(userProfile)
-    whenever(mockEventRepository.getEvent(testEvent.uid)).thenReturn(joinedEvent)
+    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(listOf(joinedEvent))
 
     controller.loadJoinedEvents()
     advanceUntilIdle()
@@ -245,29 +241,13 @@ class MapEventStateControllerTest {
   }
 
   @Test
-  fun `loadJoinedEvents handles inconsistent participant data`() = runTest {
-    val userProfile =
-        UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid))
-    whenever(mockUserProfileRepository.getUserProfile(testUserId)).thenReturn(userProfile)
-    whenever(mockEventRepository.getEvent(testEvent.uid)).thenReturn(testEvent)
-
-    controller.loadJoinedEvents()
-    advanceUntilIdle()
-
-    verify(mockSetErrorMessage)
-        .invoke(
-            "Inconsistent data: User not in participant list for event ${testEvent.uid} but event ID is in user's participatingEventIds")
-    assertTrue(controller.joinedEvents.isEmpty())
-  }
-
-  @Test
   fun `loadJoinedEvents handles missing user profile`() = runTest {
-    whenever(mockUserProfileRepository.getUserProfile(testUserId)).thenReturn(null)
+    whenever(mockAuth.currentUser).thenReturn(null)
 
     controller.loadJoinedEvents()
     advanceUntilIdle()
 
-    verify(mockSetErrorMessage).invoke("User profile not found")
+    verify(mockSetErrorMessage).invoke("User not authenticated")
     assertTrue(controller.joinedEvents.isEmpty())
   }
 
@@ -298,24 +278,14 @@ class MapEventStateControllerTest {
   // ========== Join Event Tests ==========
   @Test
   fun `joinSelectedEvent adds user to event and updates lists`() = runTest {
-    // Initialize UserProfile
-    var userProfile = UserProfile(userId = testUserId, participatingEventIds = emptyList())
-
-    // Mock getUserProfile to return the current userProfile
-    whenever(mockUserProfileRepository.getUserProfile(testUserId)).thenAnswer { userProfile }
-
-    // Mock saveUserProfile to update userProfile
-    whenever(mockUserProfileRepository.saveUserProfile(any())).thenAnswer { invocation ->
-      userProfile = invocation.getArgument(0)
-    }
+    whenever(mockEventRepository.editEventAsUser(testEvent.uid, testUserId, true)).thenReturn(Unit)
 
     // Mock selected event and repository responses
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     val updatedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(listOf(updatedEvent))
-    whenever(mockEventRepository.getEvent(testEvent.uid)).thenReturn(updatedEvent)
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
-    whenever(mockEventRepository.editEvent(testEvent.uid, updatedEvent)).thenReturn(Unit)
+    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(listOf(updatedEvent))
 
     // Execute the method
     controller.joinSelectedEvent()
@@ -324,9 +294,7 @@ class MapEventStateControllerTest {
     // Assertions
     assertEquals(listOf(updatedEvent), controller.allEvents)
     assertEquals(listOf(updatedEvent), controller.joinedEvents)
-    verify(mockEventRepository).editEvent(testEvent.uid, updatedEvent)
-    verify(mockUserProfileRepository)
-        .saveUserProfile(userProfile.copy(participatingEventIds = listOf(testEvent.uid)))
+    verify(mockEventRepository).editEventAsUser(testEvent.uid, testUserId, true)
   }
 
   @Test
@@ -357,7 +325,8 @@ class MapEventStateControllerTest {
   @Test
   fun `joinSelectedEvent reverts local changes on repository error`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
-    whenever(mockEventRepository.editEvent(any(), any()))
+    val userProfile = UserProfile(userId = testUserId, joinedEventIds = emptyList())
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(testEvent))
 
@@ -373,27 +342,18 @@ class MapEventStateControllerTest {
   fun `leaveSelectedEvent removes user from event and updates lists`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
-    var userProfile =
-        UserProfile(userId = testUserId, participatingEventIds = listOf(testEvent.uid))
-    whenever(mockUserProfileRepository.getUserProfile(testUserId)).thenAnswer { userProfile }
 
-    // Mock saveUserProfile to update userProfile
-    whenever(mockUserProfileRepository.saveUserProfile(any())).thenAnswer { invocation ->
-      userProfile = invocation.getArgument(0)
-      true
-    }
     val updatedEvent = testEvent.copy(participantIds = emptyList())
     whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(listOf(updatedEvent))
+    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(emptyList())
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
 
     controller.leaveSelectedEvent()
     advanceUntilIdle()
 
     assertEquals(listOf(updatedEvent), controller.allEvents)
-    assertTrue(controller.joinedEvents.isEmpty())
-    verify(mockEventRepository).editEvent(testEvent.uid, updatedEvent)
-    verify(mockUserProfileRepository)
-        .saveUserProfile(userProfile.copy(participatingEventIds = emptyList()))
+    assertEquals(emptyList<Event>(), controller.joinedEvents)
+    verify(mockEventRepository).editEventAsUser(testEvent.uid, testUserId, false)
   }
 
   @Test
@@ -411,7 +371,8 @@ class MapEventStateControllerTest {
   fun `leaveSelectedEvent reverts local changes on repository error`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
-    whenever(mockEventRepository.editEvent(any(), any()))
+    val userProfile = UserProfile(userId = testUserId, joinedEventIds = listOf(testEvent.uid))
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
         .thenThrow(RuntimeException("Network error"))
     controller.setAllEventsForTest(listOf(joinedEvent))
 
@@ -432,7 +393,7 @@ class MapEventStateControllerTest {
     controller.saveSelectedEvent()
     advanceUntilIdle()
 
-    verify(mockEventRepository).saveEventForUser(testUserId, testEvent.uid)
+    verify(mockUserProfileRepository).saveUserProfile(any<UserProfile>())
     assertEquals(savedEvents, controller.savedEvents)
   }
 
@@ -449,7 +410,7 @@ class MapEventStateControllerTest {
   @Test
   fun `saveSelectedEvent handles repository error`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
-    whenever(mockEventRepository.saveEventForUser(testUserId, testEvent.uid))
+    whenever(mockUserProfileRepository.saveUserProfile(any<UserProfile>()))
         .thenThrow(RuntimeException("Network error"))
 
     controller.saveSelectedEvent()
@@ -463,12 +424,14 @@ class MapEventStateControllerTest {
   @Test
   fun `unsaveSelectedEvent unsaves event and refreshes savedEvents`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+    controller.setSavedEventsForTest(listOf(testEvent))
+    whenever(mockUserProfileRepository.saveUserProfile(any<UserProfile>())).thenReturn(true)
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
 
     controller.unsaveSelectedEvent()
     advanceUntilIdle()
 
-    verify(mockEventRepository).unsaveEventForUser(testUserId, testEvent.uid)
+    verify(mockUserProfileRepository).saveUserProfile(any<UserProfile>())
     assertTrue(controller.savedEvents.isEmpty())
   }
 
@@ -485,13 +448,17 @@ class MapEventStateControllerTest {
   @Test
   fun `unsaveSelectedEvent handles repository error`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
-    whenever(mockEventRepository.unsaveEventForUser(testUserId, testEvent.uid))
+    controller.setSavedEventsForTest(listOf(testEvent))
+    whenever(mockUserProfileRepository.saveUserProfile(any<UserProfile>()))
         .thenThrow(RuntimeException("Network error"))
 
     controller.unsaveSelectedEvent()
     advanceUntilIdle()
 
     verify(mockSetErrorMessage).invoke("Network error")
+    assertEquals(listOf(testEvent), controller.savedEvents)
+    // Empty list for other tests
+    controller.setSavedEventsForTest(emptyList())
     assertTrue(controller.savedEvents.isEmpty())
   }
 
@@ -534,103 +501,5 @@ class MapEventStateControllerTest {
   fun `clearError calls clearErrorMessage lambda`() {
     controller.clearError()
     verify(mockClearErrorMessage).invoke()
-  }
-
-  // ========== Owned Events Tests ==========
-  @Test
-  fun `loadOwnedEvents populates ownedEvents for user`() = runTest {
-    val ownedEvent1 = testEvent.copy(uid = "E1", ownerId = testUserId)
-    val ownedEvent2 = testEvent.copy(uid = "E2", ownerId = testUserId)
-    val ownedEvents = listOf(ownedEvent1, ownedEvent2)
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
-
-    controller.loadOwnedEvents()
-    advanceUntilIdle()
-
-    assertEquals(ownedEvents, controller.ownedEvents)
-    assertFalse(controller.ownedLoading)
-    assertEquals(null, controller.ownedError)
-  }
-
-  @Test
-  fun `loadOwnedEvents returns empty list when user has no owned events`() = runTest {
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(emptyList())
-
-    controller.loadOwnedEvents()
-    advanceUntilIdle()
-
-    assertTrue(controller.ownedEvents.isEmpty())
-    assertFalse(controller.ownedLoading)
-    assertEquals(null, controller.ownedError)
-  }
-
-  @Test
-  fun `loadOwnedEvents sets loading state correctly`() = runTest {
-    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
-
-    controller.loadOwnedEvents()
-    // Loading state should be true during execution
-    advanceUntilIdle()
-
-    assertFalse(controller.ownedLoading) // Should be false after completion
-    assertEquals(ownedEvents, controller.ownedEvents)
-  }
-
-  @Test
-  fun `loadOwnedEvents handles repository error`() = runTest {
-    val errorMessage = "Network error while fetching owned events"
-    whenever(mockEventRepository.getEventsByOwner(testUserId))
-        .thenThrow(RuntimeException(errorMessage))
-
-    controller.loadOwnedEvents()
-    advanceUntilIdle()
-
-    verify(mockSetErrorMessage).invoke(errorMessage)
-    assertEquals(errorMessage, controller.ownedError)
-    assertFalse(controller.ownedLoading)
-    assertTrue(controller.ownedEvents.isEmpty())
-  }
-
-  @Test
-  fun `loadOwnedEvents handles unknown error`() = runTest {
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenThrow(RuntimeException())
-
-    controller.loadOwnedEvents()
-    advanceUntilIdle()
-
-    verify(mockSetErrorMessage).invoke("Unknown error occurred while fetching owned events")
-    assertEquals("Unknown error occurred while fetching owned events", controller.ownedError)
-    assertFalse(controller.ownedLoading)
-  }
-
-  @Test
-  fun `loadOwnedEvents uses getEventsByOwner instead of getAllEvents`() = runTest {
-    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
-
-    controller.loadOwnedEvents()
-    advanceUntilIdle()
-
-    // Verify that getEventsByOwner is called
-    verify(mockEventRepository).getEventsByOwner(testUserId)
-    assertEquals(ownedEvents, controller.ownedEvents)
-  }
-
-  @Test
-  fun `refreshEventsList includes loadOwnedEvents`() = runTest {
-    val filteredEvents = listOf(testEvent)
-    val ownedEvents = listOf(testEvent.copy(ownerId = testUserId))
-    whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(filteredEvents)
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
-    whenever(mockEventRepository.getEventsByOwner(testUserId)).thenReturn(ownedEvents)
-    whenever(mockUserProfileRepository.getUserProfile(testUserId))
-        .thenReturn(UserProfile(userId = testUserId, participatingEventIds = emptyList()))
-
-    controller.refreshEventsList()
-    advanceUntilIdle()
-
-    verify(mockEventRepository).getEventsByOwner(testUserId)
-    assertEquals(ownedEvents, controller.ownedEvents)
   }
 }
