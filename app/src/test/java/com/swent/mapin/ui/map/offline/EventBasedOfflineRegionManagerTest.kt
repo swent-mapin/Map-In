@@ -153,4 +153,162 @@ class EventBasedOfflineRegionManagerTest {
 
     verify { mockOfflineRegionManager.cancelActiveDownload() }
   }
+
+  @Test
+  fun `downloadRegionsForEvents respects max regions limit`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            eventRepository = mockEventRepository,
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this,
+            maxRegions = 2) // Set max to 2
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    // Create 3 events but only 2 should be downloaded
+    val events =
+        listOf(
+            Event(uid = "event1", title = "Event 1", location = Location("Loc1", 46.5197, 6.5660)),
+            Event(uid = "event2", title = "Event 2", location = Location("Loc2", 46.5300, 6.5800)),
+            Event(uid = "event3", title = "Event 3", location = Location("Loc3", 46.5400, 6.5900)))
+
+    manager.downloadRegionsForEvents(events)
+
+    // Should only download 2 regions (respecting maxRegions limit)
+    coVerify(exactly = 2) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `downloadRegionsForEvents skips already downloaded events`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            eventRepository = mockEventRepository,
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+    val event2 =
+        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+
+    // First download
+    savedEventsFlow.value = listOf(event1)
+    testScheduler.advanceUntilIdle()
+
+    // Second download with same event1 + new event2
+    savedEventsFlow.value = listOf(event1, event2)
+    testScheduler.advanceUntilIdle()
+
+    // Should only trigger 2 downloads total (event1 once, event2 once)
+    coVerify(exactly = 2) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `clearDownloadedEventIds clears the download record`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            eventRepository = mockEventRepository,
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+
+    // First download
+    savedEventsFlow.value = listOf(event1)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(1, manager.getDownloadedCount())
+
+    // Clear downloaded IDs
+    manager.clearDownloadedEventIds()
+    assertEquals(0, manager.getDownloadedCount())
+
+    // Second download should re-download event1 - emit empty first to trigger new collection
+    savedEventsFlow.value = emptyList()
+    testScheduler.advanceUntilIdle()
+
+    savedEventsFlow.value = listOf(event1)
+    testScheduler.advanceUntilIdle()
+
+    // Should trigger 2 downloads total (event1 twice)
+    coVerify(exactly = 2) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `getDownloadedCount returns correct count`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            eventRepository = mockEventRepository,
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+
+    assertEquals(0, manager.getDownloadedCount())
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+    val event2 =
+        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+
+    savedEventsFlow.value = listOf(event1, event2)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(2, manager.getDownloadedCount())
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `getMaxRegions returns configured max regions`() {
+    val customMaxRegions = 50
+
+    manager =
+        EventBasedOfflineRegionManager(
+            eventRepository = mockEventRepository,
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = kotlinx.coroutines.test.TestScope(),
+            maxRegions = customMaxRegions)
+
+    assertEquals(customMaxRegions, manager.getMaxRegions())
+  }
 }
