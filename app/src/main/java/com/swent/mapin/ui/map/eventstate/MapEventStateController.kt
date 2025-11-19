@@ -87,6 +87,7 @@ class MapEventStateController(
     getFilteredEvents(filterViewModel.filters.value)
     loadJoinedEvents()
     loadSavedEvents()
+    loadAttendedEvents()
     loadOwnedEvents()
   }
 
@@ -203,6 +204,31 @@ class MapEventStateController(
       } finally {
         _ownedLoading = false
       }
+    }
+  }
+
+  /**
+   * Loads the list of events that the current user has attended. Populates [attendedEvents] by
+   * filtering [joinedEvents] for events that have already ended.
+   */
+  private fun loadAttendedEvents() {
+    val now = System.currentTimeMillis()
+    _attendedEvents = computeAttendedEvents(_joinedEvents, now)
+  }
+
+  companion object {
+    /**
+     * Visible helper used by tests to compute which of the provided joined events are "attended"
+     * (i.e. their endDate is in the past) and return them sorted by most recent end date first.
+     */
+    @VisibleForTesting
+    fun computeAttendedEvents(
+        joinedEvents: List<Event>,
+        now: Long = System.currentTimeMillis()
+    ): List<Event> {
+      return joinedEvents
+          .filter { ev -> ev.endDate?.toDate()?.time?.let { it <= now } ?: false }
+          .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
     }
   }
 
@@ -378,6 +404,8 @@ class MapEventStateController(
   @VisibleForTesting
   fun setJoinedEventsForTest(events: List<Event>) {
     _joinedEvents = events
+    // Ensure attendedEvents is recomputed when tests set joined events directly.
+    loadAttendedEvents()
   }
 
   @VisibleForTesting
