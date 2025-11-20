@@ -60,6 +60,9 @@ class MapScreenViewModelAuthListenerTest {
     // Stub all suspend repository calls inside a coroutine
     runBlocking {
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getJoinedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getOwnedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getFilteredEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
     }
 
@@ -84,6 +87,8 @@ class MapScreenViewModelAuthListenerTest {
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()
     verify(mockAuth).addAuthStateListener(captor.capture())
     authListener = captor.firstValue
+
+    runBlocking { testDispatcher.scheduler.advanceUntilIdle() }
   }
 
   @Test
@@ -117,12 +122,12 @@ class MapScreenViewModelAuthListenerTest {
 
         // Update repo responses for this user
         whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
+        whenever(mockRepo.getJoinedEvents("testUserId")).thenReturn(emptyList())
         // Joined events are derived from _allEvents + uid; not required for this assertion,
         // but you could also stub getEventsByParticipant if your VM uses it here.
 
         authListener.onAuthStateChanged(mockAuth)
-        advanceUntilIdle()
-        runCurrent()
+        testScheduler.advanceUntilIdle()
 
         // Saved IDs & list reflect repo
         assertEquals(true, vm.isEventSaved(e))
