@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.swent.mapin.model.UserProfile
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -14,188 +15,230 @@ import org.junit.Test
 @Composable
 fun ConversationScreenForTest(
     messageViewModel: MessageViewModel,
+    conversationViewModel: ConversationViewModel,
     conversationId: String,
     conversationName: String,
     onNavigateBack: () -> Unit = {}
 ) {
-  ConversationScreen(
-      messageViewModel = messageViewModel,
-      conversationId = conversationId,
-      conversationName = conversationName,
-      onNavigateBack = onNavigateBack)
+    ConversationScreen(
+        messageViewModel = messageViewModel,
+        conversationViewModel = conversationViewModel,
+        conversationId = conversationId,
+        conversationName = conversationName,
+        onNavigateBack = onNavigateBack
+    )
 }
 
 class ConversationScreenTest {
 
-  @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule val composeTestRule = createComposeRule()
 
-  private fun sampleMessages() =
-      listOf(
-          Message(text = "Hey, how are you?", isMe = false),
-          Message(text = "Doing great, thanks!", isMe = true))
+    private fun sampleMessages() =
+        listOf(
+            Message(text = "Hey, how are you?", isMe = false),
+            Message(text = "Doing great, thanks!", isMe = true)
+        )
 
-  @Test
-  fun conversationScreen_displaysInitialMessagesAndUIElements_and_callsObserveMessages() {
-    // Arrange: mock viewmodel
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    // messages flow
-    every { mockVm.messages } returns MutableStateFlow(sampleMessages())
-    // observeMessages should be callable without side effects
-    every { mockVm.observeMessages(any()) } just Runs
+    private fun mockConversationVM(convId: String): ConversationViewModel {
+        val vm = mockk<ConversationViewModel>(relaxed = true)
 
-    // Act: set content
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm, conversationId = "conv1", conversationName = "Chat with Alice")
+        val fakeConversation =
+            Conversation(
+                id = convId,
+                participantIds = listOf("u1", "u2"),
+                participants = listOf(
+                    UserProfile("u1", "Alice"),
+                    UserProfile("u2", "Bob")
+                ),
+                profilePictureUrl = null
+            )
+
+        val flow = MutableStateFlow<Conversation?>(fakeConversation)
+
+        every { vm.gotConversation } returns flow
+        every { vm.getConversationById(any()) } just Runs
+        every { vm.currentUserProfile } returns UserProfile("u1", "Alice")
+
+        return vm
     }
 
-    // Assert UI elements visible
-    composeTestRule
-        .onNodeWithTag(ConversationScreenTestTags.CONVERSATION_SCREEN)
-        .assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON).assertIsDisplayed()
+    @Test
+    fun conversationScreen_displaysInitialMessagesAndUIElements_and_callsObserveMessages() {
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv1")
 
-    // Assert messages are displayed
-    composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+        every { mockVm.messages } returns MutableStateFlow(sampleMessages())
+        every { mockVm.observeMessages(any()) } just Runs
 
-    // Verify observeMessages was invoked with the conversation id (LaunchedEffect)
-    verify(timeout = 1000) { mockVm.observeMessages("conv1") }
-  }
-
-  @Test
-  fun sendingMessage_addsNewMessage_callsSendMessage() {
-    val messagesFlow = MutableStateFlow(sampleMessages())
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    every { mockVm.messages } returns messagesFlow
-    every { mockVm.observeMessages(any()) } just Runs
-
-    // intercept sendMessage and emit a new message to the Flow
-    coEvery { mockVm.sendMessage(any(), any()) } answers
-        {
-          val convoId = firstArg<String>()
-          val text = secondArg<String>()
-          messagesFlow.value = messagesFlow.value + Message(text, isMe = true)
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv1",
+                conversationName = "Chat with Alice"
+            )
         }
 
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm, conversationId = "conv1", conversationName = "Chat test")
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.CONVERSATION_SCREEN)
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD)
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
+
+        verify(timeout = 1000) { mockVm.observeMessages("conv1") }
     }
 
-    val input = composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD)
-    val send = composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
+    @Test
+    fun sendingMessage_addsNewMessage_callsSendMessage() {
+        val messagesFlow = MutableStateFlow(sampleMessages())
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv1")
 
-    input.performTextInput("Hello there!")
-    send.performClick()
-    composeTestRule.waitForIdle()
+        every { mockVm.messages } returns messagesFlow
+        every { mockVm.observeMessages(any()) } just Runs
 
-    coVerify(timeout = 1000) { mockVm.sendMessage("conv1", "Hello there!") }
-  }
+        coEvery { mockVm.sendMessage(any(), any()) } answers {
+            val text = secondArg<String>()
+            messagesFlow.value = messagesFlow.value + Message(text, isMe = true)
+        }
 
-  @Test
-  fun emptyMessage_notAddedAnd_sendMessageNotCalled() {
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    every { mockVm.messages } returns MutableStateFlow(sampleMessages())
-    every { mockVm.observeMessages(any()) } just Runs
-    coEvery { mockVm.sendMessage(any(), any()) } just Runs
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv1",
+                conversationName = "Chat test"
+            )
+        }
 
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm, conversationId = "conv1", conversationName = "Chat test")
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.INPUT_TEXT_FIELD)
+            .performTextInput("Hello there!")
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
+            .performClick()
+
+        composeTestRule.waitForIdle()
+
+        coVerify(timeout = 1000) { mockVm.sendMessage("conv1", "Hello there!") }
     }
 
-    val send = composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON)
-    // send while input is empty
-    send.performClick()
-    composeTestRule.waitForIdle()
+    @Test
+    fun emptyMessage_notAddedAnd_sendMessageNotCalled() {
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv1")
 
-    // Verify sendMessage was never called
-    coVerify(exactly = 0) { mockVm.sendMessage(any(), any()) }
+        every { mockVm.messages } returns MutableStateFlow(sampleMessages())
+        every { mockVm.observeMessages(any()) } just Runs
+        coEvery { mockVm.sendMessage(any(), any()) } just Runs
 
-    // messages unchanged and still displayed
-    composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
-  }
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv1",
+                conversationName = "Chat test"
+            )
+        }
 
-  @Test
-  fun messageBubble_rendersCorrectly_forSenderAndReceiver() {
-    // Render two bubbles directly (doesn't require viewmodel)
-    composeTestRule.setContent {
-      androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
-        MessageBubble(Message("From me", isMe = true))
-        MessageBubble(Message("From them", isMe = false))
-      }
+        composeTestRule.onNodeWithTag(ConversationScreenTestTags.SEND_BUTTON).performClick()
+
+        coVerify(exactly = 0) { mockVm.sendMessage(any(), any()) }
+
+        composeTestRule.onNodeWithText("Hey, how are you?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Doing great, thanks!").assertIsDisplayed()
     }
 
-    composeTestRule.onNodeWithText("From me").assertIsDisplayed()
-    composeTestRule.onNodeWithText("From them").assertIsDisplayed()
-  }
+    @Test
+    fun messageBubble_rendersCorrectly_forSenderAndReceiver() {
+        composeTestRule.setContent {
+            androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                MessageBubble(Message("From me", isMe = true))
+                MessageBubble(Message("From them", isMe = false))
+            }
+        }
 
-  @Test
-  fun conversationScreen_onNavigateBack_isCalled_whenTopBarBackClicked() {
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    every { mockVm.messages } returns MutableStateFlow(sampleMessages())
-    every { mockVm.observeMessages(any()) } just Runs
-
-    var backCalled = false
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm,
-          conversationId = "conv-back",
-          conversationName = "Chat",
-          onNavigateBack = { backCalled = true })
+        composeTestRule.onNodeWithText("From me").assertIsDisplayed()
+        composeTestRule.onNodeWithText("From them").assertIsDisplayed()
     }
 
-    // The back button is part of ChatTopBar; use its test tag
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).performClick()
-    assert(backCalled)
-  }
+    @Test
+    fun conversationScreen_onNavigateBack_isCalled_whenTopBarBackClicked() {
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv-back")
 
-  @Test
-  fun scrollToBottomButton_isVisible_and_clickable() {
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    // Provide a larger message list so the UI can potentially scroll
-    val many = List(30) { i -> Message("msg $i", isMe = i % 2 == 0) }
-    every { mockVm.messages } returns MutableStateFlow(many)
-    every { mockVm.observeMessages(any()) } just Runs
+        every { mockVm.messages } returns MutableStateFlow(sampleMessages())
+        every { mockVm.observeMessages(any()) } just Runs
 
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm, conversationId = "conv-scroll", conversationName = "Chat")
+        var backCalled = false
+
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv-back",
+                conversationName = "Chat",
+                onNavigateBack = { backCalled = true }
+            )
+        }
+
+        composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON)
+            .assertIsDisplayed()
+            .performClick()
+
+        assert(backCalled)
     }
 
-    // scroll button is present
-    composeTestRule.onNodeWithContentDescription("Scroll to bottom").assertIsDisplayed()
+    @Test
+    fun scrollToBottomButton_isVisible_and_clickable() {
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv-scroll")
 
-    // click it (it triggers a coroutine to animate scroll, but we only ensure clicking works)
-    composeTestRule.onNodeWithContentDescription("Scroll to bottom").performClick()
-  }
+        every { mockVm.messages } returns MutableStateFlow(
+            List(30) { i -> Message("msg $i", isMe = i % 2 == 0) }
+        )
+        every { mockVm.observeMessages(any()) } just Runs
 
-  @Test
-  fun pagination_trigger_callsLoadMoreMessages_whenAtTop() {
-    val mockVm = mockk<MessageViewModel>(relaxed = true)
-    val many = List(50) { i -> Message("msg $i", isMe = i % 2 == 0) }
-    every { mockVm.messages } returns MutableStateFlow(many)
-    every { mockVm.observeMessages(any()) } just Runs
-    every { mockVm.loadMoreMessages(any()) } just Runs
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv-scroll",
+                conversationName = "Chat"
+            )
+        }
 
-    composeTestRule.setContent {
-      ConversationScreenForTest(
-          messageViewModel = mockVm, conversationId = "conv-paging", conversationName = "Chat")
+        composeTestRule.onNodeWithContentDescription("Scroll to bottom")
+            .assertIsDisplayed()
+            .performClick()
     }
 
-    // trigger the derived state effect by interacting with the list (best-effort)
-    // We can't reliably scroll programmatically in unit tests, but calling performClick on a
-    // message
-    // may cause recomposition and the derived effect to evaluate. We still verify loadMoreMessages
-    // is callable.
-    runBlocking {
-      // call directly to simulate the trigger
-      mockVm.loadMoreMessages("conv-paging")
-    }
+    @Test
+    fun pagination_trigger_callsLoadMoreMessages_whenAtTop() {
+        val mockVm = mockk<MessageViewModel>(relaxed = true)
+        val mockConvVm = mockConversationVM("conv-paging")
 
-    verify { mockVm.loadMoreMessages("conv-paging") }
-  }
+        every { mockVm.messages } returns MutableStateFlow(
+            List(50) { i -> Message("msg $i", isMe = i % 2 == 0) }
+        )
+        every { mockVm.observeMessages(any()) } just Runs
+        every { mockVm.loadMoreMessages(any()) } just Runs
+
+        composeTestRule.setContent {
+            ConversationScreenForTest(
+                messageViewModel = mockVm,
+                conversationViewModel = mockConvVm,
+                conversationId = "conv-paging",
+                conversationName = "Chat"
+            )
+        }
+
+        runBlocking {
+            mockVm.loadMoreMessages("conv-paging")
+        }
+
+        verify { mockVm.loadMoreMessages("conv-paging") }
+    }
 }

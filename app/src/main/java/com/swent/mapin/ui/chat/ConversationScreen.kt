@@ -65,7 +65,7 @@ object ConversationScreenTestTags {
 }
 
 // Data class for messages
-data class Message(val text: String, val senderId: String, val isMe: Boolean, val timestamp: Long)
+data class Message(val text: String, val isMe: Boolean, val timestamp: Long = 0, val senderId: String = "")
 
 /**
  * Formats a timestamp of message to a correct display format
@@ -289,7 +289,7 @@ fun ConversationScreen(
  * @param sender The UserProfile of the sender
  */
 @Composable
-fun MessageBubble(message: Message, sender: UserProfile?) {
+fun MessageBubble(message: Message, sender: UserProfile? = null) {
   val isMe = message.isMe
 
   val bubbleColor =
