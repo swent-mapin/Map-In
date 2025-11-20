@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.swent.mapin.model.UserProfile
 import kotlinx.coroutines.launch
 
 object ConversationScreenTestTags {
@@ -61,6 +63,28 @@ object ConversationScreenTestTags {
 
 // Data class for messages
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
+
+/**
+ * Profile picture Composable, displays a profile picture and if the url is null,
+ * displays a default one
+ */
+@Composable
+fun ProfilePicture(url: String?) {
+    if (url.isNullOrBlank()) {
+        Icon(
+            imageVector = Icons.Default.AccountCircle,
+            contentDescription = "DefaultProfile",
+            modifier = Modifier.size(32.dp).clip(CircleShape),
+            tint = Color.Gray
+        )
+    } else {
+        Image(
+            painter = rememberAsyncImagePainter(url),
+            contentDescription = "ProfilePicture",
+            modifier = Modifier.size(32.dp).clip(CircleShape)
+        )
+    }
+}
 
 /**
  * Displays the top app bar for ConversationScreen.
@@ -81,18 +105,7 @@ fun ConversationTopBar(
       title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
           // Profile picture
-          if (profilePictureUrl.isNullOrBlank()) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "DefaultProfile",
-                tint = Color.Gray,
-                modifier = Modifier.size(32.dp).clip(CircleShape))
-          } else {
-            Image(
-                painter = rememberAsyncImagePainter(profilePictureUrl),
-                contentDescription = "CustomProfile",
-                modifier = Modifier.size(32.dp).clip(CircleShape))
-          }
+          ProfilePicture(profilePictureUrl)
           Spacer(modifier = Modifier.width(8.dp))
           // List of participants
           Column {
@@ -159,27 +172,42 @@ fun ConversationScreen(
   }
   conversationViewModel.getConversationById(conversationId)
   val conversation by conversationViewModel.gotConversation.collectAsState()
-  val participantNames = conversation?.participants?.map { conversation -> conversationName }
+  val participantNames = conversation?.participants?.map { participant -> participant.name }
 
   // Dynamic loading when scrolling up
   LaunchedEffect(shouldLoadMore) {
     if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
   }
 
+  conversationViewModel.getCurrentUserProfile()
+  val currentUserProfile = conversationViewModel.currentUserProfile
+
   // Auto scroll to the Bottom of the LazyColumn when a new message is sent
-  val previousCount = remember { mutableStateOf(0) }
+  val previousCount = remember { mutableIntStateOf(0) }
 
   LaunchedEffect(messages.size) {
     // Only scroll if a *new* message was added by someone else or me
-    if (messages.size > previousCount.value) {
+    if (messages.size > previousCount.intValue) {
       listState.animateScrollToItem(messages.lastIndex)
     }
-    previousCount.value = messages.size
+    previousCount.intValue = messages.size
   }
   Scaffold(
       topBar = {
-        ConversationTopBar(
-            conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+          conversation?.participantIds?.size?.let {
+              //If it is a group, then use group profile picture, if not then use the other user's
+              if(it > 2){
+                  ConversationTopBar(
+                      conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+              } else {
+                  val otherParticipant = conversation?.participants?.firstOrNull{it ->
+                      it.userId != currentUserProfile.userId
+                  }
+                  ConversationTopBar(
+                      conversationName, participantNames, onNavigateBack, otherParticipant?.profilePictureUrl
+                  )
+              }
+          }
       },
       bottomBar = {
         Row(
@@ -217,7 +245,10 @@ fun ConversationScreen(
               modifier = Modifier.fillMaxSize().padding(8.dp),
               verticalArrangement = Arrangement.spacedBy(8.dp),
               reverseLayout = false) {
-                items(messages) { message -> MessageBubble(message) }
+              items(messages) { message ->
+                  val sender = conversation?.participants?.firstOrNull { it.userId == message.senderId }
+                  MessageBubble(message, sender)
+              }
               }
           // Button to scroll down to the newest message
           IconButton(
@@ -237,19 +268,63 @@ fun ConversationScreen(
  * @param message The message sent or was sent
  */
 @Composable
-fun MessageBubble(message: Message) {
-  val horizontalArrangement = if (message.isMe) Arrangement.End else Arrangement.Start
+fun MessageBubble(
+    message: Message,
+    sender: UserProfile?   // <-- your participant/user model
+) {
+    val isMe = message.isMe
 
-  val bubbleColor =
-      if (message.isMe) MaterialTheme.colorScheme.primaryContainer
-      else MaterialTheme.colorScheme.surfaceVariant
+    val bubbleColor =
+        if (isMe) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant
 
-  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = horizontalArrangement) {
-    Surface(color = bubbleColor, shape = MaterialTheme.shapes.medium, tonalElevation = 2.dp) {
-      Text(
-          text = message.text,
-          modifier = Modifier.padding(12.dp),
-          style = MaterialTheme.typography.bodyLarge)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Top
+    ) {
+        if (!isMe) {
+            // Avatar on LEFT for incoming messages
+            ProfilePicture(sender?.profilePictureUrl)
+            Spacer(Modifier.width(6.dp))
+        }
+
+        Column(horizontalAlignment = if (isMe) Alignment.End else Alignment.Start) {
+
+            // Name row (only for others)
+            if (!isMe) {
+                Text(
+                    text = sender?.name ?: "Unknown",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            } else {
+                Text(
+                    text = "Me",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+
+            Surface(
+                color = bubbleColor,
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 2.dp
+            ) {
+                Text(
+                    text = message.text,
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+
+        if (isMe) {
+            Spacer(Modifier.width(6.dp))
+            // Avatar on RIGHT for outgoing messages
+            ProfilePicture(sender?.profilePictureUrl)
+        }
     }
-  }
 }
