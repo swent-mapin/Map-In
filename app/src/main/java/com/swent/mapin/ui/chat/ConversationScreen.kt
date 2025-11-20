@@ -64,7 +64,6 @@ const val MESSAGE_START = 0
 // Data class for messages
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
-
 /**
  * Displays the top app bar for ConversationScreen.
  *
@@ -80,69 +79,56 @@ fun ConversationTopBar(
     onNavigateBack: (() -> Unit)? = null,
     profilePictureUrl: String? = ""
 ) {
-    TopAppBar(
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Profile picture
-                if (profilePictureUrl.isNullOrBlank()) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = "DefaultProfile",
-                        tint = Color.Gray,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Image(
-                        painter = rememberAsyncImagePainter(profilePictureUrl),
-                        contentDescription = "CustomProfile",
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                //List of participants
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (!participantNames.isNullOrEmpty()) {
-                        Text(
-                            text = participantNames.joinToString(", "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+  TopAppBar(
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          // Profile picture
+          if (profilePictureUrl.isNullOrBlank()) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "DefaultProfile",
+                tint = Color.Gray,
+                modifier = Modifier.size(32.dp).clip(CircleShape))
+          } else {
+            Image(
+                painter = rememberAsyncImagePainter(profilePictureUrl),
+                contentDescription = "CustomProfile",
+                modifier = Modifier.size(32.dp).clip(CircleShape))
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          // List of participants
+          Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            if (!participantNames.isNullOrEmpty()) {
+              Text(
+                  text = participantNames.joinToString(", "),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis)
             }
-        },
-        navigationIcon = {
-            if (onNavigateBack != null) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR)
-    )
+          }
+        }
+      },
+      navigationIcon = {
+        if (onNavigateBack != null) {
+          IconButton(
+              onClick = onNavigateBack,
+              modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
+        }
+      },
+      colors =
+          TopAppBarDefaults.topAppBarColors(
+              containerColor = MaterialTheme.colorScheme.primaryContainer,
+              titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+      modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 /**
  * Assisted by AI Functions representing the UI for conversations between users
@@ -187,7 +173,8 @@ fun ConversationScreen(
 
   Scaffold(
       topBar = {
-          ConversationTopBar(conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+        ConversationTopBar(
+            conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
       },
       bottomBar = {
         Row(

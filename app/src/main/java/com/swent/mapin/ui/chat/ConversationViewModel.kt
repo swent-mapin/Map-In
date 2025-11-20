@@ -69,6 +69,8 @@ class ConversationViewModel(
   }
 
   fun getConversationById(conversationId: String) {
-    viewModelScope.launch { _gotConversation.value = conversationRepository.getConversationById(conversationId) }
+    viewModelScope.launch {
+      _gotConversation.value = conversationRepository.getConversationById(conversationId)
+    }
   }
 }
