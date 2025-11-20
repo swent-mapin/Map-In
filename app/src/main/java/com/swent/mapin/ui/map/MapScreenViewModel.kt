@@ -35,7 +35,6 @@ import com.swent.mapin.ui.map.directions.DirectionViewModel
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
-import com.swent.mapin.ui.map.offline.CoordinateBounds
 import com.swent.mapin.ui.map.offline.OfflineRegionManager
 import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
@@ -530,35 +529,6 @@ class MapScreenViewModel(
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
         withContext(mainDispatcher) { _errorMessage = "Failed to initialize offline map storage" }
-      }
-    }
-  }
-
-  /**
-   * Triggers download of map tiles for the specified viewport bounds.
-   *
-   * Downloads only occur when the device is online. Downloads are asynchronous and do not block the
-   * UI thread.
-   *
-   * @param bounds The coordinate bounds to download tiles for
-   */
-  fun downloadOfflineRegion(bounds: CoordinateBounds) {
-    viewModelScope.launch(ioDispatcher) {
-      try {
-        offlineRegionManager.downloadRegion(
-            bounds = bounds,
-            onProgress = { progress ->
-              Log.d("MapScreenViewModel", "Download progress: ${(progress * 100).toInt()}%")
-            },
-            onComplete = { result ->
-              result.fold(
-                  onSuccess = { Log.d("MapScreenViewModel", "Offline region download completed") },
-                  onFailure = { error ->
-                    Log.e("MapScreenViewModel", "Offline region download failed", error)
-                  })
-            })
-      } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to trigger offline download", e)
       }
     }
   }
