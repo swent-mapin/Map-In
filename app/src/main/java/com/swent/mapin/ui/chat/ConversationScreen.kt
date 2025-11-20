@@ -65,25 +65,23 @@ object ConversationScreenTestTags {
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
 /**
- * Profile picture Composable, displays a profile picture and if the url is null,
- * displays a default one
+ * Profile picture Composable, displays a profile picture and if the url is null, displays a default
+ * one
  */
 @Composable
 fun ProfilePicture(url: String?) {
-    if (url.isNullOrBlank()) {
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = "DefaultProfile",
-            modifier = Modifier.size(32.dp).clip(CircleShape),
-            tint = Color.Gray
-        )
-    } else {
-        Image(
-            painter = rememberAsyncImagePainter(url),
-            contentDescription = "ProfilePicture",
-            modifier = Modifier.size(32.dp).clip(CircleShape)
-        )
-    }
+  if (url.isNullOrBlank()) {
+    Icon(
+        imageVector = Icons.Default.AccountCircle,
+        contentDescription = "DefaultProfile",
+        modifier = Modifier.size(32.dp).clip(CircleShape),
+        tint = Color.Gray)
+  } else {
+    Image(
+        painter = rememberAsyncImagePainter(url),
+        contentDescription = "ProfilePicture",
+        modifier = Modifier.size(32.dp).clip(CircleShape))
+  }
 }
 
 /**
@@ -194,20 +192,23 @@ fun ConversationScreen(
   }
   Scaffold(
       topBar = {
-          conversation?.participantIds?.size?.let {
-              //If it is a group, then use group profile picture, if not then use the other user's
-              if(it > 2){
-                  ConversationTopBar(
-                      conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
-              } else {
-                  val otherParticipant = conversation?.participants?.firstOrNull{it ->
-                      it.userId != currentUserProfile.userId
-                  }
-                  ConversationTopBar(
-                      conversationName, participantNames, onNavigateBack, otherParticipant?.profilePictureUrl
-                  )
-              }
+        conversation?.participantIds?.size?.let {
+          // If it is a group, then use group profile picture, if not then use the other user's
+          if (it > 2) {
+            ConversationTopBar(
+                conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+          } else {
+            val otherParticipant =
+                conversation?.participants?.firstOrNull { it ->
+                  it.userId != currentUserProfile.userId
+                }
+            ConversationTopBar(
+                conversationName,
+                participantNames,
+                onNavigateBack,
+                otherParticipant?.profilePictureUrl)
           }
+        }
       },
       bottomBar = {
         Row(
@@ -245,10 +246,11 @@ fun ConversationScreen(
               modifier = Modifier.fillMaxSize().padding(8.dp),
               verticalArrangement = Arrangement.spacedBy(8.dp),
               reverseLayout = false) {
-              items(messages) { message ->
-                  val sender = conversation?.participants?.firstOrNull { it.userId == message.senderId }
+                items(messages) { message ->
+                  val sender =
+                      conversation?.participants?.firstOrNull { it.userId == message.senderId }
                   MessageBubble(message, sender)
-              }
+                }
               }
           // Button to scroll down to the newest message
           IconButton(
@@ -270,61 +272,53 @@ fun ConversationScreen(
 @Composable
 fun MessageBubble(
     message: Message,
-    sender: UserProfile?   // <-- your participant/user model
+    sender: UserProfile? // <-- your participant/user model
 ) {
-    val isMe = message.isMe
+  val isMe = message.isMe
 
-    val bubbleColor =
-        if (isMe) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceVariant
+  val bubbleColor =
+      if (isMe) MaterialTheme.colorScheme.primaryContainer
+      else MaterialTheme.colorScheme.surfaceVariant
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Top
-    ) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+      verticalAlignment = Alignment.Top) {
         if (!isMe) {
-            // Avatar on LEFT for incoming messages
-            ProfilePicture(sender?.profilePictureUrl)
-            Spacer(Modifier.width(6.dp))
+          // Avatar on LEFT for incoming messages
+          ProfilePicture(sender?.profilePictureUrl)
+          Spacer(Modifier.width(6.dp))
         }
 
         Column(horizontalAlignment = if (isMe) Alignment.End else Alignment.Start) {
 
-            // Name row (only for others)
-            if (!isMe) {
-                Text(
-                    text = sender?.name ?: "Unknown",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-            } else {
-                Text(
-                    text = "Me",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-            }
+          // Name row (only for others)
+          if (!isMe) {
+            Text(
+                text = sender?.name ?: "Unknown",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 2.dp))
+          } else {
+            Text(
+                text = "Me",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 2.dp))
+          }
 
-            Surface(
-                color = bubbleColor,
-                shape = MaterialTheme.shapes.medium,
-                tonalElevation = 2.dp
-            ) {
-                Text(
-                    text = message.text,
-                    modifier = Modifier.padding(12.dp),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+          Surface(color = bubbleColor, shape = MaterialTheme.shapes.medium, tonalElevation = 2.dp) {
+            Text(
+                text = message.text,
+                modifier = Modifier.padding(12.dp),
+                style = MaterialTheme.typography.bodyLarge)
+          }
         }
 
         if (isMe) {
-            Spacer(Modifier.width(6.dp))
-            // Avatar on RIGHT for outgoing messages
-            ProfilePicture(sender?.profilePictureUrl)
+          Spacer(Modifier.width(6.dp))
+          // Avatar on RIGHT for outgoing messages
+          ProfilePicture(sender?.profilePictureUrl)
         }
-    }
+      }
 }
