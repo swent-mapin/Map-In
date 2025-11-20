@@ -54,6 +54,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.swent.mapin.model.UserProfile
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object ConversationScreenTestTags {
   const val CONVERSATION_SCREEN = "conversationScreen"
@@ -62,8 +65,18 @@ object ConversationScreenTestTags {
 }
 
 // Data class for messages
-data class Message(val text: String, val senderId: String, val isMe: Boolean)
+data class Message(val text: String, val senderId: String, val isMe: Boolean, val timestamp: Long)
 
+
+/**
+ * Formats a timestamp of message to a correct display format
+ * @param timestamp The timestamp to format
+ */
+@Composable
+fun formatTimestamp(timestamp: Long): String {
+    val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    return formatter.format(Date(timestamp))
+}
 /**
  * Profile picture Composable, displays a profile picture If the url is null, displays a default one
  *
@@ -316,6 +329,13 @@ fun MessageBubble(message: Message, sender: UserProfile?) {
                 modifier = Modifier.padding(12.dp),
                 style = MaterialTheme.typography.bodyLarge)
           }
+
+          // Timestamp under the bubble
+          Text(
+              text = formatTimestamp(message.timestamp),
+              style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray),
+              modifier = Modifier.padding(top = 2.dp)
+          )
         }
 
         if (isMe) {
