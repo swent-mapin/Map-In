@@ -77,7 +77,8 @@ class MapScreenViewModelAuthListenerTest {
             memoryRepository = mockMemoryRepo,
             eventRepository = mockRepo,
             auth = mockAuth,
-            userProfileRepository = mockUserProfileRepo)
+            userProfileRepository = mockUserProfileRepo,
+            enableEventBasedDownloads = false)
 
     // Capture the auth state listener the VM registers
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()

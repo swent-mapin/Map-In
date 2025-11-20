@@ -66,7 +66,8 @@ class MapScreenViewModel(
     private val locationManager: LocationManager = LocationManager(applicationContext),
     val filterViewModel: FiltersSectionViewModel = FiltersSectionViewModel(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val enableEventBasedDownloads: Boolean = true
 ) : ViewModel() {
 
   private var clearFocusCallback: (() -> Unit) = onClearFocus
@@ -121,9 +122,11 @@ class MapScreenViewModel(
     OfflineRegionManager(tileStore, connectivityFlow)
   }
 
-  // Event-based offline region manager (remains unused in initial implementation)
-  // TODO: Integrate this properly to start observation without breaking unit tests
   private val eventBasedOfflineRegionManager: EventBasedOfflineRegionManager? by lazy {
+    if (!enableEventBasedDownloads) {
+      Log.d("MapScreenViewModel", "Event-based downloads disabled")
+      return@lazy null
+    }
     try {
       EventBasedOfflineRegionManager(
           eventRepository = eventRepository,
@@ -337,6 +340,35 @@ class MapScreenViewModel(
 
     locationController.onLocationUpdate = { location ->
       directionViewModel.onLocationUpdate(location)
+    }
+
+    // Start observing saved/joined events for offline downloads
+    if (enableEventBasedDownloads) {
+      startEventBasedOfflineDownloads()
+    }
+  }
+
+  /**
+   * Starts observing saved and joined events for offline region downloads.
+   *
+   * This is called during ViewModel initialization if event-based downloads are enabled. The
+   * manager will reactively download 2km radius regions around saved/joined events when online.
+   */
+  private fun startEventBasedOfflineDownloads() {
+    viewModelScope.launch {
+      try {
+        val manager = eventBasedOfflineRegionManager ?: return@launch
+        val userId = auth.currentUser?.uid ?: return@launch
+
+        manager.observeEvents(
+            userId = userId,
+            onSavedEventsFlow = eventStateController.savedEventsFlow,
+            onJoinedEventsFlow = eventStateController.joinedEventsFlow)
+
+        Log.d("MapScreenViewModel", "Event-based offline downloads started for user: $userId")
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Failed to start event-based offline downloads", e)
+      }
     }
   }
 
@@ -606,6 +638,7 @@ class MapScreenViewModel(
     // Cancel any active offline downloads to prevent resource leaks
     try {
       offlineRegionManager.cancelActiveDownload()
+      eventBasedOfflineRegionManager?.stopObserving()
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
     }
