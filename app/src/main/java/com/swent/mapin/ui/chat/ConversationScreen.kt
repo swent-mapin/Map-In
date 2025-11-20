@@ -65,8 +65,9 @@ object ConversationScreenTestTags {
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
 /**
- * Profile picture Composable, displays a profile picture and if the url is null, displays a default
- * one
+ * Profile picture Composable, displays a profile picture
+ * If the url is null, displays a default one
+ * @param url The URL of the profile picture.
  */
 @Composable
 fun ProfilePicture(url: String?) {
@@ -88,6 +89,7 @@ fun ProfilePicture(url: String?) {
  * Displays the top app bar for ConversationScreen.
  *
  * @param title The title text displayed in the center of the top bar.
+ * @param participantNames The list of participant's names.
  * @param onNavigateBack Optional callback invoked when the back button is pressed.
  * @param profilePictureUrl The profile picture URL of this conversation
  */
@@ -140,9 +142,13 @@ fun ConversationTopBar(
       modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 /**
- * Assisted by AI Functions representing the UI for conversations between users
+ * Assisted by AI
+ * Functions representing the UI for conversations between users
  *
  * @param conversationId The ID of the conversation
+ * @param messageViewModel ViewModel for messages
+ * @param conversationViewModel VideModel for conversations
+ * @param conversationId ID of the specific conversation displayed
  * @param conversationName The name of the conversation or group chat
  * @param onNavigateBack Callback invoked when pressing the back button
  */
@@ -265,14 +271,16 @@ fun ConversationScreen(
 }
 
 /**
- * Assisted by AI Basic UI for messages as bubbles
+ * Assisted by AI
+ * Basic UI for messages as bubbles
  *
  * @param message The message sent or was sent
+ * @param sender The UserProfile of the sender
  */
 @Composable
 fun MessageBubble(
     message: Message,
-    sender: UserProfile? // <-- your participant/user model
+    sender: UserProfile?
 ) {
   val isMe = message.isMe
 
