@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,32 +24,53 @@ import com.swent.mapin.R
 /**
  * Displays a small offline indicator when the device is offline.
  *
- * Shows a non-intrusive banner with cloud-off icon and "Offline" text in the top-right corner. The
+ * Shows a non-intrusive banner with cloud-off icon and status text in the top-right corner. The
  * indicator automatically appears when offline and disappears when connectivity is restored.
  *
+ * Shows different states:
+ * - Offline in cached region: Green "Offline - Cached"
+ * - Offline not in cached region: Red/Orange "Offline"
+ *
  * @param isOffline Whether the device is currently offline
+ * @param isInCachedRegion Whether viewport center is within a cached offline region
  * @param modifier Modifier for positioning and styling
  */
 @Composable
-fun OfflineIndicator(isOffline: Boolean, modifier: Modifier = Modifier) {
+fun OfflineIndicator(isOffline: Boolean, isInCachedRegion: Boolean, modifier: Modifier = Modifier) {
   AnimatedVisibility(visible = isOffline, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+    val containerColor =
+        if (isInCachedRegion) {
+          Color(0xFF4CAF50) // Green for cached
+        } else {
+          MaterialTheme.colorScheme.errorContainer // Red/Orange for not cached
+        }
+
+    val contentColor =
+        if (isInCachedRegion) {
+          Color.White
+        } else {
+          MaterialTheme.colorScheme.onErrorContainer
+        }
+
+    val text =
+        if (isInCachedRegion) {
+          stringResource(R.string.offline_mode) + " - " + stringResource(R.string.cached_region)
+        } else {
+          stringResource(R.string.offline_mode)
+        }
+
     Row(
         modifier =
             Modifier.testTag("offlineIndicator")
-                .background(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = RoundedCornerShape(8.dp))
+                .background(color = containerColor, shape = RoundedCornerShape(8.dp))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically) {
           Icon(
               imageVector = Icons.Default.CloudOff,
-              contentDescription = stringResource(R.string.offline_mode),
-              tint = MaterialTheme.colorScheme.onErrorContainer,
+              contentDescription = text,
+              tint = contentColor,
               modifier = Modifier.padding(end = 4.dp))
-          Text(
-              text = stringResource(R.string.offline_mode),
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onErrorContainer)
+          Text(text = text, style = MaterialTheme.typography.labelMedium, color = contentColor)
         }
   }
 }

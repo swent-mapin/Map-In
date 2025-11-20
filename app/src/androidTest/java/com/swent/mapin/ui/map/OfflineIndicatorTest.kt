@@ -14,34 +14,53 @@ class OfflineIndicatorTest {
 
   @Test
   fun offlineIndicator_isDisplayed_whenOffline() {
-    composeTestRule.setContent { MaterialTheme { OfflineIndicator(isOffline = true) } }
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = true, isInCachedRegion = false) }
+    }
 
     composeTestRule.onNodeWithTag("offlineIndicator").assertIsDisplayed()
   }
 
   @Test
   fun offlineIndicator_isNotDisplayed_whenOnline() {
-    composeTestRule.setContent { MaterialTheme { OfflineIndicator(isOffline = false) } }
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = false, isInCachedRegion = false) }
+    }
 
     composeTestRule.onNodeWithTag("offlineIndicator").assertDoesNotExist()
   }
 
   @Test
   fun offlineIndicator_displaysOfflineIcon() {
-    composeTestRule.setContent { MaterialTheme { OfflineIndicator(isOffline = true) } }
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = true, isInCachedRegion = false) }
+    }
 
     composeTestRule.onNodeWithContentDescription("Offline").assertIsDisplayed()
   }
 
   @Test
+  fun offlineIndicator_displaysCachedRegionText() {
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = true, isInCachedRegion = true) }
+    }
+
+    composeTestRule.onNodeWithContentDescription("Offline - Cached area").assertIsDisplayed()
+  }
+
+  @Test
   fun offlineIndicator_animatesVisibility() {
-    composeTestRule.setContent { MaterialTheme { OfflineIndicator(isOffline = false) } }
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = false, isInCachedRegion = false) }
+    }
 
     // Initially not displayed
     composeTestRule.onNodeWithTag("offlineIndicator").assertDoesNotExist()
 
     // Change to offline
-    composeTestRule.setContent { MaterialTheme { OfflineIndicator(isOffline = true) } }
+    composeTestRule.setContent {
+      MaterialTheme { OfflineIndicator(isOffline = true, isInCachedRegion = false) }
+    }
 
     // Now should be displayed
     composeTestRule.onNodeWithTag("offlineIndicator").assertIsDisplayed()
