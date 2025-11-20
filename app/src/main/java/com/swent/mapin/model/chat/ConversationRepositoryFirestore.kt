@@ -48,12 +48,22 @@ class ConversationRepositoryFirestore(
 
               val conversations =
                   snapshot?.documents?.mapNotNull { doc ->
-                    val conversation = doc.toObject(Conversation::class.java)
-                    // Fallback ordering: if lastMessageTimestamp is null,
-                    // treat as very old (so it goes to the end)
+                    val conversation =
+                        doc.toObject(Conversation::class.java) ?: return@mapNotNull null
+
+                    // If it's a 1-to-1 chat, override the name
+                    if (conversation.participants.size == 2) {
+                      val otherParticipant =
+                          conversation.participants.firstOrNull { it.userId != uid }
+
+                      if (otherParticipant != null) {
+                        return@mapNotNull conversation.copy(
+                            name = otherParticipant.name,
+                            profilePictureUrl = otherParticipant.profilePictureUrl)
+                      }
+                    }
                     conversation
                   } ?: emptyList()
-
               trySend(conversations)
             }
 

@@ -59,8 +59,6 @@ object ConversationScreenTestTags {
   const val INPUT_TEXT_FIELD = "inputTextField"
 }
 
-const val MESSAGE_START = 0
-
 // Data class for messages
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
@@ -169,8 +167,15 @@ fun ConversationScreen(
   }
 
   // Auto scroll to the Bottom of the LazyColumn when a new message is sent
-  LaunchedEffect(messages.size) { listState.animateScrollToItem(MESSAGE_START) }
+  val previousCount = remember { mutableStateOf(0) }
 
+  LaunchedEffect(messages.size) {
+    // Only scroll if a *new* message was added by someone else or me
+    if (messages.size > previousCount.value) {
+      listState.animateScrollToItem(messages.lastIndex)
+    }
+    previousCount.value = messages.size
+  }
   Scaffold(
       topBar = {
         ConversationTopBar(
@@ -209,14 +214,16 @@ fun ConversationScreen(
           // The lazy column to display messages
           LazyColumn(
               state = listState,
-              modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp),
+              modifier = Modifier.fillMaxSize().padding(8.dp),
               verticalArrangement = Arrangement.spacedBy(8.dp),
-              reverseLayout = true) {
-                items(messages.reversed()) { message -> MessageBubble(message) }
+              reverseLayout = false) {
+                items(messages) { message -> MessageBubble(message) }
               }
           // Button to scroll down to the newest message
           IconButton(
-              onClick = { coroutineScope.launch { listState.animateScrollToItem(MESSAGE_START) } },
+              onClick = {
+                coroutineScope.launch { listState.animateScrollToItem(messages.lastIndex) }
+              },
               modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
                 Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
               }
