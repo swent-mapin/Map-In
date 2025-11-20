@@ -65,7 +65,12 @@ object ConversationScreenTestTags {
 }
 
 // Data class for messages
-data class Message(val text: String, val isMe: Boolean, val timestamp: Long = 0, val senderId: String = "")
+data class Message(
+    val text: String,
+    val isMe: Boolean,
+    val timestamp: Long = 0,
+    val senderId: String = ""
+)
 
 /**
  * Formats a timestamp of message to a correct display format
