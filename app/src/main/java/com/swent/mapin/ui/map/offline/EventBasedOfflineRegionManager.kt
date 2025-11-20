@@ -6,6 +6,7 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
 import kotlin.math.max
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -102,11 +103,12 @@ class EventBasedOfflineRegionManager(
               "Only downloading first $maxRegions events.")
     }
 
-    eventsToDownload.forEach { event ->
+    // Download sequentially to avoid canceling in-progress downloads
+    for (event in eventsToDownload) {
       // Skip if already downloaded
       if (downloadedEventIds.contains(event.uid)) {
         Log.d(TAG, "Event ${event.uid} already downloaded, skipping")
-        return@forEach
+        continue
       }
 
       // Calculate 2km radius bounds
@@ -117,23 +119,37 @@ class EventBasedOfflineRegionManager(
           "Downloading region for event: ${event.title} " +
               "(${event.location.latitude}, ${event.location.longitude})")
 
-      // Trigger download
-      offlineRegionManager.downloadRegion(
-          bounds = bounds,
-          onProgress = { progress ->
-            Log.d(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
-          },
-          onComplete = { result ->
-            result
-                .onSuccess {
-                  downloadedEventIds.add(event.uid)
-                  Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
-                }
-                .onFailure { error ->
-                  Log.e(TAG, "Failed to download region for event ${event.title}: $error")
-                }
-          })
+      // Download and wait for completion before starting next one
+      val result = downloadRegionSuspend(event, bounds)
+      result
+          .onSuccess {
+            downloadedEventIds.add(event.uid)
+            Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
+          }
+          .onFailure { error ->
+            Log.e(TAG, "Failed to download region for event ${event.title}: $error")
+          }
     }
+  }
+
+  /**
+   * Downloads a region and suspends until completion.
+   *
+   * @param event The event to download for
+   * @param bounds The geographic bounds to download
+   * @return Result indicating success or failure
+   */
+  private suspend fun downloadRegionSuspend(event: Event, bounds: CoordinateBounds): Result<Unit> {
+    val deferred = CompletableDeferred<Result<Unit>>()
+
+    offlineRegionManager.downloadRegion(
+        bounds = bounds,
+        onProgress = { progress ->
+          Log.d(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
+        },
+        onComplete = { result -> deferred.complete(result) })
+
+    return deferred.await()
   }
 
   /**
