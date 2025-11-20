@@ -1,6 +1,8 @@
 package com.swent.mapin.ui.chat
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
@@ -146,10 +148,10 @@ class ConversationScreenTest {
   @Test
   fun messageBubble_rendersCorrectly_forSenderAndReceiver() {
     composeTestRule.setContent {
-      androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
-        MessageBubble(Message("From me", isMe = true))
-        MessageBubble(Message("From them", isMe = false))
-      }
+        Column(Modifier.fillMaxSize()) {
+          MessageBubble(Message("From me", isMe = true))
+          MessageBubble(Message("From them", isMe = false))
+        }
     }
 
     composeTestRule.onNodeWithText("From me").assertIsDisplayed()
@@ -228,7 +230,6 @@ class ConversationScreenTest {
 
   @Test
   fun formatTimestamp_formatsCorrectly() {
-    // Arrange: pick a stable timestamp (12:34)
     val cal = Calendar.getInstance().apply {
        set(Calendar.HOUR_OF_DAY, 12)
        set(Calendar.MINUTE, 34)
@@ -238,11 +239,20 @@ class ConversationScreenTest {
       val timestamp = cal.timeInMillis
 
       composeTestRule.setContent {
-         androidx.compose.material3.Text(formatTimestamp(timestamp))
+          Text(formatTimestamp(timestamp))
       }
 
       composeTestRule.onNodeWithText("12:34").assertExists()
     }
+
+  @Test
+  fun formatTimestamp_invalid_timestamp() {
+      var result = formatTimestamp(0L)
+      assert("" == result)
+      result = formatTimestamp(-123456789L)
+      assert("" == result)
+  }
+
     // ------------------------------------------------------------
     // ProfilePicture TESTS
     // ------------------------------------------------------------

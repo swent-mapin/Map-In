@@ -9,6 +9,7 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.chat.ConversationRepository
 import com.swent.mapin.model.chat.ConversationRepositoryFirestore
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,8 +68,10 @@ class ConversationViewModel(
   fun createConversation(conversation: Conversation) {
     viewModelScope.launch { conversationRepository.addConversation(conversation) }
   }
-
+  private var getConversationJob: Job? = null
   fun getConversationById(conversationId: String) {
+    getConversationJob?.cancel()
+
     viewModelScope.launch {
       _gotConversation.value = conversationRepository.getConversationById(conversationId)
     }

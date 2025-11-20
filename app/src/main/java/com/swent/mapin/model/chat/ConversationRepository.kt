@@ -18,5 +18,8 @@ interface ConversationRepository {
   /** Adds a conversation to the repository */
   suspend fun addConversation(conversation: Conversation)
 
+  /**
+   * Returns the conversation with the given ID, or null if not found.
+   * @param conversationId the conversation’s unique identifier. */
   suspend fun getConversationById(conversationId: String): Conversation?
 }

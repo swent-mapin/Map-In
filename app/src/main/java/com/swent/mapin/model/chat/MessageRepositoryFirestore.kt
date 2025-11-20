@@ -1,5 +1,6 @@
 package com.swent.mapin.model.chat
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -52,14 +53,23 @@ class MessageRepositoryFirestore(
 
           val messages =
               documents
-                  .map { doc ->
-                    Message(
-                        text = doc.getString("text") ?: "",
-                        senderId = doc.getString("senderId") ?: "",
-                        isMe = doc.getString("senderId") == auth.currentUser?.uid,
-                        timestamp = doc.getLong("timestamp") ?: 0L)
-                  }
-                  .reversed() // chronological order
+                  .mapNotNull { doc ->
+                      val senderId = doc.getString("senderId")
+                      val timestamp = doc.getLong("timestamp")
+
+                      // Validate required fields
+                      if (senderId == null || timestamp == null) {
+                          Log.w("Firestore", "Invalid message doc: ${doc.id}")
+                          return@mapNotNull null
+                      }
+
+                      Message(
+                          text = doc.getString("text") ?: "",
+                          senderId = senderId,
+                          isMe = senderId == auth.currentUser?.uid,
+                          timestamp = timestamp
+                      )
+                  }.reversed()
 
           val lastVisible = documents.lastOrNull()
           trySend(messages to lastVisible)
@@ -118,14 +128,22 @@ class MessageRepositoryFirestore(
 
     val messages =
         snapshot.documents
-            .map { doc ->
-              Message(
-                  text = doc.getString("text") ?: "",
-                  senderId = doc.getString("senderId") ?: "",
-                  isMe = doc.getString("senderId") == auth.currentUser?.uid,
-                  timestamp = doc.getLong("timestamp") ?: 0L)
-            }
-            .reversed()
+            .mapNotNull { doc ->
+                val senderId = doc.getString("senderId")
+                val timestamp = doc.getLong("timestamp")
+
+                if (senderId == null || timestamp == null) {
+                    Log.w("Firestore", "Invalid message doc: ${doc.id}")
+                    return@mapNotNull null
+                }
+
+                Message(
+                    text = doc.getString("text") ?: "",
+                    senderId = senderId,
+                    isMe = senderId == auth.currentUser?.uid,
+                    timestamp = timestamp
+                )
+            }.reversed()
 
     // Get the last document in this page to use for the next pagination
     val newLastVisible = snapshot.documents.lastOrNull()

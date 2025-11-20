@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.chat
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,10 +78,16 @@ data class Message(
  *
  * @param timestamp The timestamp to format
  */
-@Composable
 fun formatTimestamp(timestamp: Long): String {
-  val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-  return formatter.format(Date(timestamp))
+    if (timestamp <= 0L) return ""
+
+    return try {
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        formatter.format(Date(timestamp))
+    } catch (e: Exception) {
+        Log.e("timestamp format", "Error when formatting timestamp")
+        ""
+    }
 }
 /**
  * Profile picture Composable, displays a profile picture If the url is null, displays a default one
@@ -191,7 +198,10 @@ fun ConversationScreen(
   val shouldLoadMore by remember {
     derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
   }
-  conversationViewModel.getConversationById(conversationId)
+  LaunchedEffect(conversationId) {
+      conversationViewModel.getConversationById(conversationId)
+  }
+
   val conversation by conversationViewModel.gotConversation.collectAsState()
   val participantNames = conversation?.participants?.map { participant -> participant.name }
 
@@ -199,8 +209,10 @@ fun ConversationScreen(
   LaunchedEffect(shouldLoadMore) {
     if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
   }
+  LaunchedEffect(Unit) {
+      conversationViewModel.getCurrentUserProfile()
+  }
 
-  conversationViewModel.getCurrentUserProfile()
   val currentUserProfile = conversationViewModel.currentUserProfile
 
   // Auto scroll to the Bottom of the LazyColumn when a new message is sent

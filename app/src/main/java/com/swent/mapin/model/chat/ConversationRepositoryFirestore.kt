@@ -1,5 +1,6 @@
 package com.swent.mapin.model.chat
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -105,8 +106,8 @@ class ConversationRepositoryFirestore(
       val docSnapshot = db.collection("conversations").document(conversationId).get().await()
       docSnapshot.toObject(Conversation::class.java)
     } catch (e: Exception) {
-      e.printStackTrace()
-      null
+        Log.e("ConversationRepo", "Failed to get conversation by id", e)
+        null
     }
   }
 }
