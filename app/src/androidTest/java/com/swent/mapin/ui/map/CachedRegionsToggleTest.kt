@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.map
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -80,7 +83,7 @@ class CachedRegionsToggleTest {
 
   @Test
   fun cachedRegionsToggle_changesState() {
-    var isVisible = false
+    var isVisible by mutableStateOf(false)
     composeTestRule.setContent {
       MaterialTheme {
         CachedRegionsToggle(showCachedRegions = isVisible, onClick = { isVisible = !isVisible })
@@ -92,13 +95,7 @@ class CachedRegionsToggleTest {
 
     // Click to toggle
     composeTestRule.onNodeWithTag("cachedRegionsToggle").performClick()
-
-    // Recompose with new state
-    composeTestRule.setContent {
-      MaterialTheme {
-        CachedRegionsToggle(showCachedRegions = isVisible, onClick = { isVisible = !isVisible })
-      }
-    }
+    composeTestRule.waitForIdle()
 
     // Now shows "Hide cached areas"
     composeTestRule.onNodeWithContentDescription("Hide cached areas").assertIsDisplayed()

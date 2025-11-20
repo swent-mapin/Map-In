@@ -1,6 +1,9 @@
 package com.swent.mapin.ui.map
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -50,17 +53,18 @@ class OfflineIndicatorTest {
 
   @Test
   fun offlineIndicator_animatesVisibility() {
+    var isOffline by mutableStateOf(false)
+
     composeTestRule.setContent {
-      MaterialTheme { OfflineIndicator(isOffline = false, isInCachedRegion = false) }
+      MaterialTheme { OfflineIndicator(isOffline = isOffline, isInCachedRegion = false) }
     }
 
     // Initially not displayed
     composeTestRule.onNodeWithTag("offlineIndicator").assertDoesNotExist()
 
     // Change to offline
-    composeTestRule.setContent {
-      MaterialTheme { OfflineIndicator(isOffline = true, isInCachedRegion = false) }
-    }
+    isOffline = true
+    composeTestRule.waitForIdle()
 
     // Now should be displayed
     composeTestRule.onNodeWithTag("offlineIndicator").assertIsDisplayed()
