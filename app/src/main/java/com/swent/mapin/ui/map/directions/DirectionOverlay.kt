@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.map.directions
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.mapbox.geojson.LineString
@@ -36,17 +37,19 @@ fun DirectionOverlay(routePoints: List<Point>) {
 
   val lineString = remember(routePoints) { LineString.fromLngLats(routePoints) }
 
-  val directionSource =
-      rememberGeoJsonSourceState(key = "direction-line-source") { data = GeoJSONData(lineString) }
+  val directionSource = rememberGeoJsonSourceState(key = "direction-line-source")
 
-  val endpointsSource =
-      rememberGeoJsonSourceState(key = "direction-endpoints-source") {
-        data =
-            GeoJSONData(
-                listOf(
-                    com.mapbox.geojson.Feature.fromGeometry(routePoints.first()),
-                    com.mapbox.geojson.Feature.fromGeometry(routePoints.last())))
-      }
+  val endpointsSource = rememberGeoJsonSourceState(key = "direction-endpoints-source")
+
+  // Update sources when routePoints change
+  LaunchedEffect(routePoints) {
+    directionSource.data = GeoJSONData(lineString)
+    endpointsSource.data =
+        GeoJSONData(
+            listOf(
+                com.mapbox.geojson.Feature.fromGeometry(routePoints.first()),
+                com.mapbox.geojson.Feature.fromGeometry(routePoints.last())))
+  }
 
   val shadowBlue = Color(0xFF1A73E8)
   val mainBlue = Color(0xFF4285F4)
