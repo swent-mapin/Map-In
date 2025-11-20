@@ -1,6 +1,7 @@
 // Assisted by AI
 package com.swent.mapin.model.changepassword
 
+import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
@@ -38,22 +39,21 @@ class ChangePasswordRepositoryTest {
     mockUser = mockk(relaxed = true)
     mockAuthResult = mockk(relaxed = true)
 
+    // Default mock setup - can be overridden in specific tests
+    every { mockAuth.currentUser } returns mockUser
+    every { mockUser.email } returns testEmail
+
     repository = ChangePasswordRepositoryFirebase(mockAuth)
   }
 
   @Test
   fun `changePassword succeeds with valid credentials`() = runTest {
-    // Setup: user is authenticated with email
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.email } returns testEmail
 
     // Mock successful re-authentication
-    every { mockUser.reauthenticate(any()) } returns
-        Tasks.forResult(null) as com.google.android.gms.tasks.Task<Void>
+    every { mockUser.reauthenticate(any()) } returns Tasks.forResult(null) as Task<Void>
 
     // Mock successful password update
-    every { mockUser.updatePassword(testNewPassword) } returns
-        Tasks.forResult(null) as com.google.android.gms.tasks.Task<Void>
+    every { mockUser.updatePassword(testNewPassword) } returns Tasks.forResult(null) as Task<Void>
 
     // Execute
     val result = repository.changePassword(testCurrentPassword, testNewPassword)
@@ -95,9 +95,6 @@ class ChangePasswordRepositoryTest {
 
   @Test
   fun `changePassword returns InvalidCurrentPassword when re-authentication fails`() = runTest {
-    // Setup
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.email } returns testEmail
 
     // Mock failed re-authentication with invalid credentials
     val exception = mockk<FirebaseAuthInvalidCredentialsException>()
@@ -115,9 +112,6 @@ class ChangePasswordRepositoryTest {
 
   @Test
   fun `changePassword returns UserNotFound when user account doesn't exist`() = runTest {
-    // Setup
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.email } returns testEmail
 
     // Mock re-authentication failure with invalid user exception
     val exception = mockk<FirebaseAuthInvalidUserException>("ERROR_USER_NOT_FOUND")
@@ -134,13 +128,9 @@ class ChangePasswordRepositoryTest {
 
   @Test
   fun `changePassword returns Error when updatePassword fails`() = runTest {
-    // Setup
-    every { mockAuth.currentUser } returns mockUser
-    every { mockUser.email } returns testEmail
 
     // Mock successful re-authentication
-    every { mockUser.reauthenticate(any()) } returns
-        Tasks.forResult(null) as com.google.android.gms.tasks.Task<Void>
+    every { mockUser.reauthenticate(any()) } returns Tasks.forResult(null) as Task<Void>
 
     // Mock failed password update
     val exception = Exception("Network error")
@@ -159,13 +149,9 @@ class ChangePasswordRepositoryTest {
   @Test
   fun `changePassword returns Error with default message when exception has no message`() =
       runTest {
-        // Setup
-        every { mockAuth.currentUser } returns mockUser
-        every { mockUser.email } returns testEmail
 
         // Mock successful re-authentication
-        every { mockUser.reauthenticate(any()) } returns
-            Tasks.forResult(null) as com.google.android.gms.tasks.Task<Void>
+        every { mockUser.reauthenticate(any()) } returns Tasks.forResult(null) as Task<Void>
 
         // Mock failed password update with no message
         val exception = Exception()

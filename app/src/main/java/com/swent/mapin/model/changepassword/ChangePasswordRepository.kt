@@ -114,6 +114,9 @@ class ChangePasswordRepositoryFirebase(
       } catch (e: FirebaseAuthInvalidUserException) {
         // User account no longer exists
         return PasswordChangeResult.UserNotFound
+      } catch (e: Exception) {
+        // Catch any other unexpected errors during re-authentication
+        return PasswordChangeResult.Error(e.message ?: "Re-authentication failed")
       }
 
       // If re-authentication succeeded, update password
