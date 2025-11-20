@@ -106,8 +106,8 @@ class ConversationRepositoryFirestore(
       val docSnapshot = db.collection("conversations").document(conversationId).get().await()
       docSnapshot.toObject(Conversation::class.java)
     } catch (e: Exception) {
-        Log.e("ConversationRepo", "Failed to get conversation by id", e)
-        null
+      Log.e("ConversationRepo", "Failed to get conversation by id", e)
+      null
     }
   }
 }

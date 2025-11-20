@@ -79,15 +79,15 @@ data class Message(
  * @param timestamp The timestamp to format
  */
 fun formatTimestamp(timestamp: Long): String {
-    if (timestamp <= 0L) return ""
+  if (timestamp <= 0L) return ""
 
-    return try {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        formatter.format(Date(timestamp))
-    } catch (e: Exception) {
-        Log.e("timestamp format", "Error when formatting timestamp")
-        ""
-    }
+  return try {
+    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    formatter.format(Date(timestamp))
+  } catch (e: Exception) {
+    Log.e("timestamp format", "Error when formatting timestamp")
+    ""
+  }
 }
 /**
  * Profile picture Composable, displays a profile picture If the url is null, displays a default one
@@ -198,9 +198,7 @@ fun ConversationScreen(
   val shouldLoadMore by remember {
     derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
   }
-  LaunchedEffect(conversationId) {
-      conversationViewModel.getConversationById(conversationId)
-  }
+  LaunchedEffect(conversationId) { conversationViewModel.getConversationById(conversationId) }
 
   val conversation by conversationViewModel.gotConversation.collectAsState()
   val participantNames = conversation?.participants?.map { participant -> participant.name }
@@ -209,9 +207,7 @@ fun ConversationScreen(
   LaunchedEffect(shouldLoadMore) {
     if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
   }
-  LaunchedEffect(Unit) {
-      conversationViewModel.getCurrentUserProfile()
-  }
+  LaunchedEffect(Unit) { conversationViewModel.getCurrentUserProfile() }
 
   val currentUserProfile = conversationViewModel.currentUserProfile
 

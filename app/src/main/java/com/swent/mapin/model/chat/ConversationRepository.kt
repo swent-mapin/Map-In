@@ -20,6 +20,8 @@ interface ConversationRepository {
 
   /**
    * Returns the conversation with the given ID, or null if not found.
-   * @param conversationId the conversation’s unique identifier. */
+   *
+   * @param conversationId the conversation’s unique identifier.
+   */
   suspend fun getConversationById(conversationId: String): Conversation?
 }

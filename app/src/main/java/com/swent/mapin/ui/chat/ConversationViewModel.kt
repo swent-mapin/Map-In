@@ -68,7 +68,9 @@ class ConversationViewModel(
   fun createConversation(conversation: Conversation) {
     viewModelScope.launch { conversationRepository.addConversation(conversation) }
   }
+
   private var getConversationJob: Job? = null
+
   fun getConversationById(conversationId: String) {
     getConversationJob?.cancel()
 

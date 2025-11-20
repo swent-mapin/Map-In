@@ -9,11 +9,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.UserProfile
 import io.mockk.*
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
-import java.util.Calendar
 
 @Composable
 fun ConversationScreenForTest(
@@ -148,10 +148,10 @@ class ConversationScreenTest {
   @Test
   fun messageBubble_rendersCorrectly_forSenderAndReceiver() {
     composeTestRule.setContent {
-        Column(Modifier.fillMaxSize()) {
-          MessageBubble(Message("From me", isMe = true))
-          MessageBubble(Message("From them", isMe = false))
-        }
+      Column(Modifier.fillMaxSize()) {
+        MessageBubble(Message("From me", isMe = true))
+        MessageBubble(Message("From them", isMe = false))
+      }
     }
 
     composeTestRule.onNodeWithText("From me").assertIsDisplayed()
@@ -230,48 +230,43 @@ class ConversationScreenTest {
 
   @Test
   fun formatTimestamp_formatsCorrectly() {
-    val cal = Calendar.getInstance().apply {
-       set(Calendar.HOUR_OF_DAY, 12)
-       set(Calendar.MINUTE, 34)
-       set(Calendar.SECOND, 0)
-       set(Calendar.MILLISECOND, 0)
-    }
-      val timestamp = cal.timeInMillis
+    val cal =
+        Calendar.getInstance().apply {
+          set(Calendar.HOUR_OF_DAY, 12)
+          set(Calendar.MINUTE, 34)
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
+    val timestamp = cal.timeInMillis
 
-      composeTestRule.setContent {
-          Text(formatTimestamp(timestamp))
-      }
+    composeTestRule.setContent { Text(formatTimestamp(timestamp)) }
 
-      composeTestRule.onNodeWithText("12:34").assertExists()
-    }
+    composeTestRule.onNodeWithText("12:34").assertExists()
+  }
 
   @Test
   fun formatTimestamp_invalid_timestamp() {
-      var result = formatTimestamp(0L)
-      assert("" == result)
-      result = formatTimestamp(-123456789L)
-      assert("" == result)
+    var result = formatTimestamp(0L)
+    assert("" == result)
+    result = formatTimestamp(-123456789L)
+    assert("" == result)
   }
 
-    // ------------------------------------------------------------
-    // ProfilePicture TESTS
-    // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // ProfilePicture TESTS
+  // ------------------------------------------------------------
   @Test
   fun profilePicture_showsDefaultIcon_whenUrlNull() {
-      composeTestRule.setContent {
-          ProfilePicture(url = null)
-      }
+    composeTestRule.setContent { ProfilePicture(url = null) }
 
-      composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
+    composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
   }
 
   @Test
   fun profilePicture_showsDefaultIcon_whenUrlBlank() {
-      composeTestRule.setContent {
-          ProfilePicture(url = "")
-      }
+    composeTestRule.setContent { ProfilePicture(url = "") }
 
-      composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
+    composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
   }
 
   // ------------------------------------------------------------
@@ -279,66 +274,58 @@ class ConversationScreenTest {
   // ------------------------------------------------------------
   @Test
   fun conversationTopBar_showsTitle() {
-      composeTestRule.setContent {
-         ConversationTopBar(
-             title = "Chat with Sam",
-             participantNames = emptyList(),
-             onNavigateBack = {},
-             profilePictureUrl = null
-         )
-      }
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat with Sam",
+          participantNames = emptyList(),
+          onNavigateBack = {},
+          profilePictureUrl = null)
+    }
 
-      composeTestRule.onNodeWithText("Chat with Sam").assertExists()
+    composeTestRule.onNodeWithText("Chat with Sam").assertExists()
   }
 
   @Test
   fun conversationTopBar_showsParticipantsList() {
-      val names = listOf("Sam", "Alex")
+    val names = listOf("Sam", "Alex")
 
-      composeTestRule.setContent {
-          ConversationTopBar(
-              title = "Group Chat",
-              participantNames = names,
-              onNavigateBack = {},
-              profilePictureUrl = null
-          )
-      }
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Group Chat",
+          participantNames = names,
+          onNavigateBack = {},
+          profilePictureUrl = null)
+    }
     composeTestRule.onNodeWithText("Sam, Alex").assertExists()
   }
 
   @Test
   fun conversationTopBar_callsNavigateBack_whenBackButtonClicked() {
-      var backCalled = false
+    var backCalled = false
 
-      composeTestRule.setContent {
-          ConversationTopBar(
-              title = "Chat",
-              participantNames = emptyList(),
-              onNavigateBack = { backCalled = true },
-              profilePictureUrl = null
-          )
-      }
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat",
+          participantNames = emptyList(),
+          onNavigateBack = { backCalled = true },
+          profilePictureUrl = null)
+    }
 
-      composeTestRule
-          .onNodeWithTag(ChatScreenTestTags.BACK_BUTTON)
-          .performClick()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).performClick()
 
-      assert(backCalled)
+    assert(backCalled)
   }
 
   @Test
   fun conversationTopBar_doesNotShowBackButton_whenCallbackNull() {
-      composeTestRule.setContent {
-          ConversationTopBar(
-              title = "Chat",
-              participantNames = emptyList(),
-              onNavigateBack = null,
-              profilePictureUrl = null
-          )
-      }
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat",
+          participantNames = emptyList(),
+          onNavigateBack = null,
+          profilePictureUrl = null)
+    }
 
-      composeTestRule
-          .onNodeWithTag(ChatScreenTestTags.BACK_BUTTON)
-          .assertDoesNotExist()
+    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).assertDoesNotExist()
   }
 }
