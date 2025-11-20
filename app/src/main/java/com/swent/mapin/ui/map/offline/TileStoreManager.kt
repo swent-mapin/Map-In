@@ -23,8 +23,10 @@ class TileStoreManager(
   }
 
   companion object {
-    /** Default disk quota for tile storage: 50 MB as per offline map requirements */
-    const val DEFAULT_DISK_QUOTA_MB = 50L
+    /**
+     * Default disk quota for tile storage: 2 GB for offline map regions (supports ~40-60 regions)
+     */
+    const val DEFAULT_DISK_QUOTA_MB = 2048L
 
     /** Conversion factor from megabytes to bytes */
     private const val MB_TO_BYTES = 1024L * 1024L

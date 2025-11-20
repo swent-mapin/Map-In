@@ -152,7 +152,8 @@ class MapScreenViewModelTest {
             auth = mockAuth,
             userProfileRepository = mockUserProfileRepository,
             locationManager = mockLocationManager,
-            filterViewModel = mockFiltersSectionViewModel)
+            filterViewModel = mockFiltersSectionViewModel,
+            enableEventBasedDownloads = false)
 
     // Inject mock eventStateController using reflection
     try {
