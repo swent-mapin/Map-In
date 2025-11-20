@@ -15,7 +15,7 @@ import com.mapbox.common.TileStoreOptions
  * @property diskQuotaMB Maximum storage space for cached tiles in megabytes
  */
 class TileStoreManager(
-    private val tileStore: TileStore = TileStore.create(),
+    private val tileStore: TileStore = TileStore.create(), // Uses shared default path
     private val diskQuotaMB: Long = DEFAULT_DISK_QUOTA_MB
 ) {
   init {
