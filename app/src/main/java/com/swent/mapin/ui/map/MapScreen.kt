@@ -337,9 +337,6 @@ fun MapScreen(
         }
       }
 
-  // State for showing/hiding cached regions overlay
-  var showCachedRegions by remember { mutableStateOf(false) }
-
   // Determine if dark theme based on app setting
   val isSystemInDark = isSystemInDarkTheme()
   val isDarkTheme =
@@ -414,8 +411,6 @@ fun MapScreen(
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
-          showCachedRegions = showCachedRegions,
-          onToggleCachedRegions = { showCachedRegions = !showCachedRegions },
           onEventClick = { event ->
             // Conserver tous les effets attendus lors d'un clic sur un pin
             viewModel.onEventPinClicked(event)
@@ -629,8 +624,6 @@ private fun MapboxLayer(
     standardStyleState: StandardStyleState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
-    showCachedRegions: Boolean,
-    onToggleCachedRegions: () -> Unit,
     onEventClick: (Event) -> Unit
 ) {
   LaunchedEffect(mapViewportState) {
@@ -678,11 +671,6 @@ private fun MapboxLayer(
                     selectedStyle = viewModel.mapStyle,
                     onStyleSelected = { style -> viewModel.setMapStyle(style) },
                     modifier = Modifier.size(48.dp))
-
-                CachedRegionsToggle(
-                    showCachedRegions = showCachedRegions,
-                    onClick = onToggleCachedRegions,
-                    modifier = Modifier.size(48.dp))
               }
         }
       },
@@ -702,7 +690,6 @@ private fun MapboxLayer(
             mapViewportState = mapViewportState,
             heatmapSource = heatmapSource,
             isDarkTheme = isDarkTheme,
-            showCachedRegions = showCachedRegions,
             onEventClick = onEventClick)
       }
 }
@@ -722,7 +709,6 @@ private fun MapLayers(
     mapViewportState: MapViewportState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
-    showCachedRegions: Boolean,
     onEventClick: (Event) -> Unit
 ) {
   val context = LocalContext.current
@@ -747,13 +733,6 @@ private fun MapLayers(
   if (directionState is DirectionState.Displayed) {
     DirectionOverlay(routePoints = directionState.routePoints)
   }
-
-  // Render cached regions overlay if enabled
-  val cachedEvents =
-      remember(viewModel.savedEvents, viewModel.joinedEvents) {
-        (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
-      }
-  CachedRegionsOverlay(events = cachedEvents, visible = showCachedRegions)
 
   // Disable clustering when a pin is selected to prevent it from being absorbed
   val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
