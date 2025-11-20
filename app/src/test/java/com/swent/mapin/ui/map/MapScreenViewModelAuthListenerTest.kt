@@ -107,24 +107,25 @@ class MapScreenViewModelAuthListenerTest {
       }
 
   @Test
-  fun authListener_onSignIn_loadsSavedAndJoined() = runTest {
-    // Provide some saved data after sign-in
-    val e = LocalEventRepository.defaultSampleEvents().first()
+  fun authListener_onSignIn_loadsSavedAndJoined() =
+      runTest(testDispatcher) {
+        // Provide some saved data after sign-in
+        val e = LocalEventRepository.defaultSampleEvents().first()
 
-    whenever(mockAuth.currentUser).thenReturn(mockUser)
-    whenever(mockUser.uid).thenReturn("testUserId")
+        whenever(mockAuth.currentUser).thenReturn(mockUser)
+        whenever(mockUser.uid).thenReturn("testUserId")
 
-    // Update repo responses for this user
-    whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
-    // Joined events are derived from _allEvents + uid; not required for this assertion,
-    // but you could also stub getEventsByParticipant if your VM uses it here.
+        // Update repo responses for this user
+        whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
+        // Joined events are derived from _allEvents + uid; not required for this assertion,
+        // but you could also stub getEventsByParticipant if your VM uses it here.
 
-    authListener.onAuthStateChanged(mockAuth)
-    advanceUntilIdle()
-    runCurrent()
+        authListener.onAuthStateChanged(mockAuth)
+        advanceUntilIdle()
+        runCurrent()
 
-    // Saved IDs & list reflect repo
-    assertEquals(true, vm.isEventSaved(e))
-    assertEquals(listOf(e.uid), vm.savedEvents.map { it.uid })
-  }
+        // Saved IDs & list reflect repo
+        assertEquals(true, vm.isEventSaved(e))
+        assertEquals(listOf(e.uid), vm.savedEvents.map { it.uid })
+      }
 }
