@@ -88,7 +88,15 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     }
     val event = events[eventId]!!
-    val userEventData = userData.getOrPut(userId) { UserEventData() }
+    val userEventData =
+        userData.getOrPut(userId) {
+          UserEventData(
+              ownedEventIds =
+                  defaultSampleEvents()
+                      .filter { it.ownerId == userId }
+                      .map { it.uid }
+                      .toMutableList())
+        }
 
     if (join) {
       // Check capacity
@@ -161,7 +169,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       val userId = "user1" // Placeholder
       result =
           result.filter { event ->
-            event.participantIds.any { it in (userData[userId]?.joinedEventIds ?: emptySet()) }
+            event.participantIds.any { it in (userData[userId]?.joinedEventIds ?: emptyList()) }
           }
     }
 
@@ -190,12 +198,32 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
   }
 
   override suspend fun getJoinedEvents(userId: String): List<Event> {
-    val joinedEventIds = userData.getOrPut(userId) { UserEventData() }.joinedEventIds
+    val joinedEventIds =
+        userData
+            .getOrPut(userId) {
+              UserEventData(
+                  joinedEventIds =
+                      defaultSampleEvents()
+                          .filter { it.participantIds.contains(userId) }
+                          .map { it.uid }
+                          .toMutableList())
+            }
+            .joinedEventIds
     return joinedEventIds.mapNotNull { id -> events[id] }
   }
 
   override suspend fun getOwnedEvents(userId: String): List<Event> {
-    val ownedEventIds = userData.getOrPut(userId) { UserEventData() }.ownedEventIds
+    val ownedEventIds =
+        userData
+            .getOrPut(userId) {
+              UserEventData(
+                  ownedEventIds =
+                      defaultSampleEvents()
+                          .filter { it.ownerId == userId }
+                          .map { it.uid }
+                          .toMutableList())
+            }
+            .ownedEventIds
     return ownedEventIds.mapNotNull { id -> events[id] }
   }
 

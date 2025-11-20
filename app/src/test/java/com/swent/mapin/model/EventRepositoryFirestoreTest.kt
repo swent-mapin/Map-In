@@ -235,6 +235,24 @@ class EventRepositoryFirestoreTest {
   }
 
   @Test
+  fun editEventAsOwner_throwsException_whenEventNotFound() = runTest {
+    val eventDocRef = mock<DocumentReference>()
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      val missingSnapshot = mock<DocumentSnapshot>()
+      whenever(missingSnapshot.exists()).thenReturn(false)
+      whenever(transaction.get(eventDocRef)).thenReturn(missingSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    val updated = createEvent(uid = "E1", ownerId = "owner")
+    val exception = assertFailsWith<Exception> { repo.editEventAsOwner("E1", updated) }
+    assertTrue(exception.message!!.contains("Event not found"))
+  }
+
+  @Test
   fun editEventAsOwner_throwsException_whenOwnerMismatch() = runTest {
     val existing = createEvent(uid = "E1", ownerId = "owner1")
     val updated = existing.copy(ownerId = "owner2")

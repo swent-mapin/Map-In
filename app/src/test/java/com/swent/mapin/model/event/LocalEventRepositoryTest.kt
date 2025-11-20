@@ -589,6 +589,14 @@ class LocalEventRepositoryTest {
   // ---------------------------------------------------------------------
   // getOwnedEvents
   // ---------------------------------------------------------------------
+  @Test
+  fun `getOwnedEvents returns events for specific owner`() = runTest {
+    val repo = LocalEventRepository()
+    val events = repo.getOwnedEvents("user1")
+
+    assertTrue(events.all { it.ownerId == "user1" })
+    assertTrue(events.any { it.title == "Music Festival" })
+  }
 
   @Test
   fun `getOwnedEvents returns empty list for non-existent owner`() = runTest {
