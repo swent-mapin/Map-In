@@ -43,12 +43,25 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
   private val tokenManager by lazy { FCMTokenManager() }
 
   /**
+   * Initialize notification channels when the service is created. This ensures channels are created
+   * once instead of on every notification.
+   */
+  override fun onCreate() {
+    super.onCreate()
+    // Create notification channels for Android O and above
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+      createNotificationChannels(notificationManager)
+    }
+  }
+
+  /**
    * Called when a new FCM token is generated. This token is used to send push notifications to this
    * specific device.
    */
   override fun onNewToken(token: String) {
     super.onNewToken(token)
-    println("$TAG: New FCM token generated: $token")
+    Log.i(TAG, "New FCM token generated")
 
     // Save token to Firestore for the current user
     saveTokenToFirestore(token)
@@ -61,7 +74,7 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
   override fun onMessageReceived(remoteMessage: RemoteMessage) {
     super.onMessageReceived(remoteMessage)
 
-    println("$TAG: Message received from: ${remoteMessage.from}")
+    Log.d(TAG, "Message received from: ${remoteMessage.from}")
 
     // Check if message contains a notification payload
     remoteMessage.notification?.let { notification ->
@@ -87,7 +100,7 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
 
     // Check if message contains a data payload (only if no notification payload)
     if (remoteMessage.data.isNotEmpty()) {
-      println("$TAG: Message data payload: ${remoteMessage.data}")
+      Log.d(TAG, "Message data payload: ${remoteMessage.data}")
 
       // Handle data payload (for background notifications)
       val title = remoteMessage.data["title"] ?: "Map-In"
@@ -128,9 +141,12 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
           }
         }
 
+    // Use unique requestCode to prevent intents from overwriting each other
+    val requestCode = notificationId?.hashCode() ?: System.currentTimeMillis().toInt()
+
     val pendingIntent =
         PendingIntent.getActivity(
-            this, 0, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
+            this, requestCode, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
 
     // Select appropriate channel based on notification type
     val channelId = getChannelIdForType(type)
@@ -153,14 +169,26 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
     // Get notification manager
     val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-    // Create notification channels for Android O and above
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      createNotificationChannels(notificationManager)
-    }
-
-    // Show notification with unique ID (or use random if not provided)
-    val id = notificationId?.hashCode() ?: (System.currentTimeMillis() and 0xfffffff).toInt()
+    // Show notification with unique ID
+    // Use stable hash of notificationId if provided, otherwise use timestamp
+    val id =
+        notificationId?.let { generateStableNotificationId(it) }
+            ?: (System.currentTimeMillis() and 0xfffffff).toInt()
     notificationManager.notify(id, notificationBuilder.build())
+  }
+
+  /**
+   * Generate a stable notification ID from a string. Uses a simple but stable hash that won't
+   * change across app restarts.
+   */
+  private fun generateStableNotificationId(notificationId: String): Int {
+    // Use a stable hash algorithm instead of hashCode()
+    var hash = 0
+    for (char in notificationId) {
+      hash = 31 * hash + char.code
+    }
+    // Ensure positive integer and within valid range
+    return hash and 0x7FFFFFFF
   }
 
   /** Get the appropriate notification channel ID based on notification type. */
@@ -231,12 +259,16 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
       try {
         val success = tokenManager.addTokenForCurrentUser(token)
         if (success) {
-          println("$TAG: Token saved to Firestore successfully")
+          Log.i(TAG, "Token saved to Firestore successfully")
         } else {
-          println("$TAG: Failed to save token to Firestore (user may not be logged in)")
+          Log.w(TAG, "Failed to save token to Firestore (user may not be logged in)")
         }
+      } catch (e: IllegalArgumentException) {
+        Log.e(TAG, "Invalid token format: ${e.message}", e)
+      } catch (e: SecurityException) {
+        Log.e(TAG, "Security error saving token to Firestore: ${e.message}", e)
       } catch (e: Exception) {
-        Log.e(TAG, "Error saving token to Firestore: ${e.message}", e)
+        Log.e(TAG, "Unexpected error saving token to Firestore: ${e.message}", e)
       }
     }
   }

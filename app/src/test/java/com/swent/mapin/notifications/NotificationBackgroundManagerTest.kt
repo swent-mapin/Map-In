@@ -15,6 +15,7 @@ import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
@@ -94,13 +95,35 @@ class NotificationBackgroundManagerTest {
   }
 
   @Test
-  fun `service creates notification channels on Android O+`() {
+  fun `onCreate creates notification channels on service initialization`() {
+    // Create a real service with context
+    val realService = NotificationBackgroundManager()
+    val baseContextField = android.content.ContextWrapper::class.java.getDeclaredField("mBase")
+    baseContextField.isAccessible = true
+    baseContextField.set(realService, context)
+
     val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    // Channels should be created when service receives a message
-    // This is tested indirectly through onMessageReceived
-    assertNotNull(notificationManager)
+    // Call onCreate to trigger channel creation
+    realService.onCreate()
+
+    // On API 26+, verify all notification channels were created
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val channels = notificationManager.notificationChannels
+      assertTrue("Channels should be created on service initialization", channels.isNotEmpty())
+
+      // Verify all expected channels exist
+      val channelIds = channels.map { it.id }
+      assertTrue("Default channel exists", channelIds.contains("mapin_notifications"))
+      assertTrue("Friend channel exists", channelIds.contains("mapin_friend_notifications"))
+      assertTrue("Event channel exists", channelIds.contains("mapin_event_notifications"))
+      assertTrue("Message channel exists", channelIds.contains("mapin_message_notifications"))
+      assertTrue("Alert channel exists", channelIds.contains("mapin_alert_notifications"))
+
+      // Verify we have exactly 5 channels
+      assertEquals("Should create exactly 5 notification channels", 5, channels.size)
+    }
   }
 
   @Test
@@ -347,8 +370,16 @@ class NotificationBackgroundManagerTest {
     method.invoke(
         realService, "Test Title", "Test Body", NotificationType.INFO, "mapin://test", "notif123")
 
-    // The notification should be created without errors
-    assertNotNull(realService)
+    // Verify notification was actually posted using Robolectric shadows
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+    assertEquals(1, shadowNotificationManager.size())
+    val notification = shadowNotificationManager.allNotifications[0]
+    assertNotNull(notification)
+    assertEquals("Test Title", notification.extras.getString("android.title"))
+    assertEquals("Test Body", notification.extras.getString("android.text"))
   }
 
   @Test
@@ -370,7 +401,16 @@ class NotificationBackgroundManagerTest {
     // Call with null actionUrl and notificationId
     method.invoke(realService, "Test Title", "Test Body", NotificationType.ALERT, null, null)
 
-    assertNotNull(realService)
+    // Verify notification was posted
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+    assertEquals(1, shadowNotificationManager.size())
+    val notification = shadowNotificationManager.allNotifications[0]
+    assertNotNull(notification)
+    assertEquals("Test Title", notification.extras.getString("android.title"))
+    assertEquals("Test Body", notification.extras.getString("android.text"))
   }
 
   @Test
@@ -409,13 +449,22 @@ class NotificationBackgroundManagerTest {
 
     method.invoke(realService, notificationManager)
 
-    // On API 26+, verify channels were created
+    // On API 26+, verify channels were created with correct properties
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val channels = notificationManager.notificationChannels
-      assertTrue(channels.isNotEmpty())
-    }
+      assertTrue("Channels should be created", channels.isNotEmpty())
 
-    assertNotNull(realService)
+      // Verify all expected channels exist
+      val channelIds = channels.map { it.id }
+      assertTrue("Default channel exists", channelIds.contains("mapin_notifications"))
+      assertTrue("Friend channel exists", channelIds.contains("mapin_friend_notifications"))
+      assertTrue("Event channel exists", channelIds.contains("mapin_event_notifications"))
+      assertTrue("Message channel exists", channelIds.contains("mapin_message_notifications"))
+      assertTrue("Alert channel exists", channelIds.contains("mapin_alert_notifications"))
+
+      // Verify we have exactly 5 channels
+      assertEquals(5, channels.size)
+    }
   }
 
   @Test
@@ -437,7 +486,16 @@ class NotificationBackgroundManagerTest {
     // This will call the real sendNotification method
     realService.onMessageReceived(mockRemoteMessage)
 
-    assertNotNull(realService)
+    // Verify notification was posted using shadows
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+    assertEquals(1, shadowNotificationManager.size())
+    val notification = shadowNotificationManager.allNotifications[0]
+    assertNotNull(notification)
+    assertEquals("Real Test", notification.extras.getString("android.title"))
+    assertEquals("Real Message", notification.extras.getString("android.text"))
   }
 
   @Test
@@ -452,6 +510,15 @@ class NotificationBackgroundManagerTest {
 
     realService.onMessageReceived(mockRemoteMessage)
 
-    assertNotNull(realService)
+    // Verify notification was posted
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+    assertEquals(1, shadowNotificationManager.size())
+    val notification = shadowNotificationManager.allNotifications[0]
+    assertNotNull(notification)
+    assertEquals("Real Notification", notification.extras.getString("android.title"))
+    assertEquals("Real Body", notification.extras.getString("android.text"))
   }
 }
