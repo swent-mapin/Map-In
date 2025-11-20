@@ -41,4 +41,10 @@
     <string name="password_hide">Hide password</string>
     <string name="change_password">Change Password</string>
     <string name="change_password_description">Update your account password</string>
+
+    <!-- Offline map indicators -->
+    <string name="offline_mode">Offline</string>
+    <string name="cached_region">Cached area</string>
+    <string name="show_cached_regions">Show cached areas</string>
+    <string name="hide_cached_regions">Hide cached areas</string>
 </resources>

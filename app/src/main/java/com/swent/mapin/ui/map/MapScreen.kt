@@ -80,6 +80,7 @@ import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
@@ -301,6 +302,16 @@ fun MapScreen(
   val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
   val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = true)
 
+  // Monitor connectivity state for offline indicator
+  val connectivityService = remember { ConnectivityServiceProvider.getInstance(context) }
+  val connectivityState by
+      connectivityService.connectivityState.collectAsState(
+          initial = com.swent.mapin.model.network.ConnectivityState(isConnected = true))
+  val isOffline = !connectivityState.isConnected
+
+  // State for showing/hiding cached regions overlay
+  var showCachedRegions by remember { mutableStateOf(false) }
+
   // Determine if dark theme based on app setting
   val isSystemInDark = isSystemInDarkTheme()
   val isDarkTheme =
@@ -375,6 +386,8 @@ fun MapScreen(
           standardStyleState = standardStyleState,
           heatmapSource = heatmapSource,
           isDarkTheme = isDarkTheme,
+          showCachedRegions = showCachedRegions,
+          onToggleCachedRegions = { showCachedRegions = !showCachedRegions },
           onEventClick = { event ->
             // Conserver tous les effets attendus lors d'un clic sur un pin
             viewModel.onEventPinClicked(event)
@@ -383,6 +396,11 @@ fun MapScreen(
             onEventClick(event)
           })
     }
+
+    // Offline indicator at top-right
+    OfflineIndicator(
+        isOffline = isOffline,
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
 
     // Overlays et contrôles au-dessus de la carte
     Box(
@@ -582,6 +600,8 @@ private fun MapboxLayer(
     standardStyleState: StandardStyleState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
+    showCachedRegions: Boolean,
+    onToggleCachedRegions: () -> Unit,
     onEventClick: (Event) -> Unit
 ) {
   LaunchedEffect(mapViewportState) {
@@ -629,6 +649,11 @@ private fun MapboxLayer(
                     selectedStyle = viewModel.mapStyle,
                     onStyleSelected = { style -> viewModel.setMapStyle(style) },
                     modifier = Modifier.size(48.dp))
+
+                CachedRegionsToggle(
+                    showCachedRegions = showCachedRegions,
+                    onClick = onToggleCachedRegions,
+                    modifier = Modifier.size(48.dp))
               }
         }
       },
@@ -648,6 +673,7 @@ private fun MapboxLayer(
             mapViewportState = mapViewportState,
             heatmapSource = heatmapSource,
             isDarkTheme = isDarkTheme,
+            showCachedRegions = showCachedRegions,
             onEventClick = onEventClick)
       }
 }
@@ -667,6 +693,7 @@ private fun MapLayers(
     mapViewportState: MapViewportState,
     heatmapSource: GeoJsonSourceState,
     isDarkTheme: Boolean,
+    showCachedRegions: Boolean,
     onEventClick: (Event) -> Unit
 ) {
   val context = LocalContext.current
@@ -691,6 +718,13 @@ private fun MapLayers(
   if (directionState is DirectionState.Displayed) {
     DirectionOverlay(routePoints = directionState.routePoints)
   }
+
+  // Render cached regions overlay if enabled
+  val cachedEvents =
+      remember(viewModel.savedEvents, viewModel.joinedEvents) {
+        (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
+      }
+  CachedRegionsOverlay(events = cachedEvents, visible = showCachedRegions)
 
   // Disable clustering when a pin is selected to prevent it from being absorbed
   val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
