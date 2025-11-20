@@ -34,22 +34,19 @@ fun CachedRegionsOverlay(events: List<Event>, visible: Boolean, radiusKm: Double
         }
       }
 
-  // Calculate approximate radius in meters for the circle layer
-  // This is a visual approximation - actual downloaded region is rectangular
-  val radiusMeters = remember(radiusKm) { radiusKm * 1000 }
-
   val cachedRegionsSource =
       rememberGeoJsonSourceState(key = "cached-regions-source") { data = GeoJSONData(features) }
 
   val greenColor = Color(0xFF4CAF50)
 
-  // Draw circles with subtle styling
+  // Draw small visual indicators at event locations to show cached areas
+  // Note: Draws a fixed-size circle marker (20px), not the actual 2km geographic boundary
   CircleLayer(sourceState = cachedRegionsSource, layerId = "cached-regions-layer") {
-    circleRadius = DoubleValue(radiusMeters)
+    circleRadius = DoubleValue(20.0) // 20 pixels - visible but not overwhelming
     circleColor = ColorValue(greenColor)
-    circleOpacity = DoubleValue(0.15) // Very subtle
+    circleOpacity = DoubleValue(0.2) // Subtle fill
     circleStrokeColor = ColorValue(greenColor)
-    circleStrokeWidth = DoubleValue(1.5)
-    circleStrokeOpacity = DoubleValue(0.3)
+    circleStrokeWidth = DoubleValue(2.0)
+    circleStrokeOpacity = DoubleValue(0.6) // More visible stroke
   }
 }
