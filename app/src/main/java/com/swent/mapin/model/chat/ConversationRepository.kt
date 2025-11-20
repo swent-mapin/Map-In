@@ -17,4 +17,6 @@ interface ConversationRepository {
 
   /** Adds a conversation to the repository */
   suspend fun addConversation(conversation: Conversation)
+
+  suspend fun getConversationById(conversationId: String): Conversation?
 }

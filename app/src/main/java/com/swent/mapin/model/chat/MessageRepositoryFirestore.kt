@@ -55,6 +55,7 @@ class MessageRepositoryFirestore(
                   .map { doc ->
                     Message(
                         text = doc.getString("text") ?: "",
+                        senderId = doc.getString("senderId") ?: "",
                         isMe = doc.getString("senderId") == auth.currentUser?.uid)
                   }
                   .reversed() // chronological order
@@ -119,6 +120,7 @@ class MessageRepositoryFirestore(
             .map { doc ->
               Message(
                   text = doc.getString("text") ?: "",
+                  senderId = doc.getString("senderId") ?: "",
                   isMe = doc.getString("senderId") == auth.currentUser?.uid)
             }
             .reversed()

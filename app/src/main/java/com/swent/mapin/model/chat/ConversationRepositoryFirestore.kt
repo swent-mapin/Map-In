@@ -83,4 +83,24 @@ class ConversationRepositoryFirestore(
 
     conversationRef.set(conversationToSave).await()
   }
+
+
+  /**
+   * Retrieves a single conversation by its ID.
+   *
+   * @param conversationId The ID of the conversation to fetch.
+   * @return The [Conversation] object if found, or null otherwise.
+   */
+  override suspend fun getConversationById(conversationId: String): Conversation? {
+      return try {
+          val docSnapshot = db.collection("conversations")
+              .document(conversationId)
+              .get()
+              .await()
+          docSnapshot.toObject(Conversation::class.java)
+      } catch (e: Exception) {
+          e.printStackTrace()
+          null
+      }
+  }
 }

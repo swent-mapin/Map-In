@@ -29,6 +29,9 @@ class ConversationViewModel(
   private val _userConversations = MutableStateFlow<List<Conversation>>(emptyList())
   val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
 
+  private val _gotConversation = MutableStateFlow<Conversation?>(null)
+  val gotConversation: StateFlow<Conversation?> = _gotConversation.asStateFlow()
+
   var currentUserProfile: UserProfile = UserProfile()
   /** Get a new unique identifier for a conversation. */
   fun getNewUID(): String {
@@ -63,5 +66,9 @@ class ConversationViewModel(
    */
   fun createConversation(conversation: Conversation) {
     viewModelScope.launch { conversationRepository.addConversation(conversation) }
+  }
+
+  fun getConversationById(conversationId: String) {
+    viewModelScope.launch { _gotConversation.value = conversationRepository.getConversationById(conversationId) }
   }
 }

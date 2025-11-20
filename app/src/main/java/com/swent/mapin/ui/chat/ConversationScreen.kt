@@ -1,18 +1,26 @@
 package com.swent.mapin.ui.chat
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,6 +30,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,10 +43,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.launch
 
 object ConversationScreenTestTags {
@@ -48,8 +62,88 @@ object ConversationScreenTestTags {
 const val MESSAGE_START = 0
 
 // Data class for messages
-data class Message(val text: String, val isMe: Boolean)
+data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
+
+/**
+ * Displays the top app bar for ConversationScreen.
+ *
+ * @param title The title text displayed in the center of the top bar.
+ * @param onNavigateBack Optional callback invoked when the back button is pressed.
+ * @param profilePictureUrl The profile picture URL of this conversation
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConversationTopBar(
+    title: String,
+    participantNames: List<String>? = emptyList(),
+    onNavigateBack: (() -> Unit)? = null,
+    profilePictureUrl: String? = ""
+) {
+    TopAppBar(
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Profile picture
+                if (profilePictureUrl.isNullOrBlank()) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "DefaultProfile",
+                        tint = Color.Gray,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Image(
+                        painter = rememberAsyncImagePainter(profilePictureUrl),
+                        contentDescription = "CustomProfile",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                //List of participants
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!participantNames.isNullOrEmpty()) {
+                        Text(
+                            text = participantNames.joinToString(", "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        },
+        navigationIcon = {
+            if (onNavigateBack != null) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back"
+                    )
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR)
+    )
+}
 /**
  * Assisted by AI Functions representing the UI for conversations between users
  *
@@ -63,6 +157,7 @@ fun ConversationScreen(
     modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit = {},
     messageViewModel: MessageViewModel = viewModel(),
+    conversationViewModel: ConversationViewModel = viewModel(),
     conversationId: String,
     conversationName: String,
 ) {
@@ -78,6 +173,9 @@ fun ConversationScreen(
   val shouldLoadMore by remember {
     derivedStateOf { listState.firstVisibleItemIndex == messages.lastIndex }
   }
+  conversationViewModel.getConversationById(conversationId)
+  val conversation by conversationViewModel.gotConversation.collectAsState()
+  val participantNames = conversation?.participants?.map { conversation -> conversationName }
 
   // Dynamic loading when scrolling up
   LaunchedEffect(shouldLoadMore) {
@@ -88,7 +186,9 @@ fun ConversationScreen(
   LaunchedEffect(messages.size) { listState.animateScrollToItem(MESSAGE_START) }
 
   Scaffold(
-      topBar = { ChatTopBar(conversationName, onNavigateBack = onNavigateBack) },
+      topBar = {
+          ConversationTopBar(conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+      },
       bottomBar = {
         Row(
             modifier =
