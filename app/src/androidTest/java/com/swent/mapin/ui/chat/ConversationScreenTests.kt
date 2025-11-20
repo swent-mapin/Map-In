@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+import java.util.Calendar
 
 @Composable
 fun ConversationScreenForTest(
@@ -223,5 +224,111 @@ class ConversationScreenTest {
     runBlocking { mockVm.loadMoreMessages("conv-paging") }
 
     verify { mockVm.loadMoreMessages("conv-paging") }
+  }
+
+  @Test
+  fun formatTimestamp_formatsCorrectly() {
+    // Arrange: pick a stable timestamp (12:34)
+    val cal = Calendar.getInstance().apply {
+       set(Calendar.HOUR_OF_DAY, 12)
+       set(Calendar.MINUTE, 34)
+       set(Calendar.SECOND, 0)
+       set(Calendar.MILLISECOND, 0)
+    }
+      val timestamp = cal.timeInMillis
+
+      composeTestRule.setContent {
+         androidx.compose.material3.Text(formatTimestamp(timestamp))
+      }
+
+      composeTestRule.onNodeWithText("12:34").assertExists()
+    }
+    // ------------------------------------------------------------
+    // ProfilePicture TESTS
+    // ------------------------------------------------------------
+  @Test
+  fun profilePicture_showsDefaultIcon_whenUrlNull() {
+      composeTestRule.setContent {
+          ProfilePicture(url = null)
+      }
+
+      composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
+  }
+
+  @Test
+  fun profilePicture_showsDefaultIcon_whenUrlBlank() {
+      composeTestRule.setContent {
+          ProfilePicture(url = "")
+      }
+
+      composeTestRule.onNodeWithContentDescription("DefaultProfile").assertExists()
+  }
+
+  // ------------------------------------------------------------
+  // ConversationTopBar TESTS
+  // ------------------------------------------------------------
+  @Test
+  fun conversationTopBar_showsTitle() {
+      composeTestRule.setContent {
+         ConversationTopBar(
+             title = "Chat with Sam",
+             participantNames = emptyList(),
+             onNavigateBack = {},
+             profilePictureUrl = null
+         )
+      }
+
+      composeTestRule.onNodeWithText("Chat with Sam").assertExists()
+  }
+
+  @Test
+  fun conversationTopBar_showsParticipantsList() {
+      val names = listOf("Sam", "Alex")
+
+      composeTestRule.setContent {
+          ConversationTopBar(
+              title = "Group Chat",
+              participantNames = names,
+              onNavigateBack = {},
+              profilePictureUrl = null
+          )
+      }
+    composeTestRule.onNodeWithText("Sam, Alex").assertExists()
+  }
+
+  @Test
+  fun conversationTopBar_callsNavigateBack_whenBackButtonClicked() {
+      var backCalled = false
+
+      composeTestRule.setContent {
+          ConversationTopBar(
+              title = "Chat",
+              participantNames = emptyList(),
+              onNavigateBack = { backCalled = true },
+              profilePictureUrl = null
+          )
+      }
+
+      composeTestRule
+          .onNodeWithTag(ChatScreenTestTags.BACK_BUTTON)
+          .performClick()
+
+      assert(backCalled)
+  }
+
+  @Test
+  fun conversationTopBar_doesNotShowBackButton_whenCallbackNull() {
+      composeTestRule.setContent {
+          ConversationTopBar(
+              title = "Chat",
+              participantNames = emptyList(),
+              onNavigateBack = null,
+              profilePictureUrl = null
+          )
+      }
+
+      composeTestRule
+          .onNodeWithTag(ChatScreenTestTags.BACK_BUTTON)
+          .assertDoesNotExist()
   }
 }
