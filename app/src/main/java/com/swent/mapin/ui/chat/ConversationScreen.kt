@@ -65,8 +65,8 @@ object ConversationScreenTestTags {
 data class Message(val text: String, val senderId: String, val isMe: Boolean)
 
 /**
- * Profile picture Composable, displays a profile picture
- * If the url is null, displays a default one
+ * Profile picture Composable, displays a profile picture If the url is null, displays a default one
+ *
  * @param url The URL of the profile picture.
  */
 @Composable
@@ -142,8 +142,7 @@ fun ConversationTopBar(
       modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 /**
- * Assisted by AI
- * Functions representing the UI for conversations between users
+ * Assisted by AI Functions representing the UI for conversations between users
  *
  * @param conversationId The ID of the conversation
  * @param messageViewModel ViewModel for messages
@@ -271,17 +270,13 @@ fun ConversationScreen(
 }
 
 /**
- * Assisted by AI
- * Basic UI for messages as bubbles
+ * Assisted by AI Basic UI for messages as bubbles
  *
  * @param message The message sent or was sent
  * @param sender The UserProfile of the sender
  */
 @Composable
-fun MessageBubble(
-    message: Message,
-    sender: UserProfile?
-) {
+fun MessageBubble(message: Message, sender: UserProfile?) {
   val isMe = message.isMe
 
   val bubbleColor =
