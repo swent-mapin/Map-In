@@ -132,7 +132,24 @@ class MapScreenViewModel(
           eventRepository = eventRepository,
           offlineRegionManager = offlineRegionManager,
           connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
-          scope = viewModelScope)
+          scope = viewModelScope,
+          onDownloadStart = { event ->
+            _downloadingEvent = event
+            _downloadProgress = 0f
+          },
+          onDownloadProgress = { _, progress -> _downloadProgress = progress },
+          onDownloadComplete = { _, result ->
+            _downloadingEvent = null
+            _downloadProgress = 0f
+            result.onSuccess {
+              _showDownloadComplete = true
+              // Auto-clear after 3 seconds
+              viewModelScope.launch {
+                kotlinx.coroutines.delay(3000)
+                _showDownloadComplete = false
+              }
+            }
+          })
     } catch (e: Exception) {
       Log.w("MapScreenViewModel", "EventBasedOfflineRegionManager not available", e)
       null
@@ -222,6 +239,19 @@ class MapScreenViewModel(
 
   val isSavingMemory: Boolean
     get() = memoryActionController.isSavingMemory
+
+  // Download progress state
+  private var _downloadingEvent by mutableStateOf<Event?>(null)
+  val downloadingEvent: Event?
+    get() = _downloadingEvent
+
+  private var _downloadProgress by mutableStateOf(0f)
+  val downloadProgress: Float
+    get() = _downloadProgress
+
+  private var _showDownloadComplete by mutableStateOf(false)
+  val showDownloadComplete: Boolean
+    get() = _showDownloadComplete
 
   // Event catalog for memory linking
   val availableEvents: List<Event>
@@ -548,6 +578,11 @@ class MapScreenViewModel(
 
   fun clearError() {
     _errorMessage = null
+  }
+
+  /** Clears the download completion message. */
+  fun clearDownloadComplete() {
+    _showDownloadComplete = false
   }
 
   /** Loads the current user's avatar URL from their profile. */

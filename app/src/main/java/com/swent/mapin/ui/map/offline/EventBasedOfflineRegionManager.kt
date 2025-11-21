@@ -36,7 +36,10 @@ class EventBasedOfflineRegionManager(
     private val connectivityService: ConnectivityService,
     private val scope: CoroutineScope,
     private val radiusKm: Double = DEFAULT_RADIUS_KM,
-    private val maxRegions: Int = DEFAULT_MAX_REGIONS
+    private val maxRegions: Int = DEFAULT_MAX_REGIONS,
+    private val onDownloadStart: (Event) -> Unit = {},
+    private val onDownloadProgress: (Event, Float) -> Unit = { _, _ -> },
+    private val onDownloadComplete: (Event, Result<Unit>) -> Unit = { _, _ -> }
 ) {
 
   companion object {
@@ -120,15 +123,20 @@ class EventBasedOfflineRegionManager(
           "Downloading region for event: ${event.title} " +
               "(${event.location.latitude}, ${event.location.longitude})")
 
+      // Notify UI that download is starting
+      onDownloadStart(event)
+
       // Download and wait for completion before starting next one
       val result = downloadRegionSuspend(event, bounds)
       result
           .onSuccess {
             downloadedEventIds.add(event.uid)
             Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
+            onDownloadComplete(event, Result.success(Unit))
           }
           .onFailure { error ->
             Log.e(TAG, "Failed to download region for event ${event.title}: $error")
+            onDownloadComplete(event, Result.failure(error))
           }
     }
   }
@@ -147,6 +155,7 @@ class EventBasedOfflineRegionManager(
         bounds = bounds,
         onProgress = { progress ->
           Log.d(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
+          onDownloadProgress(event, progress)
         },
         onComplete = { result -> deferred.complete(result) })
 

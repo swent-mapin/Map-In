@@ -426,6 +426,13 @@ fun MapScreen(
         isInCachedRegion = isInCachedRegion,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
 
+    // Download progress indicator below offline indicator
+    DownloadIndicator(
+        downloadingEvent = viewModel.downloadingEvent,
+        downloadProgress = viewModel.downloadProgress,
+        showDownloadComplete = viewModel.showDownloadComplete,
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
+
     // Overlays et contrôles au-dessus de la carte
     Box(
         modifier =
