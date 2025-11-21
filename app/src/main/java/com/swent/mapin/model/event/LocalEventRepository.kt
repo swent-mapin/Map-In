@@ -67,18 +67,6 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     }
   }
 
-  override suspend fun editEvent(eventId: String, newValue: Event) {
-    // Deprecated but kept for CI validation until next PR
-  }
-
-  override suspend fun saveEventForUser(eventId: String, userId: String) {
-    // Deprecated but kept for CI validation until next PR
-  }
-
-  override suspend fun unsaveEventForUser(eventId: String, userId: String) {
-    // Deprecated but kept for CI validation until next PR
-  }
-
   override suspend fun editEventAsOwner(eventId: String, newValue: Event) {
     if (!events.containsKey(eventId)) {
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
@@ -100,7 +88,15 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     }
     val event = events[eventId]!!
-    val userEventData = userData.getOrPut(userId) { UserEventData() }
+    val userEventData =
+        userData.getOrPut(userId) {
+          UserEventData(
+              ownedEventIds =
+                  defaultSampleEvents()
+                      .filter { it.ownerId == userId }
+                      .map { it.uid }
+                      .toMutableList())
+        }
 
     if (join) {
       // Check capacity
@@ -124,9 +120,8 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
   }
 
   override suspend fun deleteEvent(eventId: String) {
-    val event =
-        events[eventId]
-            ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
+    events[eventId]
+        ?: throw NoSuchElementException("LocalEventRepository: Event not found (id=$eventId)")
     events.remove(eventId)
     // Remove from all users' savedEventIds, joinedEventIds, and owner's ownedEventIds
     userData.forEach { (_, data) ->
@@ -174,7 +169,7 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
       val userId = "user1" // Placeholder
       result =
           result.filter { event ->
-            event.participantIds.any { it in (userData[userId]?.joinedEventIds ?: emptySet()) }
+            event.participantIds.any { it in (userData[userId]?.joinedEventIds ?: emptyList()) }
           }
     }
 
@@ -203,12 +198,32 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
   }
 
   override suspend fun getJoinedEvents(userId: String): List<Event> {
-    val joinedEventIds = userData.getOrPut(userId) { UserEventData() }.joinedEventIds
+    val joinedEventIds =
+        userData
+            .getOrPut(userId) {
+              UserEventData(
+                  joinedEventIds =
+                      defaultSampleEvents()
+                          .filter { it.participantIds.contains(userId) }
+                          .map { it.uid }
+                          .toMutableList())
+            }
+            .joinedEventIds
     return joinedEventIds.mapNotNull { id -> events[id] }
   }
 
   override suspend fun getOwnedEvents(userId: String): List<Event> {
-    val ownedEventIds = userData.getOrPut(userId) { UserEventData() }.ownedEventIds
+    val ownedEventIds =
+        userData
+            .getOrPut(userId) {
+              UserEventData(
+                  ownedEventIds =
+                      defaultSampleEvents()
+                          .filter { it.ownerId == userId }
+                          .map { it.uid }
+                          .toMutableList())
+            }
+            .ownedEventIds
     return ownedEventIds.mapNotNull { id -> events[id] }
   }
 
@@ -222,10 +237,6 @@ class LocalEventRepository(initialEvents: List<Event> = defaultSampleEvents()) :
     return object : ListenerRegistration {
       override fun remove() {} // No-op for local repository
     }
-  }
-
-  override suspend fun getEventsByOwner(ownerId: String): List<Event> {
-    return events.values.filter { it.ownerId == ownerId }.sortedBy { it.date }
   }
 
   private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {

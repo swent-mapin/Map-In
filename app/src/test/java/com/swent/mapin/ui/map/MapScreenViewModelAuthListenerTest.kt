@@ -12,7 +12,9 @@ import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -31,7 +33,8 @@ import org.mockito.kotlin.whenever
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapScreenViewModelAuthListenerTest {
 
-  @get:Rule val mainDispatcherRule = MainDispatcherRule()
+  private val testDispatcher = StandardTestDispatcher()
+  @get:Rule val mainDispatcherRule = MainDispatcherRule(testDispatcher)
 
   @Mock(lenient = true) lateinit var mockRepo: EventRepository
   @Mock(lenient = true) lateinit var mockAuth: FirebaseAuth
@@ -57,6 +60,9 @@ class MapScreenViewModelAuthListenerTest {
     // Stub all suspend repository calls inside a coroutine
     runBlocking {
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getJoinedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getOwnedEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getFilteredEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
     }
 
@@ -82,44 +88,50 @@ class MapScreenViewModelAuthListenerTest {
     val captor = argumentCaptor<FirebaseAuth.AuthStateListener>()
     verify(mockAuth).addAuthStateListener(captor.capture())
     authListener = captor.firstValue
+
+    runBlocking { testDispatcher.scheduler.advanceUntilIdle() }
   }
 
   @Test
-  fun authListener_onSignOut_clearsSavedAndJoined() = runTest {
-    // Simulate sign-out
-    whenever(mockAuth.currentUser).thenReturn(null)
-    authListener.onAuthStateChanged(mockAuth)
-    advanceUntilIdle()
+  fun authListener_onSignOut_clearsSavedAndJoined() =
+      runTest(testDispatcher) {
+        // Simulate sign-out
+        whenever(mockAuth.currentUser).thenReturn(null)
+        authListener.onAuthStateChanged(mockAuth)
+        advanceUntilIdle()
+        runCurrent()
 
-    // Saved list cleared
-    assertEquals(emptyList<Event>(), vm.savedEvents)
+        // Saved list cleared
+        assertEquals(emptyList<Event>(), vm.savedEvents)
 
-    // savedEventIds is private; check via helper
-    val sample = LocalEventRepository.defaultSampleEvents().first()
-    assertEquals(false, vm.isEventSaved(sample))
+        // savedEventIds is private; check via helper
+        val sample = LocalEventRepository.defaultSampleEvents().first()
+        assertEquals(false, vm.isEventSaved(sample))
 
-    // Joined list cleared
-    assertEquals(0, vm.joinedEvents.size)
-  }
+        // Joined list cleared
+        assertEquals(0, vm.joinedEvents.size)
+      }
 
   @Test
-  fun authListener_onSignIn_loadsSavedAndJoined() = runTest {
-    // Provide some saved data after sign-in
-    val e = LocalEventRepository.defaultSampleEvents().first()
+  fun authListener_onSignIn_loadsSavedAndJoined() =
+      runTest(testDispatcher) {
+        // Provide some saved data after sign-in
+        val e = LocalEventRepository.defaultSampleEvents().first()
 
-    whenever(mockAuth.currentUser).thenReturn(mockUser)
-    whenever(mockUser.uid).thenReturn("testUserId")
+        whenever(mockAuth.currentUser).thenReturn(mockUser)
+        whenever(mockUser.uid).thenReturn("testUserId")
 
-    // Update repo responses for this user
-    whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
-    // Joined events are derived from _allEvents + uid; not required for this assertion,
-    // but you could also stub getEventsByParticipant if your VM uses it here.
+        // Update repo responses for this user
+        whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
+        whenever(mockRepo.getJoinedEvents("testUserId")).thenReturn(emptyList())
+        // Joined events are derived from _allEvents + uid; not required for this assertion,
+        // but you could also stub getEventsByParticipant if your VM uses it here.
 
-    authListener.onAuthStateChanged(mockAuth)
-    advanceUntilIdle()
+        authListener.onAuthStateChanged(mockAuth)
+        testScheduler.advanceUntilIdle()
 
-    // Saved IDs & list reflect repo
-    assertEquals(true, vm.isEventSaved(e))
-    assertEquals(listOf(e.uid), vm.savedEvents.map { it.uid })
-  }
+        // Saved IDs & list reflect repo
+        assertEquals(true, vm.isEventSaved(e))
+        assertEquals(listOf(e.uid), vm.savedEvents.map { it.uid })
+      }
 }
