@@ -104,7 +104,9 @@ import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
 import com.swent.mapin.ui.profile.ProfileViewModel
+import com.swent.mapin.util.EventUtils
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -319,25 +321,28 @@ fun MapScreen(
         .collect { cameraState -> viewportCenter = cameraState.center }
   }
 
-  // Calculate if viewport center is within 2km of any cached event
+  // Calculate if viewport center is within cached event radius
   val isInCachedRegion =
-      remember(viewportCenter, viewModel.savedEvents, viewModel.joinedEvents) {
-        val center = viewportCenter
-        if (center == null) {
-          false
-        } else {
-          val cachedEvents = (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
-          cachedEvents.any { event ->
-            val distance =
-                calculateDistance(
-                    center.latitude(),
-                    center.longitude(),
-                    event.location.latitude,
-                    event.location.longitude)
-            distance <= 2.0 // Within 2km
+      androidx.compose.runtime
+          .derivedStateOf {
+            val center = viewportCenter
+            if (center == null) {
+              false
+            } else {
+              val cachedEvents =
+                  (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
+              cachedEvents.any { event ->
+                val distance =
+                    EventUtils.calculateHaversineDistance(
+                        com.google.firebase.firestore.GeoPoint(
+                            center.latitude(), center.longitude()),
+                        com.google.firebase.firestore.GeoPoint(
+                            event.location.latitude, event.location.longitude))
+                distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
+              }
+            }
           }
-        }
-      }
+          .value
 
   // Determine if dark theme based on app setting
   val isSystemInDark = isSystemInDarkTheme()
@@ -822,27 +827,4 @@ internal fun calculateLocationPaddingPx(
   val mediumThreshold = mediumHeightPx.coerceAtLeast(collapsedHeightPx)
   val mediumPaddingPx = clampedSheet * mediumWeight + mediumExtraPx
   return if (clampedSheet >= mediumThreshold) mediumPaddingPx else minPaddingPx
-}
-
-/**
- * Calculates the distance between two geographic coordinates using the Haversine formula.
- *
- * @param lat1 Latitude of the first point in degrees
- * @param lon1 Longitude of the first point in degrees
- * @param lat2 Latitude of the second point in degrees
- * @param lon2 Longitude of the second point in degrees
- * @return Distance in kilometers
- */
-internal fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-  val earthRadiusKm = 6371.0
-  val dLat = Math.toRadians(lat2 - lat1)
-  val dLon = Math.toRadians(lon2 - lon1)
-  val a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(Math.toRadians(lat1)) *
-              Math.cos(Math.toRadians(lat2)) *
-              Math.sin(dLon / 2) *
-              Math.sin(dLon / 2)
-  val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return earthRadiusKm * c
 }

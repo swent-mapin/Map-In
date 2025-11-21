@@ -44,6 +44,7 @@ import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -77,6 +78,7 @@ class MapScreenViewModel(
   }
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
+  private var downloadCompleteDismissJob: Job? = null
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
@@ -144,10 +146,12 @@ class MapScreenViewModel(
             result.onSuccess {
               _showDownloadComplete = true
               // Auto-clear after 3 seconds
-              viewModelScope.launch {
-                kotlinx.coroutines.delay(3000)
-                _showDownloadComplete = false
-              }
+              downloadCompleteDismissJob?.cancel()
+              downloadCompleteDismissJob =
+                  viewModelScope.launch {
+                    kotlinx.coroutines.delay(3000)
+                    _showDownloadComplete = false
+                  }
             }
           })
     } catch (e: Exception) {
@@ -674,6 +678,7 @@ class MapScreenViewModel(
     try {
       offlineRegionManager.cancelActiveDownload()
       eventBasedOfflineRegionManager?.stopObserving()
+      downloadCompleteDismissJob?.cancel()
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
     }

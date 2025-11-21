@@ -44,7 +44,7 @@ class EventBasedOfflineRegionManager(
 
   companion object {
     private const val TAG = "EventBasedOfflineRegionManager"
-    private const val DEFAULT_RADIUS_KM = 2.0
+    const val DEFAULT_RADIUS_KM = 2.0
     private const val DEFAULT_MAX_REGIONS = 100 // Conservative limit below Mapbox's 750
   }
 

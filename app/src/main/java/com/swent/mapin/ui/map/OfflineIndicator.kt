@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,16 +39,18 @@ import com.swent.mapin.R
 @Composable
 fun OfflineIndicator(isOffline: Boolean, isInCachedRegion: Boolean, modifier: Modifier = Modifier) {
   AnimatedVisibility(visible = isOffline, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+    val isDarkTheme = isSystemInDarkTheme()
     val containerColor =
         if (isInCachedRegion) {
-          Color(0xFF4CAF50) // Green for cached
+          // Green for cached, theme-aware
+          Color(0xFF4CAF50).copy(alpha = if (isDarkTheme) 0.8f else 1f)
         } else {
           MaterialTheme.colorScheme.errorContainer // Red/Orange for not cached
         }
 
     val contentColor =
         if (isInCachedRegion) {
-          Color.White
+          Color.White.copy(alpha = if (isDarkTheme) 0.9f else 1f)
         } else {
           MaterialTheme.colorScheme.onErrorContainer
         }
