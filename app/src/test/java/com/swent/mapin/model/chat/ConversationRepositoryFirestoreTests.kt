@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
@@ -38,6 +37,7 @@ class ConversationRepositoryFirestoreTest {
     mockAuth = mockk()
     repo = ConversationRepositoryFirestore(mockDb, mockAuth)
   }
+
   private fun mockCompletedTask(doc: DocumentSnapshot?): Task<DocumentSnapshot> {
     val tcs = TaskCompletionSource<DocumentSnapshot>()
     tcs.setResult(doc)
@@ -264,49 +264,50 @@ class ConversationRepositoryFirestoreTest {
           Assert.assertEquals(conversation.id, it.id)
         }
       }
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun `getConversationById returns conversation when document exists`() = runTest {
-        val conversation = Conversation(id = "conv1", name = "Chat 1")
-        val docSnapshot = mockk<DocumentSnapshot>()
-        every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
-        val docRef = mockk<DocumentReference>()
-        every { docRef.get() } returns mockCompletedTask(docSnapshot)
-        val collection = mockk<CollectionReference>()
-        every { collection.document("conv1") } returns docRef
-        every { mockDb.collection("conversations") } returns collection
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns conversation when document exists`() = runTest {
+    val conversation = Conversation(id = "conv1", name = "Chat 1")
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
-        val result = repo.getConversationById("conv1")
-        assertEquals(conversation, result)
-    }
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun `getConversationById returns null when document does not exist`() = runTest {
-        val docSnapshot = mockk<DocumentSnapshot>()
-        every { docSnapshot.toObject(Conversation::class.java) } returns null
+    val result = repo.getConversationById("conv1")
+    assertEquals(conversation, result)
+  }
 
-        val docRef = mockk<DocumentReference>()
-        every { docRef.get() } returns mockCompletedTask(docSnapshot)
-        val collection = mockk<CollectionReference>()
-        every { collection.document("conv1") } returns docRef
-        every { mockDb.collection("conversations") } returns collection
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when document does not exist`() = runTest {
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns null
 
-        val result = repo.getConversationById("conv1")
-        assertEquals(null, result)
-    }
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun `getConversationById returns null when firestore throws exception`() = runTest {
-        val docRef = mockk<DocumentReference>()
-        every { docRef.get() } throws RuntimeException("Firestore error")
-        val collection = mockk<CollectionReference>()
-        every { collection.document("conv1") } returns docRef
-        every { mockDb.collection("conversations") } returns collection
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
+  }
 
-        val result = repo.getConversationById("conv1")
-        assertEquals(null, result)
-    }
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when firestore throws exception`() = runTest {
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } throws RuntimeException("Firestore error")
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
+  }
 }
