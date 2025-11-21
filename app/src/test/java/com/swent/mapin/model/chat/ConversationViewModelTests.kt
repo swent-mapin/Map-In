@@ -84,4 +84,44 @@ class ConversationViewModelTest {
 
     verify(conversationRepository).addConversation(conversation)
   }
+
+    @Test
+    fun `getConversationById updates gotConversation when repository returns conversation`() = runTest {
+        val conversation = Conversation(id = "conv1", name = "Test Chat")
+        whenever(conversationRepository.getConversationById("conv1")).thenReturn(conversation)
+
+        viewModel.getConversationById("conv1")
+        testDispatcher.scheduler.advanceUntilIdle() // Let coroutine complete
+
+        Assert.assertEquals(conversation, viewModel.gotConversation.value)
+    }
+
+    @Test
+    fun `getConversationById updates gotConversation to null when repository returns null`() = runTest {
+        whenever(conversationRepository.getConversationById("conv1")).thenReturn(null)
+
+        viewModel.getConversationById("conv1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        Assert.assertNull(viewModel.gotConversation.value)
+    }
+
+    @Test
+    fun `getConversationById cancels previous job before launching new one`() = runTest {
+        val firstConversation = Conversation(id = "conv1", name = "First Chat")
+        val secondConversation = Conversation(id = "conv2", name = "Second Chat")
+
+        // Simulate repository calls with delay
+        whenever(conversationRepository.getConversationById("conv1")).thenAnswer {
+            firstConversation
+        }
+        whenever(conversationRepository.getConversationById("conv2")).thenReturn(secondConversation)
+
+        viewModel.getConversationById("conv1")
+        viewModel.getConversationById("conv2") // This should cancel the first job
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // The first call should have been cancelled, final value is from second call
+        Assert.assertEquals(secondConversation, viewModel.gotConversation.value)
+    }
 }
