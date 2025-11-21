@@ -84,20 +84,21 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
             val networkCallback =
                 object : ConnectivityManager.NetworkCallback() {
                   override fun onAvailable(network: Network) {
-                    Log.d(TAG, "onAvailable called")
-                    // Don't trust onAvailable - wait for onCapabilitiesChanged
-                  }
-
-                  override fun onLost(network: Network) {
                     try {
-                      // Network is definitely lost - don't query getCurrentConnectivityState
-                      // as it may still show the network due to race condition
-                      val state = ConnectivityState(isConnected = false, networkType = null)
-                      Log.d(TAG, "Network lost: offline")
+                      val state = getCurrentConnectivityState()
+                      Log.d(TAG, "Network available: ${state.isConnected} (${state.networkType})")
                       trySend(state)
                     } catch (e: Exception) {
                       // Ignore state update errors - previous state remains
                     }
+                  }
+
+                  override fun onLost(network: Network) {
+                    // Network is definitely lost - don't query getCurrentConnectivityState
+                    // as it may still show the network due to race condition
+                    val state = ConnectivityState(isConnected = false, networkType = null)
+                    Log.d(TAG, "Network lost: offline")
+                    trySend(state)
                   }
 
                   override fun onCapabilitiesChanged(
