@@ -5,7 +5,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -62,22 +61,13 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
   private val connectivityManager =
       context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-  companion object {
-    private const val TAG = "ConnectivityService"
-  }
-
   override val connectivityState: Flow<ConnectivityState> =
       callbackFlow {
             // Send initial state with error handling
             try {
-              val initialState = getCurrentConnectivityState()
-              Log.d(
-                  TAG,
-                  "Initial connectivity: ${initialState.isConnected} (${initialState.networkType})")
-              trySend(initialState)
+              trySend(getCurrentConnectivityState())
             } catch (e: Exception) {
               // If we can't determine initial state, assume disconnected
-              Log.e(TAG, "Failed to get initial connectivity state", e)
               trySend(ConnectivityState(isConnected = false, networkType = null))
             }
 
@@ -85,20 +75,18 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
                 object : ConnectivityManager.NetworkCallback() {
                   override fun onAvailable(network: Network) {
                     try {
-                      val state = getCurrentConnectivityState()
-                      Log.d(TAG, "Network available: ${state.isConnected} (${state.networkType})")
-                      trySend(state)
+                      trySend(getCurrentConnectivityState())
                     } catch (e: Exception) {
                       // Ignore state update errors - previous state remains
                     }
                   }
 
                   override fun onLost(network: Network) {
-                    // Network is definitely lost - don't query getCurrentConnectivityState
-                    // as it may still show the network due to race condition
-                    val state = ConnectivityState(isConnected = false, networkType = null)
-                    Log.d(TAG, "Network lost: offline")
-                    trySend(state)
+                    try {
+                      trySend(getCurrentConnectivityState())
+                    } catch (e: Exception) {
+                      // Ignore state update errors - previous state remains
+                    }
                   }
 
                   override fun onCapabilitiesChanged(
@@ -106,11 +94,7 @@ class ConnectivityServiceImpl(context: Context) : ConnectivityService {
                       networkCapabilities: NetworkCapabilities
                   ) {
                     try {
-                      val state = getCurrentConnectivityState()
-                      Log.d(
-                          TAG,
-                          "Network capabilities changed: ${state.isConnected} (${state.networkType})")
-                      trySend(state)
+                      trySend(getCurrentConnectivityState())
                     } catch (e: Exception) {
                       // Ignore state update errors - previous state remains
                     }
