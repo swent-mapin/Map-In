@@ -12,6 +12,9 @@ import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -68,6 +71,14 @@ class MapEventStateController(
   private var _ownedError by mutableStateOf<String?>(null)
   val ownedError: String?
     get() = _ownedError
+
+  // StateFlow for joined events (for offline region downloads)
+  private val _joinedEventsFlow = MutableStateFlow<List<Event>>(emptyList())
+  val joinedEventsFlow: StateFlow<List<Event>> = _joinedEventsFlow.asStateFlow()
+
+  // StateFlow for saved events (for offline region downloads)
+  private val _savedEventsFlow = MutableStateFlow<List<Event>>(emptyList())
+  val savedEventsFlow: StateFlow<List<Event>> = _savedEventsFlow.asStateFlow()
 
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
@@ -162,6 +173,7 @@ class MapEventStateController(
           }
         }
         _joinedEvents = joinedEventsList
+        _joinedEventsFlow.value = joinedEventsList
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -179,6 +191,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _savedEvents = eventRepository.getSavedEvents(currentUserId)
+        _savedEventsFlow.value = _savedEvents
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
       }

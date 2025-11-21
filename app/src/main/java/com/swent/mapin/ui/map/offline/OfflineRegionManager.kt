@@ -50,7 +50,7 @@ class OfflineRegionManager(
    */
   suspend fun downloadRegion(
       bounds: CoordinateBounds,
-      styleUri: String = Style.MAPBOX_STREETS,
+      styleUri: String = Style.STANDARD,
       onProgress: (Float) -> Unit = {},
       onComplete: (Result<Unit>) -> Unit = {}
   ) {
