@@ -3,7 +3,6 @@ package com.swent.mapin.ui.map.offline
 import android.util.Log
 import com.mapbox.geojson.Point
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
 import kotlin.math.abs
 import kotlin.math.max
@@ -23,7 +22,6 @@ import kotlinx.coroutines.launch
  *
  * Respects Mapbox's 750 unique tile pack limit for offline regions.
  *
- * @property eventRepository Repository for accessing user's events
  * @property offlineRegionManager Manager for downloading tile regions
  * @property connectivityService Service for monitoring network connectivity
  * @property scope Coroutine scope for asynchronous operations
@@ -31,7 +29,6 @@ import kotlinx.coroutines.launch
  * @property maxRegions Maximum number of regions to cache (respects Mapbox 750 tile pack limit)
  */
 class EventBasedOfflineRegionManager(
-    private val eventRepository: EventRepository,
     private val offlineRegionManager: OfflineRegionManager,
     private val connectivityService: ConnectivityService,
     private val scope: CoroutineScope,
@@ -52,20 +49,15 @@ class EventBasedOfflineRegionManager(
   private val downloadedEventIds = mutableSetOf<String>()
 
   /**
-   * Starts observing saved and joined events for the given user.
+   * Starts observing saved and joined events.
    *
    * When events change and the device is online, automatically downloads map tiles for a 2km radius
    * around each event location.
    *
-   * @param userId The user ID to monitor events for
    * @param onSavedEventsFlow Flow providing saved events (typically from MapEventStateController)
    * @param onJoinedEventsFlow Flow providing joined events (typically from MapEventStateController)
    */
-  fun observeEvents(
-      userId: String,
-      onSavedEventsFlow: Flow<List<Event>>,
-      onJoinedEventsFlow: Flow<List<Event>>
-  ) {
+  fun observeEvents(onSavedEventsFlow: Flow<List<Event>>, onJoinedEventsFlow: Flow<List<Event>>) {
     // Cancel any existing observation
     observerJob?.cancel()
 

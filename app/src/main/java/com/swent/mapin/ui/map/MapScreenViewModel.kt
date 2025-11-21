@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -131,7 +132,6 @@ class MapScreenViewModel(
     }
     try {
       EventBasedOfflineRegionManager(
-          eventRepository = eventRepository,
           offlineRegionManager = offlineRegionManager,
           connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
           scope = viewModelScope,
@@ -249,7 +249,7 @@ class MapScreenViewModel(
   val downloadingEvent: Event?
     get() = _downloadingEvent
 
-  private var _downloadProgress by mutableStateOf(0f)
+  private var _downloadProgress by mutableFloatStateOf(0f)
   val downloadProgress: Float
     get() = _downloadProgress
 
@@ -395,7 +395,6 @@ class MapScreenViewModel(
         val userId = auth.currentUser?.uid ?: return@launch
 
         manager.observeEvents(
-            userId = userId,
             onSavedEventsFlow = eventStateController.savedEventsFlow,
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
