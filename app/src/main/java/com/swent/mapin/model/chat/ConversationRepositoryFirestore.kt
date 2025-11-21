@@ -1,5 +1,6 @@
 package com.swent.mapin.model.chat
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -48,12 +49,22 @@ class ConversationRepositoryFirestore(
 
               val conversations =
                   snapshot?.documents?.mapNotNull { doc ->
-                    val conversation = doc.toObject(Conversation::class.java)
-                    // Fallback ordering: if lastMessageTimestamp is null,
-                    // treat as very old (so it goes to the end)
+                    val conversation =
+                        doc.toObject(Conversation::class.java) ?: return@mapNotNull null
+
+                    // If it's a 1-to-1 chat, override the name
+                    if (conversation.participants.size == 2) {
+                      val otherParticipant =
+                          conversation.participants.firstOrNull { it.userId != uid }
+
+                      if (otherParticipant != null) {
+                        return@mapNotNull conversation.copy(
+                            name = otherParticipant.name,
+                            profilePictureUrl = otherParticipant.profilePictureUrl)
+                      }
+                    }
                     conversation
                   } ?: emptyList()
-
               trySend(conversations)
             }
 
@@ -82,5 +93,21 @@ class ConversationRepositoryFirestore(
         )
 
     conversationRef.set(conversationToSave).await()
+  }
+
+  /**
+   * Retrieves a single conversation by its ID.
+   *
+   * @param conversationId The ID of the conversation to fetch.
+   * @return The [Conversation] object if found, or null otherwise.
+   */
+  override suspend fun getConversationById(conversationId: String): Conversation? {
+    return try {
+      val docSnapshot = db.collection("conversations").document(conversationId).get().await()
+      docSnapshot.toObject(Conversation::class.java)
+    } catch (e: Exception) {
+      Log.e("ConversationRepo", "Failed to get conversation by id", e)
+      null
+    }
   }
 }

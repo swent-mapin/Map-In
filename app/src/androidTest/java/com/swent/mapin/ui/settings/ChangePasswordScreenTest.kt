@@ -4,7 +4,13 @@ package com.swent.mapin.ui.settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import com.swent.mapin.model.changepassword.ChangePasswordRepository
+import com.swent.mapin.model.changepassword.PasswordChangeResult
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -13,9 +19,29 @@ class ChangePasswordScreenTest {
   // Use Android compose rule since this file resides in androidTest (instrumentation) source set
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
+  private lateinit var mockRepository: ChangePasswordRepository
+  private lateinit var viewModel: ChangePasswordViewModel
+
+  @Before
+  fun setup() {
+    // Create mock repository
+    mockRepository = mockk(relaxed = true)
+
+    // Mock repository to return email/password user by default
+    every { mockRepository.isEmailPasswordUser() } returns true
+
+    // Mock successful password change by default
+    coEvery { mockRepository.changePassword(any(), any()) } returns PasswordChangeResult.Success
+
+    // Create ViewModel with mock repository
+    viewModel = ChangePasswordViewModel(mockRepository)
+  }
+
   @Test
   fun changePasswordScreen_displaysCorrectly() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Verify screen is displayed
     composeTestRule.onNodeWithTag("changePasswordScreen").assertIsDisplayed()
@@ -32,14 +58,18 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_hasBackButton() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     composeTestRule.onNodeWithTag("backButton").assertIsDisplayed().assertHasClickAction()
   }
 
   @Test
   fun changePasswordScreen_hasActionButtons() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     composeTestRule
         .onNodeWithTag("cancelButton")
@@ -55,7 +85,9 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_passwordFieldsHaveVisibilityToggle() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Verify visibility toggle buttons exist for all password fields
     composeTestRule.onNodeWithTag("currentPasswordField_visibilityToggle").assertIsDisplayed()
@@ -65,7 +97,9 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_displaysPasswordRequirements() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Scroll to requirements card and verify it's displayed
     composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertIsDisplayed()
@@ -84,7 +118,8 @@ class ChangePasswordScreenTest {
     var backPressed = false
 
     composeTestRule.setContent {
-      ChangePasswordScreen(onNavigateBack = { backPressed = true }, onPasswordChanged = {})
+      ChangePasswordScreen(
+          onNavigateBack = { backPressed = true }, onPasswordChanged = {}, viewModel = viewModel)
     }
 
     composeTestRule.onNodeWithTag("backButton").performClick()
@@ -96,7 +131,8 @@ class ChangePasswordScreenTest {
     var backPressed = false
 
     composeTestRule.setContent {
-      ChangePasswordScreen(onNavigateBack = { backPressed = true }, onPasswordChanged = {})
+      ChangePasswordScreen(
+          onNavigateBack = { backPressed = true }, onPasswordChanged = {}, viewModel = viewModel)
     }
 
     composeTestRule.onNodeWithTag("cancelButton").performScrollTo().performClick()
@@ -108,7 +144,10 @@ class ChangePasswordScreenTest {
     var passwordChanged = false
 
     composeTestRule.setContent {
-      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = { passwordChanged = true })
+      ChangePasswordScreen(
+          onNavigateBack = {},
+          onPasswordChanged = { passwordChanged = true },
+          viewModel = viewModel)
     }
 
     // Fill in valid data
@@ -117,24 +156,33 @@ class ChangePasswordScreenTest {
     composeTestRule.onNodeWithTag("confirmPasswordField").performTextInput("NewPass456!")
 
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
+
+    // Wait for async operation to complete
+    composeTestRule.waitForIdle()
+
+    // With mock ViewModel, the callback should be triggered
     assertTrue(passwordChanged)
   }
 
   @Test
   fun changePasswordScreen_validationShowsErrorForEmptyFields() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Click save without filling any fields
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Error message should be displayed
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
+    // Error should be displayed on the current password field
+    composeTestRule.onNodeWithTag("currentPasswordField_error").assertExists()
     composeTestRule.onNodeWithText("Current password is required").assertExists()
   }
 
   @Test
   fun changePasswordScreen_validationShowsErrorForMismatchedPasswords() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Fill fields with mismatched passwords
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("OldPass123!")
@@ -143,14 +191,16 @@ class ChangePasswordScreenTest {
 
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Error message should be displayed
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
-    composeTestRule.onNodeWithText("New password and confirmation do not match").assertExists()
+    // Error should be displayed on the confirm password field
+    composeTestRule.onNodeWithTag("confirmPasswordField_error").assertExists()
+    composeTestRule.onNodeWithText("Passwords do not match").assertExists()
   }
 
   @Test
   fun changePasswordScreen_validationShowsErrorForWeakPassword() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Fill fields with weak password (too short)
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("OldPass123!")
@@ -159,14 +209,16 @@ class ChangePasswordScreenTest {
 
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Error message should be displayed
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
+    // Error should be displayed on the new password field
+    composeTestRule.onNodeWithTag("newPasswordField_error").assertExists()
     composeTestRule.onNodeWithText("Password must be at least 8 characters long").assertExists()
   }
 
   @Test
   fun changePasswordScreen_validationShowsErrorForPasswordMissingUppercase() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Fill fields with password missing uppercase
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("OldPass123!")
@@ -175,8 +227,8 @@ class ChangePasswordScreenTest {
 
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Error message should be displayed
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
+    // Error should be displayed on the new password field
+    composeTestRule.onNodeWithTag("newPasswordField_error").assertExists()
     composeTestRule
         .onNodeWithText("Password must contain at least one uppercase letter")
         .assertExists()
@@ -184,7 +236,9 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_validationShowsErrorForSamePassword() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Fill fields with same current and new password
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("SamePass123!")
@@ -193,8 +247,8 @@ class ChangePasswordScreenTest {
 
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Error message should be displayed
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
+    // Error should be displayed on the new password field
+    composeTestRule.onNodeWithTag("newPasswordField_error").assertExists()
     composeTestRule
         .onNodeWithText("New password must be different from current password")
         .assertExists()
@@ -202,17 +256,19 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_errorMessageClearsWhenUserTypes() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
-    // Trigger validation error
+    // Trigger validation error by clicking save with empty fields
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
+    composeTestRule.onNodeWithTag("currentPasswordField_error").assertExists()
 
-    // Type in a field
+    // Type in the field to clear the error
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("O")
 
     // Error message should be cleared
-    composeTestRule.onNodeWithTag("errorMessage").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("currentPasswordField_error").assertDoesNotExist()
   }
 
   @Test
@@ -220,16 +276,20 @@ class ChangePasswordScreenTest {
     var passwordChanged = false
 
     composeTestRule.setContent {
-      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = { passwordChanged = true })
+      ChangePasswordScreen(
+          onNavigateBack = {},
+          onPasswordChanged = { passwordChanged = true },
+          viewModel = viewModel)
     }
 
     // Fill with invalid data (empty fields)
     composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
 
-    // Callback should NOT be triggered
+    // Callback should NOT be triggered since validation fails
+    composeTestRule.onNodeWithTag("currentPasswordField_error").assertExists()
+
+    // Explicitly verify callback was not triggered
     assertTrue(!passwordChanged)
-    // Error should be shown
-    composeTestRule.onNodeWithTag("errorMessage").assertExists()
   }
 
   private fun SemanticsNodeInteraction.assertTextContains(substring: String) {
@@ -248,7 +308,9 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_canTypeInPasswordFields() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Type in current password field and verify by toggling visibility
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("oldPassword123")
@@ -268,7 +330,9 @@ class ChangePasswordScreenTest {
 
   @Test
   fun changePasswordScreen_visibilityToggleWorks() {
-    composeTestRule.setContent { ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}) }
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
 
     // Type password
     composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("testPassword")
@@ -301,5 +365,30 @@ class ChangePasswordScreenTest {
         .onNodeWithTag("currentPasswordField_visibilityToggle")
         .assertContentDescriptionEquals("Hide password")
     composeTestRule.onNodeWithTag("currentPasswordField").assertTextContains("testPassword")
+  }
+
+  @Test
+  fun changePasswordScreen_displaysErrorFromRepository() {
+    // Configure mock repository to return an error
+    coEvery { mockRepository.changePassword(any(), any()) } returns
+        PasswordChangeResult.InvalidCurrentPassword
+
+    composeTestRule.setContent {
+      ChangePasswordScreen(onNavigateBack = {}, onPasswordChanged = {}, viewModel = viewModel)
+    }
+
+    // Fill in valid data
+    composeTestRule.onNodeWithTag("currentPasswordField").performTextInput("WrongPass123!")
+    composeTestRule.onNodeWithTag("newPasswordField").performTextInput("NewPass456!")
+    composeTestRule.onNodeWithTag("confirmPasswordField").performTextInput("NewPass456!")
+
+    composeTestRule.onNodeWithTag("saveButton").performScrollTo().performClick()
+
+    // Wait for async operation to complete
+    composeTestRule.waitForIdle()
+
+    // Error should be displayed
+    composeTestRule.onNodeWithTag("currentPasswordField_error").assertExists()
+    composeTestRule.onNodeWithText("Current password is incorrect").assertExists()
   }
 }

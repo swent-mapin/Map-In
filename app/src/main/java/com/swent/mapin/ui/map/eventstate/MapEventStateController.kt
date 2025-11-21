@@ -12,6 +12,9 @@ import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -69,6 +72,14 @@ class MapEventStateController(
   val ownedError: String?
     get() = _ownedError
 
+  // StateFlow for joined events (for offline region downloads)
+  private val _joinedEventsFlow = MutableStateFlow<List<Event>>(emptyList())
+  val joinedEventsFlow: StateFlow<List<Event>> = _joinedEventsFlow.asStateFlow()
+
+  // StateFlow for saved events (for offline region downloads)
+  private val _savedEventsFlow = MutableStateFlow<List<Event>>(emptyList())
+  val savedEventsFlow: StateFlow<List<Event>> = _savedEventsFlow.asStateFlow()
+
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
    * accordingly.
@@ -87,6 +98,7 @@ class MapEventStateController(
     getFilteredEvents(filterViewModel.filters.value)
     loadJoinedEvents()
     loadSavedEvents()
+    loadAttendedEvents()
     loadOwnedEvents()
   }
 
@@ -146,6 +158,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _joinedEvents = eventRepository.getJoinedEvents(currentUserId)
+        _joinedEventsFlow.value = _joinedEvents
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -164,6 +177,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _savedEvents = eventRepository.getSavedEvents(currentUserId)
+        _savedEventsFlow.value = _savedEvents
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
       }
@@ -189,6 +203,31 @@ class MapEventStateController(
       } finally {
         _ownedLoading = false
       }
+    }
+  }
+
+  /**
+   * Loads the list of events that the current user has attended. Populates [attendedEvents] by
+   * filtering [joinedEvents] for events that have already ended.
+   */
+  private fun loadAttendedEvents() {
+    val now = System.currentTimeMillis()
+    _attendedEvents = computeAttendedEvents(_joinedEvents, now)
+  }
+
+  companion object {
+    /**
+     * Visible helper used by tests to compute which of the provided joined events are "attended"
+     * (i.e. their endDate is in the past) and return them sorted by most recent end date first.
+     */
+    @VisibleForTesting
+    fun computeAttendedEvents(
+        joinedEvents: List<Event>,
+        now: Long = System.currentTimeMillis()
+    ): List<Event> {
+      return joinedEvents
+          .filter { ev -> ev.endDate?.toDate()?.time?.let { it <= now } ?: false }
+          .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
     }
   }
 
@@ -327,6 +366,8 @@ class MapEventStateController(
   @VisibleForTesting
   fun setJoinedEventsForTest(events: List<Event>) {
     _joinedEvents = events
+    // Ensure attendedEvents is recomputed when tests set joined events directly.
+    loadAttendedEvents()
   }
 
   @VisibleForTesting

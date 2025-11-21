@@ -5,16 +5,24 @@ import com.google.android.gms.tasks.TaskCompletionSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import io.mockk.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 // Assisted by AI
 class ConversationRepositoryFirestoreTest {
@@ -28,6 +36,12 @@ class ConversationRepositoryFirestoreTest {
     mockDb = mockk()
     mockAuth = mockk()
     repo = ConversationRepositoryFirestore(mockDb, mockAuth)
+  }
+
+  private fun mockCompletedTask(doc: DocumentSnapshot?): Task<DocumentSnapshot> {
+    val tcs = TaskCompletionSource<DocumentSnapshot>()
+    tcs.setResult(doc)
+    return tcs.task
   }
 
   @Test
@@ -158,7 +172,7 @@ class ConversationRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
 
     // Create a completed Task<Void>
-    val tcs = com.google.android.gms.tasks.TaskCompletionSource<Void>()
+    val tcs = TaskCompletionSource<Void>()
     tcs.setResult(null)
     val task: Task<Void> = tcs.task
 
@@ -175,5 +189,125 @@ class ConversationRepositoryFirestoreTest {
             it.participantIds.count { id -> id == "u1" } == 1 && it.participantIds.contains("u2")
           })
     }
+  }
+
+  // Assisted by GPT
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `observeConversationsForCurrentUser overrides name and profile picture for 1-to-1 chat`() =
+      runTest {
+        // Mock FirebaseAuth
+        val auth = mock<FirebaseAuth>()
+        val currentUser = mock<FirebaseUser>()
+        whenever(currentUser.uid).thenReturn("user123")
+        whenever(auth.currentUser).thenReturn(currentUser)
+
+        // Mock Firestore
+        val db = mock<FirebaseFirestore>()
+        val collectionRef = mock<CollectionReference>()
+        val query = mock<Query>()
+
+        whenever(db.collection("conversations")).thenReturn(collectionRef)
+        whenever(collectionRef.whereArrayContains("participantIds", "user123")).thenReturn(query)
+        whenever(query.orderBy("lastMessageTimestamp", Query.Direction.DESCENDING))
+            .thenReturn(query)
+
+        val conversation =
+            Conversation(
+                id = "conv1",
+                name = "Original Name",
+                profilePictureUrl = "original_url",
+                participants =
+                    listOf(
+                        UserProfile(
+                            userId = "user123",
+                            name = "Current User",
+                            bio = "",
+                            hobbies = emptyList(),
+                            location = ""),
+                        UserProfile(
+                            userId = "user456",
+                            name = "Other User",
+                            bio = "",
+                            hobbies = emptyList(),
+                            location = "")),
+                participantIds = listOf("user123", "user456"))
+
+        // Stub addSnapshotListener to immediately call the listener
+        whenever(query.addSnapshotListener(any())).thenAnswer { invocation ->
+          val listener = invocation.getArgument<EventListener<QuerySnapshot>>(0)
+
+          val snapshot = mock<QuerySnapshot>()
+          val doc = mock<DocumentSnapshot>()
+          whenever(snapshot.documents).thenReturn(listOf(doc))
+          whenever(doc.toObject(Conversation::class.java)).thenReturn(conversation)
+
+          listener.onEvent(snapshot, null)
+          mock<ListenerRegistration>()
+        }
+
+        val repo = ConversationRepositoryFirestore(db, auth)
+
+        val results = mutableListOf<List<Conversation>>()
+        val job = launch { repo.observeConversationsForCurrentUser().collect { results.add(it) } }
+
+        // Let the flow emit
+        advanceUntilIdle()
+
+        job.cancel()
+
+        val observedConversation = results.flatten().firstOrNull()
+        Assert.assertNotNull(
+            "Flow should have emitted at least one conversation", observedConversation)
+        observedConversation?.let {
+          Assert.assertEquals("Other User", it.name)
+          Assert.assertEquals(conversation.id, it.id)
+        }
+      }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns conversation when document exists`() = runTest {
+    val conversation = Conversation(id = "conv1", name = "Chat 1")
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(conversation, result)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when document does not exist`() = runTest {
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns null
+
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when firestore throws exception`() = runTest {
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } throws RuntimeException("Firestore error")
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
   }
 }

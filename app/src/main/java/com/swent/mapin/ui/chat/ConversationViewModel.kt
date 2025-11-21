@@ -9,6 +9,7 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.chat.ConversationRepository
 import com.swent.mapin.model.chat.ConversationRepositoryFirestore
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,9 @@ class ConversationViewModel(
 
   private val _userConversations = MutableStateFlow<List<Conversation>>(emptyList())
   val userConversations: StateFlow<List<Conversation>> = _userConversations.asStateFlow()
+
+  private val _gotConversation = MutableStateFlow<Conversation?>(null)
+  val gotConversation: StateFlow<Conversation?> = _gotConversation.asStateFlow()
 
   var currentUserProfile: UserProfile = UserProfile()
   /** Get a new unique identifier for a conversation. */
@@ -63,5 +67,15 @@ class ConversationViewModel(
    */
   fun createConversation(conversation: Conversation) {
     viewModelScope.launch { conversationRepository.addConversation(conversation) }
+  }
+
+  private var getConversationJob: Job? = null
+
+  fun getConversationById(conversationId: String) {
+    getConversationJob?.cancel()
+
+    viewModelScope.launch {
+      _gotConversation.value = conversationRepository.getConversationById(conversationId)
+    }
   }
 }

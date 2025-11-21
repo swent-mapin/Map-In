@@ -96,6 +96,17 @@ fun SettingsScreen(
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
   val viewModel: SettingsViewModel =
       viewModel(factory = SettingsViewModel.Factory(preferencesRepository))
+
+  // Add ChangePasswordViewModel to check authentication type
+  val changePasswordViewModel: ChangePasswordViewModel =
+      viewModel(
+          factory =
+              ChangePasswordViewModel.Factory(
+                  com.swent.mapin.model.changepassword.ChangePasswordRepositoryProvider
+                      .getRepository()))
+
+  val isEmailPasswordUser = remember { changePasswordViewModel.isEmailPasswordUser() }
+
   val themeMode by viewModel.themeMode.collectAsState()
   val mapPreferences by viewModel.mapPreferences.collectAsState()
   val errorMessage by viewModel.errorMessage.collectAsState()
@@ -235,17 +246,19 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Change Password Button
-                    SettingsActionButton(
-                        label = "Change Password",
-                        description = "Update your account password",
-                        icon = Icons.Default.Key,
-                        backgroundColor = Color(0xFF667eea),
-                        contentColor = Color.White,
-                        onAction = onNavigateToChangePassword,
-                        testTag = "changePasswordButton")
+                    // Change Password Button (only for email/password users)
+                    if (isEmailPasswordUser) {
+                      SettingsActionButton(
+                          label = "Change Password",
+                          description = "Update your account password",
+                          icon = Icons.Default.Key,
+                          backgroundColor = Color(0xFF667eea),
+                          contentColor = Color.White,
+                          onAction = onNavigateToChangePassword,
+                          testTag = "changePasswordButton")
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                      Spacer(modifier = Modifier.height(12.dp))
+                    }
 
                     // Logout Button
                     SettingsActionButton(
