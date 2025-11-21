@@ -153,4 +153,16 @@ class EventRadiusBoundsCalculatorTest {
         "High latitude should have larger lng difference (got low=$lngDiffLow, high=$lngDiffHigh)",
         lngDiffHigh > lngDiffLow)
   }
+
+  @Test
+  fun `calculateBoundsForRadius guards against pole division by zero`() {
+    val bounds = calculateBoundsForRadius(90.0, 10.0, 2.0)
+
+    val latDiff = bounds.northeast.latitude() - bounds.southwest.latitude()
+    val lngDiff = bounds.northeast.longitude() - bounds.southwest.longitude()
+
+    assertFalse("Latitude diff should be finite", latDiff.isNaN() || latDiff.isInfinite())
+    assertFalse("Longitude diff should be finite", lngDiff.isNaN() || lngDiff.isInfinite())
+    assertTrue(bounds.southwest.longitude() >= -180.0 && bounds.northeast.longitude() <= 180.0)
+  }
 }

@@ -5,6 +5,7 @@ import com.mapbox.geojson.Point
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
+import kotlin.math.abs
 import kotlin.math.max
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -225,7 +226,10 @@ fun calculateBoundsForRadius(
 ): CoordinateBounds {
   // Approximate degrees per km
   val latDegreePerKm = 1.0 / 111.0
-  val lngDegreePerKm = 1.0 / (111.0 * kotlin.math.cos(Math.toRadians(centerLat)))
+  val clampedLatForLongitude = centerLat.coerceIn(-89.9999, 89.9999)
+  val cosLat = abs(kotlin.math.cos(Math.toRadians(clampedLatForLongitude)))
+  val safeCosLat = max(1e-6, cosLat) // Prevent division by zero near the poles
+  val lngDegreePerKm = 1.0 / (111.0 * safeCosLat)
 
   // Calculate offsets
   val latOffset = radiusKm * latDegreePerKm
