@@ -309,6 +309,9 @@ fun MapScreen(
           initial = com.swent.mapin.model.network.ConnectivityState(isConnected = true))
   val isOffline = !connectivityState.isConnected
 
+  // Monitor download progress for offline maps
+  val downloadProgress by viewModel.downloadProgress.collectAsState()
+
   // Track viewport center to determine if in cached region
   var viewportCenter by remember { mutableStateOf<Point?>(null) }
   LaunchedEffect(mapViewportState) {
@@ -425,6 +428,11 @@ fun MapScreen(
         isOffline = isOffline,
         isInCachedRegion = isInCachedRegion,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
+
+    // Download progress indicator at bottom-center
+    DownloadProgressIndicator(
+        downloadProgress = downloadProgress,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
 
     // Overlays et contrôles au-dessus de la carte
     Box(

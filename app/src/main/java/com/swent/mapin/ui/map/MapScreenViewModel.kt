@@ -139,6 +139,13 @@ class MapScreenViewModel(
     }
   }
 
+  /** Offline download progress for user feedback */
+  val downloadProgress:
+      kotlinx.coroutines.flow.StateFlow<com.swent.mapin.ui.map.offline.DownloadProgress> =
+      eventBasedOfflineRegionManager?.downloadProgress
+          ?: kotlinx.coroutines.flow.MutableStateFlow(
+              com.swent.mapin.ui.map.offline.DownloadProgress.Idle)
+
   val bottomSheetState: BottomSheetState
     get() = bottomSheetStateController.state
 

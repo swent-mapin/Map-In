@@ -13,6 +13,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+/** Represents the download progress state for offline regions. */
+sealed class DownloadProgress {
+  /** No downloads in progress */
+  object Idle : DownloadProgress()
+
+  /** Downloading regions */
+  data class Downloading(val current: Int, val total: Int) : DownloadProgress()
+
+  /** All downloads complete */
+  object Complete : DownloadProgress()
+}
+
 /**
  * Manages automatic downloading of map tiles for saved and joined events.
  *
@@ -46,6 +58,10 @@ class EventBasedOfflineRegionManager(
 
   private var observerJob: Job? = null
   private val downloadedEventIds = mutableSetOf<String>()
+
+  private val _downloadProgress =
+      kotlinx.coroutines.flow.MutableStateFlow<DownloadProgress>(DownloadProgress.Idle)
+  val downloadProgress: kotlinx.coroutines.flow.StateFlow<DownloadProgress> = _downloadProgress
 
   /**
    * Starts observing saved and joined events for the given user.
@@ -103,13 +119,20 @@ class EventBasedOfflineRegionManager(
               "Only downloading first $maxRegions events.")
     }
 
+    // Filter out already downloaded events
+    val newEventsToDownload = eventsToDownload.filter { !downloadedEventIds.contains(it.uid) }
+
+    if (newEventsToDownload.isEmpty()) {
+      return
+    }
+
+    val totalToDownload = newEventsToDownload.size
+    var currentDownload = 0
+
     // Download sequentially to avoid canceling in-progress downloads
-    for (event in eventsToDownload) {
-      // Skip if already downloaded
-      if (downloadedEventIds.contains(event.uid)) {
-        Log.d(TAG, "Event ${event.uid} already downloaded, skipping")
-        continue
-      }
+    for (event in newEventsToDownload) {
+      currentDownload++
+      _downloadProgress.value = DownloadProgress.Downloading(currentDownload, totalToDownload)
 
       // Calculate 2km radius bounds
       val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
@@ -130,6 +153,9 @@ class EventBasedOfflineRegionManager(
             Log.e(TAG, "Failed to download region for event ${event.title}: $error")
           }
     }
+
+    // Mark as complete
+    _downloadProgress.value = DownloadProgress.Complete
   }
 
   /**
