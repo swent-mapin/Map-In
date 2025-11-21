@@ -38,6 +38,12 @@ class ConversationRepositoryFirestoreTest {
     repo = ConversationRepositoryFirestore(mockDb, mockAuth)
   }
 
+  private fun mockCompletedTask(doc: DocumentSnapshot?): Task<DocumentSnapshot> {
+    val tcs = TaskCompletionSource<DocumentSnapshot>()
+    tcs.setResult(doc)
+    return tcs.task
+  }
+
   @Test
   fun `getNewUid returns document id`() {
     val mockDocRef = mockk<DocumentReference>()
@@ -258,4 +264,50 @@ class ConversationRepositoryFirestoreTest {
           Assert.assertEquals(conversation.id, it.id)
         }
       }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns conversation when document exists`() = runTest {
+    val conversation = Conversation(id = "conv1", name = "Chat 1")
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(conversation, result)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when document does not exist`() = runTest {
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns null
+
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `getConversationById returns null when firestore throws exception`() = runTest {
+    val docRef = mockk<DocumentReference>()
+    every { docRef.get() } throws RuntimeException("Firestore error")
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    val result = repo.getConversationById("conv1")
+    assertEquals(null, result)
+  }
 }

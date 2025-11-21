@@ -1,5 +1,6 @@
 package com.swent.mapin.model.chat
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -92,5 +93,21 @@ class ConversationRepositoryFirestore(
         )
 
     conversationRef.set(conversationToSave).await()
+  }
+
+  /**
+   * Retrieves a single conversation by its ID.
+   *
+   * @param conversationId The ID of the conversation to fetch.
+   * @return The [Conversation] object if found, or null otherwise.
+   */
+  override suspend fun getConversationById(conversationId: String): Conversation? {
+    return try {
+      val docSnapshot = db.collection("conversations").document(conversationId).get().await()
+      docSnapshot.toObject(Conversation::class.java)
+    } catch (e: Exception) {
+      Log.e("ConversationRepo", "Failed to get conversation by id", e)
+      null
+    }
   }
 }
