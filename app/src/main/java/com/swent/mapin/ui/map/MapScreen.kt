@@ -322,27 +322,24 @@ fun MapScreen(
   }
 
   // Calculate if viewport center is within cached event radius
-  val isInCachedRegion =
-      androidx.compose.runtime
-          .derivedStateOf {
-            val center = viewportCenter
-            if (center == null) {
-              false
-            } else {
-              val cachedEvents =
-                  (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
-              cachedEvents.any { event ->
-                val distance =
-                    EventUtils.calculateHaversineDistance(
-                        com.google.firebase.firestore.GeoPoint(
-                            center.latitude(), center.longitude()),
-                        com.google.firebase.firestore.GeoPoint(
-                            event.location.latitude, event.location.longitude))
-                distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
-              }
-            }
-          }
-          .value
+  val isInCachedRegion by remember {
+    androidx.compose.runtime.derivedStateOf {
+      val center = viewportCenter
+      if (center == null) {
+        false
+      } else {
+        val cachedEvents = (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
+        cachedEvents.any { event ->
+          val distance =
+              EventUtils.calculateHaversineDistance(
+                  com.google.firebase.firestore.GeoPoint(center.latitude(), center.longitude()),
+                  com.google.firebase.firestore.GeoPoint(
+                      event.location.latitude, event.location.longitude))
+          distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
+        }
+      }
+    }
+  }
 
   // Determine if dark theme based on app setting
   val isSystemInDark = isSystemInDarkTheme()
