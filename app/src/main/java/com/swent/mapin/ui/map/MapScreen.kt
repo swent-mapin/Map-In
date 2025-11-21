@@ -105,6 +105,7 @@ import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.profile.ProfileViewModel
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -306,7 +307,7 @@ fun MapScreen(
   val connectivityService = remember { ConnectivityServiceProvider.getInstance(context) }
   val connectivityState by
       connectivityService.connectivityState.collectAsState(
-          initial = com.swent.mapin.model.network.ConnectivityState(isConnected = true))
+          initial = com.swent.mapin.model.network.ConnectivityState(isConnected = false))
   val isOffline = !connectivityState.isConnected
 
   // Track viewport center to determine if in cached region
@@ -314,6 +315,7 @@ fun MapScreen(
   LaunchedEffect(mapViewportState) {
     snapshotFlow { mapViewportState.cameraState }
         .filterNotNull()
+        .debounce(300) // Debounce to avoid excessive recalculations
         .collect { cameraState -> viewportCenter = cameraState.center }
   }
 
