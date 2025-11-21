@@ -101,6 +101,16 @@ class ChangePasswordViewModel(private val repository: ChangePasswordRepository) 
       hasErrors = true
     }
 
+    // Validate new password is different from current password
+    if (currentPassword.isNotBlank() &&
+        newPassword.isNotBlank() &&
+        currentPassword == newPassword) {
+      validationErrors =
+          validationErrors.copy(
+              newPasswordError = "New password must be different from current password")
+      hasErrors = true
+    }
+
     // Validate new password requirements
     if (newPassword.isBlank()) {
       validationErrors = validationErrors.copy(newPasswordError = "New password is required")
@@ -140,14 +150,6 @@ class ChangePasswordViewModel(private val repository: ChangePasswordRepository) 
       hasErrors = true
     }
 
-    // Validate new password is different from current
-    if (!hasErrors && currentPassword == newPassword) {
-      validationErrors =
-          validationErrors.copy(
-              newPasswordError = "New password must be different from current password")
-      hasErrors = true
-    }
-
     _state.value = _state.value.copy(validationErrors = validationErrors)
     return !hasErrors
   }
@@ -165,7 +167,9 @@ class ChangePasswordViewModel(private val repository: ChangePasswordRepository) 
       return
     }
 
-    _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+    _state.value =
+        _state.value.copy(
+            isLoading = true, errorMessage = null, validationErrors = ValidationErrors())
 
     viewModelScope.launch {
       val result =

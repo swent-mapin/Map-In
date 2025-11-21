@@ -1,7 +1,6 @@
 // Assisted by AI
 package com.swent.mapin.ui.settings
 
-import android.os.Parcelable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +55,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
-import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -67,73 +65,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.changepassword.ChangePasswordRepositoryProvider
-import kotlinx.parcelize.Parcelize
 
 /**
  * Custom semantic property to expose password visibility state. This allows tests and accessibility
  * services to detect whether the password is currently visible.
  */
 val PasswordVisibleKey = SemanticsPropertyKey<Boolean>("PasswordVisible")
-var SemanticsPropertyReceiver.passwordVisible by PasswordVisibleKey
-
-/**
- * Data class to hold password change form state. Survives configuration changes and process death
- * via Parcelable.
- */
-@Parcelize
-data class PasswordChangeState(
-    val currentPassword: String = "",
-    val newPassword: String = "",
-    val confirmNewPassword: String = "",
-    val currentPasswordVisible: Boolean = false,
-    val newPasswordVisible: Boolean = false,
-    val confirmPasswordVisible: Boolean = false,
-    val errorMessage: String? = null
-) : Parcelable
-
-/**
- * Validates password strength according to requirements:
- * - At least 8 characters
- * - Contains uppercase letter
- * - Contains lowercase letter
- * - Contains number
- * - Contains special character
- */
-private fun validatePasswordStrength(password: String): String? {
-  if (password.length < 8) return "Password must be at least 8 characters long"
-  if (!password.any { it.isUpperCase() })
-      return "Password must contain at least one uppercase letter"
-  if (!password.any { it.isLowerCase() })
-      return "Password must contain at least one lowercase letter"
-  if (!password.any { it.isDigit() }) return "Password must contain at least one number"
-  if (!password.any { !it.isLetterOrDigit() })
-      return "Password must contain at least one special character"
-  return null
-}
-
-/**
- * Validates the complete password change form. Returns error message if validation fails, null if
- * valid.
- */
-private fun validatePasswordForm(state: PasswordChangeState): String? {
-  if (state.currentPassword.isEmpty()) return "Current password is required"
-  if (state.newPassword.isEmpty()) return "New password is required"
-  if (state.confirmNewPassword.isEmpty()) return "Please confirm your new password"
-
-  validatePasswordStrength(state.newPassword)?.let {
-    return it
-  }
-
-  if (state.newPassword != state.confirmNewPassword) {
-    return "New password and confirmation do not match"
-  }
-
-  if (state.currentPassword == state.newPassword) {
-    return "New password must be different from current password"
-  }
-
-  return null
-}
 
 /**
  * Change Password screen allowing users to update their password.
