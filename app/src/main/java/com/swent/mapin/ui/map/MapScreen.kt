@@ -80,6 +80,7 @@ import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
@@ -103,7 +104,10 @@ import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
 import com.swent.mapin.ui.profile.ProfileViewModel
+import com.swent.mapin.util.EventUtils
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -301,6 +305,42 @@ fun MapScreen(
   val showStreetNames by preferencesRepository.showStreetNamesFlow.collectAsState(initial = true)
   val enable3DView by preferencesRepository.enable3DViewFlow.collectAsState(initial = true)
 
+  // Monitor connectivity state for offline indicator
+  val connectivityService = remember { ConnectivityServiceProvider.getInstance(context) }
+  val connectivityState by
+      connectivityService.connectivityState.collectAsState(
+          initial = com.swent.mapin.model.network.ConnectivityState(isConnected = false))
+  val isOffline = !connectivityState.isConnected
+
+  // Track viewport center to determine if in cached region
+  var viewportCenter by remember { mutableStateOf<Point?>(null) }
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .debounce(300) // Debounce to avoid excessive recalculations
+        .collect { cameraState -> viewportCenter = cameraState.center }
+  }
+
+  // Calculate if viewport center is within cached event radius
+  val isInCachedRegion by remember {
+    androidx.compose.runtime.derivedStateOf {
+      val center = viewportCenter
+      if (center == null) {
+        false
+      } else {
+        val cachedEvents = (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
+        cachedEvents.any { event ->
+          val distance =
+              EventUtils.calculateHaversineDistance(
+                  com.google.firebase.firestore.GeoPoint(center.latitude(), center.longitude()),
+                  com.google.firebase.firestore.GeoPoint(
+                      event.location.latitude, event.location.longitude))
+          distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
+        }
+      }
+    }
+  }
+
   // Determine if dark theme based on app setting
   val isSystemInDark = isSystemInDarkTheme()
   val isDarkTheme =
@@ -383,6 +423,19 @@ fun MapScreen(
             onEventClick(event)
           })
     }
+
+    // Offline indicator at top-right
+    OfflineIndicator(
+        isOffline = isOffline,
+        isInCachedRegion = isInCachedRegion,
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
+
+    // Download progress indicator below offline indicator
+    DownloadIndicator(
+        downloadingEvent = viewModel.downloadingEvent,
+        downloadProgress = viewModel.downloadProgress,
+        showDownloadComplete = viewModel.showDownloadComplete,
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
 
     // Overlays et contrôles au-dessus de la carte
     Box(

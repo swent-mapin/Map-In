@@ -2,7 +2,6 @@ package com.swent.mapin.ui.map.offline
 
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,7 +16,6 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventBasedOfflineRegionManagerTest {
 
-  private lateinit var mockEventRepository: EventRepository
   private lateinit var mockOfflineRegionManager: OfflineRegionManager
   private lateinit var mockConnectivityService: ConnectivityService
   private lateinit var manager: EventBasedOfflineRegionManager
@@ -27,7 +25,6 @@ class EventBasedOfflineRegionManagerTest {
 
   @Before
   fun setup() {
-    mockEventRepository = mockk(relaxed = true)
     mockOfflineRegionManager = mockk(relaxed = true)
     mockConnectivityService = mockk(relaxed = true)
 
@@ -46,7 +43,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `observeEvents triggers download when events are added and device is online`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
@@ -58,7 +54,7 @@ class EventBasedOfflineRegionManagerTest {
         }
 
     // Start observing
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     // Emit saved events
     val event1 =
@@ -81,12 +77,11 @@ class EventBasedOfflineRegionManagerTest {
 
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
         Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
@@ -106,7 +101,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `observeEvents combines saved and joined events without duplicates`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
@@ -117,7 +111,7 @@ class EventBasedOfflineRegionManagerTest {
           onComplete(Result.success(Unit))
         }
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
         Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
@@ -142,12 +136,11 @@ class EventBasedOfflineRegionManagerTest {
   fun `stopObserving cancels active downloads`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     manager.stopObserving()
 
@@ -158,7 +151,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `downloadRegionsForEvents respects max regions limit`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this,
@@ -187,7 +179,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `downloadRegionsForEvents skips already downloaded events`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
@@ -198,7 +189,7 @@ class EventBasedOfflineRegionManagerTest {
           onComplete(Result.success(Unit))
         }
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
         Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
@@ -224,7 +215,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `clearDownloadedEventIds clears the download record`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
@@ -235,7 +225,7 @@ class EventBasedOfflineRegionManagerTest {
           onComplete(Result.success(Unit))
         }
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
         Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
@@ -268,7 +258,6 @@ class EventBasedOfflineRegionManagerTest {
   fun `getDownloadedCount returns correct count`() = runTest {
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = this)
@@ -279,7 +268,7 @@ class EventBasedOfflineRegionManagerTest {
           onComplete(Result.success(Unit))
         }
 
-    manager.observeEvents("user123", savedEventsFlow, joinedEventsFlow)
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     assertEquals(0, manager.getDownloadedCount())
 
@@ -303,7 +292,6 @@ class EventBasedOfflineRegionManagerTest {
 
     manager =
         EventBasedOfflineRegionManager(
-            eventRepository = mockEventRepository,
             offlineRegionManager = mockOfflineRegionManager,
             connectivityService = mockConnectivityService,
             scope = kotlinx.coroutines.test.TestScope(),
