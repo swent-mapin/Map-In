@@ -658,15 +658,13 @@ class MapScreenViewModel(
   }
 
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
-    viewModelScope.launch {
-      // Save current sheet state before opening event detail
-      _sheetStateBeforeEvent = bottomSheetState
-      _selectedEvent = event
-      _organizerName = "User ${event.ownerId.take(6)}"
-      setBottomSheetState(BottomSheetState.MEDIUM)
+    // Save current sheet state before opening event detail
+    _sheetStateBeforeEvent = bottomSheetState
+    _selectedEvent = event
+    _organizerName = "User ${event.ownerId.take(6)}"
+    setBottomSheetState(BottomSheetState.MEDIUM)
 
-      cameraController.centerOnEvent(event, forceZoom)
-    }
+    viewModelScope.launch { cameraController.centerOnEvent(event, forceZoom) }
   }
 
   /**
@@ -679,6 +677,8 @@ class MapScreenViewModel(
     wasEditingBeforeEvent = searchStateController.clearSearchOnExitFull
     searchStateController.saveRecentEvent(event.uid, event.title)
     searchStateController.markSearchCommitted()
+    // Clear focus to hide keyboard before showing event detail
+    clearSearchFieldFocus()
     onEventPinClicked(event, forceZoom = true)
   }
 
