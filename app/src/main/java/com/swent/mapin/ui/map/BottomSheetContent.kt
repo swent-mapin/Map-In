@@ -32,6 +32,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,8 @@ import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
+import com.swent.mapin.ui.event.EditEventScreen
+import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSection
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -70,7 +73,8 @@ import com.swent.mapin.ui.profile.ProfileViewModel
 enum class BottomSheetScreen {
   MAIN_CONTENT,
   MEMORY_FORM,
-  ADD_EVENT
+  ADD_EVENT,
+  EDIT_EVENT
 }
 
 // Animation constants for consistent transitions
@@ -157,6 +161,8 @@ fun BottomSheetContent(
     onCreateEventDone: () -> Unit = {},
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onTabEventClick: (Event) -> Unit = {},
+    onEditEvent: (Event) -> Unit = {},
+    onEditEventDone: () -> Unit = {},
     // Profile/Filters support
     avatarUrl: String? = null,
     onProfileClick: () -> Unit = {},
@@ -204,8 +210,19 @@ fun BottomSheetContent(
             AddEventScreen(
                 modifier = Modifier.testTag(AddEventScreenTestTags.SCREEN),
                 eventViewModel = eventViewModel,
+                locationViewModel = locationViewModel,
                 onCancel = onCreateEventDone,
                 onDone = onCreateEventDone)
+          }
+          BottomSheetScreen.EDIT_EVENT -> {
+            val eventToEdit by eventViewModel.eventToEdit.collectAsState()
+            EditEventScreen(
+                modifier = Modifier.testTag(EditEventScreenTestTags.SCREEN),
+                eventViewModel = eventViewModel,
+                locationViewModel = locationViewModel,
+                event = eventToEdit ?: Event(),
+                onCancel = onEditEventDone,
+                onDone = onEditEventDone)
           }
           BottomSheetScreen.MAIN_CONTENT -> {
             var showAllRecents by remember { mutableStateOf(false) }
@@ -357,6 +374,7 @@ fun BottomSheetContent(
                                         loading = ownedLoading,
                                         error = ownedError,
                                         onEventClick = onTabEventClick,
+                                        onEditEvent = onEditEvent,
                                         onRetry = onRetryOwnedEvents)
                                   }
                                 }

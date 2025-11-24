@@ -130,8 +130,10 @@ fun MapScreen(
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
-  val eventViewModel =
-      EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
+  val eventViewModel = remember {
+    EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
+  }
+
   val snackbarHostState = remember { SnackbarHostState() }
   val density = LocalDensity.current
   val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
@@ -515,6 +517,14 @@ fun MapScreen(
                         // search mode
                         viewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
+                      },
+                      onEditEvent = { event ->
+                        eventViewModel.selectEventToEdit(event)
+                        viewModel.showEditEventForm()
+                      },
+                      onEditEventDone = {
+                        eventViewModel.clearEventToEdit()
+                        viewModel.onEditEventCancel()
                       },
                       onCreateMemoryClick = viewModel::showMemoryFormForEvent,
                       onCreateEventClick = viewModel::showAddEventForm,

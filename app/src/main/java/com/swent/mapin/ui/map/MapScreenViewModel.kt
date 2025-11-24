@@ -617,6 +617,17 @@ class MapScreenViewModel(
     _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
   }
 
+  fun showEditEventForm() {
+    _previousSheetState = bottomSheetState
+    _showMemoryForm = false
+    _currentBottomSheetScreen = BottomSheetScreen.EDIT_EVENT
+    setBottomSheetState(BottomSheetState.FULL)
+  }
+
+  fun hideEditEventForm() {
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+  }
+
   fun onMemorySave(formData: MemoryFormData) {
     memoryActionController.saveMemory(formData)
   }
@@ -628,6 +639,11 @@ class MapScreenViewModel(
 
   fun onAddEventCancel() {
     hideAddEventForm()
+    restorePreviousSheetState()
+  }
+
+  fun onEditEventCancel() {
+    hideEditEventForm()
     restorePreviousSheetState()
   }
 

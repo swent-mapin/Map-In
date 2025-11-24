@@ -31,6 +31,17 @@ class EventViewModel(
     }
   }
 
+  private val _eventToEdit = MutableStateFlow<Event?>(null)
+  val eventToEdit = _eventToEdit.asStateFlow()
+
+  fun selectEventToEdit(event: Event) {
+    _eventToEdit.value = event
+  }
+
+  fun clearEventToEdit() {
+    _eventToEdit.value = null
+  }
+
   fun editEvent(eventID: String, event: Event) {
     viewModelScope.launch {
       try {

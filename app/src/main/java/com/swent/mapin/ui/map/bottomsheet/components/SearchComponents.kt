@@ -8,8 +8,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,7 +79,8 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -113,25 +117,56 @@ fun SearchResultsSection(
 
   // Show search results
   LazyColumn(modifier = modifier.fillMaxWidth()) {
-    items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
+    items(results) { event ->
+      SearchResultItem(
+          event = event, onClick = { onEventClick(event) }, onEditEvent = { onEditEvent(event) })
+    }
 
     item { Spacer(modifier = Modifier.height(8.dp)) }
   }
 }
 
 @Composable
-fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+fun SearchResultItem(
+    event: Event,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
+) {
   Column(
       modifier =
           modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text(
-                  text = event.title,
-                  style = MaterialTheme.typography.bodyLarge,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis)
+              Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = event.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = "Edit event",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier =
+                            Modifier.padding(start = 12.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(8.dp))
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .clickable(
+                                    // Prevents click propagation to the whole row
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = LocalIndication.current,
+                                    onClick = { onEditEvent(event) }))
+                  }
 
               if (event.location.name.isNotBlank()) {
                 Text(
