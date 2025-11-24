@@ -21,7 +21,13 @@ data class Badge(
     val rarity: BadgeRarity,
     val isUnlocked: Boolean = false,
     val progress: Float = 0f // 0.0 to 1.0
-)
+) {
+  init {
+    require(progress in 0f..1f) {
+      "Progress must be between 0.0 and 1.0, but was $progress"
+    }
+  }
+}
 
 /**
  * Badge rarity levels.
