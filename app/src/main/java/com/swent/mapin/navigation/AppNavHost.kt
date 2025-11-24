@@ -20,7 +20,8 @@ import com.swent.mapin.ui.settings.SettingsScreen
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
-    renderMap: Boolean = true // Set to false in instrumented tests to skip Mapbox rendering
+    renderMap: Boolean = true, // Set to false in instrumented tests to skip Mapbox rendering
+    deepLinkEventId: String? = null
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
@@ -41,7 +42,8 @@ fun AppNavHost(
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
-          renderMap = renderMap)
+          renderMap = renderMap,
+          deepLinkEventId = deepLinkEventId)
     }
 
     composable(Route.Profile.route) {

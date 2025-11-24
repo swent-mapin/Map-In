@@ -37,6 +37,8 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
     private const val MESSAGE_CHANNEL_NAME = "Messages"
     private const val ALERT_CHANNEL_ID = "mapin_alert_notifications"
     private const val ALERT_CHANNEL_NAME = "Alerts"
+    const val OFFLINE_DOWNLOAD_CHANNEL_ID = "mapin_offline_download"
+    const val OFFLINE_DOWNLOAD_CHANNEL_NAME = "Offline Map Downloads"
   }
 
   // FCM Token Manager for saving tokens to Firestore
@@ -240,12 +242,21 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
                   ALERT_CHANNEL_ID, ALERT_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
               .apply { description = "Important alerts and system notifications" }
 
+      // Offline download channel
+      val offlineDownloadChannel =
+          NotificationChannel(
+                  OFFLINE_DOWNLOAD_CHANNEL_ID,
+                  OFFLINE_DOWNLOAD_CHANNEL_NAME,
+                  NotificationManager.IMPORTANCE_LOW)
+              .apply { description = "Offline map download progress and completion" }
+
       // Register all channels
       notificationManager.createNotificationChannel(defaultChannel)
       notificationManager.createNotificationChannel(friendChannel)
       notificationManager.createNotificationChannel(eventChannel)
       notificationManager.createNotificationChannel(messageChannel)
       notificationManager.createNotificationChannel(alertChannel)
+      notificationManager.createNotificationChannel(offlineDownloadChannel)
     }
   }
 

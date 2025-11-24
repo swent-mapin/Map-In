@@ -38,6 +38,12 @@ class MainActivity : ComponentActivity() {
     // Initialize LocalEventRepository
     // EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
 
+    // Check if opened from notification with event deep link
+    val eventIdFromIntent =
+        intent
+            ?.takeIf { it.getBooleanExtra("open_event_detail", false) }
+            ?.getStringExtra("event_id")
+
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
       // Cache the theme mode flow collection to prevent repeated DataStore reads
@@ -56,8 +62,13 @@ class MainActivity : ComponentActivity() {
       MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn)
+        AppNavHost(isLoggedIn = isLoggedIn, deepLinkEventId = eventIdFromIntent)
       }
     }
+  }
+
+  override fun onNewIntent(intent: android.content.Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 }

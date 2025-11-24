@@ -1394,23 +1394,4 @@ class MapScreenViewModelTest {
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
     assertTrue(viewModel.searchQuery.isEmpty())
   }
-
-  @Test
-  fun downloadState_hasCorrectInitialValues() {
-    assertNull(viewModel.downloadingEvent)
-    assertEquals(0f, viewModel.downloadProgress, 0.01f)
-    assertFalse(viewModel.showDownloadComplete)
-  }
-
-  @Test
-  fun clearDownloadComplete_setsShowDownloadCompleteToFalse() = runTest {
-    // Initially false
-    assertFalse(viewModel.showDownloadComplete)
-
-    // Call clearDownloadComplete
-    viewModel.clearDownloadComplete()
-
-    // Should still be false
-    assertFalse(viewModel.showDownloadComplete)
-  }
 }

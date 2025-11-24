@@ -120,9 +120,10 @@ class NotificationBackgroundManagerTest {
       assertTrue("Event channel exists", channelIds.contains("mapin_event_notifications"))
       assertTrue("Message channel exists", channelIds.contains("mapin_message_notifications"))
       assertTrue("Alert channel exists", channelIds.contains("mapin_alert_notifications"))
+      assertTrue("Offline download channel exists", channelIds.contains("mapin_offline_download"))
 
-      // Verify we have exactly 5 channels
-      assertEquals("Should create exactly 5 notification channels", 5, channels.size)
+      // Verify we have exactly 6 channels
+      assertEquals("Should create exactly 6 notification channels", 6, channels.size)
     }
   }
 
@@ -461,9 +462,10 @@ class NotificationBackgroundManagerTest {
       assertTrue("Event channel exists", channelIds.contains("mapin_event_notifications"))
       assertTrue("Message channel exists", channelIds.contains("mapin_message_notifications"))
       assertTrue("Alert channel exists", channelIds.contains("mapin_alert_notifications"))
+      assertTrue("Offline download channel exists", channelIds.contains("mapin_offline_download"))
 
-      // Verify we have exactly 5 channels
-      assertEquals(5, channels.size)
+      // Verify we have exactly 6 channels
+      assertEquals(6, channels.size)
     }
   }
 

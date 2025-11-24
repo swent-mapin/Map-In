@@ -123,7 +123,8 @@ fun MapScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    deepLinkEventId: String? = null
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -134,6 +135,11 @@ fun MapScreen(
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
+
+  // Handle deep link event opening
+  LaunchedEffect(deepLinkEventId) {
+    deepLinkEventId?.let { eventId -> viewModel.openEventFromDeepLink(eventId) }
+  }
   val eventViewModel =
       EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
   val snackbarHostState = remember { SnackbarHostState() }
@@ -429,13 +435,6 @@ fun MapScreen(
         isOffline = isOffline,
         isInCachedRegion = isInCachedRegion,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
-
-    // Download progress indicator below offline indicator
-    DownloadIndicator(
-        downloadingEvent = viewModel.downloadingEvent,
-        downloadProgress = viewModel.downloadProgress,
-        showDownloadComplete = viewModel.showDownloadComplete,
-        modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
 
     // Overlays et contrôles au-dessus de la carte
     Box(

@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +36,7 @@ import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
 import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
+import com.swent.mapin.ui.map.offline.OfflineDownloadNotificationHelper
 import com.swent.mapin.ui.map.offline.OfflineRegionManager
 import com.swent.mapin.ui.map.offline.TileStoreManagerProvider
 import com.swent.mapin.ui.map.search.RecentItem
@@ -125,6 +125,10 @@ class MapScreenViewModel(
     OfflineRegionManager(tileStore, connectivityFlow)
   }
 
+  private val offlineDownloadNotificationHelper by lazy {
+    OfflineDownloadNotificationHelper(applicationContext)
+  }
+
   private val eventBasedOfflineRegionManager: EventBasedOfflineRegionManager? by lazy {
     if (!enableEventBasedDownloads) {
       Log.d("MapScreenViewModel", "Event-based downloads disabled")
@@ -135,24 +139,12 @@ class MapScreenViewModel(
           offlineRegionManager = offlineRegionManager,
           connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
           scope = viewModelScope,
-          onDownloadStart = { event ->
-            _downloadingEvent = event
-            _downloadProgress = 0f
+          onDownloadStart = { event -> offlineDownloadNotificationHelper.showProgress(event, 0f) },
+          onDownloadProgress = { event, progress ->
+            offlineDownloadNotificationHelper.showProgress(event, progress)
           },
-          onDownloadProgress = { _, progress -> _downloadProgress = progress },
-          onDownloadComplete = { _, result ->
-            _downloadingEvent = null
-            _downloadProgress = 0f
-            result.onSuccess {
-              _showDownloadComplete = true
-              // Auto-clear after 3 seconds
-              downloadCompleteDismissJob?.cancel()
-              downloadCompleteDismissJob =
-                  viewModelScope.launch {
-                    kotlinx.coroutines.delay(3000)
-                    _showDownloadComplete = false
-                  }
-            }
+          onDownloadComplete = { event, result ->
+            result.onSuccess { offlineDownloadNotificationHelper.showComplete(event) }
           })
     } catch (e: Exception) {
       Log.w("MapScreenViewModel", "EventBasedOfflineRegionManager not available", e)
@@ -243,19 +235,6 @@ class MapScreenViewModel(
 
   val isSavingMemory: Boolean
     get() = memoryActionController.isSavingMemory
-
-  // Download progress state
-  private var _downloadingEvent by mutableStateOf<Event?>(null)
-  val downloadingEvent: Event?
-    get() = _downloadingEvent
-
-  private var _downloadProgress by mutableFloatStateOf(0f)
-  val downloadProgress: Float
-    get() = _downloadProgress
-
-  private var _showDownloadComplete by mutableStateOf(false)
-  val showDownloadComplete: Boolean
-    get() = _showDownloadComplete
 
   // Event catalog for memory linking
   val availableEvents: List<Event>
@@ -592,11 +571,6 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
-  /** Clears the download completion message. */
-  fun clearDownloadComplete() {
-    _showDownloadComplete = false
-  }
-
   /** Loads the current user's avatar URL from their profile. */
   fun loadUserProfile() {
     val uid = auth.currentUser?.uid
@@ -738,6 +712,18 @@ class MapScreenViewModel(
       // Recent events are always committed searches (not editing)
       wasEditingBeforeEvent = false
       searchStateController.markSearchCommitted()
+      onEventPinClicked(event, forceZoom = true)
+    }
+  }
+
+  /**
+   * Opens an event detail by ID (used for deep links from notifications).
+   *
+   * @param eventId The event ID to open
+   */
+  fun openEventFromDeepLink(eventId: String) {
+    val event = eventStateController.allEvents.find { it.uid == eventId }
+    if (event != null) {
       onEventPinClicked(event, forceZoom = true)
     }
   }
