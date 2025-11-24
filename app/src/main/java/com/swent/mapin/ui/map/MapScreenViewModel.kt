@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +45,7 @@ import com.swent.mapin.ui.memory.MemoryActionController
 import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -77,6 +79,7 @@ class MapScreenViewModel(
   }
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
+  private var downloadCompleteDismissJob: Job? = null
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
@@ -129,10 +132,28 @@ class MapScreenViewModel(
     }
     try {
       EventBasedOfflineRegionManager(
-          eventRepository = eventRepository,
           offlineRegionManager = offlineRegionManager,
           connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
-          scope = viewModelScope)
+          scope = viewModelScope,
+          onDownloadStart = { event ->
+            _downloadingEvent = event
+            _downloadProgress = 0f
+          },
+          onDownloadProgress = { _, progress -> _downloadProgress = progress },
+          onDownloadComplete = { _, result ->
+            _downloadingEvent = null
+            _downloadProgress = 0f
+            result.onSuccess {
+              _showDownloadComplete = true
+              // Auto-clear after 3 seconds
+              downloadCompleteDismissJob?.cancel()
+              downloadCompleteDismissJob =
+                  viewModelScope.launch {
+                    kotlinx.coroutines.delay(3000)
+                    _showDownloadComplete = false
+                  }
+            }
+          })
     } catch (e: Exception) {
       Log.w("MapScreenViewModel", "EventBasedOfflineRegionManager not available", e)
       null
@@ -222,6 +243,19 @@ class MapScreenViewModel(
 
   val isSavingMemory: Boolean
     get() = memoryActionController.isSavingMemory
+
+  // Download progress state
+  private var _downloadingEvent by mutableStateOf<Event?>(null)
+  val downloadingEvent: Event?
+    get() = _downloadingEvent
+
+  private var _downloadProgress by mutableFloatStateOf(0f)
+  val downloadProgress: Float
+    get() = _downloadProgress
+
+  private var _showDownloadComplete by mutableStateOf(false)
+  val showDownloadComplete: Boolean
+    get() = _showDownloadComplete
 
   // Event catalog for memory linking
   val availableEvents: List<Event>
@@ -361,7 +395,6 @@ class MapScreenViewModel(
         val userId = auth.currentUser?.uid ?: return@launch
 
         manager.observeEvents(
-            userId = userId,
             onSavedEventsFlow = eventStateController.savedEventsFlow,
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
@@ -550,6 +583,11 @@ class MapScreenViewModel(
     _errorMessage = null
   }
 
+  /** Clears the download completion message. */
+  fun clearDownloadComplete() {
+    _showDownloadComplete = false
+  }
+
   /** Loads the current user's avatar URL from their profile. */
   fun loadUserProfile() {
     val uid = auth.currentUser?.uid
@@ -655,6 +693,7 @@ class MapScreenViewModel(
     try {
       offlineRegionManager.cancelActiveDownload()
       eventBasedOfflineRegionManager?.stopObserving()
+      downloadCompleteDismissJob?.cancel()
     } catch (e: Exception) {
       Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
     }
@@ -674,15 +713,13 @@ class MapScreenViewModel(
   }
 
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
-    viewModelScope.launch {
-      // Save current sheet state before opening event detail
-      _sheetStateBeforeEvent = bottomSheetState
-      _selectedEvent = event
-      _organizerName = "User ${event.ownerId.take(6)}"
-      setBottomSheetState(BottomSheetState.MEDIUM)
+    // Save current sheet state before opening event detail
+    _sheetStateBeforeEvent = bottomSheetState
+    _selectedEvent = event
+    _organizerName = "User ${event.ownerId.take(6)}"
+    setBottomSheetState(BottomSheetState.MEDIUM)
 
-      cameraController.centerOnEvent(event, forceZoom)
-    }
+    viewModelScope.launch { cameraController.centerOnEvent(event, forceZoom) }
   }
 
   /**
@@ -695,6 +732,8 @@ class MapScreenViewModel(
     wasEditingBeforeEvent = searchStateController.clearSearchOnExitFull
     searchStateController.saveRecentEvent(event.uid, event.title)
     searchStateController.markSearchCommitted()
+    // Clear focus to hide keyboard before showing event detail
+    clearSearchFieldFocus()
     onEventPinClicked(event, forceZoom = true)
   }
 
