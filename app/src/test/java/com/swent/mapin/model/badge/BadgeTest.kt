@@ -124,4 +124,79 @@ class BadgeTest {
     assertEquals("Profile Pro", profile!!.title)
     assertEquals(0.2f, profile.progress, 0.0f)
   }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `progress below zero throws exception`() {
+    val icon = mockk<ImageVector>()
+    Badge(
+        id = "invalid",
+        title = "Invalid",
+        description = "Should fail",
+        icon = icon,
+        rarity = BadgeRarity.COMMON,
+        progress = -0.1f)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `progress above one throws exception`() {
+    val icon = mockk<ImageVector>()
+    Badge(
+        id = "invalid",
+        title = "Invalid",
+        description = "Should fail",
+        icon = icon,
+        rarity = BadgeRarity.COMMON,
+        progress = 1.1f)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `progress far below zero throws exception`() {
+    val icon = mockk<ImageVector>()
+    Badge(
+        id = "invalid",
+        title = "Invalid",
+        description = "Should fail",
+        icon = icon,
+        rarity = BadgeRarity.COMMON,
+        progress = -100f)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun `progress far above one throws exception`() {
+    val icon = mockk<ImageVector>()
+    Badge(
+        id = "invalid",
+        title = "Invalid",
+        description = "Should fail",
+        icon = icon,
+        rarity = BadgeRarity.COMMON,
+        progress = 100f)
+  }
+
+  @Test
+  fun `progress exactly at boundaries is valid`() {
+    val icon = mockk<ImageVector>()
+
+    // 0f should be valid
+    val atZero =
+        Badge(
+            id = "zero",
+            title = "Zero",
+            description = "At zero",
+            icon = icon,
+            rarity = BadgeRarity.COMMON,
+            progress = 0f)
+    assertEquals(0f, atZero.progress, 0.0f)
+
+    // 1f should be valid
+    val atOne =
+        Badge(
+            id = "one",
+            title = "One",
+            description = "At one",
+            icon = icon,
+            rarity = BadgeRarity.COMMON,
+            progress = 1f)
+    assertEquals(1f, atOne.progress, 0.0f)
+  }
 }
