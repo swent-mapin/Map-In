@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.badge.SampleBadges
 
 // Assisted by AI
 
@@ -310,6 +311,11 @@ internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileView
           }
         }
       }
+
+  Spacer(modifier = Modifier.height(16.dp))
+
+  // Badges Section
+  BadgesSection(badges = SampleBadges.getSampleBadges())
 }
 
 /** Reusable card component for displaying profile information. */
