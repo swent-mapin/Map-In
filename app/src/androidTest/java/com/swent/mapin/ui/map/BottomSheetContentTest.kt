@@ -16,7 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
-import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -240,7 +240,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
+    val testEvents = LocalEventList.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
     rule.onNodeWithText("Joined Events").performClick()
@@ -257,7 +257,7 @@ class BottomSheetContentTest {
 
   @Test
   fun joinedEventsTab_handlesEventInteractions() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventList.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -275,7 +275,7 @@ class BottomSheetContentTest {
 
   @Test
   fun tabSwitch_betweenSavedEventsAndJoinedEvents() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventList.defaultSampleEvents().take(1)
     var currentTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS
 
     rule.setContent {
@@ -366,7 +366,7 @@ class BottomSheetContentTest {
 
   @Test
   fun noResultsMessage_doesNotDisplayWhenSearchResultsExist() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventList.defaultSampleEvents().take(1)
     rule.setContent { TestContentWithSearch(query = "test", searchResults = testEvents) }
 
     rule.waitForIdle()
@@ -400,7 +400,7 @@ class BottomSheetContentTest {
 
   @Test
   fun savedEventsTab_displaysMultipleEventsWithAllData() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(3)
+    val testEvents = LocalEventList.defaultSampleEvents().take(3)
     rule.setContent { SavedEventsContent(events = testEvents) }
     rule.waitForIdle()
 
@@ -432,7 +432,7 @@ class BottomSheetContentTest {
 
   @Test
   fun savedEventsTab_handlesEventInteractions() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(1)
+    val testEvents = LocalEventList.defaultSampleEvents().take(1)
     var clickedEvent: Event? = null
 
     rule.setContent {
@@ -450,7 +450,7 @@ class BottomSheetContentTest {
   @Test
   fun savedEventsTab_showMoreAndShowLessToggle() {
     // >3 events so EventsSection shows the "Show more" control
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(5)
+    val testEvents = LocalEventList.defaultSampleEvents().take(5)
     rule.setContent { SavedEventsContent(events = testEvents) }
     rule.waitForIdle()
 
@@ -499,8 +499,8 @@ class BottomSheetContentTest {
 
   @Test
   fun tabSwitch_startOnSaved_thenSwitchToJoined_showsJoinedContent() {
-    val saved = LocalEventRepository.defaultSampleEvents().take(1)
-    val joined = LocalEventRepository.defaultSampleEvents().drop(1).take(1)
+    val saved = LocalEventList.defaultSampleEvents().take(1)
+    val joined = LocalEventList.defaultSampleEvents().drop(1).take(1)
 
     rule.setContent {
       MaterialTheme {
@@ -711,7 +711,7 @@ class BottomSheetContentTest {
 
   @Test
   fun searchMode_withQuery_showsResults() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+    val testEvents = LocalEventList.defaultSampleEvents().take(2)
 
     rule.setContent { SearchModeContent(query = "concert", searchResults = testEvents) }
 
@@ -739,7 +739,7 @@ class BottomSheetContentTest {
   @Test
   fun searchResultsSection_withResults_displaysEventsAndHandlesClick() {
     var clickedEvent: Event? = null
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+    val testEvents = LocalEventList.defaultSampleEvents().take(2)
 
     rule.setContent {
       SearchModeContent(
@@ -762,7 +762,7 @@ class BottomSheetContentTest {
   @Test
   fun recentItemsSection_withClickedEvent_displaysAndHandlesClick() {
     var clickedEventId = ""
-    val testEvent = LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
     val recentItems = listOf(RecentItem.ClickedEvent(testEvent.uid, testEvent.title))
 
     rule.setContent {
@@ -916,7 +916,7 @@ class BottomSheetContentTest {
 
   @Test
   fun memoryFormScreen_displaysWhenCurrentScreenIsMemoryForm() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(2)
+    val testEvents = LocalEventList.defaultSampleEvents().take(2)
 
     rule.setContent {
       MaterialTheme {
@@ -1260,7 +1260,7 @@ class BottomSheetContentTest {
 
   @Test
   fun ownedEvents_list_showsItems_showMore_and_handlesClick() {
-    val testEvents = LocalEventRepository.defaultSampleEvents().take(4)
+    val testEvents = LocalEventList.defaultSampleEvents().take(4)
     var clicked: Event? = null
 
     rule.setContent { OwnedEventsContent(events = testEvents, onTabEventClick = { clicked = it }) }
