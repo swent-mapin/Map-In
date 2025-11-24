@@ -208,7 +208,7 @@ class EventBasedOfflineRegionManager(
                   Log.d(
                       TAG,
                       "Detected ${removedEventIds.size} removed/finished events, deleting regions")
-                  deleteRegionsForEvents(removedEventIds, activeEvents)
+                  deleteRegionsForEvents(removedEventIds)
                 }
 
                 // Update previous state for next iteration
@@ -248,9 +248,8 @@ class EventBasedOfflineRegionManager(
    * Deletes tile regions for the given event IDs.
    *
    * @param eventIds Set of event IDs to delete regions for
-   * @param allEvents All current events (not used, kept for consistency)
    */
-  private fun deleteRegionsForEvents(eventIds: Set<String>, allEvents: List<Event>) {
+  private fun deleteRegionsForEvents(eventIds: Set<String>) {
     scope.launch {
       for (eventId in eventIds) {
         // Get stored location for this event
@@ -289,7 +288,7 @@ class EventBasedOfflineRegionManager(
    *
    * @param event The event to delete the region for
    */
-  suspend fun deleteRegionForEvent(event: Event) {
+  fun deleteRegionForEvent(event: Event) {
     val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
 
     Log.d(TAG, "Deleting region for event: ${event.title}")
