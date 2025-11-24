@@ -259,7 +259,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -293,7 +293,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -319,7 +319,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -354,7 +354,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -569,7 +569,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
