@@ -248,7 +248,11 @@ class SignInViewModel(context: Context) : ViewModel() {
    *
    * Validation rules:
    * - Both email and password must be non-empty.
-   * - Password must be at least 6 characters long.
+   * - Password must be at least 8 characters long.
+   * - Password must contain at least one uppercase letter.
+   * - Password must contain at least one lowercase letter.
+   * - Password must contain at least one number.
+   * - Password must contain at least one special character.
    *
    * Error handling:
    * - If validation fails, sets an appropriate error message in the UI state.
@@ -263,8 +267,33 @@ class SignInViewModel(context: Context) : ViewModel() {
       return
     }
 
-    if (password.length < 6) {
-      _uiState.value = _uiState.value.copy(errorMessage = "Password must be at least 6 characters")
+    // Validate password requirements
+    if (password.length < 8) {
+      _uiState.value = _uiState.value.copy(errorMessage = "Password must be at least 8 characters")
+      return
+    }
+
+    if (!password.any { it.isUpperCase() }) {
+      _uiState.value =
+          _uiState.value.copy(errorMessage = "Password must contain at least one uppercase letter")
+      return
+    }
+
+    if (!password.any { it.isLowerCase() }) {
+      _uiState.value =
+          _uiState.value.copy(errorMessage = "Password must contain at least one lowercase letter")
+      return
+    }
+
+    if (!password.any { it.isDigit() }) {
+      _uiState.value =
+          _uiState.value.copy(errorMessage = "Password must contain at least one number")
+      return
+    }
+
+    if (!password.any { !it.isLetterOrDigit() }) {
+      _uiState.value =
+          _uiState.value.copy(errorMessage = "Password must contain at least one special character")
       return
     }
 
