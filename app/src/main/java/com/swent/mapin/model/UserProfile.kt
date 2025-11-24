@@ -1,5 +1,7 @@
 package com.swent.mapin.model
 
+import com.swent.mapin.model.badge.Badge
+
 /**
  * Data class representing a user's profile information.
  *
@@ -16,6 +18,7 @@ package com.swent.mapin.model
  * @property savedEventIds List of event IDs the user has saved/bookmarked
  * @property ownedEventIds List of event IDs the user has created/organizes
  * @property fcmToken Firebase Cloud Messaging token for push notifications (optional)
+ * @property badges List of user-specific badges with progress and unlock status
  */
 data class UserProfile(
     val userId: String = "",
@@ -30,5 +33,6 @@ data class UserProfile(
     val joinedEventIds: List<String> = emptyList(),
     val savedEventIds: List<String> = emptyList(),
     val ownedEventIds: List<String> = emptyList(),
-    val fcmToken: String? = null
+    val fcmToken: String? = null,
+    val badges: List<Badge> = emptyList()
 )
