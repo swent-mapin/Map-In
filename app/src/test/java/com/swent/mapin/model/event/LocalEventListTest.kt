@@ -4,6 +4,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
+private const val EVENT_LIST_SIZE = 50
+
 class LocalEventListTest {
 
   // ---------------------------------------------------------------------
@@ -28,7 +30,7 @@ class LocalEventListTest {
   @Test
   fun defaultSampleEvents_containsAllDefaultEvents() {
     val events = LocalEventList.defaultSampleEvents()
-    assertEquals(50, events.size)
+    assertEquals(EVENT_LIST_SIZE, events.size)
   }
 
   @Test
