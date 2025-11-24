@@ -315,9 +315,7 @@ internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileView
   Spacer(modifier = Modifier.height(16.dp))
 
   // Badges Section - use dynamic badges from user profile, fallback to sample badges for demo
-  BadgesSection(
-      badges = userProfile.badges.ifEmpty { SampleBadges.getSampleBadges() }
-  )
+  BadgesSection(badges = userProfile.badges.ifEmpty { SampleBadges.getSampleBadges() })
 }
 
 /** Reusable card component for displaying profile information. */
