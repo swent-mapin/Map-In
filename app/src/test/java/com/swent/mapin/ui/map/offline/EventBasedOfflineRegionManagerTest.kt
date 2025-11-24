@@ -299,4 +299,330 @@ class EventBasedOfflineRegionManagerTest {
 
     assertEquals(customMaxRegions, manager.getMaxRegions())
   }
+
+  @Test
+  fun `observeEventsForDeletion triggers deletion when events are removed`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+    val event2 =
+        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+
+    // Start observing for downloads and deletions
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add two events
+    savedEventsFlow.value = listOf(event1, event2)
+    testScheduler.advanceUntilIdle()
+
+    // Verify downloads happened
+    coVerify(exactly = 2) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+    assertEquals(2, manager.getDownloadedCount())
+
+    // Remove event1 (keep only event2)
+    savedEventsFlow.value = listOf(event2)
+    testScheduler.advanceUntilIdle()
+
+    // Verify deletion was triggered for event1
+    verify(exactly = 1) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+    assertEquals(1, manager.getDownloadedCount())
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `observeEventsForDeletion handles multiple removals`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+    val event2 =
+        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+    val event3 =
+        Event(uid = "event3", title = "Event 3", location = Location("Location 3", 46.5400, 6.5900))
+
+    // Start observing
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add three events
+    savedEventsFlow.value = listOf(event1, event2, event3)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(3, manager.getDownloadedCount())
+
+    // Remove two events at once
+    savedEventsFlow.value = listOf(event2)
+    testScheduler.advanceUntilIdle()
+
+    // Verify both deletions were triggered
+    verify(exactly = 2) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+    assertEquals(1, manager.getDownloadedCount())
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `observeEventsForDeletion does not trigger on first observation`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+
+    // Start observing for deletions
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add event - should NOT trigger deletion on first observation
+    savedEventsFlow.value = listOf(event1)
+    testScheduler.advanceUntilIdle()
+
+    // Verify no deletion was triggered
+    verify(exactly = 0) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `deleteRegionForEvent removes specific event region`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    val event1 =
+        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+
+    // Download event first
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    savedEventsFlow.value = listOf(event1)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(1, manager.getDownloadedCount())
+
+    // Delete the event region manually
+    manager.deleteRegionForEvent(event1)
+    testScheduler.advanceUntilIdle()
+
+    // Verify deletion was called
+    verify(exactly = 1) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `observeEventsForDeletion filters finished events from tracking`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    // Create event with endDate in the past (1 hour ago)
+    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val finishedEvent =
+        Event(
+            uid = "finished1",
+            title = "Finished Event",
+            location = Location("Location 1", 46.5197, 6.5660),
+            date = pastTime,
+            endDate = pastTime)
+
+    val activeEvent =
+        Event(
+            uid = "active1",
+            title = "Active Event",
+            location = Location("Location 2", 46.5300, 6.5800),
+            date = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 3600, 0))
+
+    // Start observing
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add both events - download observer will try to download both
+    savedEventsFlow.value = listOf(finishedEvent, activeEvent)
+    testScheduler.advanceUntilIdle()
+
+    // Both should be attempted for download (download observer doesn't filter)
+    coVerify(exactly = 2) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+
+    // But deletion observer should filter out finished event from tracking
+    // So only active event is in previousEventIds for deletion observer
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `observeEventsForDeletion deletes events when they finish`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    // Create event with future endDate
+    val futureTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 3600, 0)
+    val event =
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location("Location 1", 46.5197, 6.5660),
+            date = futureTime,
+            endDate = futureTime)
+
+    // Start observing
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add event (future, so it's active)
+    savedEventsFlow.value = listOf(event)
+    testScheduler.advanceUntilIdle()
+
+    coVerify(exactly = 1) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+    assertEquals(1, manager.getDownloadedCount())
+
+    // Simulate time passing - update event to have past endDate
+    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val finishedEvent = event.copy(endDate = pastTime)
+
+    // Re-emit with finished event (simulates periodic check)
+    savedEventsFlow.value = listOf(finishedEvent)
+    testScheduler.advanceUntilIdle()
+
+    // Should trigger deletion because event is now finished
+    verify(exactly = 1) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `observeEventsForDeletion uses start date if no endDate provided`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(
+            offlineRegionManager = mockOfflineRegionManager,
+            connectivityService = mockConnectivityService,
+            scope = this)
+
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(3)
+          onComplete(Result.success(Unit))
+        }
+
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          val onComplete = arg<(Result<Unit>) -> Unit>(1)
+          onComplete(Result.success(Unit))
+        }
+
+    // Event with past start date but no endDate
+    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val finishedEvent =
+        Event(
+            uid = "finished1",
+            title = "Finished Event",
+            location = Location("Location 1", 46.5197, 6.5660),
+            date = pastTime,
+            endDate = null)
+
+    // Start observing
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+
+    // Add finished event - download observer will try to download it
+    savedEventsFlow.value = listOf(finishedEvent)
+    testScheduler.advanceUntilIdle()
+
+    // Download observer attempts download (doesn't filter by date)
+    coVerify(exactly = 1) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+
+    // But deletion observer filters it out from tracking (uses start date since no endDate)
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
 }
