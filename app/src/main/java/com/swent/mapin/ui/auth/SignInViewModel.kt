@@ -98,6 +98,10 @@ class SignInViewModel(context: Context) : ViewModel() {
                   isSignInSuccessful = true,
                   currentUser = user,
                   errorMessage = null)
+
+          // Initialize FCM for push notifications
+          initializeFCM()
+
           onSuccess()
         }
             ?: run {
@@ -170,6 +174,9 @@ class SignInViewModel(context: Context) : ViewModel() {
                         isSignInSuccessful = true,
                         currentUser = user,
                         errorMessage = null)
+
+                // Initialize FCM for push notifications
+                viewModelScope.launch { initializeFCM() }
               }
                   ?: run {
                     _uiState.value =
@@ -220,6 +227,9 @@ class SignInViewModel(context: Context) : ViewModel() {
                   isSignInSuccessful = true,
                   currentUser = user,
                   errorMessage = null)
+
+          // Initialize FCM for push notifications
+          initializeFCM()
         }
             ?: run {
               _uiState.value =
@@ -281,6 +291,9 @@ class SignInViewModel(context: Context) : ViewModel() {
                   isSignInSuccessful = true,
                   currentUser = user,
                   errorMessage = null)
+
+          // Initialize FCM for push notifications
+          initializeFCM()
         }
             ?: run {
               _uiState.value =
@@ -299,6 +312,26 @@ class SignInViewModel(context: Context) : ViewModel() {
               else -> "Sign-up failed: ${e.message}"
             }
         _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+      }
+    }
+  }
+
+  /**
+   * Initializes FCM (Firebase Cloud Messaging) for the current user. This registers the device
+   * token for push notifications.
+   */
+  private fun initializeFCM() {
+    viewModelScope.launch {
+      try {
+        val fcmManager = com.swent.mapin.notifications.FCMTokenManager()
+        val success = fcmManager.initializeForCurrentUser()
+        if (success) {
+          Log.d(TAG, "FCM token registered successfully")
+        } else {
+          Log.w(TAG, "Failed to register FCM token")
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Error initializing FCM", e)
       }
     }
   }
