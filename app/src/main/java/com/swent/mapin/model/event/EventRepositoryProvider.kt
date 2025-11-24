@@ -41,7 +41,4 @@ object EventRepositoryProvider {
     val friendRepository = FriendRequestRepository()
     return EventRepositoryFirestore(firestore, friendRepository)
   }
-
-  /** Convenience helper to create a local in-memory repository populated with sample data. */
-  fun createLocalRepository(): EventRepository = LocalEventRepository()
 }
