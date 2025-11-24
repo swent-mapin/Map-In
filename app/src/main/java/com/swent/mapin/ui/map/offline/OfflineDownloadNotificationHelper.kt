@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.swent.mapin.MainActivity
 import com.swent.mapin.R
@@ -22,7 +21,6 @@ import com.swent.mapin.notifications.NotificationBackgroundManager
 class OfflineDownloadNotificationHelper(private val context: Context) {
 
   companion object {
-    private const val TAG = "OfflineDownloadNotif"
     private const val NOTIFICATION_ID_BASE = 10000
   }
 
@@ -30,7 +28,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
       context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
   init {
-    Log.d(TAG, "OfflineDownloadNotificationHelper initialized")
     // Create notification channel for Android O and above
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val channel =
@@ -40,9 +37,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
                   NotificationManager.IMPORTANCE_LOW)
               .apply { description = "Offline map download progress and completion" }
       notificationManager.createNotificationChannel(channel)
-      Log.d(
-          TAG,
-          "Notification channel created: ${NotificationBackgroundManager.OFFLINE_DOWNLOAD_CHANNEL_ID}")
     }
   }
 
@@ -53,9 +47,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
    * @param progress Download progress (0.0 to 1.0)
    */
   fun showProgress(event: Event, progress: Float) {
-    Log.d(
-        TAG,
-        "showProgress called for event: ${event.title}, progress: ${(progress * 100).toInt()}%")
     val notificationId = getNotificationId(event.uid)
     val progressPercent = (progress * 100).toInt()
 
@@ -80,7 +71,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
             .build()
 
     notificationManager.notify(notificationId, notification)
-    Log.d(TAG, "Notification posted with ID: $notificationId")
   }
 
   /**
@@ -89,7 +79,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
    * @param event The event that finished downloading
    */
   fun showComplete(event: Event) {
-    Log.d(TAG, "showComplete called for event: ${event.title}")
     val notificationId = getNotificationId(event.uid)
 
     val intent = createEventIntent(event.uid)
@@ -111,7 +100,6 @@ class OfflineDownloadNotificationHelper(private val context: Context) {
             .build()
 
     notificationManager.notify(notificationId, notification)
-    Log.d(TAG, "Completion notification posted with ID: $notificationId")
   }
 
   /**
