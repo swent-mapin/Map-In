@@ -89,7 +89,7 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
           Spacer(modifier = Modifier.height(12.dp))
 
           LazyVerticalGrid(
-              columns = GridCells.Fixed(4),
+              columns = GridCells.Adaptive(minSize = 80.dp),
               horizontalArrangement = Arrangement.spacedBy(12.dp),
               verticalArrangement = Arrangement.spacedBy(12.dp),
               modifier = Modifier.fillMaxWidth().height(250.dp)) {
