@@ -1488,8 +1488,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should accept password with Cyrillic characters as special chars`() =
       runTest {
         viewModel.signUpWithEmail(VALID_EMAIL, passwordWithUnicode())
-        val state = awaitStateUpdate { !it.isLoading }
+        advanceUntilIdle()
 
+        val state = viewModel.uiState.first()
         // Cyrillic characters should count as special characters
         state.errorMessage?.let { error ->
           assertFalse(
@@ -1501,8 +1502,9 @@ class SignInViewModelTest {
   @Test
   fun `signUpWithEmail should accept password with emoji as special character`() = runTest {
     viewModel.signUpWithEmail(VALID_EMAIL, passwordWithEmoji())
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Emoji should count as special character
     state.errorMessage?.let { error ->
       assertFalse(
@@ -1515,8 +1517,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should accept password with Chinese characters as special chars`() =
       runTest {
         viewModel.signUpWithEmail(VALID_EMAIL, passwordWithChinese())
-        val state = awaitStateUpdate { !it.isLoading }
+        advanceUntilIdle()
 
+        val state = viewModel.uiState.first()
         // Chinese characters should count as special characters
         state.errorMessage?.let { error ->
           assertFalse(
@@ -1529,8 +1532,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle password with accented characters`() = runTest {
     val passwordWithAccents = "Pàsswörd123!"
     viewModel.signUpWithEmail(VALID_EMAIL, passwordWithAccents)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Should handle accented characters properly
     assertNotNull(state)
   }
@@ -1539,8 +1543,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle password with mathematical symbols`() = runTest {
     val passwordWithMath = "Pass±×÷Word123"
     viewModel.signUpWithEmail(VALID_EMAIL, passwordWithMath)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Mathematical symbols should count as special characters
     state.errorMessage?.let { error ->
       assertFalse(
@@ -1553,8 +1558,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle password with spaces as special chars`() = runTest {
     val passwordWithSpaces = "Pass word 123!"
     viewModel.signUpWithEmail(VALID_EMAIL, passwordWithSpaces)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Spaces count as special characters
     state.errorMessage?.let { error ->
       assertFalse(
@@ -1596,8 +1602,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle very long password without crashing`() = runTest {
     val longPassword = "A1!" + "a".repeat(1000) // 1003 characters
     viewModel.signUpWithEmail(VALID_EMAIL, longPassword)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Should not crash or fail validation due to length
     assertNotNull(state)
   }
@@ -1606,8 +1613,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should handle password with tabs and newlines`() = runTest {
     val passwordWithWhitespace = "Pass\tword\n123!"
     viewModel.signUpWithEmail(VALID_EMAIL, passwordWithWhitespace)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Tabs and newlines should count as special characters
     state.errorMessage?.let { error ->
       assertFalse(
@@ -1628,8 +1636,9 @@ class SignInViewModelTest {
   fun `signUpWithEmail should accept password with all punctuation types`() = runTest {
     val punctuationPassword = "Pass123!@#$%^&*()"
     viewModel.signUpWithEmail(VALID_EMAIL, punctuationPassword)
-    val state = awaitStateUpdate { !it.isLoading }
+    advanceUntilIdle()
 
+    val state = viewModel.uiState.first()
     // Should be valid
     state.errorMessage?.let { error ->
       assertFalse(
@@ -1643,7 +1652,6 @@ class SignInViewModelTest {
     // Multiple rapid calls
     repeat(5) { viewModel.signUpWithEmail("test$it@example.com", "TestPassword$it!") }
     advanceUntilIdle()
-
     val state = viewModel.uiState.first()
     // Should not crash and should have some state
     assertNotNull(state)
