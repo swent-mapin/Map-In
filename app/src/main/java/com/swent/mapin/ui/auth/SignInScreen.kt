@@ -3,6 +3,7 @@ package com.swent.mapin.ui.auth
 import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,7 @@ import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.R
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.util.PasswordValidationUtils.validatePassword
 
 /**
  * Sign-in screen that provides authentication options for users.
@@ -119,7 +121,7 @@ fun SignInScreen(
                   value = password,
                   onValueChange = { password = it },
                   label = { Text("Password") },
-                  modifier = Modifier.fillMaxWidth(),
+                  modifier = Modifier.fillMaxWidth().testTag("passwordField"),
                   enabled = !uiState.isLoading,
                   visualTransformation =
                       if (passwordVisible) VisualTransformation.None
@@ -136,6 +138,15 @@ fun SignInScreen(
                     }
                   },
                   singleLine = true)
+
+              // Show password requirements when in register mode
+              if (isRegistering) {
+                Spacer(modifier = Modifier.height(16.dp))
+                val passwordValidation by
+                    remember(password) { derivedStateOf { validatePassword(password) } }
+                PasswordRequirementsCard(
+                    password = password, passwordValidation = passwordValidation)
+              }
 
               Spacer(modifier = Modifier.height(16.dp))
 
