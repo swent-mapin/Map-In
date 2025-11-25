@@ -169,9 +169,31 @@ class FCMTokenManager(
     }
   }
 
-  /** Initialize FCM for the current user. Call this after user logs in. */
+  /**
+   * Initialize FCM for the current user. Call this after user logs in. This function is
+   * idempotent - it checks if the token is already registered and only adds it if missing,
+   * preventing duplicate network calls.
+   */
   suspend fun initializeForCurrentUser(): Boolean {
+    val userId = auth.currentUser?.uid ?: return false
     val token = getToken() ?: return false
-    return addTokenForCurrentUser(token)
+
+    return try {
+      // Check if token already exists in user's fcmTokens array
+      val userDoc = firestore.collection(COLLECTION_USERS).document(userId).get().await()
+      val existingTokens = userDoc.get(FIELD_FCM_TOKENS) as? List<*> ?: emptyList<String>()
+
+      if (existingTokens.contains(token)) {
+        Log.d(TAG, "FCM token already registered for user: $userId")
+        return true // Already registered, no-op
+      }
+
+      // Token not found, add it
+      addTokenForCurrentUser(token)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to check/initialize FCM token for user: $userId", e)
+      // Fallback to addToken which handles errors gracefully
+      addTokenForCurrentUser(token)
+    }
   }
 }
