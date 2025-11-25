@@ -14,6 +14,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
+import com.swent.mapin.util.PasswordValidationResult
+import com.swent.mapin.util.PasswordValidationUtils.validatePassword
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -243,21 +245,20 @@ class SignInViewModel(context: Context) : ViewModel() {
   /**
    * Creates a new user account with email and password.
    *
-   * @param email The user's email address.
-   * @param password The user's password.
+   * Performs client-side validation before attempting Firebase registration. Uses centralized
+   * password validation logic from [validatePassword] to ensure consistency across the application.
+   *
+   * @param email The user's email address
+   * @param password The user's password
    *
    * Validation rules:
-   * - Both email and password must be non-empty.
-   * - Password must be at least 8 characters long.
-   * - Password must contain at least one uppercase letter.
-   * - Password must contain at least one lowercase letter.
-   * - Password must contain at least one number.
-   * - Password must contain at least one special character.
+   * - Both email and password must be non-empty
+   * - Password must meet security requirements (see [validatePassword])
    *
    * Error handling:
-   * - If validation fails, sets an appropriate error message in the UI state.
-   * - If Firebase sign-up fails, sets an error message in the UI state based on the exception.
-   * - On success, updates the UI state with the new user and clears any error messages.
+   * - If validation fails, sets a localized error message in the UI state
+   * - If Firebase sign-up fails, maps the exception to an appropriate error message
+   * - On success, updates the UI state with the new user and clears any error messages
    */
   fun signUpWithEmail(email: String, password: String) {
     if (_uiState.value.isLoading) return
@@ -267,33 +268,13 @@ class SignInViewModel(context: Context) : ViewModel() {
       return
     }
 
-    // Validate password requirements
-    if (password.length < 8) {
-      _uiState.value = _uiState.value.copy(errorMessage = "Password must be at least 8 characters")
-      return
-    }
+    // Validate password requirements using shared validation utility
+    val validation = validatePassword(password)
+    val validationResult = validation.toResult()
 
-    if (!password.any { it.isUpperCase() }) {
-      _uiState.value =
-          _uiState.value.copy(errorMessage = "Password must contain at least one uppercase letter")
-      return
-    }
-
-    if (!password.any { it.isLowerCase() }) {
-      _uiState.value =
-          _uiState.value.copy(errorMessage = "Password must contain at least one lowercase letter")
-      return
-    }
-
-    if (!password.any { it.isDigit() }) {
-      _uiState.value =
-          _uiState.value.copy(errorMessage = "Password must contain at least one number")
-      return
-    }
-
-    if (!password.any { !it.isLetterOrDigit() }) {
-      _uiState.value =
-          _uiState.value.copy(errorMessage = "Password must contain at least one special character")
+    if (validationResult is PasswordValidationResult.Invalid) {
+      val errorMessage = applicationContext.getString(validationResult.messageResId)
+      _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
       return
     }
 

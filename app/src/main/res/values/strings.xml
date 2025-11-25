@@ -42,6 +42,23 @@
     <string name="change_password">Change Password</string>
     <string name="change_password_description">Update your account password</string>
 
+    <!-- Password Requirements -->
+    <string name="password_requirements_title">Password Requirements</string>
+    <string name="password_requirement_min_length">At least 8 characters long</string>
+    <string name="password_requirement_uppercase">Contains at least one uppercase letter</string>
+    <string name="password_requirement_lowercase">Contains at least one lowercase letter</string>
+    <string name="password_requirement_digit">Contains at least one number</string>
+    <string name="password_requirement_special_char">Contains at least one special character</string>
+    <string name="requirement_met">Requirement met</string>
+    <string name="requirement_not_met">Requirement not met</string>
+
+    <!-- Password Validation Error Messages -->
+    <string name="password_error_too_short">Password must be at least 8 characters</string>
+    <string name="password_error_missing_uppercase">Password must contain at least one uppercase letter</string>
+    <string name="password_error_missing_lowercase">Password must contain at least one lowercase letter</string>
+    <string name="password_error_missing_digit">Password must contain at least one number</string>
+    <string name="password_error_missing_special_char">Password must contain at least one special character</string>
+
     <!-- Offline map indicators -->
     <string name="offline_mode">Offline</string>
     <string name="cached_region">Cached area</string>

@@ -4,16 +4,12 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -22,11 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -35,6 +29,7 @@ import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.R
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.util.PasswordValidationUtils.validatePassword
 
 /**
  * Sign-in screen that provides authentication options for users.
@@ -126,7 +121,7 @@ fun SignInScreen(
                   value = password,
                   onValueChange = { password = it },
                   label = { Text("Password") },
-                  modifier = Modifier.fillMaxWidth(),
+                  modifier = Modifier.fillMaxWidth().testTag("passwordField"),
                   enabled = !uiState.isLoading,
                   visualTransformation =
                       if (passwordVisible) VisualTransformation.None
@@ -147,7 +142,10 @@ fun SignInScreen(
               // Show password requirements when in register mode
               if (isRegistering) {
                 Spacer(modifier = Modifier.height(16.dp))
-                PasswordRequirementsCard(password = password)
+                val passwordValidation by
+                    remember(password) { derivedStateOf { validatePassword(password) } }
+                PasswordRequirementsCard(
+                    password = password, passwordValidation = passwordValidation)
               }
 
               Spacer(modifier = Modifier.height(16.dp))
@@ -272,97 +270,5 @@ fun SignInScreen(
                     }
                   }
             }
-      }
-}
-
-// Assisted by AI
-
-/** Card showing password requirements with real-time validation */
-@Composable
-private fun PasswordRequirementsCard(password: String) {
-  val isDarkTheme = isSystemInDarkTheme()
-
-  // Calculate which requirements are met
-  val hasMinLength = password.length >= 8
-  val hasUppercase = password.any { it.isUpperCase() }
-  val hasLowercase = password.any { it.isLowerCase() }
-  val hasDigit = password.any { it.isDigit() }
-  val hasSpecialChar = password.any { !it.isLetterOrDigit() }
-
-  Column(
-      modifier =
-          Modifier.fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp))
-              .background(
-                  color =
-                      if (isDarkTheme) {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                      } else {
-                        MaterialTheme.colorScheme.surface
-                      })
-              .padding(16.dp)
-              .testTag("passwordRequirementsCard")) {
-        Text(
-            text = "Password Requirements",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface)
-        Spacer(modifier = Modifier.height(12.dp))
-        PasswordRequirementItem(
-            "At least 8 characters long",
-            isValid = hasMinLength,
-            showStatus = password.isNotEmpty())
-        PasswordRequirementItem(
-            "Contains at least one uppercase letter",
-            isValid = hasUppercase,
-            showStatus = password.isNotEmpty())
-        PasswordRequirementItem(
-            "Contains at least one lowercase letter",
-            isValid = hasLowercase,
-            showStatus = password.isNotEmpty())
-        PasswordRequirementItem(
-            "Contains at least one number", isValid = hasDigit, showStatus = password.isNotEmpty())
-        PasswordRequirementItem(
-            "Contains at least one special character",
-            isValid = hasSpecialChar,
-            showStatus = password.isNotEmpty())
-      }
-}
-
-/** Individual password requirement item */
-@Composable
-private fun PasswordRequirementItem(
-    requirement: String,
-    isValid: Boolean = false,
-    showStatus: Boolean = false
-) {
-  Row(
-      modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-      verticalAlignment = Alignment.CenterVertically) {
-        if (showStatus) {
-          // Show checkmark or cross based on validation
-          Icon(
-              imageVector = if (isValid) Icons.Default.Check else Icons.Default.Close,
-              contentDescription = if (isValid) "Requirement met" else "Requirement not met",
-              tint = if (isValid) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
-              modifier = Modifier.size(16.dp))
-        } else {
-          // Show neutral dot when no input yet
-          Box(
-              modifier =
-                  Modifier.size(8.dp)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.primary))
-        }
-        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-        Text(
-            text = requirement,
-            style = MaterialTheme.typography.bodyMedium,
-            color =
-                when {
-                  showStatus && isValid -> Color(0xFF4CAF50)
-                  showStatus && !isValid -> MaterialTheme.colorScheme.error
-                  else -> MaterialTheme.colorScheme.onSurfaceVariant
-                })
       }
 }
