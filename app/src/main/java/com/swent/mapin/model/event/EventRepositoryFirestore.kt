@@ -532,44 +532,43 @@ class EventRepositoryFirestore(
   }
 
   /**
-   * Listen to changes in saved events for a user.
-   * Monitors the user's savedEventIds array and fetches corresponding events.
+   * Listen to changes in saved events for a user. Monitors the user's savedEventIds array and
+   * fetches corresponding events.
    *
    * @param userId The unique identifier of the user.
    * @param onUpdate Callback with added, modified, and removed events.
    * @return ListenerRegistration to manage the listener.
    */
   override fun listenToSavedEvents(
-    userId: String,
-    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      userId: String,
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
   ): ListenerRegistration {
     return listenToUserEvents(userId, UserEventSource.SAVED, onUpdate)
   }
 
   /**
-   * Listen to changes in joined events for a user.
-   * Monitors the user's joinedEventIds array and fetches corresponding events.
+   * Listen to changes in joined events for a user. Monitors the user's joinedEventIds array and
+   * fetches corresponding events.
    *
    * @param userId The unique identifier of the user.
    * @param onUpdate Callback with added, modified, and removed events.
    * @return ListenerRegistration to manage the listener.
    */
   override fun listenToJoinedEvents(
-    userId: String,
-    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      userId: String,
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
   ): ListenerRegistration {
     return listenToUserEvents(userId, UserEventSource.JOINED, onUpdate)
   }
 
   /**
-   * Generic method to listen to changes in user events (saved, joined, owned).
-   * Strategy:
+   * Generic method to listen to changes in user events (saved, joined, owned). Strategy:
    * 1. Fetch initial event IDs from user document
    * 2. Set up listeners on each event document
    * 3. Detect when events are modified or deleted
    *
-   * Note: This creates multiple listeners (one per event). For large numbers of events,
-   * consider pagination or limiting the number of active listeners.
+   * Note: This creates multiple listeners (one per event). For large numbers of events, consider
+   * pagination or limiting the number of active listeners.
    *
    * @param userId The user ID.
    * @param source The source type (SAVED, JOINED, OWNED).
@@ -577,87 +576,90 @@ class EventRepositoryFirestore(
    * @return ListenerRegistration to manage the listener.
    */
   private fun listenToUserEvents(
-    userId: String,
-    source: UserEventSource,
-    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      userId: String,
+      source: UserEventSource,
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
   ): ListenerRegistration {
     // Composite listener to manage multiple sub-listeners
     val eventListeners = mutableMapOf<String, ListenerRegistration>()
     var isInitialLoad = true
 
     // Main listener on user document to know which events to monitor
-    val userListener = db.collection(USERS_COLLECTION_PATH).document(userId)
-      .addSnapshotListener { snapshot, error ->
-        if (error != null) {
-          Log.e("EventRepositoryFirestore", "User events listener error for $source", error)
-          onUpdate(emptyList(), emptyList(), emptyList())
-          return@addSnapshotListener
-        }
+    val userListener =
+        db.collection(USERS_COLLECTION_PATH).document(userId).addSnapshotListener { snapshot, error
+          ->
+          if (error != null) {
+            Log.e("EventRepositoryFirestore", "User events listener error for $source", error)
+            onUpdate(emptyList(), emptyList(), emptyList())
+            return@addSnapshotListener
+          }
 
-        if (snapshot == null || !snapshot.exists()) {
-          Log.w("EventRepositoryFirestore", "User document not found: $userId")
-          onUpdate(emptyList(), emptyList(), emptyList())
-          return@addSnapshotListener
-        }
+          if (snapshot == null || !snapshot.exists()) {
+            Log.w("EventRepositoryFirestore", "User document not found: $userId")
+            onUpdate(emptyList(), emptyList(), emptyList())
+            return@addSnapshotListener
+          }
 
-        // Get current event IDs
-        val currentEventIds = try {
-          (snapshot.get(source.fieldName) as? List<String>)?.toSet() ?: emptySet()
-        } catch (e: Exception) {
-          Log.e("EventRepositoryFirestore", "Failed to parse ${source.fieldName}", e)
-          emptySet()
-        }
-
-        // Determine which listeners to add/remove
-        val existingIds = eventListeners.keys.toSet()
-        val idsToAdd = currentEventIds - existingIds
-        val idsToRemove = existingIds - currentEventIds
-
-        // Remove listeners for events no longer in the list
-        idsToRemove.forEach { eventId ->
-          eventListeners.remove(eventId)?.remove()
-        }
-
-        // Add listeners for new events
-        idsToAdd.forEach { eventId ->
-          val listener = db.collection(EVENTS_COLLECTION_PATH).document(eventId)
-            .addSnapshotListener { eventSnapshot, eventError ->
-              if (eventError != null) {
-                Log.e("EventRepositoryFirestore", "Event listener error for $eventId", eventError)
-                return@addSnapshotListener
+          // Get current event IDs
+          val currentEventIds =
+              try {
+                (snapshot.get(source.fieldName) as? List<String>)?.toSet() ?: emptySet()
+              } catch (e: Exception) {
+                Log.e("EventRepositoryFirestore", "Failed to parse ${source.fieldName}", e)
+                emptySet()
               }
 
-              // Skip initial load to avoid duplicate notifications
-              if (isInitialLoad) return@addSnapshotListener
+          // Determine which listeners to add/remove
+          val existingIds = eventListeners.keys.toSet()
+          val idsToAdd = currentEventIds - existingIds
+          val idsToRemove = existingIds - currentEventIds
 
-              if (eventSnapshot == null || !eventSnapshot.exists()) {
-                // Event was deleted
-                val deletedEvent = Event(
-                  uid = eventId,
-                  title = "",
-                  description = "",
-                  date = Timestamp.now(),
-                  location = Location("", 0.0, 0.0),
-                  ownerId = "",
-                  tags = emptyList()
-                )
-                onUpdate(emptyList(), emptyList(), listOf(deletedEvent))
-              } else {
-                // Event was modified
-                val modifiedEvent = eventSnapshot.toEvent()
-                if (modifiedEvent != null) {
-                  onUpdate(emptyList(), listOf(modifiedEvent), emptyList())
+          // Remove listeners for events no longer in the list
+          idsToRemove.forEach { eventId -> eventListeners.remove(eventId)?.remove() }
+
+          // Add listeners for new events
+          idsToAdd.forEach { eventId ->
+            val listener =
+                db.collection(EVENTS_COLLECTION_PATH).document(eventId).addSnapshotListener {
+                    eventSnapshot,
+                    eventError ->
+                  if (eventError != null) {
+                    Log.e(
+                        "EventRepositoryFirestore", "Event listener error for $eventId", eventError)
+                    return@addSnapshotListener
+                  }
+
+                  // Skip initial load to avoid duplicate notifications
+                  if (isInitialLoad) return@addSnapshotListener
+
+                  if (eventSnapshot == null || !eventSnapshot.exists()) {
+                    // Event was deleted
+                    val deletedEvent =
+                        Event(
+                            uid = eventId,
+                            title = "",
+                            description = "",
+                            date = Timestamp.now(),
+                            location = Location("", 0.0, 0.0),
+                            ownerId = "",
+                            tags = emptyList())
+                    onUpdate(emptyList(), emptyList(), listOf(deletedEvent))
+                  } else {
+                    // Event was modified
+                    val modifiedEvent = eventSnapshot.toEvent()
+                    if (modifiedEvent != null) {
+                      onUpdate(emptyList(), listOf(modifiedEvent), emptyList())
+                    }
+                  }
                 }
-              }
-            }
-          eventListeners[eventId] = listener
-        }
+            eventListeners[eventId] = listener
+          }
 
-        // After first load, start monitoring changes
-        if (isInitialLoad) {
-          isInitialLoad = false
+          // After first load, start monitoring changes
+          if (isInitialLoad) {
+            isInitialLoad = false
+          }
         }
-      }
 
     // Return a composite listener that removes all sub-listeners
     return ListenerRegistration {

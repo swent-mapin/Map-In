@@ -109,28 +109,28 @@ interface EventRepository {
   ): ListenerRegistration
 
   /**
-   * Listen to changes in saved events for a user.
-   * Monitors the user's savedEventIds array and fetches corresponding events.
+   * Listen to changes in saved events for a user. Monitors the user's savedEventIds array and
+   * fetches corresponding events.
    *
    * @param userId The unique identifier of the user.
    * @param onUpdate Callback with added, modified, and removed events.
    * @return ListenerRegistration to manage the listener.
    */
   fun listenToSavedEvents(
-    userId: String,
-    onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+      userId: String,
+      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
   ): ListenerRegistration
 
   /**
-   * Listen to changes in joined events for a user.
-   * Monitors the user's joinedEventIds array and fetches corresponding events.
+   * Listen to changes in joined events for a user. Monitors the user's joinedEventIds array and
+   * fetches corresponding events.
    *
    * @param userId The unique identifier of the user.
    * @param onUpdate Callback with added, modified, and removed events.
    * @return ListenerRegistration to manage the listener.
    */
   fun listenToJoinedEvents(
-    userId: String,
-    onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+      userId: String,
+      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
   ): ListenerRegistration
 }

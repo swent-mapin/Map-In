@@ -1178,7 +1178,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     // Setup event listener
     val eventDocRef = mock<DocumentReference>()
@@ -1187,13 +1187,11 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-      .thenReturn(eventListenerReg)
+        .thenReturn(eventListenerReg)
 
     var removedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToSavedEvents(userId) { _, _, removed ->
-      removedEvents = removed
-    }
+    val registration = repo.listenToSavedEvents(userId) { _, _, removed -> removedEvents = removed }
 
     // Simulate user document update with saved event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1226,7 +1224,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef = mock<DocumentReference>()
     whenever(collection.document("E1")).thenReturn(eventDocRef)
@@ -1234,13 +1232,12 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-      .thenReturn(eventListenerReg)
+        .thenReturn(eventListenerReg)
 
     var modifiedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToSavedEvents(userId) { _, modified, _ ->
-      modifiedEvents = modified
-    }
+    val registration =
+        repo.listenToSavedEvents(userId) { _, modified, _ -> modifiedEvents = modified }
 
     // Simulate user document with saved event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1271,17 +1268,18 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     var addedEvents: List<Event> = emptyList()
     var modifiedEvents: List<Event> = emptyList()
     var removedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToSavedEvents(userId) { added, modified, removed ->
-      addedEvents = added
-      modifiedEvents = modified
-      removedEvents = removed
-    }
+    val registration =
+        repo.listenToSavedEvents(userId) { added, modified, removed ->
+          addedEvents = added
+          modifiedEvents = modified
+          removedEvents = removed
+        }
 
     // Simulate user document not found
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1306,17 +1304,18 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     var addedEvents: List<Event> = emptyList()
     var modifiedEvents: List<Event> = emptyList()
     var removedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToSavedEvents(userId) { added, modified, removed ->
-      addedEvents = added
-      modifiedEvents = modified
-      removedEvents = removed
-    }
+    val registration =
+        repo.listenToSavedEvents(userId) { added, modified, removed ->
+          addedEvents = added
+          modifiedEvents = modified
+          removedEvents = removed
+        }
 
     // Simulate error
     val error = mock<FirebaseFirestoreException>()
@@ -1340,7 +1339,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef1 = mock<DocumentReference>()
     val eventDocRef2 = mock<DocumentReference>()
@@ -1350,9 +1349,9 @@ class EventRepositoryFirestoreTest {
     val eventListenerReg1 = mock<ListenerRegistration>()
     val eventListenerReg2 = mock<ListenerRegistration>()
     whenever(eventDocRef1.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(eventListenerReg1)
+        .thenReturn(eventListenerReg1)
     whenever(eventDocRef2.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(eventListenerReg2)
+        .thenReturn(eventListenerReg2)
 
     val registration = repo.listenToSavedEvents(userId) { _, _, _ -> }
 
@@ -1386,7 +1385,7 @@ class EventRepositoryFirestoreTest {
     registration.remove()
   }
 
-// ========== LISTEN TO JOINED EVENTS TESTS ==========
+  // ========== LISTEN TO JOINED EVENTS TESTS ==========
 
   @Test
   fun listenToJoinedEvents_detectsEventDeletion() = runTest {
@@ -1398,7 +1397,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef = mock<DocumentReference>()
     whenever(collection.document("E1")).thenReturn(eventDocRef)
@@ -1406,13 +1405,12 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-      .thenReturn(eventListenerReg)
+        .thenReturn(eventListenerReg)
 
     var removedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToJoinedEvents(userId) { _, _, removed ->
-      removedEvents = removed
-    }
+    val registration =
+        repo.listenToJoinedEvents(userId) { _, _, removed -> removedEvents = removed }
 
     // Simulate user document with joined event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1443,7 +1441,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef = mock<DocumentReference>()
     whenever(collection.document("E1")).thenReturn(eventDocRef)
@@ -1451,13 +1449,12 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-      .thenReturn(eventListenerReg)
+        .thenReturn(eventListenerReg)
 
     var modifiedEvents: List<Event> = emptyList()
 
-    val registration = repo.listenToJoinedEvents(userId) { _, modified, _ ->
-      modifiedEvents = modified
-    }
+    val registration =
+        repo.listenToJoinedEvents(userId) { _, modified, _ -> modifiedEvents = modified }
 
     // Simulate user document with joined event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1488,7 +1485,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef = mock<DocumentReference>()
     whenever(collection.document("E1")).thenReturn(eventDocRef)
@@ -1496,13 +1493,14 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-      .thenReturn(eventListenerReg)
+        .thenReturn(eventListenerReg)
 
     val modifiedTitles = mutableListOf<String>()
 
-    val registration = repo.listenToJoinedEvents(userId) { _, modified, _ ->
-      modifiedTitles.addAll(modified.map { it.title })
-    }
+    val registration =
+        repo.listenToJoinedEvents(userId) { _, modified, _ ->
+          modifiedTitles.addAll(modified.map { it.title })
+        }
 
     // Simulate user document with joined event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1540,7 +1538,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef1 = mock<DocumentReference>()
     val eventDocRef2 = mock<DocumentReference>()
@@ -1548,9 +1546,9 @@ class EventRepositoryFirestoreTest {
     whenever(collection.document("E2")).thenReturn(eventDocRef2)
 
     whenever(eventDocRef1.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(mock())
+        .thenReturn(mock())
     whenever(eventDocRef2.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(mock())
+        .thenReturn(mock())
 
     val registration = repo.listenToJoinedEvents(userId) { _, _, _ -> }
 
@@ -1577,7 +1575,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-      .thenReturn(userListenerReg)
+        .thenReturn(userListenerReg)
 
     val eventDocRef1 = mock<DocumentReference>()
     val eventDocRef2 = mock<DocumentReference>()
@@ -1587,9 +1585,9 @@ class EventRepositoryFirestoreTest {
     val eventListenerReg1 = mock<ListenerRegistration>()
     val eventListenerReg2 = mock<ListenerRegistration>()
     whenever(eventDocRef1.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(eventListenerReg1)
+        .thenReturn(eventListenerReg1)
     whenever(eventDocRef2.addSnapshotListener(any<EventListener<DocumentSnapshot>>()))
-      .thenReturn(eventListenerReg2)
+        .thenReturn(eventListenerReg2)
 
     val registration = repo.listenToJoinedEvents(userId) { _, _, _ -> }
 
