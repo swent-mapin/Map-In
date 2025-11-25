@@ -2,6 +2,8 @@ package com.swent.mapin.model.event
 
 import android.util.Log
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
@@ -17,6 +19,7 @@ import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
 import com.swent.mapin.ui.filters.Filters
+import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import java.time.ZoneId
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -34,6 +37,7 @@ object FirestoreSchema {
 }
 
 const val FIRESTORE_QUERY_LIMIT: Int = 10
+const val POPULAR_EVENT: Int = 30
 
 /**
  * Enum to specify the source of user events (saved, joined, owned). Defines the field name in the
@@ -279,22 +283,173 @@ class EventRepositoryFirestore(
   }
 
   /**
-   * Retrieves Event items based on the specified filters.
+   * Retrieves Event items based on the specified filters with optimized queries.
    *
-   * Basic implementation for PR #1 - will be optimized with query strategies in PR #2.
+   * Strategy:
+   * 1. Use Firestore queries for server-side filtering when possible (dates, price, tags/friends)
+   * 2. Apply client-side filters for complex operations (geo-distance, popularOnly)
+   * 3. Prioritize friendsOnly filter in query to reduce data transfer
    *
    * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
    * @return A list of Event items matching the filters.
    */
   override suspend fun getFilteredEvents(filters: Filters): List<Event> {
     return try {
-      val query = buildBaseQuery(filters)
-      val snap = query.orderBy("date", Query.Direction.DESCENDING).get().await()
-      snap.documents.mapNotNull { it.toEvent() }
+      // Determine query strategy based on filters
+      val queryStrategy = determineQueryStrategy(filters)
+
+      val events =
+          when (queryStrategy) {
+            QueryStrategy.FRIENDS -> getEventsByFriendsQuery(filters)
+            QueryStrategy.TAGS -> getEventsByTagsQuery(filters)
+            QueryStrategy.BASIC -> getEventsByBasicQuery(filters)
+          }
+
+      // Apply client-side filters that can't be done server-side
+      applyClientSideFilters(events, filters)
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to fetch filtered events", e)
       throw Exception("Failed to fetch filtered events: ${e.message}", e)
     }
+  }
+
+  /** Determines the optimal query strategy based on filter combinations. */
+  private enum class QueryStrategy {
+    FRIENDS, // Friends filter in query (tags client-side if present)
+    TAGS, // Tags in query (friends not active)
+    BASIC // Date and price only (all other filters client-side)
+  }
+
+  /**
+   * Analyzes filters and returns the best query strategy. Priority: friendsOnly > tags Price is
+   * automatically added when present (compatible with all strategies).
+   */
+  private fun determineQueryStrategy(filters: Filters): QueryStrategy {
+    return when {
+      // Friends filter (most selective)
+      filters.friendsOnly -> QueryStrategy.FRIENDS
+
+      // Tags filter (no friends)
+      filters.tags.isNotEmpty() -> QueryStrategy.TAGS
+
+      // Basic query (dates + price, everything else client-side)
+      else -> QueryStrategy.BASIC
+    }
+  }
+
+  /**
+   * Query events by friends' IDs. Price is added to Firestore query if present. Tags are filtered
+   * client-side (Firestore constraint: can't combine whereIn + whereArrayContainsAny).
+   */
+  private suspend fun getEventsByFriendsQuery(filters: Filters): List<Event> = coroutineScope {
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@coroutineScope emptyList()
+
+    val friendsDeferred = async {
+      try {
+        friendRequestRepository.getFriends(userId).map { it.userProfile.userId }
+      } catch (e: Exception) {
+        Log.e("EventRepositoryFirestore", "Failed to fetch friends", e)
+        emptyList()
+      }
+    }
+
+    val friendIds = friendsDeferred.await()
+    if (friendIds.isEmpty()) return@coroutineScope emptyList()
+
+    // Build query with dates + price (if present)
+    val query = buildBaseQuery(filters)
+
+    // Fetch events by friend chunks
+    val friendChunks = friendIds.chunked(FIRESTORE_QUERY_LIMIT)
+    val allEvents = mutableListOf<Event>()
+
+    for (chunk in friendChunks) {
+      val snap = query.whereIn("ownerId", chunk).get().await()
+      allEvents += snap.documents.mapNotNull { it.toEvent() }
+    }
+
+    // Apply tags filter CLIENT-SIDE (Firestore constraint)
+    return@coroutineScope if (filters.tags.isNotEmpty()) {
+      allEvents.filter { event -> event.tags.any { tag -> filters.tags.contains(tag) } }
+    } else {
+      allEvents
+    }
+  }
+
+  /**
+   * Query events by tags. Price is added to Firestore query if present (fully server-side
+   * filtering).
+   */
+  private suspend fun getEventsByTagsQuery(filters: Filters): List<Event> {
+    var query = buildBaseQuery(filters)
+
+    // Add tags filter
+    val limitedTags = filters.tags.take(FIRESTORE_QUERY_LIMIT).toList()
+    query = query.whereArrayContainsAny("tags", limitedTags)
+
+    val snap = query.orderBy("date", Query.Direction.DESCENDING).get().await()
+    return snap.documents.mapNotNull { it.toEvent() }
+  }
+
+  /**
+   * Basic query with dates and optional price. All other filters (tags, friends) applied
+   * client-side.
+   */
+  private suspend fun getEventsByBasicQuery(filters: Filters): List<Event> {
+    val query = buildBaseQuery(filters)
+
+    val snap = query.orderBy("date", Query.Direction.DESCENDING).get().await()
+    val events = snap.documents.mapNotNull { it.toEvent() }
+
+    return events
+  }
+
+  /** Builds the base query with date filters. */
+  private fun buildBaseQuery(filters: Filters): Query {
+    var query: Query = db.collection(EVENTS_COLLECTION_PATH)
+
+    // Apply startDate filter
+    val startTimestamp =
+        Timestamp(filters.startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+    query = query.whereGreaterThanOrEqualTo("date", startTimestamp)
+
+    // Apply endDate filter if provided
+    if (filters.endDate != null) {
+      val endTimestamp =
+          Timestamp(
+              filters.endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
+      query = query.whereLessThanOrEqualTo("date", endTimestamp)
+    }
+
+    // Add price to query if present
+    if (filters.maxPrice != null) {
+      query = query.whereLessThanOrEqualTo("price", filters.maxPrice.toDouble())
+    }
+
+    return query
+  }
+
+  /** Applies client-side filters that can't be efficiently done server-side. */
+  private fun applyClientSideFilters(events: List<Event>, filters: Filters): List<Event> {
+    var filtered = events
+
+    // Apply popularOnly filter (requires counting participants)
+    if (filters.popularOnly) {
+      filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT }
+    }
+
+    // Apply location/radius filter (requires haversine distance calculation)
+    if (filters.place != null) {
+      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
+      filtered =
+          filtered.filter { event ->
+            val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
+            val distance = calculateHaversineDistance(eventGeoPoint, placeGeoPoint)
+            distance <= filters.radiusKm
+          }
+    }
+
+    return filtered.sortedByDescending { it.date }
   }
 
   /**
@@ -330,8 +485,6 @@ class EventRepositoryFirestore(
   /**
    * Listen to changes in the events collection with filters.
    *
-   * Basic implementation for PR #1 - will be enhanced with advanced filtering in PR #2.
-   *
    * @param filters The filtering criteria.
    * @param onUpdate Callback with added, modified, and removed events.
    * @return ListenerRegistration to manage the listener.
@@ -340,7 +493,13 @@ class EventRepositoryFirestore(
       filters: Filters,
       onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
   ): ListenerRegistration {
-    val query = buildBaseQuery(filters)
+    var query = buildBaseQuery(filters)
+
+    // Add tags filter if available and not using friendsOnly
+    if (filters.tags.isNotEmpty() && !filters.friendsOnly) {
+      val limitedTags = filters.tags.take(FIRESTORE_QUERY_LIMIT).toList()
+      query = query.whereArrayContainsAny("tags", limitedTags)
+    }
 
     return query.orderBy("date", Query.Direction.DESCENDING).addSnapshotListener { snapshot, error
       ->
@@ -350,31 +509,162 @@ class EventRepositoryFirestore(
         return@addSnapshotListener
       }
 
-      // Simple implementation: treat all documents as added
-      // PR #2 will differentiate between added/modified/removed
-      val events = snapshot.documents.mapNotNull { it.toEvent() }
-      onUpdate(events, emptyList(), emptyList())
+      val addedEvents = mutableListOf<Event>()
+      val modifiedEvents = mutableListOf<Event>()
+      val removedEvents = mutableListOf<Event>()
+
+      for (change in snapshot.documentChanges) {
+        val event = change.document.toEvent() ?: continue
+        when (change.type) {
+          DocumentChange.Type.ADDED -> addedEvents.add(event)
+          DocumentChange.Type.MODIFIED -> modifiedEvents.add(event)
+          DocumentChange.Type.REMOVED -> removedEvents.add(event)
+        }
+      }
+
+      // Apply client-side filters
+      val filteredAdded = applyClientSideFilters(addedEvents, filters)
+      val filteredModified = applyClientSideFilters(modifiedEvents, filters)
+      val filteredRemoved = applyClientSideFilters(removedEvents, filters)
+
+      onUpdate(filteredAdded, filteredModified, filteredRemoved)
     }
   }
 
-  /** Builds the base query with date filters and optional price filter. */
-  private fun buildBaseQuery(filters: Filters): Query {
-    var query: Query = db.collection(EVENTS_COLLECTION_PATH)
+  /**
+   * Listen to changes in saved events for a user.
+   * Monitors the user's savedEventIds array and fetches corresponding events.
+   *
+   * @param userId The unique identifier of the user.
+   * @param onUpdate Callback with added, modified, and removed events.
+   * @return ListenerRegistration to manage the listener.
+   */
+  override fun listenToSavedEvents(
+    userId: String,
+    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+  ): ListenerRegistration {
+    return listenToUserEvents(userId, UserEventSource.SAVED, onUpdate)
+  }
 
-    // Apply startDate filter
-    val startTimestamp =
-        Timestamp(filters.startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
-    query = query.whereGreaterThanOrEqualTo("date", startTimestamp)
+  /**
+   * Listen to changes in joined events for a user.
+   * Monitors the user's joinedEventIds array and fetches corresponding events.
+   *
+   * @param userId The unique identifier of the user.
+   * @param onUpdate Callback with added, modified, and removed events.
+   * @return ListenerRegistration to manage the listener.
+   */
+  override fun listenToJoinedEvents(
+    userId: String,
+    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+  ): ListenerRegistration {
+    return listenToUserEvents(userId, UserEventSource.JOINED, onUpdate)
+  }
 
-    // Apply endDate filter if provided
-    if (filters.endDate != null) {
-      val endTimestamp =
-          Timestamp(
-              filters.endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
-      query = query.whereLessThanOrEqualTo("date", endTimestamp)
+  /**
+   * Generic method to listen to changes in user events (saved, joined, owned).
+   * Strategy:
+   * 1. Fetch initial event IDs from user document
+   * 2. Set up listeners on each event document
+   * 3. Detect when events are modified or deleted
+   *
+   * Note: This creates multiple listeners (one per event). For large numbers of events,
+   * consider pagination or limiting the number of active listeners.
+   *
+   * @param userId The user ID.
+   * @param source The source type (SAVED, JOINED, OWNED).
+   * @param onUpdate Callback with added, modified, and removed events.
+   * @return ListenerRegistration to manage the listener.
+   */
+  private fun listenToUserEvents(
+    userId: String,
+    source: UserEventSource,
+    onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+  ): ListenerRegistration {
+    // Composite listener to manage multiple sub-listeners
+    val eventListeners = mutableMapOf<String, ListenerRegistration>()
+    var isInitialLoad = true
+
+    // Main listener on user document to know which events to monitor
+    val userListener = db.collection(USERS_COLLECTION_PATH).document(userId)
+      .addSnapshotListener { snapshot, error ->
+        if (error != null) {
+          Log.e("EventRepositoryFirestore", "User events listener error for $source", error)
+          onUpdate(emptyList(), emptyList(), emptyList())
+          return@addSnapshotListener
+        }
+
+        if (snapshot == null || !snapshot.exists()) {
+          Log.w("EventRepositoryFirestore", "User document not found: $userId")
+          onUpdate(emptyList(), emptyList(), emptyList())
+          return@addSnapshotListener
+        }
+
+        // Get current event IDs
+        val currentEventIds = try {
+          (snapshot.get(source.fieldName) as? List<String>)?.toSet() ?: emptySet()
+        } catch (e: Exception) {
+          Log.e("EventRepositoryFirestore", "Failed to parse ${source.fieldName}", e)
+          emptySet()
+        }
+
+        // Determine which listeners to add/remove
+        val existingIds = eventListeners.keys.toSet()
+        val idsToAdd = currentEventIds - existingIds
+        val idsToRemove = existingIds - currentEventIds
+
+        // Remove listeners for events no longer in the list
+        idsToRemove.forEach { eventId ->
+          eventListeners.remove(eventId)?.remove()
+        }
+
+        // Add listeners for new events
+        idsToAdd.forEach { eventId ->
+          val listener = db.collection(EVENTS_COLLECTION_PATH).document(eventId)
+            .addSnapshotListener { eventSnapshot, eventError ->
+              if (eventError != null) {
+                Log.e("EventRepositoryFirestore", "Event listener error for $eventId", eventError)
+                return@addSnapshotListener
+              }
+
+              // Skip initial load to avoid duplicate notifications
+              if (isInitialLoad) return@addSnapshotListener
+
+              if (eventSnapshot == null || !eventSnapshot.exists()) {
+                // Event was deleted
+                val deletedEvent = Event(
+                  uid = eventId,
+                  title = "",
+                  description = "",
+                  date = Timestamp.now(),
+                  location = Location("", 0.0, 0.0),
+                  ownerId = "",
+                  tags = emptyList()
+                )
+                onUpdate(emptyList(), emptyList(), listOf(deletedEvent))
+              } else {
+                // Event was modified
+                val modifiedEvent = eventSnapshot.toEvent()
+                if (modifiedEvent != null) {
+                  onUpdate(emptyList(), listOf(modifiedEvent), emptyList())
+                }
+              }
+            }
+          eventListeners[eventId] = listener
+        }
+
+        // After first load, start monitoring changes
+        if (isInitialLoad) {
+          isInitialLoad = false
+        }
+      }
+
+    // Return a composite listener that removes all sub-listeners
+    return ListenerRegistration {
+      userListener.remove()
+      eventListeners.values.forEach { it.remove() }
+      eventListeners.clear()
     }
-
-    return query
   }
 
   /**
@@ -382,7 +672,7 @@ class EventRepositoryFirestore(
    *
    * @param userId The user ID.
    * @param source The source type (SAVED, JOINED, OWNED).
-   * @return A list of event IDs.
+   * @return A set of event IDs.
    */
   private suspend fun getUserEventIds(userId: String, source: UserEventSource): List<String> {
     return try {
@@ -391,8 +681,7 @@ class EventRepositoryFirestore(
         Log.w("EventRepositoryFirestore", "User $userId not found")
         throw Exception("User $userId not found")
       } else {
-        @Suppress("UNCHECKED_CAST")
-        (snap.get(source.fieldName) as? List<String>) ?: emptyList()
+        (snap.get(source.fieldName) as List<String>)
       }
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to fetch event IDs for $source", e)
