@@ -36,9 +36,9 @@ interface NotificationData {
   senderId?: string;
   readStatus: boolean;
   timestamp: admin.firestore.Timestamp;
-  metadata: { [key: string]: string };
+  metadata?: { [key: string]: string };
   actionUrl?: string;
-  priority: number;
+  priority?: number;
 }
 
 /**
@@ -76,6 +76,10 @@ export const sendNotificationOnCreate = functions.firestore
       console.log(`Found ${tokens.length} device(s) for user ${notification.recipientId}`);
 
       // Build the notification payload
+      // Safely handle optional fields - default to empty/fallback values if undefined/null
+      const metadata = notification.metadata ?? {};
+      const priority = notification.priority ?? 0;
+
       const payload: admin.messaging.MulticastMessage = {
         notification: {
           title: notification.title,
@@ -88,17 +92,17 @@ export const sendNotificationOnCreate = functions.firestore
           recipientId: notification.recipientId,
           senderId: notification.senderId || "",
           // Convert metadata object to strings for FCM data payload
-          ...Object.keys(notification.metadata).reduce((acc, key) => {
-            acc[`metadata_${key}`] = notification.metadata[key];
+          ...Object.keys(metadata).reduce((acc, key) => {
+            acc[`metadata_${key}`] = metadata[key];
             return acc;
           }, {} as { [key: string]: string }),
         },
         // Set Android-specific options
         android: {
-          priority: notification.priority >= 2 ? "high" : "normal",
+          priority: priority >= 2 ? "high" : "normal",
           notification: {
             channelId: getChannelIdForType(notification.type),
-            priority: notification.priority >= 2 ? "high" : "default",
+            priority: priority >= 2 ? "high" : "default",
             defaultSound: true,
             defaultVibrateTimings: true,
           },
