@@ -7,6 +7,8 @@ import java.util.Calendar
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+//Assisted by ChatGPT
+
 class EditEventScreenTest {
   @Test
   fun `toDateString returns correct formatted date`() {
