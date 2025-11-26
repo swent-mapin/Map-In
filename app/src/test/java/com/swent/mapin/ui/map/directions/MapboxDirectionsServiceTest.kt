@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map.directions
 
+//Assisted by AI
+
 import com.mapbox.geojson.Point
 import kotlinx.coroutines.test.runTest
 import okhttp3.Call
@@ -74,10 +76,10 @@ class MapboxDirectionsServiceTest {
     val result = service.getDirections(origin, destination)
 
     assertNotNull(result)
-    assertEquals(3, result?.size)
-    assertEquals(6.5674, result?.get(0)?.longitude() ?: 0.0, 0.0001)
-    assertEquals(46.5197, result?.get(0)?.latitude() ?: 0.0, 0.0001)
-    assertEquals(6.6335, result?.get(2)?.longitude() ?: 0.0, 0.0001)
+    assertEquals(3, result?.routePoints?.size)
+    assertEquals(6.5674, result?.routePoints?.get(0)?.longitude() ?: 0.0, 0.0001)
+    assertEquals(46.5197, result?.routePoints?.get(0)?.latitude() ?: 0.0, 0.0001)
+    assertEquals(6.6335, result?.routePoints?.get(2)?.longitude() ?: 0.0, 0.0001)
     verify(mockClient).newCall(any())
   }
 
@@ -213,9 +215,9 @@ class MapboxDirectionsServiceTest {
     val result = service.getDirections(origin, destination)
 
     assertNotNull(result)
-    assertEquals(5, result?.size)
-    assertEquals(6.5800, result?.get(1)?.longitude() ?: 0.0, 0.0001)
-    assertEquals(46.5200, result?.get(1)?.latitude() ?: 0.0, 0.0001)
+    assertEquals(5, result?.routePoints?.size)
+    assertEquals(6.5800, result?.routePoints?.get(1)?.longitude() ?: 0.0, 0.0001)
+    assertEquals(46.5200, result?.routePoints?.get(1)?.latitude() ?: 0.0, 0.0001)
   }
 
   @Test
@@ -307,5 +309,85 @@ class MapboxDirectionsServiceTest {
     val result = service.getDirections(origin, destination)
 
     assertNull(result)
+  }
+
+  @Test
+  fun `getDirections returns DirectionsResult with distance and duration`() = runTest {
+    val jsonResponse =
+        """
+        {
+          "routes": [{
+            "geometry": {
+              "coordinates": [[6.5674, 46.5197], [6.6335, 46.5197]]
+            },
+            "distance": 5280.5,
+            "duration": 3960.0
+          }]
+        }
+        """
+            .trimIndent()
+
+    val mockResponse =
+        Response.Builder()
+            .request(Request.Builder().url("https://test.com").build())
+            .protocol(Protocol.HTTP_1_1)
+            .code(200)
+            .message("OK")
+            .body(jsonResponse.toResponseBody())
+            .build()
+
+    `when`(mockClient.newCall(any())).thenReturn(mockCall)
+    `when`(mockCall.execute()).thenReturn(mockResponse)
+
+    val result = service.getDirections(origin, destination)
+
+    assertNotNull(result)
+    assertEquals(2, result?.routePoints?.size)
+    assertEquals(5280.5, result?.routeInfo?.distance ?: 0.0, 0.001)
+    assertEquals(3960.0, result?.routeInfo?.duration ?: 0.0, 0.001)
+  }
+
+  @Test
+  fun `getDirections defaults to zero when distance and duration missing`() = runTest {
+    val jsonResponse =
+        """
+        {
+          "routes": [{
+            "geometry": {
+              "coordinates": [[6.5674, 46.5197], [6.6335, 46.5197]]
+            }
+          }]
+        }
+        """
+            .trimIndent()
+
+    val mockResponse =
+        Response.Builder()
+            .request(Request.Builder().url("https://test.com").build())
+            .protocol(Protocol.HTTP_1_1)
+            .code(200)
+            .message("OK")
+            .body(jsonResponse.toResponseBody())
+            .build()
+
+    `when`(mockClient.newCall(any())).thenReturn(mockCall)
+    `when`(mockCall.execute()).thenReturn(mockResponse)
+
+    val result = service.getDirections(origin, destination)
+
+    assertNotNull(result)
+    assertEquals(0.0, result?.routeInfo?.distance ?: -1.0, 0.001)
+    assertEquals(0.0, result?.routeInfo?.duration ?: -1.0, 0.001)
+  }
+
+  @Test
+  fun `DirectionsResult data class works correctly`() {
+    val points = listOf(Point.fromLngLat(6.5674, 46.5197), Point.fromLngLat(6.6335, 46.5197))
+    val routeInfo = RouteInfo(distance = 1000.0, duration = 600.0)
+    val result = DirectionsResult(routePoints = points, routeInfo = routeInfo)
+
+    assertEquals(2, result.routePoints.size)
+    assertEquals(1000.0, result.routeInfo.distance, 0.001)
+    assertEquals(600.0, result.routeInfo.duration, 0.001)
   }
 }

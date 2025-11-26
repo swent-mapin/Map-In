@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map
 
+//Assisted by AI
+
 import android.location.Location
 import com.mapbox.geojson.Point
 import com.swent.mapin.ui.map.directions.DirectionState
@@ -33,6 +35,12 @@ class DirectionViewModelTest {
   private var testTime = 0L
   private val testClock: () -> Long = { testTime }
 
+  private fun toDirectionsResult(points: List<Point>) =
+      com.swent.mapin.ui.map.directions.DirectionsResult(
+          routePoints = points,
+          routeInfo = com.swent.mapin.ui.map.directions.RouteInfo(distance = 500.0, duration = 360.0)
+      )
+
   @Before
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
@@ -65,7 +73,7 @@ class DirectionViewModelTest {
   fun `requestDirections transitions to Displayed state on success`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -84,7 +92,7 @@ class DirectionViewModelTest {
   fun `requestDirections calls service with correct parameters`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -106,7 +114,7 @@ class DirectionViewModelTest {
   @Test
   fun `requestDirections sets Cleared state when service returns empty list`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(emptyList())
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(com.swent.mapin.ui.map.directions.DirectionsResult(emptyList(), com.swent.mapin.ui.map.directions.RouteInfo.ZERO))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -117,7 +125,7 @@ class DirectionViewModelTest {
   @Test
   fun `clearDirection sets state to Cleared from Displayed`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -144,9 +152,9 @@ class DirectionViewModelTest {
         listOf(Point.fromLngLat(6.5668, 46.5197), Point.fromLngLat(6.5800, 46.5300))
 
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
     `when`(mockDirectionsService.getDirections(testOrigin, destination2))
-        .thenReturn(mockRoutePoints2)
+        .thenReturn(toDirectionsResult(mockRoutePoints2))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -167,7 +175,7 @@ class DirectionViewModelTest {
   fun `requestDirections preserves route points order`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -202,7 +210,7 @@ class DirectionViewModelTest {
   fun `requestDirections handles single point route`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val singlePointRoute = listOf(testOrigin)
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(singlePointRoute)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(singlePointRoute))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -215,7 +223,7 @@ class DirectionViewModelTest {
   fun `requestDirections handles large route with many points`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val largeRoute = (0..100).map { i -> Point.fromLngLat(6.5668 + i * 0.001, 46.5197 + i * 0.001) }
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(largeRoute)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(largeRoute))
 
     viewModel.requestDirections(testOrigin, testDestination)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -241,7 +249,7 @@ class DirectionViewModelTest {
   @Test
   fun `onLocationUpdate does nothing when state is Loading`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination)
     // Don't advance - keep in Loading state
@@ -259,7 +267,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -283,7 +291,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -307,7 +315,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -339,7 +347,7 @@ class DirectionViewModelTest {
   fun `onLocationUpdate triggers on first update when lastUpdateLocation is null`() = runTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     // Request without passing location
     viewModel.requestDirections(testOrigin, testDestination, null)
@@ -366,8 +374,8 @@ class DirectionViewModelTest {
             Point.fromLngLat(6.5700, 46.5220))
 
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(newRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(newRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -392,7 +400,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -415,7 +423,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -444,7 +452,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -469,7 +477,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -496,7 +504,7 @@ class DirectionViewModelTest {
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -525,7 +533,7 @@ class DirectionViewModelTest {
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
     `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
-        .thenReturn(mockRoutePoints)
+        .thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -533,7 +541,7 @@ class DirectionViewModelTest {
     val initialState = viewModel.directionState as DirectionState.Displayed
 
     // API returns empty list
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(emptyList())
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(com.swent.mapin.ui.map.directions.DirectionsResult(emptyList(), com.swent.mapin.ui.map.directions.RouteInfo.ZERO))
 
     testTime += 11000
 
@@ -553,7 +561,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -576,7 +584,7 @@ class DirectionViewModelTest {
     viewModel = DirectionViewModel(mockDirectionsService, testClock)
     val initialLocation = createMockLocation(46.5197, 6.5668)
 
-    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(mockRoutePoints)
+    `when`(mockDirectionsService.getDirections(any(), any())).thenReturn(toDirectionsResult(mockRoutePoints))
 
     viewModel.requestDirections(testOrigin, testDestination, initialLocation)
     testDispatcher.scheduler.advanceUntilIdle()
@@ -614,5 +622,79 @@ class DirectionViewModelTest {
     `when`(location.latitude).thenReturn(latitude)
     `when`(location.longitude).thenReturn(longitude)
     return location
+  }
+
+  // ========== ROUTE INFO TESTS ==========
+
+  @Test
+  fun `requestDirections stores routeInfo from DirectionsResult`() = runTest {
+    viewModel = DirectionViewModel(mockDirectionsService, testClock)
+    val mockResult = com.swent.mapin.ui.map.directions.DirectionsResult(
+        routePoints = mockRoutePoints,
+        routeInfo = com.swent.mapin.ui.map.directions.RouteInfo(distance = 1500.0, duration = 900.0)
+    )
+    `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
+        .thenReturn(mockResult)
+
+    viewModel.requestDirections(testOrigin, testDestination)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.directionState as DirectionState.Displayed
+    assertEquals(1500.0, state.routeInfo.distance, 0.001)
+    assertEquals(900.0, state.routeInfo.duration, 0.001)
+  }
+
+  @Test
+  fun `onLocationUpdate updates routeInfo when refreshing route`() = runTest {
+    viewModel = DirectionViewModel(mockDirectionsService, testClock, minDistanceThreshold = 5f, minTimeThreshold = 1000L)
+    val initialResult = com.swent.mapin.ui.map.directions.DirectionsResult(
+        routePoints = mockRoutePoints,
+        routeInfo = com.swent.mapin.ui.map.directions.RouteInfo(distance = 2000.0, duration = 1200.0)
+    )
+    val updatedResult = com.swent.mapin.ui.map.directions.DirectionsResult(
+        routePoints = mockRoutePoints,
+        routeInfo = com.swent.mapin.ui.map.directions.RouteInfo(distance = 1500.0, duration = 900.0)
+    )
+
+    `when`(mockDirectionsService.getDirections(any(), any()))
+        .thenReturn(initialResult)
+        .thenReturn(updatedResult)
+
+    val initialLocation = createMockLocation(46.5197, 6.5668)
+    viewModel.requestDirections(testOrigin, testDestination, initialLocation)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state1 = viewModel.directionState as DirectionState.Displayed
+    assertEquals(2000.0, state1.routeInfo.distance, 0.001)
+
+    testTime = 2000L
+    val newLocation = createMockLocation(46.5200, 6.5675)
+    `when`(initialLocation.distanceTo(newLocation)).thenReturn(20f)
+
+    viewModel.onLocationUpdate(newLocation)
+    testDispatcher.scheduler.advanceTimeBy(1500L)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state2 = viewModel.directionState as DirectionState.Displayed
+    assertEquals(1500.0, state2.routeInfo.distance, 0.001)
+    assertEquals(900.0, state2.routeInfo.duration, 0.001)
+  }
+
+  @Test
+  fun `routeInfo defaults to ZERO when not provided`() = runTest {
+    viewModel = DirectionViewModel(mockDirectionsService, testClock)
+    val mockResult = com.swent.mapin.ui.map.directions.DirectionsResult(
+        routePoints = mockRoutePoints,
+        routeInfo = com.swent.mapin.ui.map.directions.RouteInfo.ZERO
+    )
+    `when`(mockDirectionsService.getDirections(testOrigin, testDestination))
+        .thenReturn(mockResult)
+
+    viewModel.requestDirections(testOrigin, testDestination)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    val state = viewModel.directionState as DirectionState.Displayed
+    assertEquals(0.0, state.routeInfo.distance, 0.001)
+    assertEquals(0.0, state.routeInfo.duration, 0.001)
   }
 }
