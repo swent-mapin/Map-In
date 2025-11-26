@@ -196,7 +196,7 @@ fun EditEventScreen(
                     }
 
                 Text(
-                    text = "New Event",
+                    text = "Edit Event",
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f))
