@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map.directions
 
+//Assisted by AI
+
 import android.location.Location
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,12 +64,15 @@ class DirectionViewModel(
     viewModelScope.launch {
       _directionState = DirectionState.Loading
 
-      val routePoints = directionsService?.getDirections(origin, destination)
+      val result = directionsService?.getDirections(origin, destination)
 
-      if (routePoints != null && routePoints.isNotEmpty()) {
+      if (result != null && result.routePoints.isNotEmpty()) {
         _directionState =
             DirectionState.Displayed(
-                routePoints = routePoints, origin = origin, destination = destination)
+                routePoints = result.routePoints,
+                origin = origin,
+                destination = destination,
+                routeInfo = result.routeInfo)
 
         if (currentLocation != null) {
           lastUpdateLocation = currentLocation
@@ -120,14 +125,15 @@ class DirectionViewModel(
             }
 
             val newOrigin = Point.fromLngLat(location.longitude, location.latitude)
-            val routePoints = directionsService?.getDirections(newOrigin, state.destination)
+            val result = directionsService?.getDirections(newOrigin, state.destination)
 
-            if (routePoints != null && routePoints.isNotEmpty()) {
+            if (result != null && result.routePoints.isNotEmpty()) {
               _directionState =
                   DirectionState.Displayed(
-                      routePoints = routePoints,
+                      routePoints = result.routePoints,
                       origin = newOrigin,
-                      destination = state.destination)
+                      destination = state.destination,
+                      routeInfo = result.routeInfo)
               lastUpdateLocation = location
               lastUpdateTime = currentTimeMillis()
             }

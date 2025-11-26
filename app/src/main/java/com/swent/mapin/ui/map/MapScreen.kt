@@ -104,6 +104,7 @@ import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.directions.RouteInfoCard
 import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
 import com.swent.mapin.ui.profile.ProfileViewModel
 import com.swent.mapin.util.EventUtils
@@ -436,6 +437,17 @@ fun MapScreen(
         downloadProgress = viewModel.downloadProgress,
         showDownloadComplete = viewModel.showDownloadComplete,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
+
+    // Route info card when directions are displayed
+    val directionState = viewModel.directionViewModel.directionState
+    if (directionState is DirectionState.Displayed) {
+      RouteInfoCard(
+          routeInfo = directionState.routeInfo,
+          modifier = Modifier
+              .align(Alignment.TopCenter)
+              .padding(top = 70.dp)
+      )
+    }
 
     // Overlays et contrôles au-dessus de la carte
     Box(
