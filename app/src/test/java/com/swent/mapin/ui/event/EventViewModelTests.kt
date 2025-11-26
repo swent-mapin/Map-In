@@ -98,4 +98,31 @@ class EventViewModelTests {
     advanceUntilIdle()
     assertEquals("Delete failed", viewModel.error.value)
   }
+
+  // 8. selectEventToEdit sets the eventToEdit StateFlow
+  @Test
+  fun `selectEventToEdit updates eventToEdit`() {
+    val event = Event("1")
+    viewModel.selectEventToEdit(event)
+    assertEquals(event, viewModel.eventToEdit.value)
+  }
+
+  // 9. clearEventToEdit sets eventToEdit to null
+  @Test
+  fun `clearEventToEdit clears eventToEdit`() {
+    val event = Event("1")
+    viewModel.selectEventToEdit(event)
+    viewModel.clearEventToEdit()
+    assertEquals(null, viewModel.eventToEdit.value)
+  }
+  // 10. clearError sets error StateFlow to null
+  @Test
+  fun `clearError clears error`() = runTest {
+    Mockito.doThrow(RuntimeException("Error")).`when`(repository).addEvent(Event("1"))
+    viewModel.addEvent(Event("1"))
+    advanceUntilIdle()
+    assertEquals("Error", viewModel.error.value)
+    viewModel.clearError()
+    assertEquals(null, viewModel.error.value)
+  }
 }
