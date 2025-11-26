@@ -25,9 +25,11 @@ interface EventRepository {
    * Retrieves Event items based on the specified filters.
    *
    * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
+   * @param userId The unique identifier of the user requesting the events (to identify his
+   *   friends).
    * @return A list of Event items matching the filters.
    */
-  suspend fun getFilteredEvents(filters: Filters): List<Event>
+  suspend fun getFilteredEvents(filters: Filters, userId: String): List<Event>
 
   /**
    * Adds a new Event item to the repository.
@@ -109,28 +111,52 @@ interface EventRepository {
   ): ListenerRegistration
 
   /**
-   * Listen to changes in saved events for a user. Monitors the user's savedEventIds array and
-   * fetches corresponding events.
+   * Listen to real-time changes in the user's saved events.
    *
-   * @param userId The unique identifier of the user.
-   * @param onUpdate Callback with added, modified, and removed events.
-   * @return ListenerRegistration to manage the listener.
+   * IMPORTANT:
+   * - This listener provides incremental deltas only.
+   * - It never emits the initial/full set of events.
+   * - The first invocation of onUpdate only happens when an event is actually added, modified, or
+   *   removed after registration.
+   * - To get the current state, call getSavedEvents(userId) separately before or after registering
+   *   this listener.
+   *
+   * Callback details:
+   * - Callbacks are delivered on a Firestore background thread (not the Android main thread).
+   * - In case of transient errors, empty updates may be emitted; permanent failures are logged.
+   * - Removed events are represented by a minimal Event object (only uid is guaranteed valid).
+   *
+   * @param userId The user ID
+   * @param onUpdate Callback receiving only incremental changes
+   * @return ListenerRegistration to remove the listener
    */
   fun listenToSavedEvents(
       userId: String,
-      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+      onUpdate: (List<Event>, List<Event>, List<String>) -> Unit
   ): ListenerRegistration
 
   /**
-   * Listen to changes in joined events for a user. Monitors the user's joinedEventIds array and
-   * fetches corresponding events.
+   * Listen to real-time changes in the user's joined events.
    *
-   * @param userId The unique identifier of the user.
-   * @param onUpdate Callback with added, modified, and removed events.
-   * @return ListenerRegistration to manage the listener.
+   * IMPORTANT:
+   * - This listener provides incremental deltas only.
+   * - It never emits the initial/full set of events.
+   * - The first invocation of onUpdate only happens when an event is actually added, modified, or
+   *   removed after registration.
+   * - To get the current state, call getJoinedEvents(userId) separately before or after registering
+   *   this listener.
+   *
+   * Callback details:
+   * - Callbacks are delivered on a Firestore background thread (not the Android main thread).
+   * - In case of transient errors, empty updates may be emitted; permanent failures are logged.
+   * - Removed events are represented by a minimal Event object (only uid is guaranteed valid).
+   *
+   * @param userId The user ID
+   * @param onUpdate Receives only incremental changes after registration
+   * @return ListenerRegistration to remove the listener
    */
   fun listenToJoinedEvents(
       userId: String,
-      onUpdate: (List<Event>, List<Event>, List<Event>) -> Unit
+      onUpdate: (List<Event>, List<Event>, List<String>) -> Unit
   ): ListenerRegistration
 }

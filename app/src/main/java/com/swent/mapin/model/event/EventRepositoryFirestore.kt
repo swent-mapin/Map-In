@@ -1,8 +1,6 @@
 package com.swent.mapin.model.event
 
 import android.util.Log
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
@@ -20,7 +18,8 @@ import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.EventUtils.calculateHaversineDistance
-import java.time.ZoneId
+import com.swent.mapin.util.TimeUtils
+import java.time.ZoneOffset
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
@@ -293,14 +292,14 @@ class EventRepositoryFirestore(
    * @param filters The filtering criteria (e.g., tags, date range, location, etc.).
    * @return A list of Event items matching the filters.
    */
-  override suspend fun getFilteredEvents(filters: Filters): List<Event> {
+  override suspend fun getFilteredEvents(filters: Filters, userId: String): List<Event> {
     return try {
       // Determine query strategy based on filters
       val queryStrategy = determineQueryStrategy(filters)
 
       val events =
           when (queryStrategy) {
-            QueryStrategy.FRIENDS -> getEventsByFriendsQuery(filters)
+            QueryStrategy.FRIENDS -> getEventsByFriendsQuery(filters, userId)
             QueryStrategy.TAGS -> getEventsByTagsQuery(filters)
             QueryStrategy.BASIC -> getEventsByBasicQuery(filters)
           }
@@ -341,40 +340,39 @@ class EventRepositoryFirestore(
    * Query events by friends' IDs. Price is added to Firestore query if present. Tags are filtered
    * client-side (Firestore constraint: can't combine whereIn + whereArrayContainsAny).
    */
-  private suspend fun getEventsByFriendsQuery(filters: Filters): List<Event> = coroutineScope {
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@coroutineScope emptyList()
+  private suspend fun getEventsByFriendsQuery(filters: Filters, userId: String): List<Event> =
+      coroutineScope {
+        val friendsDeferred = async {
+          try {
+            friendRequestRepository.getFriends(userId).map { it.userProfile.userId }
+          } catch (e: Exception) {
+            Log.e("EventRepositoryFirestore", "Failed to fetch friends", e)
+            emptyList()
+          }
+        }
 
-    val friendsDeferred = async {
-      try {
-        friendRequestRepository.getFriends(userId).map { it.userProfile.userId }
-      } catch (e: Exception) {
-        Log.e("EventRepositoryFirestore", "Failed to fetch friends", e)
-        emptyList()
+        val friendIds = friendsDeferred.await()
+        if (friendIds.isEmpty()) return@coroutineScope emptyList()
+
+        // Build query with dates + price (if present)
+        val query = buildBaseQuery(filters)
+
+        // Fetch events by friend chunks
+        val friendChunks = friendIds.chunked(FIRESTORE_QUERY_LIMIT)
+        val allEvents = mutableListOf<Event>()
+
+        for (chunk in friendChunks) {
+          val snap = query.whereIn("ownerId", chunk).get().await()
+          allEvents += snap.documents.mapNotNull { it.toEvent() }
+        }
+
+        // Apply tags filter CLIENT-SIDE (Firestore constraint)
+        return@coroutineScope if (filters.tags.isNotEmpty()) {
+          allEvents.filter { event -> event.tags.any { tag -> filters.tags.contains(tag) } }
+        } else {
+          allEvents
+        }
       }
-    }
-
-    val friendIds = friendsDeferred.await()
-    if (friendIds.isEmpty()) return@coroutineScope emptyList()
-
-    // Build query with dates + price (if present)
-    val query = buildBaseQuery(filters)
-
-    // Fetch events by friend chunks
-    val friendChunks = friendIds.chunked(FIRESTORE_QUERY_LIMIT)
-    val allEvents = mutableListOf<Event>()
-
-    for (chunk in friendChunks) {
-      val snap = query.whereIn("ownerId", chunk).get().await()
-      allEvents += snap.documents.mapNotNull { it.toEvent() }
-    }
-
-    // Apply tags filter CLIENT-SIDE (Firestore constraint)
-    return@coroutineScope if (filters.tags.isNotEmpty()) {
-      allEvents.filter { event -> event.tags.any { tag -> filters.tags.contains(tag) } }
-    } else {
-      allEvents
-    }
-  }
 
   /**
    * Query events by tags. Price is added to Firestore query if present (fully server-side
@@ -409,16 +407,13 @@ class EventRepositoryFirestore(
     var query: Query = db.collection(EVENTS_COLLECTION_PATH)
 
     // Apply startDate filter
-    val startTimestamp =
-        Timestamp(filters.startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), 0)
+    val (startTimestamp, _) = TimeUtils.dayBounds(filters.startDate, zone = ZoneOffset.UTC)
     query = query.whereGreaterThanOrEqualTo("date", startTimestamp)
 
     // Apply endDate filter if provided
-    if (filters.endDate != null) {
-      val endTimestamp =
-          Timestamp(
-              filters.endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond(), 0)
-      query = query.whereLessThanOrEqualTo("date", endTimestamp)
+    filters.endDate?.let { endDate ->
+      val (_, endOfDayExclusive) = TimeUtils.dayBounds(endDate, zone = ZoneOffset.UTC)
+      query = query.whereLessThan("date", endOfDayExclusive)
     }
 
     // Add price to query if present
@@ -541,7 +536,7 @@ class EventRepositoryFirestore(
    */
   override fun listenToSavedEvents(
       userId: String,
-      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<String>) -> Unit
   ): ListenerRegistration {
     return listenToUserEvents(userId, UserEventSource.SAVED, onUpdate)
   }
@@ -556,7 +551,7 @@ class EventRepositoryFirestore(
    */
   override fun listenToJoinedEvents(
       userId: String,
-      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<String>) -> Unit
   ): ListenerRegistration {
     return listenToUserEvents(userId, UserEventSource.JOINED, onUpdate)
   }
@@ -578,11 +573,11 @@ class EventRepositoryFirestore(
   private fun listenToUserEvents(
       userId: String,
       source: UserEventSource,
-      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<Event>) -> Unit
+      onUpdate: (added: List<Event>, modified: List<Event>, removed: List<String>) -> Unit
   ): ListenerRegistration {
     // Composite listener to manage multiple sub-listeners
     val eventListeners = mutableMapOf<String, ListenerRegistration>()
-    var isInitialLoad = true
+    val isInitialLoadMap = mutableMapOf<String, Boolean>() // Track initial load per event
 
     // Main listener on user document to know which events to monitor
     val userListener =
@@ -630,20 +625,14 @@ class EventRepositoryFirestore(
                   }
 
                   // Skip initial load to avoid duplicate notifications
-                  if (isInitialLoad) return@addSnapshotListener
+                  if (isInitialLoadMap[eventId] == true) {
+                    isInitialLoadMap[eventId] = false // Mark as loaded for this specific event
+                    return@addSnapshotListener
+                  }
 
                   if (eventSnapshot == null || !eventSnapshot.exists()) {
                     // Event was deleted
-                    val deletedEvent =
-                        Event(
-                            uid = eventId,
-                            title = "",
-                            description = "",
-                            date = Timestamp.now(),
-                            location = Location("", 0.0, 0.0),
-                            ownerId = "",
-                            tags = emptyList())
-                    onUpdate(emptyList(), emptyList(), listOf(deletedEvent))
+                    onUpdate(emptyList(), emptyList(), listOf(eventId))
                   } else {
                     // Event was modified
                     val modifiedEvent = eventSnapshot.toEvent()
@@ -653,11 +642,6 @@ class EventRepositoryFirestore(
                   }
                 }
             eventListeners[eventId] = listener
-          }
-
-          // After first load, start monitoring changes
-          if (isInitialLoad) {
-            isInitialLoad = false
           }
         }
 
