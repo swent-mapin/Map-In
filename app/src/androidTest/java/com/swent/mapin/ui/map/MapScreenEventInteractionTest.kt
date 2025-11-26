@@ -46,7 +46,7 @@ class MapScreenEventInteractionTest {
 
   @Test
   fun mapScreen_withSelectedEvent_rendersWithoutCrashing() {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       var selectedEvent by remember { mutableStateOf<Event?>(testEvent) }
@@ -60,7 +60,7 @@ class MapScreenEventInteractionTest {
   // CAMERA CENTERING CALLBACK TESTS
   @Test
   fun onCenterCamera_receivesCorrectEventData() {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
     var receivedEvent: Event? = null
 
     rule.setContent {
@@ -77,7 +77,7 @@ class MapScreenEventInteractionTest {
 
   @Test
   fun onCenterCamera_canAccessEventLocation() {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
     var eventReceived = false
     var longitudeValid = false
     var latitudeValid = false
@@ -101,7 +101,7 @@ class MapScreenEventInteractionTest {
   // INTEGRATION SMOKE TESTS
   @Test
   fun mapScreen_withMultipleEvents_rendersWithoutCrashing() {
-    val testEvents = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents().take(3)
+    val testEvents = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents().take(3)
 
     rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()

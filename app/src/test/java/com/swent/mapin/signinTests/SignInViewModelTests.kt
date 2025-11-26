@@ -53,6 +53,53 @@ class SignInViewModelTest {
   private lateinit var viewModel: SignInViewModel
   private val testDispatcher = StandardTestDispatcher()
 
+  // Error message constants to avoid string brittleness
+  companion object {
+    const val ERROR_EMPTY_CREDENTIALS = "Email and password cannot be empty"
+    const val ERROR_TOO_SHORT = "at least 8 characters"
+    const val ERROR_MISSING_UPPERCASE = "at least one uppercase"
+    const val ERROR_MISSING_LOWERCASE = "at least one lowercase"
+    const val ERROR_MISSING_DIGIT = "at least one number"
+    const val ERROR_MISSING_SPECIAL = "at least one special character"
+
+    // Test password helpers
+    const val VALID_PASSWORD = "ValidPass123!"
+    const val VALID_EMAIL = "test@example.com"
+  }
+
+  // Helper function to create password variants with specific missing requirements
+  private fun passwordMissingUppercase() = "validpass123!"
+
+  private fun passwordMissingLowercase() = "VALIDPASS123!"
+
+  private fun passwordMissingDigit() = "ValidPassword!"
+
+  private fun passwordMissingSpecial() = "ValidPass123"
+
+  private fun passwordTooShort() = "Val1!"
+
+  private fun passwordWithUnicode() = "Пароль123!" // Cyrillic
+
+  private fun passwordWithEmoji() = "Password123😀"
+
+  private fun passwordWithChinese() = "密码Pass123"
+
+  // Helper to wait for async state updates and assert on updated state
+  private suspend fun TestScope.awaitStateUpdate(
+      expectedCondition: (SignInUiState) -> Boolean
+  ): SignInUiState {
+    advanceUntilIdle()
+    return viewModel.uiState.first { expectedCondition(it) || it.errorMessage != null }
+  }
+
+  // Helper to assert error message contains expected substring
+  private fun assertErrorContains(actual: String?, expected: String) {
+    assertNotNull("Expected error message but got null", actual)
+    assertTrue(
+        "Expected error to contain '$expected' but was '$actual'",
+        actual!!.contains(expected, ignoreCase = true))
+  }
+
   @Before
   fun setup() {
     // Setup test dispatcher for coroutines
@@ -386,34 +433,89 @@ class SignInViewModelTest {
   }
 
   @Test
-  fun `signUpWithEmail should reject password shorter than 6 characters`() = runTest {
+  fun `signUpWithEmail should reject password shorter than 8 characters`() = runTest {
     viewModel.signUpWithEmail("test@example.com", "12345")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Password must be at least 6 characters", state.errorMessage)
+    assertEquals("Password must be at least 8 characters", state.errorMessage)
     assertFalse(state.isSignInSuccessful)
   }
 
   @Test
-  fun `signUpWithEmail should accept password with exactly 6 characters`() = runTest {
-    viewModel.signUpWithEmail("test@example.com", "123456")
+  fun `signUpWithEmail should reject password with only 6 characters`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "Ts12!a")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    // Should not fail with password length error
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    // Should fail because less than 8 characters
+    assertEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
-  fun `signUpWithEmail should accept password longer than 6 characters`() = runTest {
-    viewModel.signUpWithEmail("test@example.com", "1234567890")
+  fun `signUpWithEmail should accept password with exactly 8 characters and all requirements`() =
+      runTest {
+        viewModel.signUpWithEmail("test@example.com", "Test123!")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.first()
+        // Should not fail with any validation errors
+        assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+        assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
+        assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
+        assertNotEquals("Password must contain at least one number", state.errorMessage)
+        assertNotEquals("Password must contain at least one special character", state.errorMessage)
+      }
+
+  @Test
+  fun `signUpWithEmail should reject password missing uppercase`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "test123!")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    // Should not fail with password length error
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    assertEquals("Password must contain at least one uppercase letter", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject password missing lowercase`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "TEST123!")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Password must contain at least one lowercase letter", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject password missing digit`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "TestTest!")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Password must contain at least one number", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should reject password missing special character`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "Test1234")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    assertEquals("Password must contain at least one special character", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should accept long password with all requirements`() = runTest {
+    viewModel.signUpWithEmail("test@example.com", "Test123456!")
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not fail with any validation errors
+    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+    assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
+    assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
+    assertNotEquals("Password must contain at least one number", state.errorMessage)
+    assertNotEquals("Password must contain at least one special character", state.errorMessage)
   }
 
   @Test
@@ -470,7 +572,7 @@ class SignInViewModelTest {
     val state = viewModel.uiState.first()
     // Should not have validation errors
     assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
@@ -531,7 +633,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
@@ -546,13 +648,17 @@ class SignInViewModelTest {
 
   @Test
   fun `signUpWithEmail with very long password should be accepted`() = runTest {
-    val longPassword = "a".repeat(100)
+    val longPassword = "Aa1!" + "a".repeat(96) // Total 100 chars with all requirements
     viewModel.signUpWithEmail("test@example.com", longPassword)
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+    assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
+    assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
+    assertNotEquals("Password must contain at least one number", state.errorMessage)
+    assertNotEquals("Password must contain at least one special character", state.errorMessage)
   }
 
   @Test
@@ -602,7 +708,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail("test@example.com", "123")
     advanceUntilIdle()
     state = viewModel.uiState.first()
-    assertEquals("Password must be at least 6 characters", state.errorMessage)
+    assertEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   // ========== Firebase Authentication Success/Failure Tests ==========
@@ -696,7 +802,7 @@ class SignInViewModelTest {
     coEvery { mockTask.await<AuthResult>() } throws exception
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("existing@example.com", "password123")
+    testViewModel.signUpWithEmail("existing@example.com", "Password123!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
@@ -720,7 +826,7 @@ class SignInViewModelTest {
     coEvery { mockTask.await<AuthResult>() } throws exception
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("invalid-email", "password123")
+    testViewModel.signUpWithEmail("invalid-email", "Password123!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
@@ -744,7 +850,7 @@ class SignInViewModelTest {
     coEvery { mockTask.await<AuthResult>() } throws exception
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("test@example.com", "password123")
+    testViewModel.signUpWithEmail("test@example.com", "Password123!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
@@ -1048,7 +1154,7 @@ class SignInViewModelTest {
     every { mockAuthResult.user } returns mockUser
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("newuser@example.com", "password123")
+    testViewModel.signUpWithEmail("newuser@example.com", "Password123!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
@@ -1101,7 +1207,7 @@ class SignInViewModelTest {
     every { mockAuthResult.user } returns null
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("test@example.com", "password123")
+    testViewModel.signUpWithEmail("test@example.com", "Password123!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
@@ -1127,15 +1233,14 @@ class SignInViewModelTest {
     coEvery { mockTask.await<AuthResult>() } throws exception
 
     val testViewModel = SignInViewModel(context)
-    testViewModel.signUpWithEmail("test@example.com", "123456")
+    // Use a password that would pass Firebase's 6 char requirement but fails our 8 char requirement
+    testViewModel.signUpWithEmail("test@example.com", "Ab1!")
     advanceUntilIdle()
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    // Since the error doesn't contain "weak password", it will be a generic error
-    assertEquals(
-        "Sign-up failed: The given password is invalid. [ Password should be at least 6 characters ]",
-        state.errorMessage)
+    // Our local validation catches it before Firebase
+    assertEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
@@ -1226,18 +1331,19 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Password must be at least 6 characters", state.errorMessage)
+    assertEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
-  fun `signUpWithEmail with exactly 6 character password should succeed validation`() = runTest {
-    viewModel.signUpWithEmail("test@example.com", "123456")
-    advanceUntilIdle()
+  fun `signUpWithEmail with exactly 8 character password with all requirements should succeed validation`() =
+      runTest {
+        viewModel.signUpWithEmail("test@example.com", "Test123!")
+        advanceUntilIdle()
 
-    val state = viewModel.uiState.first()
-    // Should not have password length error
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
-  }
+        val state = viewModel.uiState.first()
+        // Should not have password length error
+        assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+      }
 
   @Test
   fun `signInWithEmail error messages are properly mapped`() = runTest {
@@ -1298,7 +1404,7 @@ class SignInViewModelTest {
       coEvery { mockTask.await<AuthResult>() } throws exception
 
       val testViewModel = SignInViewModel(context)
-      testViewModel.signUpWithEmail("test@example.com", "password123")
+      testViewModel.signUpWithEmail("test@example.com", "Password123!")
       advanceUntilIdle()
 
       val state = testViewModel.uiState.first()
@@ -1347,7 +1453,7 @@ class SignInViewModelTest {
     val state = viewModel.uiState.first()
     // Should not fail with validation errors
     assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 6 characters", state.errorMessage)
+    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
   }
 
   @Test
@@ -1374,5 +1480,180 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isSignInSuccessful)
+  }
+
+  // ========== Additional Unicode and Non-ASCII Character Tests ==========
+
+  @Test
+  fun `signUpWithEmail should accept password with Cyrillic characters as special chars`() =
+      runTest {
+        viewModel.signUpWithEmail(VALID_EMAIL, passwordWithUnicode())
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.first()
+        // Cyrillic characters should count as special characters
+        state.errorMessage?.let { error ->
+          assertFalse(
+              "Cyrillic password should be valid but got: $error",
+              error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+        }
+      }
+
+  @Test
+  fun `signUpWithEmail should accept password with emoji as special character`() = runTest {
+    viewModel.signUpWithEmail(VALID_EMAIL, passwordWithEmoji())
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Emoji should count as special character
+    state.errorMessage?.let { error ->
+      assertFalse(
+          "Emoji password should have special char but got: $error",
+          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail should accept password with Chinese characters as special chars`() =
+      runTest {
+        viewModel.signUpWithEmail(VALID_EMAIL, passwordWithChinese())
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.first()
+        // Chinese characters should count as special characters
+        state.errorMessage?.let { error ->
+          assertFalse(
+              "Chinese password should have special char but got: $error",
+              error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+        }
+      }
+
+  @Test
+  fun `signUpWithEmail should handle password with accented characters`() = runTest {
+    val passwordWithAccents = "Pàsswörd123!"
+    viewModel.signUpWithEmail(VALID_EMAIL, passwordWithAccents)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should handle accented characters properly
+    assertNotNull(state)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle password with mathematical symbols`() = runTest {
+    val passwordWithMath = "Pass±×÷Word123"
+    viewModel.signUpWithEmail(VALID_EMAIL, passwordWithMath)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Mathematical symbols should count as special characters
+    state.errorMessage?.let { error ->
+      assertFalse(
+          "Math symbols should count as special char",
+          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail should handle password with spaces as special chars`() = runTest {
+    val passwordWithSpaces = "Pass word 123!"
+    viewModel.signUpWithEmail(VALID_EMAIL, passwordWithSpaces)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Spaces count as special characters
+    state.errorMessage?.let { error ->
+      assertFalse(
+          "Spaces should count as special char",
+          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+    }
+  }
+
+  // ========== Edge Cases and Boundary Tests ==========
+
+  @Test
+  fun `signUpWithEmail should explicitly handle empty email string`() = runTest {
+    viewModel.signUpWithEmail("", VALID_PASSWORD)
+    val state = awaitStateUpdate { !it.isLoading }
+
+    assertErrorContains(state.errorMessage, ERROR_EMPTY_CREDENTIALS)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signUpWithEmail should explicitly handle empty password string`() = runTest {
+    viewModel.signUpWithEmail(VALID_EMAIL, "")
+    val state = awaitStateUpdate { !it.isLoading }
+
+    assertErrorContains(state.errorMessage, ERROR_EMPTY_CREDENTIALS)
+    assertFalse(state.isSignInSuccessful)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle whitespace-only password`() = runTest {
+    viewModel.signUpWithEmail(VALID_EMAIL, "        ")
+    val state = awaitStateUpdate { !it.isLoading }
+
+    // Whitespace-only password should fail validation
+    assertNotNull("Should have error for whitespace-only password", state.errorMessage)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle very long password without crashing`() = runTest {
+    val longPassword = "A1!" + "a".repeat(1000) // 1003 characters
+    viewModel.signUpWithEmail(VALID_EMAIL, longPassword)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should not crash or fail validation due to length
+    assertNotNull(state)
+  }
+
+  @Test
+  fun `signUpWithEmail should handle password with tabs and newlines`() = runTest {
+    val passwordWithWhitespace = "Pass\tword\n123!"
+    viewModel.signUpWithEmail(VALID_EMAIL, passwordWithWhitespace)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Tabs and newlines should count as special characters
+    state.errorMessage?.let { error ->
+      assertFalse(
+          "Whitespace chars should count as special",
+          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail should reject 7 character password`() = runTest {
+    viewModel.signUpWithEmail(VALID_EMAIL, "Pass1!a") // 7 characters
+    val state = awaitStateUpdate { !it.isLoading }
+
+    assertErrorContains(state.errorMessage, ERROR_TOO_SHORT)
+  }
+
+  @Test
+  fun `signUpWithEmail should accept password with all punctuation types`() = runTest {
+    val punctuationPassword = "Pass123!@#$%^&*()"
+    viewModel.signUpWithEmail(VALID_EMAIL, punctuationPassword)
+    advanceUntilIdle()
+
+    val state = viewModel.uiState.first()
+    // Should be valid
+    state.errorMessage?.let { error ->
+      assertFalse(
+          "All punctuation types should be valid",
+          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail should handle rapid successive calls gracefully`() = runTest {
+    // Multiple rapid calls
+    repeat(5) { viewModel.signUpWithEmail("test$it@example.com", "TestPassword$it!") }
+    advanceUntilIdle()
+    val state = viewModel.uiState.first()
+    // Should not crash and should have some state
+    assertNotNull(state)
   }
 }

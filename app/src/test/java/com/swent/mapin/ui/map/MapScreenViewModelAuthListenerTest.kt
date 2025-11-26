@@ -7,7 +7,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
-import com.swent.mapin.model.event.LocalEventRepository
+import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -105,7 +105,7 @@ class MapScreenViewModelAuthListenerTest {
         assertEquals(emptyList<Event>(), vm.savedEvents)
 
         // savedEventIds is private; check via helper
-        val sample = LocalEventRepository.defaultSampleEvents().first()
+        val sample = LocalEventList.defaultSampleEvents().first()
         assertEquals(false, vm.isEventSaved(sample))
 
         // Joined list cleared
@@ -116,7 +116,7 @@ class MapScreenViewModelAuthListenerTest {
   fun authListener_onSignIn_loadsSavedAndJoined() =
       runTest(testDispatcher) {
         // Provide some saved data after sign-in
-        val e = LocalEventRepository.defaultSampleEvents().first()
+        val e = LocalEventList.defaultSampleEvents().first()
 
         whenever(mockAuth.currentUser).thenReturn(mockUser)
         whenever(mockUser.uid).thenReturn("testUserId")

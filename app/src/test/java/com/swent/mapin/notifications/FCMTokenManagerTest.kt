@@ -214,19 +214,63 @@ class FCMTokenManagerTest {
   }
 
   @Test
-  fun `initializeForCurrentUser gets token and saves it`() = runTest {
+  fun `initializeForCurrentUser gets token and saves it when token not exists`() = runTest {
     val userId = "user123"
     val fcmToken = "fcm_init_token"
+    val mockDocumentSnapshot: DocumentSnapshot = mock()
 
     whenever(mockAuth.currentUser).thenReturn(mockUser)
     whenever(mockUser.uid).thenReturn(userId)
     whenever(mockMessaging.token).thenReturn(Tasks.forResult(fcmToken))
+    whenever(mockDocumentReference.get()).thenReturn(Tasks.forResult(mockDocumentSnapshot))
+    whenever(mockDocumentSnapshot.get("fcmTokens")).thenReturn(emptyList<String>())
     whenever(mockDocumentReference.update(anyString(), any())).thenReturn(Tasks.forResult(null))
 
     val success = tokenManager.initializeForCurrentUser()
 
     assertTrue(success)
     verify(mockMessaging).token
+    verify(mockDocumentReference).get()
+    verify(mockDocumentReference).update(eq("fcmTokens"), any())
+  }
+
+  @Test
+  fun `initializeForCurrentUser returns true when token already exists (idempotent)`() = runTest {
+    val userId = "user123"
+    val fcmToken = "fcm_init_token"
+    val mockDocumentSnapshot: DocumentSnapshot = mock()
+
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+    whenever(mockMessaging.token).thenReturn(Tasks.forResult(fcmToken))
+    whenever(mockDocumentReference.get()).thenReturn(Tasks.forResult(mockDocumentSnapshot))
+    whenever(mockDocumentSnapshot.get("fcmTokens")).thenReturn(listOf(fcmToken))
+
+    val success = tokenManager.initializeForCurrentUser()
+
+    assertTrue(success)
+    verify(mockMessaging).token
+    verify(mockDocumentReference).get()
+    // Should NOT call update since token already exists
+    verify(mockDocumentReference, never()).update(anyString(), any())
+  }
+
+  @Test
+  fun `initializeForCurrentUser falls back to addToken on get error`() = runTest {
+    val userId = "user123"
+    val fcmToken = "fcm_init_token"
+
+    whenever(mockAuth.currentUser).thenReturn(mockUser)
+    whenever(mockUser.uid).thenReturn(userId)
+    whenever(mockMessaging.token).thenReturn(Tasks.forResult(fcmToken))
+    whenever(mockDocumentReference.get()).thenReturn(Tasks.forException(Exception("Get failed")))
+    whenever(mockDocumentReference.update(anyString(), any())).thenReturn(Tasks.forResult(null))
+
+    val success = tokenManager.initializeForCurrentUser()
+
+    assertTrue(success)
+    verify(mockDocumentReference).get()
+    // Should fall back to addToken
     verify(mockDocumentReference).update(eq("fcmTokens"), any())
   }
 
