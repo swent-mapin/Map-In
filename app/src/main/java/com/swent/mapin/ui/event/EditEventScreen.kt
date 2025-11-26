@@ -54,6 +54,13 @@ import java.util.TimeZone
 
 object EditEventScreenTestTags {
   const val SCREEN = "EditEventScreen"
+  const val EVENT_CANCEL = "EDIT_EVENT_CANCEL"
+  const val EVENT_SAVE = "EDIT_EVENT_SAVE"
+  const val ERROR_MESSAGE = "EDIT_ERROR_MESSAGE"
+  const val INPUT_EVENT_TITLE = "EDIT_INPUT_EVENT_TITLE"
+  const val INPUT_EVENT_DESCRIPTION = "EDIT_INPUT_EVENT_DESCRIPTION"
+  const val INPUT_EVENT_TAG = "EDIT_INPUT_EVENT_TAG"
+  const val DATE_TIME_ERROR = "EDIT_DATE_TIME_ERROR"
 }
 
 fun Timestamp.toDateString(): String =
@@ -181,7 +188,7 @@ fun EditEventScreen(
               verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = onCancel,
-                    modifier = Modifier.size(48.dp).testTag(AddEventScreenTestTags.EVENT_CANCEL)) {
+                    modifier = Modifier.size(48.dp).testTag(EditEventScreenTestTags.EVENT_CANCEL)) {
                       Icon(
                           imageVector = Icons.Default.Close,
                           contentDescription = "Cancel",
@@ -281,7 +288,7 @@ fun EditEventScreen(
                                     if (isEventValid) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.surfaceVariant,
                                 shape = CircleShape)
-                            .testTag(AddEventScreenTestTags.EVENT_SAVE)) {
+                            .testTag(EditEventScreenTestTags.EVENT_SAVE)) {
                       Icon(
                           imageVector = Icons.Default.Check,
                           contentDescription = "Save",
@@ -311,7 +318,7 @@ fun EditEventScreen(
                               R.string.validation_banner_prefix, errorFields.joinToString(", ")),
                       color = Color.White,
                       style = MaterialTheme.typography.bodySmall,
-                      modifier = Modifier.testTag(AddEventScreenTestTags.ERROR_MESSAGE))
+                      modifier = Modifier.testTag(EditEventScreenTestTags.ERROR_MESSAGE))
                 }
           }
 
@@ -326,7 +333,7 @@ fun EditEventScreen(
               title,
               titleError,
               stringResource(R.string.title_place_holder),
-              modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_TITLE),
+              modifier = Modifier.testTag(EditEventScreenTestTags.INPUT_EVENT_TITLE),
               singleLine = true)
 
           Spacer(modifier = Modifier.padding(10.dp))
@@ -343,7 +350,8 @@ fun EditEventScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Red,
                 modifier =
-                    Modifier.padding(bottom = 8.dp).testTag(AddEventScreenTestTags.DATE_TIME_ERROR))
+                    Modifier.padding(bottom = 8.dp)
+                        .testTag(EditEventScreenTestTags.DATE_TIME_ERROR))
           }
           Row(
               modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -419,7 +427,7 @@ fun EditEventScreen(
               descriptionError,
               stringResource(R.string.description_place_holder),
               modifier =
-                  Modifier.height(120.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION),
+                  Modifier.height(120.dp).testTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION),
           )
 
           Spacer(modifier = Modifier.padding(10.dp))
@@ -433,7 +441,7 @@ fun EditEventScreen(
               tag,
               tagError,
               stringResource(R.string.add_tag_place_holder),
-              modifier = Modifier.height(80.dp).testTag(AddEventScreenTestTags.INPUT_EVENT_TAG),
+              modifier = Modifier.height(80.dp).testTag(EditEventScreenTestTags.INPUT_EVENT_TAG),
               isTag = true)
           Spacer(modifier = Modifier.padding(bottom = 5.dp))
           Text(
