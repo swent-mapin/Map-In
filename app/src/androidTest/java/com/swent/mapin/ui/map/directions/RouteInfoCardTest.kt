@@ -1,4 +1,4 @@
-//Assisted by AI
+// Assisted by AI
 package com.swent.mapin.ui.map.directions
 
 import androidx.compose.ui.test.assertIsDisplayed
@@ -89,4 +89,3 @@ class RouteInfoCardTest {
     composeTestRule.onNodeWithText("2 h").assertIsDisplayed()
   }
 }
-

@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.map.directions
 
-//Assisted by AI
+// Assisted by AI
 
 import com.mapbox.geojson.Point
 import kotlinx.coroutines.test.runTest

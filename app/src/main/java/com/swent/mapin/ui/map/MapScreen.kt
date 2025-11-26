@@ -443,10 +443,7 @@ fun MapScreen(
     if (directionState is DirectionState.Displayed) {
       RouteInfoCard(
           routeInfo = directionState.routeInfo,
-          modifier = Modifier
-              .align(Alignment.TopCenter)
-              .padding(top = 70.dp)
-      )
+          modifier = Modifier.align(Alignment.TopCenter).padding(top = 70.dp))
     }
 
     // Overlays et contrôles au-dessus de la carte

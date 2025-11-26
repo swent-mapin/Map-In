@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.map.directions
 
-//Assisted by AI
+// Assisted by AI
 
 import android.location.Location
 import androidx.compose.runtime.getValue

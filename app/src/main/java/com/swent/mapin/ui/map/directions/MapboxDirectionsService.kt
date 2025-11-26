@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.map.directions
 
-//Assisted by AI
+// Assisted by AI
 
 import android.util.Log
 import com.mapbox.geojson.Point
@@ -10,13 +10,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 
-/**
- * Result of a directions request containing route points and information.
- */
-data class DirectionsResult(
-    val routePoints: List<Point>,
-    val routeInfo: RouteInfo
-)
+/** Result of a directions request containing route points and information. */
+data class DirectionsResult(val routePoints: List<Point>, val routeInfo: RouteInfo)
 
 /**
  * Service responsible for fetching walking directions from the Mapbox Directions API.

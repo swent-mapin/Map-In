@@ -1,4 +1,4 @@
-//Assisted by AI
+// Assisted by AI
 package com.swent.mapin.ui.map.directions
 
 import androidx.compose.foundation.background
@@ -24,60 +24,37 @@ import androidx.compose.ui.unit.sp
  * @param modifier Optional modifier for the container
  */
 @Composable
-fun RouteInfoCard(
-    routeInfo: RouteInfo,
-    modifier: Modifier = Modifier
-) {
+fun RouteInfoCard(routeInfo: RouteInfo, modifier: Modifier = Modifier) {
   Box(
-      modifier = modifier
-          .background(
-              color = Color.White,
-              shape = RoundedCornerShape(8.dp)
-          )
-          .padding(horizontal = 16.dp, vertical = 12.dp)
-  ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-      // Distance
-      Column(horizontalAlignment = Alignment.Start) {
-        Text(
-            text = routeInfo.formatDistance(),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1F1F1F)
-        )
-        Text(
-            text = "distance",
-            fontSize = 12.sp,
-            color = Color(0xFF5F6368)
-        )
-      }
+      modifier =
+          modifier
+              .background(color = Color.White, shape = RoundedCornerShape(8.dp))
+              .padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+              // Distance
+              Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    text = routeInfo.formatDistance(),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F1F1F))
+                Text(text = "distance", fontSize = 12.sp, color = Color(0xFF5F6368))
+              }
 
-      // Separator
-      Box(
-          modifier = Modifier
-              .width(1.dp)
-              .height(32.dp)
-              .background(Color(0xFFE8EAED))
-      )
+              // Separator
+              Box(modifier = Modifier.width(1.dp).height(32.dp).background(Color(0xFFE8EAED)))
 
-      // Duration
-      Column(horizontalAlignment = Alignment.Start) {
-        Text(
-            text = routeInfo.formatDuration(),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1F1F1F)
-        )
-        Text(
-            text = "temps",
-            fontSize = 12.sp,
-            color = Color(0xFF5F6368)
-        )
+              // Duration
+              Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    text = routeInfo.formatDuration(),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F1F1F))
+                Text(text = "temps", fontSize = 12.sp, color = Color(0xFF5F6368))
+              }
+            }
       }
-    }
-  }
 }
-

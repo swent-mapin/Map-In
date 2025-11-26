@@ -1,4 +1,4 @@
-//Assisted by AI
+// Assisted by AI
 package com.swent.mapin.ui.map.directions
 
 import org.junit.Assert.assertEquals
@@ -131,4 +131,3 @@ class RouteInfoTest {
     assertEquals("10 h", routeInfo.formatDuration())
   }
 }
-
