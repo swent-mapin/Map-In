@@ -11,7 +11,8 @@ import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
-//Assisted by ChatGPT
+
+// Assisted by ChatGPT
 
 class EditEventScreenTests {
   @get:Rule val composeTestRule = createComposeRule()

@@ -7,7 +7,7 @@ import java.util.Calendar
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-//Assisted by ChatGPT
+// Assisted by ChatGPT
 
 class EditEventScreenTest {
   @Test
