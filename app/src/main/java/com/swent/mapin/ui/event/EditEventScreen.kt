@@ -63,23 +63,16 @@ object EditEventScreenTestTags {
   const val DATE_TIME_ERROR = "EDIT_DATE_TIME_ERROR"
 }
 
-/**
- * Extension function for TimeStamp to convert a timestamp to a
- * dd/MM/yyyy date string
- */
+/** Extension function for TimeStamp to convert a timestamp to a dd/MM/yyyy date string */
 fun Timestamp.toDateString(): String =
     SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(this.toDate())
 
-/**
- * Extension function for TimeStamp to convert a timestamp to a
- * HHmm time string
- */
+/** Extension function for TimeStamp to convert a timestamp to a HHmm time string */
 fun Timestamp.toTimeString(): String =
     SimpleDateFormat("HHmm", Locale.getDefault()).format(this.toDate())
 
 /**
- * Edit Event Screen composable, allows event owners
- * to edit events
+ * Edit Event Screen composable, allows event owners to edit events
  *
  * @param modifier Modifier for the composable
  * @param eventViewModel ViewModel for event functionalities
