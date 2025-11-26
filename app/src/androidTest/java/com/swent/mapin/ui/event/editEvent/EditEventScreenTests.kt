@@ -41,13 +41,26 @@ class EditEventScreenTests {
   @Test
   fun displaysAllFields() {
     setEditEventScreen()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performScrollTo()
+        .assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
         .assertIsDisplayed()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_CANCEL).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.EVENT_CANCEL)
+        .performScrollTo()
+        .assertIsDisplayed()
   }
 
   @Test
@@ -70,8 +83,14 @@ class EditEventScreenTests {
   @Test
   fun emptyFieldsShowValidationError() {
     setEditEventScreen()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
+        .performScrollTo()
+        .performClick()
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE)
+        .performScrollTo()
+        .assertIsDisplayed()
   }
 
   @Test
