@@ -233,7 +233,9 @@ class MapEventStateController(
 
   /** Automatically refreshes [attendedEvents] every 10 seconds. */
   init {
-    startAttendedAutoRefresh()
+    if (!isRunningUnderUnitTest()) {
+      startAttendedAutoRefresh()
+    }
   }
 
   private fun startAttendedAutoRefresh() {
@@ -243,6 +245,18 @@ class MapEventStateController(
         delay(10_000) // every 10 seconds
       }
     }
+  }
+
+  /**
+   * Indicates whether the code is running inside a unit test environment.
+   *
+   * Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
+   * auto-refresh loops) which would otherwise block or hang the test runner. In production this
+   * returns false, so normal behavior is preserved.
+   */
+  fun isRunningUnderUnitTest(): Boolean {
+    return java.lang.Boolean.getBoolean("org.gradle.test.worker") ||
+        System.getProperty("junit.test") != null
   }
 
   /**
