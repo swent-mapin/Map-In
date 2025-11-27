@@ -39,12 +39,7 @@ import java.time.format.DateTimeFormatter
 
 /** Row of quick action buttons (Create Memory, Create Event, Friends). */
 @Composable
-fun QuickActionsSection(
-    modifier: Modifier = Modifier,
-    // Accept optional Event to prefill memory form (null = create generic memory)
-    onCreateMemoryClick: (Event?) -> Unit,
-    onCreateEventClick: () -> Unit
-) {
+fun QuickActionsSection(modifier: Modifier = Modifier, onCreateEventClick: () -> Unit) {
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -53,11 +48,9 @@ fun QuickActionsSection(
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       QuickActionButton(
-          text = "Create Memory",
-          modifier = Modifier.weight(1f),
-          onClick = { onCreateMemoryClick(null) })
-      QuickActionButton(
           text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
+      // TODO : Add show memories button that switches to a map with past events and their memories
+      QuickActionButton(text = "Show Memories", modifier = Modifier.weight(1f), onClick = {})
     }
   }
 }
@@ -120,7 +113,7 @@ fun AttendedEventsSection(
     attendedEvents: List<Event>,
     onEventClick: (Event) -> Unit,
     // Accepts the selected event to prefill memory creation (or null)
-    onCreateMemoryClick: (Event?) -> Unit
+    onCreateMemoryClick: (Event) -> Unit
 ) {
   var expanded by remember { mutableStateOf(false) }
   val visible = if (expanded) attendedEvents else attendedEvents.take(3)
