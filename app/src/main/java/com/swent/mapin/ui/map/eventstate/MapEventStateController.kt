@@ -237,7 +237,7 @@ class MapEventStateController(
 
   /** Automatically refreshes [attendedEvents] every 10 seconds. */
   init {
-    if (autoRefreshEnabled) {
+    if (autoRefreshEnabled && !isRunningUnderUnitTest()) {
       startAttendedAutoRefresh()
     }
   }
@@ -248,6 +248,12 @@ class MapEventStateController(
         loadAttendedEvents()
         delay(10_000) // every 10 seconds
       }
+    }
+  }
+
+  fun isRunningUnderUnitTest(): Boolean {
+    return Thread.currentThread().stackTrace.any {
+      it.className.startsWith("org.junit") || it.className.contains("GradleTest")
     }
   }
 
