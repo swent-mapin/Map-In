@@ -13,13 +13,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+// Assisted by AI
+
 @RunWith(AndroidJUnit4::class)
 class MemoryDetailSheetTest {
 
-  @get:Rule
-  // Use a plain ComponentActivity for tests so setContent in the test rule doesn't conflict
-  // with the app's MainActivity.setContent which is called in production code.
-  val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
   @Test
   fun collapsed_shows_title_and_buttons() {
