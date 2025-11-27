@@ -36,7 +36,9 @@ object FirestoreSchema {
 }
 
 const val FIRESTORE_QUERY_LIMIT: Int = 10
-const val POPULAR_EVENT: Int = 30
+const val FIRESTORE_MAX_ARRAY: Int = 10
+const val FRIEND_QUERY_CHUNK_SIZE: Int = 10
+const val POPULAR_EVENT_PARTICIPANT_THRESHOLD: Int = 30
 
 /**
  * Enum to specify the source of user events (saved, joined, owned). Defines the field name in the
@@ -358,7 +360,7 @@ class EventRepositoryFirestore(
         val query = buildBaseQuery(filters)
 
         // Fetch events by friend chunks
-        val friendChunks = friendIds.chunked(FIRESTORE_QUERY_LIMIT)
+        val friendChunks = friendIds.chunked(FRIEND_QUERY_CHUNK_SIZE)
         val allEvents = mutableListOf<Event>()
 
         for (chunk in friendChunks) {
@@ -430,7 +432,7 @@ class EventRepositoryFirestore(
 
     // Apply popularOnly filter (requires counting participants)
     if (filters.popularOnly) {
-      filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT }
+      filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT_PARTICIPANT_THRESHOLD }
     }
 
     // Apply location/radius filter (requires haversine distance calculation)
@@ -697,7 +699,7 @@ class EventRepositoryFirestore(
     if (ids.isEmpty()) return@coroutineScope emptyList()
 
     try {
-      val chunks = ids.chunked(FIRESTORE_QUERY_LIMIT)
+      val chunks = ids.chunked(FIRESTORE_MAX_ARRAY)
 
       // Execute all chunks in parallel for better performance
       val deferredResults =
