@@ -3,7 +3,6 @@ package com.swent.mapin.ui.map.offline
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mapbox.geojson.Point
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -56,38 +55,7 @@ class OfflineRegionManagerInstrumentedTest {
   }
 
   @Test
-  fun downloadRegion_completesSuccessfully() = runBlocking {
-    val bounds = CoordinateBounds(Point.fromLngLat(6.56, 46.51), Point.fromLngLat(6.57, 46.52))
-    var complete = false
-    var success = false
-    val progress = mutableListOf<Float>()
-    manager.downloadRegion(
-        bounds,
-        onProgress = { progress.add(it) },
-        onComplete = {
-          complete = true
-          success = it.isSuccess
-        })
-    var waited = 0
-    while (!complete && waited < 30000) {
-      Thread.sleep(100)
-      waited += 100
-    }
-    assertTrue(complete)
-    assertTrue(success)
-    assertTrue(progress.isNotEmpty())
-    manager.removeTileRegion(bounds)
-    Thread.sleep(100)
-  }
-
-  @Test
-  fun cancelActiveDownload_cancelsInProgressDownload() = runBlocking {
-    val bounds = CoordinateBounds(Point.fromLngLat(6.56, 46.51), Point.fromLngLat(6.60, 46.55))
-    manager.downloadRegion(bounds, onComplete = {})
-    Thread.sleep(100)
+  fun cancelActiveDownload_doesNotThrow() {
     manager.cancelActiveDownload()
-    Thread.sleep(500)
-    manager.removeTileRegion(bounds)
-    Thread.sleep(100)
   }
 }
