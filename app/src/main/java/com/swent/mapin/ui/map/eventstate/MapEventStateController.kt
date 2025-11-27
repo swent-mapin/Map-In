@@ -33,7 +33,11 @@ class MapEventStateController(
     private val filterViewModel: FiltersSectionViewModel,
     private val getSelectedEvent: () -> Event?,
     private val setErrorMessage: (String) -> Unit,
-    private val clearErrorMessage: () -> Unit
+    private val clearErrorMessage: () -> Unit,
+    // Indicates whether the code is not running inside a unit test environment.
+    // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
+    // auto-refresh loops) which would otherwise block or hang the test runner.
+    private val autoRefreshEnabled: Boolean = true
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -233,7 +237,7 @@ class MapEventStateController(
 
   /** Automatically refreshes [attendedEvents] every 10 seconds. */
   init {
-    if (!isRunningUnderUnitTest()) {
+    if (autoRefreshEnabled) {
       startAttendedAutoRefresh()
     }
   }
@@ -245,18 +249,6 @@ class MapEventStateController(
         delay(10_000) // every 10 seconds
       }
     }
-  }
-
-  /**
-   * Indicates whether the code is running inside a unit test environment.
-   *
-   * Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
-   * auto-refresh loops) which would otherwise block or hang the test runner. In production this
-   * returns false, so normal behavior is preserved.
-   */
-  fun isRunningUnderUnitTest(): Boolean {
-    return java.lang.Boolean.getBoolean("org.gradle.test.worker") ||
-        System.getProperty("junit.test") != null
   }
 
   /**
