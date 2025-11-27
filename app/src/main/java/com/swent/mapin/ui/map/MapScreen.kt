@@ -723,7 +723,7 @@ private fun MapLayers(
     onEventClick: (Event) -> Unit
 ) {
   val context = LocalContext.current
-  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker_green) }
+  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
 
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
