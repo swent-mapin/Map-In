@@ -228,16 +228,16 @@ class EventBasedOfflineRegionManager(
    * @return true if the event has finished, false otherwise
    */
   private fun isEventFinished(event: Event): Boolean {
-    val now = System.currentTimeMillis()
+    val now = com.google.firebase.Timestamp.now()
 
     // Check endDate first (if provided)
     event.endDate?.let {
-      return it.toDate().time < now
+      return it < now
     }
 
     // Fall back to start date if no endDate
     event.date?.let {
-      return it.toDate().time < now
+      return it < now
     }
 
     // If no dates at all, consider it active

@@ -491,7 +491,8 @@ class EventBasedOfflineRegionManagerTest {
         }
 
     // Create event with endDate in the past (1 hour ago)
-    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val now = com.google.firebase.Timestamp.now()
+    val pastTime = com.google.firebase.Timestamp(now.seconds - 3600, 0)
     val finishedEvent =
         Event(
             uid = "finished1",
@@ -505,7 +506,7 @@ class EventBasedOfflineRegionManagerTest {
             uid = "active1",
             title = "Active Event",
             location = Location("Location 2", 46.5300, 6.5800),
-            date = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 3600, 0))
+            date = com.google.firebase.Timestamp(now.seconds + 3600, 0))
 
     // Start observing
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
@@ -545,7 +546,8 @@ class EventBasedOfflineRegionManagerTest {
         }
 
     // Create event with future endDate
-    val futureTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 + 3600, 0)
+    val now = com.google.firebase.Timestamp.now()
+    val futureTime = com.google.firebase.Timestamp(now.seconds + 3600, 0)
     val event =
         Event(
             uid = "event1",
@@ -566,7 +568,7 @@ class EventBasedOfflineRegionManagerTest {
     assertEquals(1, manager.getDownloadedCount())
 
     // Simulate time passing - update event to have past endDate
-    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val pastTime = com.google.firebase.Timestamp(now.seconds - 3600, 0)
     val finishedEvent = event.copy(endDate = pastTime)
 
     // Re-emit with finished event (simulates periodic check)
@@ -601,7 +603,8 @@ class EventBasedOfflineRegionManagerTest {
         }
 
     // Event with past start date but no endDate
-    val pastTime = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val now = com.google.firebase.Timestamp.now()
+    val pastTime = com.google.firebase.Timestamp(now.seconds - 3600, 0)
     val finishedEvent =
         Event(
             uid = "finished1",

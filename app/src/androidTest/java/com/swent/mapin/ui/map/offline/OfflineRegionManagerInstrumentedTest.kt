@@ -2,6 +2,8 @@ package com.swent.mapin.ui.map.offline
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mapbox.geojson.Point
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.*
@@ -28,11 +30,15 @@ class OfflineRegionManagerInstrumentedTest {
   @Test
   fun removeTileRegion_callsOnCompleteWithSuccess() {
     val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
+    val latch = CountDownLatch(1)
     var result: Result<Unit>? = null
-    manager.removeTileRegion(bounds) { result = it }
-    Thread.sleep(100)
+    manager.removeTileRegion(bounds) {
+      result = it
+      latch.countDown()
+    }
+    assertTrue(latch.await(1, TimeUnit.SECONDS))
     assertNotNull(result)
-    assertTrue(result!!.isSuccess)
+    assertEquals(true, result?.isSuccess)
   }
 
   @Test
@@ -44,11 +50,17 @@ class OfflineRegionManagerInstrumentedTest {
   @Test
   fun removeTileRegion_generatesConsistentRegionIds() {
     val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
+    val latch = CountDownLatch(2)
     val results = mutableListOf<Result<Unit>>()
-    manager.removeTileRegion(bounds) { results.add(it) }
-    Thread.sleep(100)
-    manager.removeTileRegion(bounds) { results.add(it) }
-    Thread.sleep(100)
+    manager.removeTileRegion(bounds) {
+      results.add(it)
+      latch.countDown()
+    }
+    manager.removeTileRegion(bounds) {
+      results.add(it)
+      latch.countDown()
+    }
+    assertTrue(latch.await(2, TimeUnit.SECONDS))
     assertEquals(2, results.size)
     assertTrue(results[0].isSuccess)
     assertTrue(results[1].isSuccess)
