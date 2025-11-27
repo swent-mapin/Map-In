@@ -89,7 +89,7 @@ class EventViewModel(
           Log.e("InvalidEditEvent", "You are not the owner of the event!")
         }
       } catch (e: Exception) {
-        Log.e("InvalidEditEvent", "Unknown error")
+        Log.e("InvalidEditEvent", "Unknown error $e")
       }
     }
   }
