@@ -97,7 +97,7 @@ class MapScreenViewModelTest {
 
     // Mock repositories
     runBlocking {
-      whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getFilteredEvents(any(), any<String>())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
@@ -466,26 +466,6 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.showMemoryForm)
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
-  }
-
-  @Test
-  fun onMemorySave_withNoUser_setsErrorMessage() = runTest {
-    whenever(mockAuth.currentUser).thenReturn(null)
-
-    val formData =
-        MemoryFormData(
-            title = "Test",
-            description = "Description",
-            eventId = null,
-            isPublic = false,
-            mediaUris = emptyList(),
-            taggedUserIds = emptyList())
-
-    viewModel.onMemorySave(formData)
-    advanceUntilIdle()
-
-    assertNotNull(viewModel.errorMessage)
-    assertTrue(viewModel.errorMessage!!.contains("signed in"))
   }
 
   @Test

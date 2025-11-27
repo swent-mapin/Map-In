@@ -77,7 +77,7 @@ class MapEventStateControllerTest {
 
     // Mock repositories
     runBlocking {
-      whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepository.getUserProfile(testUserId))
           .thenReturn(UserProfile(userId = testUserId, joinedEventIds = emptyList()))
@@ -105,7 +105,9 @@ class MapEventStateControllerTest {
   fun `observeFilters updates allEvents on filter change`() = runTest {
     val newFilters = Filters(tags = setOf("party"))
     val filteredEvents = listOf(testEvent)
-    whenever(mockEventRepository.getFilteredEvents(newFilters)).thenReturn(filteredEvents)
+    whenever(controller.getUserId()).thenReturn(testUserId)
+    whenever(mockEventRepository.getFilteredEvents(newFilters, testUserId))
+        .thenReturn(filteredEvents)
 
     // Simulate filter change
     val filtersFlow = MutableStateFlow(Filters())
@@ -131,7 +133,8 @@ class MapEventStateControllerTest {
   fun `getFilteredEvents updates allEvents with filtered events`() = runTest {
     val filters = Filters(tags = setOf("party"))
     val filteredEvents = listOf(testEvent)
-    whenever(mockEventRepository.getFilteredEvents(filters)).thenReturn(filteredEvents)
+    whenever(controller.getUserId()).thenReturn(testUserId)
+    whenever(mockEventRepository.getFilteredEvents(filters, testUserId)).thenReturn(filteredEvents)
 
     controller.getFilteredEvents(filters)
     advanceUntilIdle()
@@ -142,7 +145,8 @@ class MapEventStateControllerTest {
   @Test
   fun `getFilteredEvents handles repository error`() = runTest {
     val filters = Filters()
-    whenever(mockEventRepository.getFilteredEvents(filters))
+    whenever(controller.getUserId()).thenReturn(testUserId)
+    whenever(mockEventRepository.getFilteredEvents(filters, testUserId))
         .thenThrow(RuntimeException("Network error"))
 
     controller.getFilteredEvents(filters)
@@ -158,7 +162,7 @@ class MapEventStateControllerTest {
     val filteredEvents = listOf(testEvent)
     val joinedEvents = listOf(testEvent.copy(participantIds = listOf(testUserId)))
     val savedEvents = listOf(testEvent)
-    whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(filteredEvents)
+    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(filteredEvents)
     whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(joinedEvents)
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(savedEvents)
 
@@ -282,7 +286,7 @@ class MapEventStateControllerTest {
     // Mock selected event and repository responses
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     val updatedEvent = testEvent.copy(participantIds = listOf(testUserId))
-    whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(listOf(updatedEvent))
+    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(listOf(updatedEvent))
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
     whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(listOf(updatedEvent))
 
@@ -342,7 +346,7 @@ class MapEventStateControllerTest {
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
 
     val updatedEvent = testEvent.copy(participantIds = emptyList())
-    whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(listOf(updatedEvent))
+    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(listOf(updatedEvent))
     whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(emptyList())
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
 

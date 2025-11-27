@@ -120,7 +120,8 @@ class MapEventStateController(
   fun getFilteredEvents(filters: Filters) {
     scope.launch {
       try {
-        _allEvents = eventRepository.getFilteredEvents(filters)
+        val userId = getUserId()
+        _allEvents = eventRepository.getFilteredEvents(filters, userId)
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching events")
       }
