@@ -260,20 +260,19 @@ class EventBasedOfflineRegionManager(
 
           Log.d(TAG, "Deleting region for removed event: $eventId")
 
-          offlineRegionManager.removeTileRegion(bounds) { result ->
-            result
-                .onSuccess {
-                  downloadedEventIds.remove(eventId)
-                  eventLocations.remove(eventId)
-                  Log.d(TAG, "Successfully deleted region for event: $eventId")
-                }
-                .onFailure { error ->
-                  Log.e(TAG, "Failed to delete region for event $eventId: $error")
-                  // Still remove from tracking even if deletion fails
-                  downloadedEventIds.remove(eventId)
-                  eventLocations.remove(eventId)
-                }
-          }
+          val result = offlineRegionManager.removeTileRegion(bounds)
+          result
+              .onSuccess {
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+                Log.d(TAG, "Successfully deleted region for event: $eventId")
+              }
+              .onFailure { error ->
+                Log.e(TAG, "Failed to delete region for event $eventId: $error")
+                // Still remove from tracking even if deletion fails
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+              }
         } else {
           // Event wasn't downloaded or location not stored, just remove from tracking
           downloadedEventIds.remove(eventId)
@@ -289,11 +288,12 @@ class EventBasedOfflineRegionManager(
    * @param event The event to delete the region for
    */
   fun deleteRegionForEvent(event: Event) {
-    val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
+    scope.launch {
+      val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
 
-    Log.d(TAG, "Deleting region for event: ${event.title}")
+      Log.d(TAG, "Deleting region for event: ${event.title}")
 
-    offlineRegionManager.removeTileRegion(bounds) { result ->
+      val result = offlineRegionManager.removeTileRegion(bounds)
       result
           .onSuccess {
             downloadedEventIds.remove(event.uid)

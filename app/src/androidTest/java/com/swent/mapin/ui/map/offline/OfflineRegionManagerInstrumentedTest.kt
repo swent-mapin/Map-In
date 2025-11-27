@@ -2,9 +2,8 @@ package com.swent.mapin.ui.map.offline
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mapbox.geojson.Point
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -28,42 +27,26 @@ class OfflineRegionManagerInstrumentedTest {
   @After fun tearDown() = manager.cancelActiveDownload()
 
   @Test
-  fun removeTileRegion_callsOnCompleteWithSuccess() {
+  fun removeTileRegion_callsOnCompleteWithSuccess() = runBlocking {
     val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
-    val latch = CountDownLatch(1)
-    var result: Result<Unit>? = null
-    manager.removeTileRegion(bounds) {
-      result = it
-      latch.countDown()
-    }
-    assertTrue(latch.await(1, TimeUnit.SECONDS))
-    assertNotNull(result)
-    assertEquals(true, result?.isSuccess)
+    val result = manager.removeTileRegion(bounds)
+    assertTrue(result.isSuccess)
   }
 
   @Test
-  fun removeTileRegion_worksWithoutCallback() {
+  fun removeTileRegion_worksWithoutCallback() = runBlocking {
     val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
-    manager.removeTileRegion(bounds)
+    val result = manager.removeTileRegion(bounds)
+    assertTrue(result.isSuccess)
   }
 
   @Test
-  fun removeTileRegion_generatesConsistentRegionIds() {
+  fun removeTileRegion_generatesConsistentRegionIds() = runBlocking {
     val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
-    val latch = CountDownLatch(2)
-    val results = mutableListOf<Result<Unit>>()
-    manager.removeTileRegion(bounds) {
-      results.add(it)
-      latch.countDown()
-    }
-    manager.removeTileRegion(bounds) {
-      results.add(it)
-      latch.countDown()
-    }
-    assertTrue(latch.await(2, TimeUnit.SECONDS))
-    assertEquals(2, results.size)
-    assertTrue(results[0].isSuccess)
-    assertTrue(results[1].isSuccess)
+    val result1 = manager.removeTileRegion(bounds)
+    val result2 = manager.removeTileRegion(bounds)
+    assertTrue(result1.isSuccess)
+    assertTrue(result2.isSuccess)
   }
 
   @Test
