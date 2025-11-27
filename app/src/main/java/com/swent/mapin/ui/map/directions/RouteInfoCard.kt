@@ -9,9 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.swent.mapin.R
 
 /**
  * Composable that displays route information (distance and time) similar to Google Maps style.
@@ -40,7 +42,10 @@ fun RouteInfoCard(routeInfo: RouteInfo, modifier: Modifier = Modifier) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1F1F1F))
-                Text(text = "distance", fontSize = 12.sp, color = Color(0xFF5F6368))
+                Text(
+                    text = stringResource(R.string.route_distance),
+                    fontSize = 12.sp,
+                    color = Color(0xFF5F6368))
               }
 
               // Separator
@@ -53,7 +58,10 @@ fun RouteInfoCard(routeInfo: RouteInfo, modifier: Modifier = Modifier) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1F1F1F))
-                Text(text = "temps", fontSize = 12.sp, color = Color(0xFF5F6368))
+                Text(
+                    text = stringResource(R.string.route_duration),
+                    fontSize = 12.sp,
+                    color = Color(0xFF5F6368))
               }
             }
       }
