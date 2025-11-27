@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
@@ -277,21 +276,16 @@ fun EditEventScreen(
                         endTimeError.value = false
                         return@IconButton
                       }
-                      val editedEvent =
-                          event.copy(
-                              title = title.value,
-                              description = description.value,
-                              location = gotLocation.value,
-                              date = startTs,
-                              endDate = endTs,
-                              tags = extractTags(tag.value))
-
-                      if (Firebase.auth.currentUser?.uid == event.ownerId) {
-                        eventViewModel.editEvent(event.uid, editedEvent)
-                        onDone()
-                      } else {
-                        throw FirebaseAuthException("000", "You are not the owner of the event!")
-                      }
+                      eventViewModel.saveEditedEvent(
+                          originalEvent = event,
+                          title = title.value,
+                          description = description.value,
+                          location = gotLocation.value,
+                          startTs = startTs,
+                          endTs = endTs,
+                          tagsString = tag.value,
+                          onSuccess = { onDone() },
+                      )
                     },
                     modifier =
                         Modifier.size(48.dp)

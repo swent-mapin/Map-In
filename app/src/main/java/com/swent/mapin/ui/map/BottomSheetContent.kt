@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -215,14 +217,21 @@ fun BottomSheetContent(
                 onDone = onCreateEventDone)
           }
           BottomSheetScreen.EDIT_EVENT -> {
-            val eventToEdit by eventViewModel.eventToEdit.collectAsState()
-            EditEventScreen(
-                modifier = Modifier.testTag(EditEventScreenTestTags.SCREEN),
-                eventViewModel = eventViewModel,
-                locationViewModel = locationViewModel,
-                event = eventToEdit ?: Event(),
-                onCancel = onEditEventDone,
-                onDone = onEditEventDone)
+            val eventToEditState by eventViewModel.eventToEdit.collectAsState()
+            val eventToEdit = eventToEditState
+            if (eventToEdit == null) {
+              Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+              }
+            } else {
+              EditEventScreen(
+                  modifier = Modifier.testTag(EditEventScreenTestTags.SCREEN),
+                  eventViewModel = eventViewModel,
+                  locationViewModel = locationViewModel,
+                  event = eventToEdit,
+                  onCancel = onEditEventDone,
+                  onDone = onEditEventDone)
+            }
           }
           BottomSheetScreen.MAIN_CONTENT -> {
             var showAllRecents by remember { mutableStateOf(false) }

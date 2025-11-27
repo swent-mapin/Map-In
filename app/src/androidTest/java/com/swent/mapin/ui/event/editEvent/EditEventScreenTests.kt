@@ -2,8 +2,10 @@ package com.swent.mapin.ui.event.editEvent
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.EditEventScreen
 import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
@@ -20,6 +22,18 @@ class EditEventScreenTests {
   lateinit var eventViewModel: EventViewModel
   lateinit var locationViewModel: LocationViewModel
 
+  private val testEvent =
+      Event(
+          uid = "123",
+          title = "Test Event",
+          description = "Test Description",
+          location = Location("Test Location", 0.0, 0.0),
+          date = Timestamp.now(),
+          endDate = Timestamp.now(),
+          tags = listOf("tag1", "tag2"),
+          price = 10.0,
+          ownerId = "owner123")
+
   private fun setEditEventScreen(onCancel: () -> Unit = {}, onDone: () -> Unit = {}) {
     val testLocations = listOf(Location("Test", 0.0, 0.0))
     val locationFlow = MutableStateFlow(testLocations)
@@ -28,13 +42,16 @@ class EditEventScreenTests {
     every { locationViewModel.locations } returns locationFlow
 
     eventViewModel = mockk(relaxed = true)
+    val eventFlow = MutableStateFlow(testEvent)
+    every { eventViewModel.eventToEdit } returns eventFlow
 
     composeTestRule.setContent {
       EditEventScreen(
           eventViewModel = eventViewModel,
           locationViewModel = locationViewModel,
           onCancel = onCancel,
-          onDone = onDone)
+          onDone = onDone,
+          event = testEvent)
     }
   }
 
@@ -107,5 +124,25 @@ class EditEventScreenTests {
         .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE)
         .performScrollTo()
         .assert(hasText("Tags", substring = true, ignoreCase = true))
+  }
+
+  @Test
+  fun fieldsLoadExistingEventValues() {
+    setEditEventScreen()
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TITLE)
+        .performScrollTo()
+        .assertTextEquals(testEvent.title)
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
+        .assertTextEquals(testEvent.description)
+
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG)
+        .performScrollTo()
+        .assertTextEquals(testEvent.tags.joinToString(" "))
   }
 }

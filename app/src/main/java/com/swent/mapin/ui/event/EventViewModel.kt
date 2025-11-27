@@ -1,7 +1,12 @@
 package com.swent.mapin.ui.event
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
+import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
@@ -49,6 +54,40 @@ class EventViewModel(
         stateController.refreshEventsList()
       } catch (e: Exception) {
         _error.value = e.message
+      }
+    }
+  }
+
+  fun saveEditedEvent(
+      originalEvent: Event,
+      title: String,
+      description: String,
+      location: Location,
+      startTs: Timestamp,
+      endTs: Timestamp,
+      tagsString: String,
+      onSuccess: () -> Unit,
+  ) {
+    viewModelScope.launch {
+      try {
+        val editedEvent =
+            originalEvent.copy(
+                title = title,
+                description = description,
+                location = location,
+                date = startTs,
+                endDate = endTs,
+                tags = extractTags(tagsString))
+
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser?.uid == originalEvent.ownerId) {
+          editEvent(originalEvent.uid, editedEvent)
+          onSuccess()
+        } else {
+          Log.e("InvalidEditEvent", "You are not the owner of the event!")
+        }
+      } catch (e: Exception) {
+        Log.e("InvalidEditEvent", "Unknown error")
       }
     }
   }
