@@ -11,6 +11,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
@@ -53,7 +54,8 @@ enum class UserEventSource(val fieldName: String) {
  */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val friendRequestRepository: FriendRequestRepository = FriendRequestRepository()
+    private val friendRequestRepository: FriendRequestRepository =
+        FriendRequestRepository(notificationService = NotificationService())
 ) : EventRepository {
 
   /**

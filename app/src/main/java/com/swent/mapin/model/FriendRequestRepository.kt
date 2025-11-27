@@ -21,7 +21,7 @@ import kotlinx.coroutines.tasks.await
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
-    private val notificationService: NotificationService = NotificationService()
+    private val notificationService: NotificationService
 ) {
   companion object {
     private const val COLLECTION = "friendRequests"
@@ -369,6 +369,16 @@ class FriendRequestRepository(
                 }
               }
             }
+
+    // Send initial data
+    launch {
+      try {
+        val pendingRequests = getPendingRequests(userId)
+        trySend(pendingRequests)
+      } catch (e: Exception) {
+        close(e)
+      }
+    }
 
     awaitClose { listener.remove() }
   }
