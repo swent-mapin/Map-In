@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -237,7 +238,7 @@ class MapEventStateController(
 
   private fun startAttendedAutoRefresh() {
     scope.launch {
-      while (true) {
+      while (isActive) {
         loadAttendedEvents()
         delay(10_000) // every 10 seconds
       }
