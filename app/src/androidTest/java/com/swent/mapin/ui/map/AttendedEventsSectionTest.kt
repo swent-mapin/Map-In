@@ -151,6 +151,7 @@ class AttendedEventsSectionTest {
               availableEvents = listOf(event),
               onSave = {},
               onCancel = {},
+              onEventClick = {},
               initialSelectedEvent = selected)
         }
       }
@@ -196,7 +197,7 @@ class AttendedEventsSectionTest {
 
     val input = listOf(eFuture, eNull, e1, e2)
 
-    val result = MapEventStateController.computeAttendedEvents(input, now)
+    val result = MapEventStateController.computeAttendedEvents(input)
 
     // Should include only e1 and e2 (past events), sorted by most recent end date first => e2, e1
     assertEquals(listOf(e2.uid, e1.uid), result.map { it.uid })
@@ -222,7 +223,7 @@ class AttendedEventsSectionTest {
             participantIds = emptyList(),
             price = 0.0)
 
-    val result = MapEventStateController.computeAttendedEvents(listOf(ef), now)
+    val result = MapEventStateController.computeAttendedEvents(listOf(ef))
     assertEquals(0, result.size)
   }
 }
