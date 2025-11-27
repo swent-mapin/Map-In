@@ -62,7 +62,7 @@ class MapScreenViewModelAuthListenerTest {
       whenever(mockRepo.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockRepo.getJoinedEvents(any())).thenReturn(emptyList())
       whenever(mockRepo.getOwnedEvents(any())).thenReturn(emptyList())
-      whenever(mockRepo.getFilteredEvents(any())).thenReturn(emptyList())
+      whenever(mockRepo.getFilteredEvents(any(), any())).thenReturn(emptyList())
       whenever(mockUserProfileRepo.getUserProfile(any())).thenReturn(null)
     }
 

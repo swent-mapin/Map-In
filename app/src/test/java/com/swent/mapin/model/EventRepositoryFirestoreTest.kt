@@ -551,7 +551,7 @@ class EventRepositoryFirestoreTest {
     whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
     whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-    val result = repo.getFilteredEvents(filters)
+    val result = repo.getFilteredEvents(filters, "user")
 
     // Only popular event should be returned (>30 participants)
     assertEquals(1, result.size)
@@ -577,7 +577,7 @@ class EventRepositoryFirestoreTest {
     whenever(filteredQuery.orderBy("date", Query.Direction.DESCENDING)).thenReturn(orderedQuery)
     whenever(orderedQuery.get()).thenReturn(taskOf(snap))
 
-    val result = repo.getFilteredEvents(filters)
+    val result = repo.getFilteredEvents(filters, "user")
 
     // Both events returned by query, but only tagged one should match
     assertEquals(1, result.size)
@@ -601,7 +601,7 @@ class EventRepositoryFirestoreTest {
     whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
     whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-    val result = repo.getFilteredEvents(filters)
+    val result = repo.getFilteredEvents(filters, "user")
 
     // Should include both in mock, but in real scenario only cheap would be returned by query
     verify(queryMock).whereLessThanOrEqualTo("price", 50.0)
@@ -622,7 +622,7 @@ class EventRepositoryFirestoreTest {
       // No friends
       whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
 
-      val result = repo.getFilteredEvents(filters)
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
 
       verify(friendRepo).getFriends("currentUser")
       assertTrue(result.isEmpty())
@@ -661,7 +661,7 @@ class EventRepositoryFirestoreTest {
       whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
       whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val result = repo.getFilteredEvents(filters)
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
 
       // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
       verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
@@ -682,7 +682,7 @@ class EventRepositoryFirestoreTest {
     whenever(query.get()).thenReturn(Tasks.forException(RuntimeException("broken")))
 
     val filters = Filters(startDate = LocalDate.now())
-    val exception = assertFailsWith<Exception> { repo.getFilteredEvents(filters) }
+    val exception = assertFailsWith<Exception> { repo.getFilteredEvents(filters, "user") }
 
     assertTrue(exception.message!!.contains("Failed to fetch filtered events"))
   }
@@ -748,11 +748,12 @@ class EventRepositoryFirestoreTest {
       whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
           .thenReturn(queryMock)
       whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+      whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
       whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
       whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
       whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val result = repo.getFilteredEvents(filters)
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
 
       // Only validEvent should pass all filters
       assertEquals(1, result.size)
@@ -876,7 +877,7 @@ class EventRepositoryFirestoreTest {
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
         .thenReturn(eventListenerReg)
 
-    var removedEvents: List<Event> = emptyList()
+    var removedEvents: List<String> = emptyList()
 
     val registration = repo.listenToSavedEvents(userId) { _, _, removed -> removedEvents = removed }
 
@@ -894,7 +895,7 @@ class EventRepositoryFirestoreTest {
 
     // Verify removal was detected
     assertEquals(1, removedEvents.size)
-    assertEquals("E1", removedEvents.first().uid)
+    assertEquals("E1", removedEvents.first())
 
     registration.remove()
     verify(userListenerReg).remove()
@@ -915,7 +916,7 @@ class EventRepositoryFirestoreTest {
 
     var addedEvents: List<Event> = emptyList()
     var modifiedEvents: List<Event> = emptyList()
-    var removedEvents: List<Event> = emptyList()
+    var removedEvents: List<String> = emptyList()
 
     val registration =
         repo.listenToSavedEvents(userId) { added, modified, removed ->
@@ -951,7 +952,7 @@ class EventRepositoryFirestoreTest {
 
     var addedEvents: List<Event> = emptyList()
     var modifiedEvents: List<Event> = emptyList()
-    var removedEvents: List<Event> = emptyList()
+    var removedEvents: List<String> = emptyList()
 
     val registration =
         repo.listenToSavedEvents(userId) { added, modified, removed ->
