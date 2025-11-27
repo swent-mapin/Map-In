@@ -9,8 +9,13 @@ import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.model.memory.MemoryRepository
+import com.swent.mapin.model.network.ConnectivityService
+import com.swent.mapin.model.network.ConnectivityServiceProvider
+import com.swent.mapin.model.network.ConnectivityState
+import com.swent.mapin.model.network.NetworkType
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -42,6 +47,7 @@ class MapScreenViewModelAuthListenerTest {
   @Mock(lenient = true) lateinit var mockMemoryRepo: MemoryRepository
   @Mock(lenient = true) lateinit var mockUserProfileRepo: UserProfileRepository
   @Mock(lenient = true) lateinit var mockContext: Context
+  @Mock(lenient = true) lateinit var mockConnectivityService: ConnectivityService
 
   // We'll store the captured listener here after setup
   private lateinit var authListener: FirebaseAuth.AuthStateListener
@@ -51,6 +57,11 @@ class MapScreenViewModelAuthListenerTest {
   @Before
   fun setup() {
     MockitoAnnotations.openMocks(this)
+
+    // Set mock ConnectivityService in the provider BEFORE creating ViewModel
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI)))
+    ConnectivityServiceProvider.setInstance(mockConnectivityService)
 
     // Default auth stubs
     whenever(mockAuth.currentUser).thenReturn(mockUser)
@@ -90,6 +101,12 @@ class MapScreenViewModelAuthListenerTest {
     authListener = captor.firstValue
 
     runBlocking { testDispatcher.scheduler.advanceUntilIdle() }
+  }
+
+  @Before
+  fun tearDown() {
+    // Clear the ConnectivityServiceProvider for next test
+    ConnectivityServiceProvider.clearInstance()
   }
 
   @Test

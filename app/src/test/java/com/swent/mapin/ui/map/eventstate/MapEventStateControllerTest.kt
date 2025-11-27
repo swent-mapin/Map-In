@@ -2,17 +2,22 @@ package com.swent.mapin.ui.map.eventstate
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.ListenerRegistration
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.network.ConnectivityService
+import com.swent.mapin.model.network.ConnectivityState
+import com.swent.mapin.model.network.NetworkType
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -28,8 +33,13 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -48,6 +58,7 @@ class MapEventStateControllerTest {
   @Mock private lateinit var mockGetSelectedEvent: () -> Event?
   @Mock private lateinit var mockSetErrorMessage: (String) -> Unit
   @Mock private lateinit var mockClearErrorMessage: () -> Unit
+  @Mock private lateinit var mockConnectivityService: ConnectivityService
 
   private lateinit var controller: MapEventStateController
   private val testUserId = "testUserId"
@@ -75,10 +86,15 @@ class MapEventStateControllerTest {
     val filtersFlow = MutableStateFlow(defaultFilters)
     whenever(mockFiltersSectionViewModel.filters).thenReturn(filtersFlow)
 
+    // Mock ConnectivityService - online by default
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI)))
+
     // Mock repositories
     runBlocking {
       whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getJoinedEvents(any())).thenReturn(emptyList())
       whenever(mockUserProfileRepository.getUserProfile(testUserId))
           .thenReturn(UserProfile(userId = testUserId, joinedEventIds = emptyList()))
     }
@@ -90,6 +106,7 @@ class MapEventStateControllerTest {
             auth = mockAuth,
             scope = testScope,
             filterViewModel = mockFiltersSectionViewModel,
+            connectivityService = mockConnectivityService,
             getSelectedEvent = mockGetSelectedEvent,
             setErrorMessage = mockSetErrorMessage,
             clearErrorMessage = mockClearErrorMessage)
@@ -119,6 +136,7 @@ class MapEventStateControllerTest {
             auth = mockAuth,
             scope = testScope,
             filterViewModel = mockFiltersSectionViewModel,
+            connectivityService = mockConnectivityService,
             getSelectedEvent = mockGetSelectedEvent,
             setErrorMessage = mockSetErrorMessage,
             clearErrorMessage = mockClearErrorMessage)
@@ -343,10 +361,12 @@ class MapEventStateControllerTest {
   @Test
   fun `leaveSelectedEvent removes user from event and updates lists`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(joinedEvent))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
 
     val updatedEvent = testEvent.copy(participantIds = emptyList())
-    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(listOf(updatedEvent))
+    whenever(mockEventRepository.getFilteredEvents(any<Filters>(), any<String>()))
+        .thenReturn(listOf(updatedEvent))
     whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(emptyList())
     whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
 
@@ -372,6 +392,7 @@ class MapEventStateControllerTest {
   @Test
   fun `leaveSelectedEvent reverts local changes on repository error`() = runTest {
     val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(testEvent))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
     whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
         .thenThrow(RuntimeException("Network error"))
@@ -389,7 +410,6 @@ class MapEventStateControllerTest {
   fun `saveSelectedEvent saves event and refreshes savedEvents`() = runTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     val savedEvents = listOf(testEvent)
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(savedEvents)
 
     controller.saveSelectedEvent()
     advanceUntilIdle()
@@ -427,7 +447,6 @@ class MapEventStateControllerTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     controller.setSavedEventsForTest(listOf(testEvent))
     whenever(mockUserProfileRepository.saveUserProfile(any<UserProfile>())).thenReturn(true)
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
 
     controller.unsaveSelectedEvent()
     advanceUntilIdle()
@@ -502,5 +521,341 @@ class MapEventStateControllerTest {
   fun `clearError calls clearErrorMessage lambda`() {
     controller.clearError()
     verify(mockClearErrorMessage).invoke()
+  }
+
+  // ========== Listeners Tests ==========
+  @Test
+  fun `startListeners initializes joined and saved event listeners`() = runTest {
+    val mockJoinedListener = mock<ListenerRegistration>()
+    val mockSavedListener = mock<ListenerRegistration>()
+
+    whenever(mockEventRepository.listenToJoinedEvents(any(), any())).thenReturn(mockJoinedListener)
+    whenever(mockEventRepository.listenToSavedEvents(any(), any())).thenReturn(mockSavedListener)
+
+    controller.startListeners()
+
+    verify(mockEventRepository).listenToJoinedEvents(eq(testUserId), any())
+    verify(mockEventRepository).listenToSavedEvents(eq(testUserId), any())
+  }
+
+  @Test
+  fun `stopListeners removes all active listeners`() = runTest {
+    val mockJoinedListener = mock<ListenerRegistration>()
+    val mockSavedListener = mock<ListenerRegistration>()
+
+    whenever(mockEventRepository.listenToJoinedEvents(any(), any())).thenReturn(mockJoinedListener)
+    whenever(mockEventRepository.listenToSavedEvents(any(), any())).thenReturn(mockSavedListener)
+
+    controller.startListeners()
+    controller.stopListeners()
+
+    verify(mockJoinedListener).remove()
+    verify(mockSavedListener).remove()
+  }
+
+  @Test
+  fun `handleJoinedEventsUpdate adds new events correctly`() = runTest {
+    val mockListener = mock<ListenerRegistration>()
+    val newEvent = testEvent.copy(uid = "new1")
+
+    val updateCaptor = argumentCaptor<(List<Event>, List<Event>, List<String>) -> Unit>()
+    whenever(mockEventRepository.listenToJoinedEvents(any(), updateCaptor.capture()))
+        .thenReturn(mockListener)
+
+    controller.startListeners()
+
+    // Simulate listener callback with added event
+    updateCaptor.firstValue.invoke(listOf(newEvent), emptyList(), emptyList())
+
+    assertTrue(controller.joinedEvents.contains(newEvent))
+  }
+
+  @Test
+  fun `handleJoinedEventsUpdate removes deleted events correctly`() = runTest {
+    val mockListener = mock<ListenerRegistration>()
+    controller.setJoinedEventsForTest(listOf(testEvent))
+
+    val updateCaptor = argumentCaptor<(List<Event>, List<Event>, List<String>) -> Unit>()
+    whenever(mockEventRepository.listenToJoinedEvents(any(), updateCaptor.capture()))
+        .thenReturn(mockListener)
+
+    controller.startListeners()
+
+    // Simulate listener callback with removed event
+    updateCaptor.firstValue.invoke(emptyList(), emptyList(), listOf(testEvent.uid))
+
+    assertTrue(controller.joinedEvents.isEmpty())
+  }
+
+  @Test
+  fun `handleSavedEventsUpdate updates saved events correctly`() = runTest {
+    val mockListener = mock<ListenerRegistration>()
+    val savedEvent = testEvent.copy(uid = "saved1")
+
+    val updateCaptor = argumentCaptor<(List<Event>, List<Event>, List<String>) -> Unit>()
+    whenever(mockEventRepository.listenToSavedEvents(any(), updateCaptor.capture()))
+        .thenReturn(mockListener)
+
+    controller.startListeners()
+
+    // Simulate listener callback
+    updateCaptor.firstValue.invoke(listOf(savedEvent), emptyList(), emptyList())
+
+    assertTrue(controller.savedEvents.contains(savedEvent))
+  }
+
+  // ========== Optimistic Updates Tests ==========
+  @Test
+  fun `joinSelectedEvent applies optimistic update before server call`() = runTest {
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenAnswer {
+      // Assert optimistic update happened before this call
+      assertTrue(controller.joinedEvents.contains(testEvent))
+      Unit
+    }
+
+    controller.joinSelectedEvent()
+    advanceUntilIdle()
+  }
+
+  @Test
+  fun `leaveSelectedEvent applies optimistic update before server call`() = runTest {
+    val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(joinedEvent))
+    whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
+
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenAnswer {
+      // Assert optimistic update happened before this call
+      assertFalse(controller.joinedEvents.contains(joinedEvent))
+      Unit
+    }
+
+    controller.leaveSelectedEvent()
+    advanceUntilIdle()
+  }
+
+  // ========== Offline Mode Tests ==========
+  @Test
+  fun `observeConnectivity starts monitoring connectivity changes`() = runTest {
+    val connectivityFlow = MutableStateFlow(ConnectivityState(true, NetworkType.WIFI))
+    whenever(mockConnectivityService.connectivityState).thenReturn(connectivityFlow)
+
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    assertTrue(controller.isOnline.value)
+  }
+
+  @Test
+  fun `joinSelectedEvent blocked when offline`() = runTest {
+    // Set offline state
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = false)))
+
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    controller.joinSelectedEvent()
+    advanceUntilIdle()
+
+    verify(mockSetErrorMessage).invoke("Joining events requires an internet connection")
+    verify(mockEventRepository, never()).editEventAsUser(any(), any(), any())
+  }
+
+  @Test
+  fun `saveSelectedEvent queues action when offline`() = runTest {
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    // Set offline state
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = false)))
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    controller.saveSelectedEvent()
+    advanceUntilIdle()
+
+    // Optimistic update applied
+    assertTrue(controller.savedEvents.contains(testEvent))
+    // Action queued
+    verify(mockUserProfileRepository, never()).saveUserProfile(any<UserProfile>())
+    assertEquals(1, controller.getOfflineQueueSize())
+  }
+
+  @Test
+  fun `unsaveSelectedEvent queues action when offline`() = runTest {
+    controller.setSavedEventsForTest(listOf(testEvent))
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    // Set offline state
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = false)))
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    controller.unsaveSelectedEvent()
+    advanceUntilIdle()
+
+    // Optimistic update applied
+    assertFalse(controller.savedEvents.contains(testEvent))
+    // Action queued
+    verify(mockUserProfileRepository, never()).saveUserProfile(any<UserProfile>())
+    assertEquals(1, controller.getOfflineQueueSize())
+  }
+
+  @Test
+  fun `offline queue processes on reconnection`() = runTest {
+    val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(joinedEvent))
+    whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
+
+    val connectivityFlow = MutableStateFlow(ConnectivityState(isConnected = false))
+    whenever(mockConnectivityService.connectivityState).thenReturn(connectivityFlow)
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    // Queue action while offline
+    controller.leaveSelectedEvent()
+    advanceUntilIdle()
+
+    assertEquals(1, controller.getOfflineQueueSize())
+
+    // Mock repository response for queue processing
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenReturn(Unit)
+    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(emptyList())
+    whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
+    whenever(mockEventRepository.getJoinedEvents(any())).thenReturn(emptyList())
+    whenever(mockEventRepository.getOwnedEvents(any())).thenReturn(emptyList())
+
+    // Go back online
+    connectivityFlow.emit(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI))
+    advanceUntilIdle()
+
+    // Queue processed
+    verify(mockEventRepository).editEventAsUser(joinedEvent.uid, testUserId, false)
+    assertEquals(0, controller.getOfflineQueueSize())
+  }
+
+  @Test
+  fun `offline queue retries up to 5 times before reverting`() = runTest {
+    controller.setSavedEventsForTest(emptyList())
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    val connectivityFlow = MutableStateFlow(ConnectivityState(isConnected = false))
+    whenever(mockConnectivityService.connectivityState).thenReturn(connectivityFlow)
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    // Queue action while offline
+    controller.saveSelectedEvent()
+    advanceUntilIdle()
+
+    assertTrue(controller.savedEvents.contains(testEvent)) // Optimistic update
+    assertEquals(1, controller.getOfflineQueueSize())
+
+    // Mock repository to always fail
+    whenever(mockUserProfileRepository.saveUserProfile(any<UserProfile>()))
+        .thenThrow(RuntimeException("Network error"))
+
+    // Go back online
+    connectivityFlow.emit(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI))
+    advanceUntilIdle()
+
+    // Should retry 5 times
+    verify(mockUserProfileRepository, times(5)).saveUserProfile(any<UserProfile>())
+    // Queue cleared after max retries
+    assertEquals(0, controller.getOfflineQueueSize())
+    // Optimistic update reverted
+    assertFalse(controller.savedEvents.contains(testEvent))
+  }
+
+  @Test
+  fun `clearOfflineQueue removes all pending actions`() = runTest {
+    controller.setSavedEventsForTest(emptyList())
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = false)))
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    // Queue multiple actions
+    controller.saveSelectedEvent()
+    advanceUntilIdle()
+
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent.copy(uid = "event2"))
+    controller.saveSelectedEvent()
+    advanceUntilIdle()
+
+    assertEquals(2, controller.getOfflineQueueSize())
+
+    controller.clearOfflineQueue()
+
+    assertEquals(0, controller.getOfflineQueueSize())
+  }
+
+  @Test
+  fun `clearUserScopedState clears offline queue`() = runTest {
+    controller.setSavedEventsForTest(emptyList())
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = false)))
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    controller.saveSelectedEvent()
+    advanceUntilIdle()
+
+    assertEquals(1, controller.getOfflineQueueSize())
+
+    controller.clearUserScopedState()
+
+    assertEquals(0, controller.getOfflineQueueSize())
+  }
+
+  // ========== Edge Cases ==========
+  @Test
+  fun `leaveSelectedEvent does nothing if event already removed from joined list`() = runTest {
+    controller.setJoinedEventsForTest(emptyList())
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+
+    controller.leaveSelectedEvent()
+    advanceUntilIdle()
+
+    verify(mockEventRepository, never()).editEventAsUser(any(), any(), any())
+  }
+
+  @Test
+  fun `leaveSelectedEvent succeeds silently when event was deleted`() = runTest {
+    val joinedEvent = testEvent.copy(participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(joinedEvent))
+    whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
+
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any()))
+        .thenThrow(RuntimeException("Event not found"))
+
+    controller.leaveSelectedEvent()
+    advanceUntilIdle()
+
+    // No error message set - treated as success
+    verify(mockSetErrorMessage, never()).invoke(any())
+    assertFalse(controller.joinedEvents.contains(joinedEvent))
+  }
+
+  @Test
+  fun `isOnline reflects connectivity state`() = runTest {
+    val connectivityFlow = MutableStateFlow(ConnectivityState(isConnected = true))
+    whenever(mockConnectivityService.connectivityState).thenReturn(connectivityFlow)
+
+    controller.observeConnectivity()
+    advanceUntilIdle()
+
+    assertTrue(controller.isOnline.value)
+
+    connectivityFlow.emit(ConnectivityState(isConnected = false))
+    advanceUntilIdle()
+
+    assertFalse(controller.isOnline.value)
   }
 }
