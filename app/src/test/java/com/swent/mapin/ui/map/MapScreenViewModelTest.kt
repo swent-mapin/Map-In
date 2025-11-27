@@ -10,6 +10,10 @@ import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.memory.MemoryRepository
+import com.swent.mapin.model.network.ConnectivityService
+import com.swent.mapin.model.network.ConnectivityServiceProvider
+import com.swent.mapin.model.network.ConnectivityState
+import com.swent.mapin.model.network.NetworkType
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -20,6 +24,7 @@ import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -57,6 +62,7 @@ class MapScreenViewModelTest {
   @Mock(lenient = true) private lateinit var mockFiltersSectionViewModel: FiltersSectionViewModel
   @Mock(lenient = true) private lateinit var mockEventStateController: MapEventStateController
   @Mock(lenient = true) private lateinit var mockLocationManager: LocationManager
+  @Mock(lenient = true) private lateinit var mockConnectivityService: ConnectivityService
 
   private lateinit var viewModel: MapScreenViewModel
   private lateinit var config: BottomSheetConfig
@@ -76,6 +82,11 @@ class MapScreenViewModelTest {
 
     clearFocusCalled = false
     config = BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+
+    // Set mock ConnectivityService in the provider BEFORE creating ViewModel
+    whenever(mockConnectivityService.connectivityState)
+        .thenReturn(flowOf(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI)))
+    ConnectivityServiceProvider.setInstance(mockConnectivityService)
 
     // Mock SharedPreferences
     whenever(mockContext.getSharedPreferences(any(), any())).thenReturn(mockSharedPreferences)
@@ -99,6 +110,8 @@ class MapScreenViewModelTest {
     runBlocking {
       whenever(mockEventRepository.getFilteredEvents(any(), any<String>())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getJoinedEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getOwnedEvents(any())).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
       whenever(mockUserProfileRepository.getUserProfile(any())).thenReturn(null)
@@ -115,8 +128,16 @@ class MapScreenViewModelTest {
     whenever(mockEventStateController.allEvents).thenReturn(emptyList())
     whenever(mockEventStateController.searchResults).thenReturn(emptyList())
     whenever(mockEventStateController.joinedEvents).thenAnswer { joinedEvents.toList() }
+    whenever(mockEventStateController.joinedEventsFlow).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventStateController.savedEventsFlow).thenReturn(MutableStateFlow(emptyList()))
+    whenever(mockEventStateController.isOnline).thenReturn(MutableStateFlow(true))
     whenever(mockEventStateController.searchEvents(any())).then {}
     whenever(mockEventStateController.clearSearchResults()).then {}
+    whenever(mockEventStateController.observeFilters()).then {}
+    whenever(mockEventStateController.observeConnectivity()).then {}
+    whenever(mockEventStateController.startListeners()).then {}
+    whenever(mockEventStateController.stopListeners()).then {}
+
     runBlocking {
       whenever(mockEventStateController.joinSelectedEvent()).thenAnswer {
         viewModel.selectedEvent?.let { event -> joinedEvents.add(event) }
@@ -169,6 +190,7 @@ class MapScreenViewModelTest {
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+    ConnectivityServiceProvider.clearInstance()
   }
 
   @Test
