@@ -96,6 +96,7 @@ class MapScreenViewModel(
           auth = auth,
           scope = viewModelScope,
           filterViewModel = filterViewModel,
+          connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
           getSelectedEvent = { _selectedEvent },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
@@ -358,7 +359,9 @@ class MapScreenViewModel(
   }
 
   init {
+    // Observe filters and connectivity changes
     eventStateController.observeFilters()
+    eventStateController.observeConnectivity()
     // Load map style preference
     loadMapStylePreference()
 
@@ -366,6 +369,9 @@ class MapScreenViewModel(
     eventStateController.refreshEventsList()
     eventStateController.loadSavedEvents()
     eventStateController.loadJoinedEvents()
+
+    // Start listeners for real-time updates
+    eventStateController.startListeners()
 
     // Load user profile
     loadUserProfile()
@@ -458,6 +464,7 @@ class MapScreenViewModel(
             eventStateController.loadSavedEvents()
             eventStateController.loadJoinedEvents()
             eventStateController.loadOwnedEvents()
+            eventStateController.startListeners()
             loadUserProfile()
           }
         }
@@ -672,6 +679,9 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
     cameraController.clearCallbacks()
+
+    // Stop event listeners
+    eventStateController.stopListeners()
 
     // Cancel any active offline downloads to prevent resource leaks
     try {
