@@ -370,15 +370,13 @@ fun Modifier.pinchToZoom(): Modifier = composed {
 @Composable
 fun MemoryVideoPlayer(url: String) {
   val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build()
-    }
+  val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
-    LaunchedEffect(url) {
-        exoPlayer.setMediaItem(ExoMediaItem.fromUri(url))
-        exoPlayer.prepare()
-        exoPlayer.playWhenReady = false
-    }
+  LaunchedEffect(url) {
+    exoPlayer.setMediaItem(ExoMediaItem.fromUri(url))
+    exoPlayer.prepare()
+    exoPlayer.playWhenReady = false
+  }
 
   AndroidView(
       factory = {
