@@ -75,82 +75,83 @@ export const sendNotificationOnCreate = functions.firestore
 
       console.log(`Found ${tokens.length} device(s) for user ${notification.recipientId}`);
 
-      // Build the notification payload
+      // Build the notification payload for individual sending (FCM v1 API)
       // Safely handle optional fields - default to empty/fallback values if undefined/null
       const metadata = notification.metadata ?? {};
       const priority = notification.priority ?? 0;
 
-      const payload: admin.messaging.MulticastMessage = {
-        notification: {
-          title: notification.title,
-          body: notification.message,
-        },
-        data: {
-          notificationId: notificationId,
-          type: notification.type,
-          actionUrl: notification.actionUrl || "",
-          recipientId: notification.recipientId,
-          senderId: notification.senderId || "",
-          // Convert metadata object to strings for FCM data payload
-          ...Object.keys(metadata).reduce((acc, key) => {
-            acc[`metadata_${key}`] = metadata[key];
-            return acc;
-          }, {} as { [key: string]: string }),
-        },
-        // Set Android-specific options
-        android: {
-          priority: priority >= 2 ? "high" : "normal",
-          notification: {
-            channelId: getChannelIdForType(notification.type),
-            priority: priority >= 2 ? "high" : "default",
-            defaultSound: true,
-            defaultVibrateTimings: true,
-          },
-        },
-        tokens: tokens,
-      };
+      // Send to each token individually to avoid /batch endpoint issues
+      let successCount = 0;
+      let failureCount = 0;
+      const failedTokens: string[] = [];
 
-      // Send the notification to all devices
-      const response = await admin.messaging().sendMulticast(payload);
+      for (const token of tokens) {
+        try {
+          const message: admin.messaging.Message = {
+            notification: {
+              title: notification.title,
+              body: notification.message,
+            },
+            data: {
+              notificationId: notificationId,
+              type: notification.type,
+              actionUrl: notification.actionUrl || "",
+              recipientId: notification.recipientId,
+              senderId: notification.senderId || "",
+              // Convert metadata object to strings for FCM data payload
+              ...Object.keys(metadata).reduce((acc, key) => {
+                acc[`metadata_${key}`] = metadata[key];
+                return acc;
+              }, {} as { [key: string]: string }),
+            },
+            // Set Android-specific options
+            android: {
+              priority: priority >= 2 ? "high" : "normal",
+              notification: {
+                channelId: getChannelIdForType(notification.type),
+                priority: priority >= 2 ? "high" : "default",
+                defaultSound: true,
+                defaultVibrateTimings: true,
+              },
+            },
+            token: token,
+          };
 
-      console.log(`Successfully sent ${response.successCount} notification(s)`);
-      console.log(`Failed to send ${response.failureCount} notification(s)`);
+          await admin.messaging().send(message);
+          successCount++;
+          console.log(`Successfully sent notification to token ${tokens.indexOf(token) + 1}/${tokens.length}`);
+        } catch (error: any) {
+          failureCount++;
+          console.error(`Failed to send to token ${tokens.indexOf(token) + 1}:`, error?.code, error?.message);
+
+          // Remove token if it's invalid or unregistered
+          if (
+            error?.code === "messaging/invalid-registration-token" ||
+            error?.code === "messaging/registration-token-not-registered"
+          ) {
+            failedTokens.push(token);
+          }
+        }
+      }
+
+      console.log(`Successfully sent ${successCount} notification(s)`);
+      console.log(`Failed to send ${failureCount} notification(s)`);
 
       // Clean up invalid tokens
-      if (response.failureCount > 0) {
-        const failedTokens: string[] = [];
-
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            const error = resp.error;
-            console.error(`Failed to send to token ${idx}:`, error?.code, error?.message);
-
-            // Remove token if it's invalid or unregistered
-            if (
-              error?.code === "messaging/invalid-registration-token" ||
-              error?.code === "messaging/registration-token-not-registered"
-            ) {
-              failedTokens.push(tokens[idx]);
-            }
-          }
-        });
-
-        // Remove invalid tokens from Firestore
-        if (failedTokens.length > 0) {
-          console.log(`Removing ${failedTokens.length} invalid token(s)`);
-          await admin.firestore()
-            .collection("users")
-            .doc(notification.recipientId)
-            .update({
-              fcmTokens: admin.firestore.FieldValue.arrayRemove(...failedTokens),
-            });
-        }
+      if (failedTokens.length > 0) {
+        console.log(`Removing ${failedTokens.length} invalid token(s)`);
+        await admin.firestore()
+          .collection("users")
+          .doc(notification.recipientId)
+          .update({
+            fcmTokens: admin.firestore.FieldValue.arrayRemove(...failedTokens),
+          });
       }
 
       return {
         success: true,
-        successCount: response.successCount,
-        failureCount: response.failureCount,
+        successCount: successCount,
+        failureCount: failureCount,
       };
     } catch (error) {
       console.error(`Error sending notification ${notificationId}:`, error);

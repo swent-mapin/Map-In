@@ -22,6 +22,7 @@ class FriendRequestRepositoryTest {
 
   private lateinit var firestore: FirebaseFirestore
   private lateinit var userProfileRepo: UserProfileRepository
+  private lateinit var notificationService: NotificationService
   private lateinit var repository: FriendRequestRepository
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
@@ -30,6 +31,7 @@ class FriendRequestRepositoryTest {
   fun setup() {
     firestore = mockk(relaxed = true)
     userProfileRepo = mockk(relaxed = true)
+    notificationService = mockk(relaxed = true)
     mockCollection = mockk(relaxed = true)
     mockDocument = mockk(relaxed = true)
 
@@ -38,7 +40,22 @@ class FriendRequestRepositoryTest {
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns "testDocId"
 
-    repository = FriendRequestRepository(firestore, userProfileRepo)
+    // Mock notification service to always succeed
+    val mockNotification =
+        Notification(
+            notificationId = "notif123",
+            title = "Test",
+            message = "Test message",
+            type = NotificationType.FRIEND_REQUEST,
+            recipientId = "user1",
+            readStatus = false)
+    coEvery {
+      notificationService.sendFriendRequestNotification(any(), any(), any(), any())
+    } returns NotificationResult.Success(mockNotification)
+    coEvery { notificationService.sendInfoNotification(any(), any(), any(), any(), any()) } returns
+        NotificationResult.Success(mockNotification)
+
+    repository = FriendRequestRepository(firestore, userProfileRepo, notificationService)
   }
 
   // ==================== Send Friend Request Tests ====================
@@ -55,6 +72,8 @@ class FriendRequestRepositoryTest {
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.isEmpty } returns true
     every { mockDocument.set(any()) } returns Tasks.forResult(null)
+    coEvery { userProfileRepo.getUserProfile(fromUser) } returns
+        UserProfile(userId = fromUser, name = "Sender User")
 
     val result = repository.sendFriendRequest(fromUser, toUser)
 
@@ -93,7 +112,19 @@ class FriendRequestRepositoryTest {
   @Test
   fun `acceptFriendRequest updates status to ACCEPTED`() = runTest {
     val requestId = "req123"
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val friendRequest =
+        FriendRequest(
+            requestId = requestId,
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING)
+
+    every { mockDocument.get() } returns Tasks.forResult(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns friendRequest
     every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+    coEvery { userProfileRepo.getUserProfile(any()) } returns
+        UserProfile(userId = "user2", name = "Test User")
 
     val result = repository.acceptFriendRequest(requestId)
 
