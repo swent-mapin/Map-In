@@ -12,6 +12,7 @@ import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -159,6 +160,7 @@ class MapEventStateController(
         val currentUserId = getUserId()
         _joinedEvents = eventRepository.getJoinedEvents(currentUserId)
         _joinedEventsFlow.value = _joinedEvents
+        loadAttendedEvents()
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -211,8 +213,7 @@ class MapEventStateController(
    * filtering [joinedEvents] for events that have already ended.
    */
   private fun loadAttendedEvents() {
-    val now = System.currentTimeMillis()
-    _attendedEvents = computeAttendedEvents(_joinedEvents, now)
+    _attendedEvents = computeAttendedEvents(_joinedEvents)
   }
 
   companion object {
@@ -221,13 +222,25 @@ class MapEventStateController(
      * (i.e. their endDate is in the past) and return them sorted by most recent end date first.
      */
     @VisibleForTesting
-    fun computeAttendedEvents(
-        joinedEvents: List<Event>,
-        now: Long = System.currentTimeMillis()
-    ): List<Event> {
+    fun computeAttendedEvents(joinedEvents: List<Event>): List<Event> {
+      val now = System.currentTimeMillis()
       return joinedEvents
           .filter { ev -> ev.endDate?.toDate()?.time?.let { it <= now } ?: false }
           .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
+    }
+  }
+
+  /** Automatically refreshes [attendedEvents] every 10 seconds. */
+  init {
+    startAttendedAutoRefresh()
+  }
+
+  private fun startAttendedAutoRefresh() {
+    scope.launch {
+      while (true) {
+        loadAttendedEvents()
+        delay(10_000) // every 10 seconds
+      }
     }
   }
 
