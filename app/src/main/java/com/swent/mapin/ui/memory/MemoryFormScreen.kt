@@ -113,9 +113,11 @@ private fun EventSelectionSection(
                     color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(4.dp))
                 val dateStr =
-                    selectedEvent?.date?.let {
-                      SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it.toDate())
-                    } ?: "No date"
+                    remember(selectedEvent?.date) {
+                      selectedEvent?.date?.toDate()?.let {
+                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it)
+                      } ?: "No date"
+                    }
                 Text(
                     text = "$dateStr • ${selectedEvent?.location?.name}",
                     style = MaterialTheme.typography.bodySmall,
