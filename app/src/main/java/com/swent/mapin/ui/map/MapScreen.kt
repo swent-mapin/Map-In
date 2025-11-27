@@ -578,7 +578,7 @@ fun MapScreen(
                         viewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
                       },
-                      onCreateMemoryClick = viewModel::showMemoryFormForEvent,
+                      onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
                       onProfileClick = onNavigateToProfile,

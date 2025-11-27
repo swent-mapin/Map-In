@@ -133,10 +133,9 @@ fun BottomSheetContent(
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
-    // Optional initial event to prefill memory form when opening it
+    // Initial event to prefill memory form when opening it
     initialMemoryEvent: Event? = null,
-    // Joined/Saved/Attended events
-    // Joined/Saved/Owned events
+    // Joined/Saved/Attended/Owned events
     joinedEvents: List<Event> = emptyList(),
     attendedEvents: List<Event> = emptyList(),
     savedEvents: List<Event> = emptyList(),
@@ -149,7 +148,7 @@ fun BottomSheetContent(
     // Callbacks
     onEventClick: (Event) -> Unit = {},
     // now accepts an optional Event to prefill the memory form (null = new memory without event)
-    onCreateMemoryClick: (Event?) -> Unit = {},
+    onCreateMemoryClick: (Event) -> Unit = {},
     onCreateEventClick: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
@@ -198,6 +197,7 @@ fun BottomSheetContent(
                 availableEvents = availableEvents,
                 onSave = onMemorySave,
                 onCancel = onMemoryCancel,
+                onEventClick = onTabEventClick,
                 initialSelectedEvent = initialMemoryEvent)
           }
           BottomSheetScreen.ADD_EVENT -> {
@@ -300,9 +300,7 @@ fun BottomSheetContent(
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {
-                                QuickActionsSection(
-                                    onCreateMemoryClick = onCreateMemoryClick,
-                                    onCreateEventClick = onCreateEventClick)
+                                QuickActionsSection(onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))

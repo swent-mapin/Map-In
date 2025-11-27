@@ -12,11 +12,13 @@ import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -31,7 +33,11 @@ class MapEventStateController(
     private val filterViewModel: FiltersSectionViewModel,
     private val getSelectedEvent: () -> Event?,
     private val setErrorMessage: (String) -> Unit,
-    private val clearErrorMessage: () -> Unit
+    private val clearErrorMessage: () -> Unit,
+    // Indicates whether the code is not running inside a unit test environment.
+    // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
+    // auto-refresh loops) which would otherwise block or hang the test runner.
+    private val autoRefreshEnabled: Boolean = true
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -160,6 +166,7 @@ class MapEventStateController(
         val currentUserId = getUserId()
         _joinedEvents = eventRepository.getJoinedEvents(currentUserId)
         _joinedEventsFlow.value = _joinedEvents
+        loadAttendedEvents()
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -212,8 +219,7 @@ class MapEventStateController(
    * filtering [joinedEvents] for events that have already ended.
    */
   private fun loadAttendedEvents() {
-    val now = System.currentTimeMillis()
-    _attendedEvents = computeAttendedEvents(_joinedEvents, now)
+    _attendedEvents = computeAttendedEvents(_joinedEvents)
   }
 
   companion object {
@@ -222,13 +228,33 @@ class MapEventStateController(
      * (i.e. their endDate is in the past) and return them sorted by most recent end date first.
      */
     @VisibleForTesting
-    fun computeAttendedEvents(
-        joinedEvents: List<Event>,
-        now: Long = System.currentTimeMillis()
-    ): List<Event> {
+    fun computeAttendedEvents(joinedEvents: List<Event>): List<Event> {
+      val now = System.currentTimeMillis()
       return joinedEvents
           .filter { ev -> ev.endDate?.toDate()?.time?.let { it <= now } ?: false }
           .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
+    }
+  }
+
+  /** Automatically refreshes [attendedEvents] every 10 seconds. */
+  init {
+    if (autoRefreshEnabled && !isRunningUnderUnitTest()) {
+      startAttendedAutoRefresh()
+    }
+  }
+
+  private fun startAttendedAutoRefresh() {
+    scope.launch {
+      while (isActive) {
+        loadAttendedEvents()
+        delay(10_000) // every 10 seconds
+      }
+    }
+  }
+
+  fun isRunningUnderUnitTest(): Boolean {
+    return Thread.currentThread().stackTrace.any {
+      it.className.startsWith("org.junit") || it.className.contains("GradleTest")
     }
   }
 

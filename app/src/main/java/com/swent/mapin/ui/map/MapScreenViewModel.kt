@@ -624,7 +624,8 @@ class MapScreenViewModel(
     searchStateController.clearRecentSearches()
   }
 
-  fun showMemoryForm() {
+  fun showMemoryForm(event: Event) {
+    _memoryFormInitialEvent = event
     _previousSheetState = bottomSheetState
     _showMemoryForm = true
     _currentBottomSheetScreen = BottomSheetScreen.MEMORY_FORM
@@ -636,12 +637,6 @@ class MapScreenViewModel(
     _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
     // clear any prefilled event selection
     _memoryFormInitialEvent = null
-  }
-
-  /** Open memory form and prefill it with an optional event. */
-  fun showMemoryFormForEvent(event: Event?) {
-    _memoryFormInitialEvent = event
-    showMemoryForm()
   }
 
   fun showAddEventForm() {
