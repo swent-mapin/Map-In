@@ -18,7 +18,7 @@ class RouteInfoCardTest {
     composeTestRule.setContent { RouteInfoCard(routeInfo = routeInfo) }
 
     composeTestRule.onNodeWithText("500 m").assertIsDisplayed()
-    composeTestRule.onNodeWithText("distance").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Distance").assertIsDisplayed()
   }
 
   @Test
@@ -28,7 +28,7 @@ class RouteInfoCardTest {
     composeTestRule.setContent { RouteInfoCard(routeInfo = routeInfo) }
 
     composeTestRule.onNodeWithText("2.5 km").assertIsDisplayed()
-    composeTestRule.onNodeWithText("distance").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Distance").assertIsDisplayed()
   }
 
   @Test
@@ -38,7 +38,7 @@ class RouteInfoCardTest {
     composeTestRule.setContent { RouteInfoCard(routeInfo = routeInfo) }
 
     composeTestRule.onNodeWithText("10 min").assertIsDisplayed()
-    composeTestRule.onNodeWithText("temps").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Duration").assertIsDisplayed()
   }
 
   @Test
@@ -48,7 +48,7 @@ class RouteInfoCardTest {
     composeTestRule.setContent { RouteInfoCard(routeInfo = routeInfo) }
 
     composeTestRule.onNodeWithText("1 h 30 min").assertIsDisplayed()
-    composeTestRule.onNodeWithText("temps").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Duration").assertIsDisplayed()
   }
 
   @Test
@@ -67,8 +67,8 @@ class RouteInfoCardTest {
 
     composeTestRule.setContent { RouteInfoCard(routeInfo = routeInfo) }
 
-    composeTestRule.onNodeWithText("distance").assertIsDisplayed()
-    composeTestRule.onNodeWithText("temps").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Distance").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Duration").assertIsDisplayed()
   }
 
   @Test
