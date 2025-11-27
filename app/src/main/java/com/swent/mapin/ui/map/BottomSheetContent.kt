@@ -221,7 +221,7 @@ fun BottomSheetContent(
             val eventToEdit = eventToEditState
             if (eventToEdit == null) {
               Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(modifier = Modifier.testTag("EditEventCircularIndicator"))
               }
             } else {
               EditEventScreen(

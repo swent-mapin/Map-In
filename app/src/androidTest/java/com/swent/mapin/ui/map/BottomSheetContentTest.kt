@@ -14,9 +14,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.google.firebase.Timestamp
+import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventList
+import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -24,7 +27,10 @@ import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.profile.ProfileViewModel
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -1295,5 +1301,56 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     assertEquals(toClick, clicked)
+  }
+
+  @Test
+  fun bottomSheetEditEvent_showsProgressOrScreen() {
+    val mockEventViewModel = mockk<EventViewModel>(relaxed = true)
+    val eventFlow = MutableStateFlow<Event?>(null)
+    every { mockEventViewModel.eventToEdit } returns eventFlow.asStateFlow()
+
+    // Single setContent
+    rule.setContent {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          currentScreen = BottomSheetScreen.EDIT_EVENT,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = "",
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel,
+          eventViewModel = mockEventViewModel)
+    }
+
+    // CASE 1: eventToEdit = null -> CircularProgressIndicator
+    rule.onNodeWithTag("EditEventCircularIndicator").assertExists()
+
+    // CASE 2: eventToEdit != null -> EditEventScreen
+    val locationMock = mockk<Location>(relaxed = true)
+    val dateMock = mockk<Timestamp>(relaxed = true)
+    val endDateMock = mockk<Timestamp>(relaxed = true)
+    val testEvent =
+        Event(
+            uid = "1",
+            ownerId = "user1",
+            title = "Test",
+            description = "",
+            location = locationMock,
+            date = dateMock,
+            endDate = endDateMock,
+            tags = emptyList())
+    eventFlow.value = testEvent // update the flow to trigger recomposition
+
+    rule.waitForIdle() // wait for Compose to recompose
+
+    // Assert EditEventScreen is displayed
+    rule.onNodeWithTag(EditEventScreenTestTags.SCREEN).assertExists()
   }
 }

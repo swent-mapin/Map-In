@@ -10,6 +10,7 @@ import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
+import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,7 +24,6 @@ import org.junit.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
-import kotlin.test.assertEquals
 
 @ExperimentalCoroutinesApi
 class EventViewModelTests {
@@ -31,7 +31,8 @@ class EventViewModelTests {
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var repository: EventRepository
   private lateinit var viewModel: EventViewModel
-  private val stateController: MapEventStateController = Mockito.mock(MapEventStateController::class.java)
+  private val stateController: MapEventStateController =
+      Mockito.mock(MapEventStateController::class.java)
 
   @Before
   fun setUp() {
@@ -145,15 +146,14 @@ class EventViewModelTests {
 
     var successCalled = false
     viewModel.saveEditedEvent(
-      originalEvent = event,
-      title = editedTitle,
-      description = editedDesc,
-      location = location,
-      startTs = startTs,
-      endTs = endTs,
-      tagsString = tagsString,
-      onSuccess = { successCalled = true }
-    )
+        originalEvent = event,
+        title = editedTitle,
+        description = editedDesc,
+        location = location,
+        startTs = startTs,
+        endTs = endTs,
+        tagsString = tagsString,
+        onSuccess = { successCalled = true })
     advanceUntilIdle()
 
     Mockito.verify(repository).editEventAsOwner(eq(event.uid), any())
@@ -172,15 +172,14 @@ class EventViewModelTests {
 
     var successCalled = false
     viewModel.saveEditedEvent(
-      originalEvent = event,
-      title = editedTitle,
-      description = editedDesc,
-      location = location,
-      startTs = startTs,
-      endTs = endTs,
-      tagsString = tagsString,
-      onSuccess = { successCalled = true }
-    )
+        originalEvent = event,
+        title = editedTitle,
+        description = editedDesc,
+        location = location,
+        startTs = startTs,
+        endTs = endTs,
+        tagsString = tagsString,
+        onSuccess = { successCalled = true })
     advanceUntilIdle()
 
     Mockito.verify(repository, Mockito.never()).editEventAsOwner(eq(event.uid), any())
