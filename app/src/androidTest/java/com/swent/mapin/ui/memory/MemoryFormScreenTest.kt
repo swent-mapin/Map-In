@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import java.util.Calendar
 import org.junit.Rule
 import org.junit.Test
 
@@ -56,7 +57,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
     rule.onNodeWithTag("memoryFormScreen").assertIsDisplayed()
@@ -68,7 +73,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -81,7 +90,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -95,7 +108,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -109,7 +126,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -122,66 +143,61 @@ class MemoryFormScreenTest {
   }
 
   @Test
-  fun memoryForm_eventSelectionCard_displayed() {
+  fun memoryForm_showsEventDetailSheet() {
+    val cal = Calendar.getInstance().apply { set(2025, 9, 20) }
+    val date = cal.time
+    val event =
+        Event(
+            title = "Test Event",
+            location = Location(name = "Paris", latitude = 0.0, longitude = 0.0),
+            date = Timestamp(date))
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
             scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
+            availableEvents = listOf(event),
             onSave = {},
-            onCancel = {})
-      }
-    }
-
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun memoryForm_eventSelection_showsEventPicker() {
-    rule.setContent {
-      MaterialTheme {
-        MemoryFormScreen(
-            scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
-            onSave = {},
-            onCancel = {})
+            onCancel = {},
+            onEventClick = {},
+            initialSelectedEvent = event)
       }
     }
 
     rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
     rule.waitForIdle()
 
-    rule.onNodeWithText("Select an event").assertIsDisplayed()
-    rule.onNodeWithText("Beach Party").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Mountain Hike").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText(event.title).assertIsDisplayed()
+    rule.onNodeWithText("2025", substring = true).assertIsDisplayed()
+    rule.onNodeWithText("20", substring = true).assertIsDisplayed()
+    rule.onNodeWithText("Oct", substring = true).assertIsDisplayed()
+    rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
   }
 
   @Test
-  fun memoryForm_eventSelection_andClear() {
+  fun memoryForm_showsEvent() {
+    val cal = Calendar.getInstance().apply { set(2025, 9, 20) }
+    val date = cal.time
+    val event =
+        Event(
+            title = "Test Event",
+            location = Location(name = "Paris", latitude = 0.0, longitude = 0.0),
+            date = Timestamp(date))
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
             scrollState = ScrollState(0),
-            availableEvents = sampleEvents,
+            availableEvents = listOf(event),
             onSave = {},
-            onCancel = {})
+            onCancel = {},
+            onEventClick = {},
+            initialSelectedEvent = event)
       }
     }
-
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Beach Party").performScrollTo().performClick()
-    rule.waitForIdle()
 
     rule.onNodeWithTag("eventSelectionCard").performScrollTo()
-    rule.onNodeWithText("Beach Party").assertIsDisplayed()
-    rule.onNodeWithText("Santa Monica Beach", substring = true).assertIsDisplayed()
-
-    rule.onNodeWithTag("clearEventButton").performClick()
-    rule.waitForIdle()
-
-    rule.onNodeWithText("Tap to select an event").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText(event.title).assertIsDisplayed()
+    rule.onNodeWithText("Oct 20, 2025", substring = true).assertIsDisplayed()
+    rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
   }
 
   @Test
@@ -189,7 +205,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -206,7 +226,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -219,7 +243,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -231,7 +259,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -250,7 +282,8 @@ class MemoryFormScreenTest {
             scrollState = ScrollState(0),
             availableEvents = emptyList(),
             onSave = {},
-            onCancel = { cancelCalled = true })
+            onCancel = { cancelCalled = true },
+            onEventClick = {})
       }
     }
 
@@ -270,7 +303,8 @@ class MemoryFormScreenTest {
             scrollState = ScrollState(0),
             availableEvents = sampleEvents,
             onSave = { data -> savedData = data },
-            onCancel = {})
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
@@ -293,7 +327,9 @@ class MemoryFormScreenTest {
             scrollState = ScrollState(0),
             availableEvents = sampleEvents,
             onSave = { data -> savedData = data },
-            onCancel = {})
+            onCancel = {},
+            onEventClick = {},
+            initialSelectedEvent = sampleEvents[0])
       }
     }
 
@@ -301,11 +337,6 @@ class MemoryFormScreenTest {
     rule.waitForIdle()
 
     rule.onNodeWithTag("descriptionField").performScrollTo().performTextInput("Amazing experience!")
-    rule.waitForIdle()
-
-    rule.onNodeWithTag("eventSelectionCard").performScrollTo().performClick()
-    rule.waitForIdle()
-    rule.onNodeWithText("Beach Party").performScrollTo().performClick()
     rule.waitForIdle()
 
     rule.onNodeWithTag("publicSwitch").performScrollTo().performClick()
@@ -329,11 +360,12 @@ class MemoryFormScreenTest {
             scrollState = ScrollState(0),
             availableEvents = sampleEvents,
             onSave = {},
-            onCancel = {})
+            onCancel = {},
+            onEventClick = {})
       }
     }
 
-    rule.onNodeWithText("Link to event (optional)").performScrollTo().assertIsDisplayed()
+    rule.onNodeWithText("Link to event").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Title (optional)").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Description *").performScrollTo().assertIsDisplayed()
     rule.onNodeWithText("Photos or videos (up to 5)").performScrollTo().assertIsDisplayed()
@@ -401,7 +433,11 @@ class MemoryFormScreenTest {
     rule.setContent {
       MaterialTheme {
         MemoryFormScreen(
-            scrollState = ScrollState(0), availableEvents = emptyList(), onSave = {}, onCancel = {})
+            scrollState = ScrollState(0),
+            availableEvents = emptyList(),
+            onSave = {},
+            onCancel = {},
+            onEventClick = {})
       }
     }
 

@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map.directions
 
+// Assisted by AI
+
 import com.mapbox.geojson.Point
 
 /**
@@ -24,9 +26,14 @@ sealed class DirectionState {
    * @property routePoints Ordered list of geographic points forming the route path
    * @property origin Starting point of the route (typically user's location)
    * @property destination End point of the route (typically event location)
+   * @property routeInfo Information about route distance and duration
    */
-  data class Displayed(val routePoints: List<Point>, val origin: Point, val destination: Point) :
-      DirectionState()
+  data class Displayed(
+      val routePoints: List<Point>,
+      val origin: Point,
+      val destination: Point,
+      val routeInfo: RouteInfo = RouteInfo.ZERO
+  ) : DirectionState()
 }
 
 /**

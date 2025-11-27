@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
@@ -16,7 +17,8 @@ import kotlinx.coroutines.launch
 
 class EventViewModel(
     private val eventRepository: EventRepository,
-    private val stateController: MapEventStateController
+    private val stateController: MapEventStateController,
+    private val firebaseAuth: FirebaseAuth = Firebase.auth
 ) : ViewModel() {
   private val _error = MutableStateFlow<String?>(null)
   val error = _error.asStateFlow()
@@ -79,7 +81,7 @@ class EventViewModel(
                 endDate = endTs,
                 tags = extractTags(tagsString))
 
-        val currentUser = Firebase.auth.currentUser
+        val currentUser = firebaseAuth.currentUser
         if (currentUser?.uid == originalEvent.ownerId) {
           editEvent(originalEvent.uid, editedEvent)
           onSuccess()
