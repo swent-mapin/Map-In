@@ -97,11 +97,15 @@ class EditEventScreenTests {
   fun invalidTagInputShowsError() {
     setEditEventScreen()
     val tagNode = composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG)
-    tagNode.performTextInput("invalid tag !!")
-    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
+    tagNode.performScrollTo().performTextInput("invalid tag !!")
+    composeTestRule
+        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
+        .performScrollTo()
+        .performClick()
 
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE)
+        .performScrollTo()
         .assert(hasText("Tags", substring = true, ignoreCase = true))
   }
 }
