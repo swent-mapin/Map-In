@@ -625,4 +625,121 @@ class EventBasedOfflineRegionManagerTest {
     manager.stopObserving()
     testScheduler.advanceUntilIdle()
   }
+
+  @Test
+  fun `downloadRegionsForEvents handles download failure`() = runTest {
+    val error = Exception("Download failed")
+    var capturedEvent: Event? = null
+    var capturedResult: Result<Unit>? = null
+    manager =
+        EventBasedOfflineRegionManager(
+            mockOfflineRegionManager,
+            mockConnectivityService,
+            this,
+            onDownloadComplete = { e, r ->
+              capturedEvent = e
+              capturedResult = r
+            })
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          arg<(Result<Unit>) -> Unit>(3)(Result.failure(error))
+        }
+    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    manager.downloadRegionsForEvents(listOf(event))
+    coVerify(exactly = 1) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
+    assertNotNull(capturedResult)
+    assertTrue(capturedResult!!.isFailure)
+    assertEquals(error, capturedResult!!.exceptionOrNull())
+    assertEquals(event, capturedEvent)
+    assertEquals(0, manager.getDownloadedCount())
+  }
+
+  @Test
+  fun `downloadRegionSuspend reports progress updates`() = runTest {
+    val updates = mutableListOf<Float>()
+    manager =
+        EventBasedOfflineRegionManager(
+            mockOfflineRegionManager,
+            mockConnectivityService,
+            this,
+            onDownloadProgress = { _, p -> updates.add(p) })
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          val onProgress = arg<(Float) -> Unit>(2)
+          onProgress(0.25f)
+          onProgress(0.75f)
+          arg<(Result<Unit>) -> Unit>(3)(Result.success(Unit))
+        }
+    manager.downloadRegionsForEvents(
+        listOf(Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))))
+    assertEquals(2, updates.size)
+    assertEquals(0.25f, updates[0], 0.01f)
+    assertEquals(0.75f, updates[1], 0.01f)
+  }
+
+  @Test
+  fun `deleteRegionsForEvents handles deletion failure`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(mockOfflineRegionManager, mockConnectivityService, this)
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          arg<(Result<Unit>) -> Unit>(3)(Result.success(Unit))
+        }
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          arg<(Result<Unit>) -> Unit>(1)(Result.failure(Exception("Failed")))
+        }
+    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+    savedEventsFlow.value = listOf(event)
+    testScheduler.advanceUntilIdle()
+    assertEquals(1, manager.getDownloadedCount())
+    savedEventsFlow.value = emptyList()
+    testScheduler.advanceUntilIdle()
+    verify(exactly = 1) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+    assertEquals(0, manager.getDownloadedCount())
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `deleteRegionsForEvents handles event without stored location`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(mockOfflineRegionManager, mockConnectivityService, this)
+    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
+    savedEventsFlow.value = listOf(event)
+    testScheduler.advanceUntilIdle()
+    savedEventsFlow.value = emptyList()
+    testScheduler.advanceUntilIdle()
+    verify(exactly = 0) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `deleteRegionForEvent handles deletion failure`() = runTest {
+    manager =
+        EventBasedOfflineRegionManager(mockOfflineRegionManager, mockConnectivityService, this)
+    coEvery { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) } answers
+        {
+          arg<(Result<Unit>) -> Unit>(3)(Result.success(Unit))
+        }
+    every { mockOfflineRegionManager.removeTileRegion(any(), any()) } answers
+        {
+          arg<(Result<Unit>) -> Unit>(1)(Result.failure(Exception("Failed")))
+        }
+    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    manager.observeEvents(savedEventsFlow, joinedEventsFlow)
+    savedEventsFlow.value = listOf(event)
+    testScheduler.advanceUntilIdle()
+    assertEquals(1, manager.getDownloadedCount())
+    manager.deleteRegionForEvent(event)
+    testScheduler.advanceUntilIdle()
+    verify(exactly = 1) { mockOfflineRegionManager.removeTileRegion(any(), any()) }
+    assertEquals(1, manager.getDownloadedCount())
+    manager.stopObserving()
+    testScheduler.advanceUntilIdle()
+  }
 }

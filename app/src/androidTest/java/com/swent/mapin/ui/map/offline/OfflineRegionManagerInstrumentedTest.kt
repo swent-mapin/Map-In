@@ -1,0 +1,93 @@
+package com.swent.mapin.ui.map.offline
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.mapbox.geojson.Point
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class OfflineRegionManagerInstrumentedTest {
+
+  private lateinit var manager: OfflineRegionManager
+  private lateinit var tileStoreManager: TileStoreManager
+
+  @Before
+  fun setup() {
+    tileStoreManager = TileStoreManager()
+    manager =
+        OfflineRegionManager(
+            tileStore = tileStoreManager.getTileStore(), connectivityProvider = { flowOf(true) })
+  }
+
+  @After fun tearDown() = manager.cancelActiveDownload()
+
+  @Test
+  fun removeTileRegion_callsOnCompleteWithSuccess() {
+    val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
+    var result: Result<Unit>? = null
+    manager.removeTileRegion(bounds) { result = it }
+    Thread.sleep(100)
+    assertNotNull(result)
+    assertTrue(result!!.isSuccess)
+  }
+
+  @Test
+  fun removeTileRegion_worksWithoutCallback() {
+    val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
+    manager.removeTileRegion(bounds)
+  }
+
+  @Test
+  fun removeTileRegion_generatesConsistentRegionIds() {
+    val bounds = CoordinateBounds(Point.fromLngLat(6.5, 46.5), Point.fromLngLat(6.6, 46.6))
+    val results = mutableListOf<Result<Unit>>()
+    manager.removeTileRegion(bounds) { results.add(it) }
+    Thread.sleep(100)
+    manager.removeTileRegion(bounds) { results.add(it) }
+    Thread.sleep(100)
+    assertEquals(2, results.size)
+    assertTrue(results[0].isSuccess)
+    assertTrue(results[1].isSuccess)
+  }
+
+  @Test
+  fun downloadRegion_completesSuccessfully() = runBlocking {
+    val bounds = CoordinateBounds(Point.fromLngLat(6.56, 46.51), Point.fromLngLat(6.57, 46.52))
+    var complete = false
+    var success = false
+    val progress = mutableListOf<Float>()
+    manager.downloadRegion(
+        bounds,
+        onProgress = { progress.add(it) },
+        onComplete = {
+          complete = true
+          success = it.isSuccess
+        })
+    var waited = 0
+    while (!complete && waited < 30000) {
+      Thread.sleep(100)
+      waited += 100
+    }
+    assertTrue(complete)
+    assertTrue(success)
+    assertTrue(progress.isNotEmpty())
+    manager.removeTileRegion(bounds)
+    Thread.sleep(100)
+  }
+
+  @Test
+  fun cancelActiveDownload_cancelsInProgressDownload() = runBlocking {
+    val bounds = CoordinateBounds(Point.fromLngLat(6.56, 46.51), Point.fromLngLat(6.60, 46.55))
+    manager.downloadRegion(bounds, onComplete = {})
+    Thread.sleep(100)
+    manager.cancelActiveDownload()
+    Thread.sleep(500)
+    manager.removeTileRegion(bounds)
+    Thread.sleep(100)
+  }
+}
