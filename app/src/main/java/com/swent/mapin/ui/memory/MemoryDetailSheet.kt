@@ -3,11 +3,8 @@ package com.swent.mapin.ui.memory
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -29,6 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -149,12 +147,12 @@ private fun CollapsedMemoryContent(memory: Memory, onShare: () -> Unit, onClose:
                   style = MaterialTheme.typography.headlineSmall,
                   fontWeight = FontWeight.Bold,
                   modifier = Modifier.basicMarquee().testTag("memoryTitleCollapsed"))
-              if (memory.eventId != null) {
-                Text(
-                    text = "Memory",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary)
-              }
+
+              Text(
+                  text = "Memory",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.testTag("collapsedMemoryLabel"))
             }
 
         IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close") }
@@ -318,7 +316,10 @@ private fun TaggedUsersSection(names: List<String>) {
   Column {
     Text("Tagged people", fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
-    Text(names.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
+    Text(
+        names.joinToString(", "),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("taggedUsersText"))
   }
 }
 
@@ -331,32 +332,24 @@ private fun LinkedEventChip(onClick: () -> Unit) {
 }
 
 // ----- Pinch-to-zoom modifier -----
-fun Modifier.pinchToZoom(): Modifier = composed {
-  var scale by remember { mutableStateOf(1f) }
-  var offset by remember { mutableStateOf(Offset.Zero) }
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.pinchToZoom(resetKey: Any? = null, maxScale: Float = 4f): Modifier = composed {
+  var scale by remember(resetKey) { mutableStateOf(1f) }
+  var offset by remember(resetKey) { mutableStateOf(Offset.Zero) }
 
-  this.pointerInput(Unit) {
-        awaitEachGesture {
-          awaitFirstDown()
-          var zoom = 1f
-          var pan = Offset.Zero
-
-          awaitTouchSlopOrCancellation(currentEvent.changes.first().id) { _, _ ->
-            val event = currentEvent
-            if (event.changes.size >= 2) {
-              val zoomChange = event.calculateZoom()
-              val panChange = event.calculatePan()
-
-              zoom *= zoomChange
-              pan += panChange
-
-              event.changes.forEach { it.consume() }
-            }
-          }
-
-          scale = (scale * zoom).coerceIn(1f, 4f)
-          offset += pan
-        }
+  this.pointerInput(resetKey) {
+        detectTransformGestures(
+            onGesture = { _, pan, zoom, _ ->
+              scale = (scale * zoom).coerceIn(1f, maxScale)
+              offset += pan
+            })
+      }
+      .pointerInput(resetKey) {
+        detectTapGestures(
+            onDoubleTap = {
+              scale = 1f
+              offset = Offset.Zero
+            })
       }
       .graphicsLayer {
         scaleX = scale
@@ -368,7 +361,7 @@ fun Modifier.pinchToZoom(): Modifier = composed {
 
 // ----- Video Player -----
 @Composable
-fun MemoryVideoPlayer(url: String) {
+private fun MemoryVideoPlayer(url: String) {
   val context = LocalContext.current
   val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
@@ -401,60 +394,76 @@ sealed class MediaItem {
 
 @Composable
 private fun MemoryMediaPreview(urls: List<String>) {
-  AsyncImage(
-      model = urls.first(),
-      contentDescription = "Memory photo",
-      modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(8.dp)),
-      contentScale = ContentScale.Crop)
+  if (urls.isNotEmpty()) {
+    AsyncImage(
+        model = urls.first(),
+        contentDescription = "Memory photo",
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .testTag("memoryMediaPreview"),
+        contentScale = ContentScale.Crop)
+  }
 }
 
 @Composable
-fun MemoryMediaGallery(urls: List<String>) {
+private fun MemoryMediaGallery(urls: List<String>) {
   if (urls.isEmpty()) {
     Box(modifier = Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
-      Text("No media available", color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(
+          "No media available",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.testTag("noMediaText"))
     }
     return
   }
 
   // Convert URLs to MediaItem
+  val videoExtensions = listOf(".mp4", ".mov", ".avi", ".mkv", ".webm")
   val items =
-      urls.map {
-        if (it.endsWith(".mp4") || it.contains("video")) MediaItem.Video(it)
-        else MediaItem.Image(it)
+      urls.map { url ->
+        val lower = url.lowercase()
+        when {
+          videoExtensions.any { lower.endsWith(it) } -> MediaItem.Video(url)
+          else -> MediaItem.Image(url)
+        }
       }
 
   val pagerState = rememberPagerState(initialPage = 0) { items.size }
 
   Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().height(420.dp)) { page ->
-      when (val media = items[page]) {
-        is MediaItem.Image -> {
-          AsyncImage(
-              model = media.url,
-              contentDescription = null,
-              contentScale = ContentScale.Crop,
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(horizontal = 12.dp)
-                      .clip(RoundedCornerShape(12.dp))
-                      .pinchToZoom())
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth().height(420.dp).testTag("mediaPager")) { page ->
+          when (val media = items[page]) {
+            is MediaItem.Image -> {
+              AsyncImage(
+                  model = media.url,
+                  contentDescription = "Gallery image $page",
+                  contentScale = ContentScale.Crop,
+                  modifier =
+                      Modifier.fillMaxSize()
+                          .padding(horizontal = 12.dp)
+                          .clip(RoundedCornerShape(12.dp))
+                          .pinchToZoom(resetKey = media.url)
+                          .testTag("mediaItem_$page"))
+            }
+            is MediaItem.Video -> {
+              Box(
+                  modifier =
+                      Modifier.fillMaxSize()
+                          .padding(horizontal = 12.dp)
+                          .clip(RoundedCornerShape(12.dp))) {
+                    MemoryVideoPlayer(media.url)
+                  }
+            }
+          }
         }
-        is MediaItem.Video -> {
-          Box(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .padding(horizontal = 12.dp)
-                      .clip(RoundedCornerShape(12.dp))) {
-                MemoryVideoPlayer(media.url)
-              }
-        }
-      }
-    }
 
     Spacer(Modifier.height(8.dp))
 
-    Row {
+    Row(modifier = Modifier.testTag("mediaIndicatorsRow")) {
       repeat(items.size) { i ->
         val selected = pagerState.currentPage == i
         Box(
@@ -464,11 +473,13 @@ fun MemoryMediaGallery(urls: List<String>) {
                     .clip(RoundedCornerShape(50))
                     .background(
                         if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                    .testTag("mediaIndicator_$i"))
       }
     }
   }
 }
+
 /* ------------------------ Helpers ------------------------ */
 
 private fun formatMemoryDate(timestamp: Timestamp): String {
