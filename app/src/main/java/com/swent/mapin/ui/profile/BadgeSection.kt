@@ -21,7 +21,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +46,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +54,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeRarity
+
+/**
+ * Maps badge icon names to Material ImageVector icons.
+ *
+ * @param iconName the icon name stored in the badge
+ * @return the corresponding ImageVector, or a default icon if not found
+ */
+private fun getIconFromName(iconName: String): ImageVector {
+  return when (iconName.lowercase()) {
+    "star" -> Icons.Default.Star
+    "face" -> Icons.Default.Face
+    "person" -> Icons.Default.Person
+    "emoji_events" -> Icons.Default.EmojiEvents
+    else -> Icons.Default.Star // Default fallback
+  }
+}
 
 /**
  * Displays the badges section in the profile screen.
@@ -148,7 +169,9 @@ private fun BadgeItem(badge: Badge, onClick: () -> Unit) {
                       .alpha(alpha),
               contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = if (badge.isUnlocked) badge.icon else Icons.Default.Lock,
+                    imageVector =
+                        if (badge.isUnlocked) getIconFromName(badge.iconName)
+                        else Icons.Default.Lock,
                     contentDescription = badge.title,
                     modifier = Modifier.size(28.dp),
                     tint =
@@ -226,7 +249,9 @@ private fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit = {}) {
                               shape = CircleShape),
                   contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (badge.isUnlocked) badge.icon else Icons.Default.Lock,
+                        imageVector =
+                            if (badge.isUnlocked) getIconFromName(badge.iconName)
+                            else Icons.Default.Lock,
                         contentDescription = badge.title,
                         modifier = Modifier.size(40.dp),
                         tint =
