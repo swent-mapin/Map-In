@@ -572,6 +572,15 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun `oneEditEventCancel resets to MAIN_CONTENT and COLLAPSED`() {
+    viewModel.showEditEventForm()
+    viewModel.onEditEventCancel()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
   fun `setMapStyle toggles heatmap and satellite states`() {
     assertFalse(viewModel.showHeatmap)
 
@@ -840,10 +849,28 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun `showEditEventForm sets state correctly`() {
+    viewModel.showEditEventForm()
+
+    assertFalse(viewModel.showMemoryForm) // legacy boolean remains false
+    assertEquals(BottomSheetScreen.EDIT_EVENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
+
+  @Test
   fun `hideAddEventForm resets to MAIN_CONTENT`() {
     viewModel.showAddEventForm()
 
     viewModel.hideAddEventForm()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
+
+  @Test
+  fun `hideEditEventForm resets to MAIN_CONTENT`() {
+    viewModel.showEditEventForm()
+
+    viewModel.hideEditEventForm()
 
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
   }

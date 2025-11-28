@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -76,7 +78,8 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -113,25 +116,45 @@ fun SearchResultsSection(
 
   // Show search results
   LazyColumn(modifier = modifier.fillMaxWidth()) {
-    items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
+    items(results) { event ->
+      SearchResultItem(
+          event = event, onClick = { onEventClick(event) }, onEditEvent = { onEditEvent(event) })
+    }
 
     item { Spacer(modifier = Modifier.height(8.dp)) }
   }
 }
 
 @Composable
-fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+fun SearchResultItem(
+    event: Event,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
+) {
   Column(
       modifier =
           modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text(
-                  text = event.title,
-                  style = MaterialTheme.typography.bodyLarge,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis)
+              Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = event.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    OutlinedButton(
+                        onClick = { onEditEvent(event) },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+                          Text("Edit event")
+                        }
+                  }
 
               if (event.location.name.isNotBlank()) {
                 Text(
