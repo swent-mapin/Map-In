@@ -6,6 +6,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.SearchResultWithStatus
+import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,10 +20,12 @@ import kotlinx.coroutines.launch
  *
  * @property repo Repository for friend request operations.
  * @property auth Firebase Auth instance for getting current user.
+ * @property profileRepo Repository for user profile operations.
  */
 class FriendsViewModel(
     private val repo: FriendRequestRepository = FriendRequestRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val profileRepo: UserProfileRepository? = null
 ) : ViewModel() {
 
   private val currentUserId: String
@@ -112,6 +116,8 @@ class FriendsViewModel(
       if (repo.acceptFriendRequest(requestId)) {
         loadFriends()
         loadPendingRequests()
+        // Badge updates disabled - will be updated when user saves their profile
+        // updateUserBadges()
       }
     }
   }
@@ -131,7 +137,13 @@ class FriendsViewModel(
    * @param userId The ID of the friend to remove.
    */
   fun removeFriend(userId: String) {
-    viewModelScope.launch { if (repo.removeFriendship(currentUserId, userId)) loadFriends() }
+    viewModelScope.launch {
+      if (repo.removeFriendship(currentUserId, userId)) {
+        loadFriends()
+        // Badge updates disabled - will be updated when user saves their profile
+        // updateUserBadges()
+      }
+    }
   }
 
   /**
@@ -143,6 +155,42 @@ class FriendsViewModel(
     viewModelScope.launch {
       if (repo.sendFriendRequest(currentUserId, userId)) {
         _searchResults.value = repo.searchUsersWithStatus(_searchQuery.value, currentUserId)
+      }
+    }
+  }
+
+  /**
+   * Updates the user's badges after friends list changes. This ensures the "Friendly" badge is
+   * unlocked when the user gets their first friend. Saves the updated badges to Firestore
+   * immediately.
+   */
+  private fun updateUserBadges() {
+    viewModelScope.launch {
+      if (currentUserId.isEmpty() || profileRepo == null) return@launch
+
+      try {
+        // Get current profile
+        val currentProfile = profileRepo?.getUserProfile(currentUserId) ?: return@launch
+
+        // Get current friends count
+        val friendsCount = _friends.value.size
+
+        // Calculate updated badges
+        val updatedBadges = BadgeManager.calculateBadges(currentProfile, friendsCount)
+
+        // Update profile with new badges
+        val updatedProfile = currentProfile.copy(badges = updatedBadges)
+
+        // Save to Firestore immediately
+        val success = profileRepo?.saveUserProfile(updatedProfile)
+
+        if (success == true) {
+          println("FriendsViewModel - Badges updated and saved successfully")
+        } else {
+          println("FriendsViewModel - Failed to save updated badges")
+        }
+      } catch (e: Exception) {
+        println("FriendsViewModel - Error updating badges: ${e.message}")
       }
     }
   }
