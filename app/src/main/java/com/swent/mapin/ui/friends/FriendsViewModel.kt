@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.SearchResultWithStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ import kotlinx.coroutines.launch
  * @property auth Firebase Auth instance for getting current user.
  */
 class FriendsViewModel(
-    private val repo: FriendRequestRepository = FriendRequestRepository(),
+    private val repo: FriendRequestRepository =
+        FriendRequestRepository(notificationService = NotificationService()),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
 

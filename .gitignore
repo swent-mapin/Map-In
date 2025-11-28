@@ -51,3 +51,7 @@ android/gradle.properties
 
 # Internal docs
 CLAUDE.md
+
+# Firebase Functions
+functions/node_modules
+
