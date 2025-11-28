@@ -23,6 +23,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -117,6 +120,8 @@ fun ProfilePicture(url: String?) {
  * @param participantNames The list of participant's names.
  * @param onNavigateBack Optional callback invoked when the back button is pressed.
  * @param profilePictureUrl The profile picture URL of this conversation
+ * @param isGroupChat Whether this is a group chat (more than 2 participants)
+ * @param onLeaveGroup Callback invoked when the user wants to leave the group
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,8 +129,12 @@ fun ConversationTopBar(
     title: String,
     participantNames: List<String>? = emptyList(),
     onNavigateBack: (() -> Unit)? = null,
-    profilePictureUrl: String? = ""
+    profilePictureUrl: String? = "",
+    isGroupChat: Boolean = false,
+    onLeaveGroup: (() -> Unit)? = null
 ) {
+  var showMenu by remember { mutableStateOf(false) }
+
   TopAppBar(
       title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -157,6 +166,27 @@ fun ConversationTopBar(
               modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
+        }
+      },
+      // This was written with the help of Claude Sonnet 4.5
+      actions = {
+        if (isGroupChat && onLeaveGroup != null) {
+          Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.testTag("conversationMenuButton")) {
+                  Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More options")
+                }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+              DropdownMenuItem(
+                  text = { Text("Leave Group") },
+                  onClick = {
+                    showMenu = false
+                    onLeaveGroup()
+                  },
+                  modifier = Modifier.testTag("leaveGroupMenuItem"))
+            }
+          }
         }
       },
       colors =
@@ -227,17 +257,23 @@ fun ConversationScreen(
           // If it is a group, then use group profile picture, if not then use the other user's
           if (it > 2) {
             ConversationTopBar(
-                conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+                conversationName,
+                participantNames,
+                onNavigateBack,
+                conversation?.profilePictureUrl,
+                isGroupChat = true,
+                onLeaveGroup = {
+                  conversationViewModel.leaveConversation(conversationId)
+                  onNavigateBack()
+                })
           } else {
             val otherParticipant =
                 conversation?.participants?.firstOrNull { it ->
                   it.userId != currentUserProfile.userId
                 }
+            // For 1-to-1 chats, don't show participant names list at all
             ConversationTopBar(
-                conversationName,
-                participantNames,
-                onNavigateBack,
-                otherParticipant?.profilePictureUrl)
+                conversationName, null, onNavigateBack, otherParticipant?.profilePictureUrl)
           }
         }
       },
