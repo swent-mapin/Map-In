@@ -39,12 +39,7 @@ import java.time.format.DateTimeFormatter
 
 /** Row of quick action buttons (Create Memory, Create Event, Friends). */
 @Composable
-fun QuickActionsSection(
-    modifier: Modifier = Modifier,
-    // Accept optional Event to prefill memory form (null = create generic memory)
-    onCreateMemoryClick: (Event?) -> Unit,
-    onCreateEventClick: () -> Unit
-) {
+fun QuickActionsSection(modifier: Modifier = Modifier, onCreateEventClick: () -> Unit) {
   Column(modifier = modifier.fillMaxWidth()) {
     Text(
         text = "Quick Actions",
@@ -53,11 +48,9 @@ fun QuickActionsSection(
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       QuickActionButton(
-          text = "Create Memory",
-          modifier = Modifier.weight(1f),
-          onClick = { onCreateMemoryClick(null) })
-      QuickActionButton(
           text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
+      // TODO : Add show memories button that switches to a map with past events and their memories
+      QuickActionButton(text = "Show Memories", modifier = Modifier.weight(1f), onClick = {})
     }
   }
 }
@@ -82,7 +75,11 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 }
 
 @Composable
-fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+fun EventsSection(
+    events: List<Event>,
+    onEventClick: (Event) -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
+) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
     return
@@ -96,7 +93,8 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
       SearchResultItem(
           event = event,
           modifier = Modifier.padding(horizontal = 16.dp),
-          onClick = { onEventClick(event) })
+          onClick = { onEventClick(event) },
+          onEditEvent = onEditEvent)
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
@@ -120,7 +118,7 @@ fun AttendedEventsSection(
     attendedEvents: List<Event>,
     onEventClick: (Event) -> Unit,
     // Accepts the selected event to prefill memory creation (or null)
-    onCreateMemoryClick: (Event?) -> Unit
+    onCreateMemoryClick: (Event) -> Unit
 ) {
   var expanded by remember { mutableStateOf(false) }
   val visible = if (expanded) attendedEvents else attendedEvents.take(3)
@@ -237,6 +235,7 @@ fun OwnedEventsSection(
     loading: Boolean,
     error: String?,
     onEventClick: (Event) -> Unit,
+    onEditEvent: (Event) -> Unit,
     onRetry: () -> Unit
 ) {
   when {
@@ -285,7 +284,7 @@ fun OwnedEventsSection(
       Column(
           modifier =
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
-            EventsSection(events = events, onEventClick = onEventClick)
+            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent)
           }
     }
   }

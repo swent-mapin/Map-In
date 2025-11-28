@@ -181,6 +181,14 @@ class SettingsViewModel(
     viewModelScope.launch {
       _isLoading.value = true
       try {
+        // Remove FCM token before signing out to stop receiving notifications
+        try {
+          val fcmManager = com.swent.mapin.notifications.FCMTokenManager()
+          fcmManager.removeTokenForCurrentUser()
+        } catch (e: Exception) {
+          android.util.Log.e("SettingsViewModel", "Failed to remove FCM token on logout", e)
+        }
+
         auth.signOut()
       } catch (e: Exception) {
         e.printStackTrace()

@@ -3,6 +3,8 @@ package com.swent.mapin.model
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
@@ -20,7 +22,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.mockito.MockedStatic
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,6 +38,7 @@ class EventRepositoryFirestoreTest {
   private lateinit var userDocRef: DocumentReference
   private lateinit var friendRepo: FriendRequestRepository
   private lateinit var transaction: Transaction
+  private lateinit var firebaseAuthMock: MockedStatic<FirebaseAuth>
 
   @Before
   fun setup() {
@@ -529,28 +534,143 @@ class EventRepositoryFirestoreTest {
     assertTrue(result.isEmpty())
   }
 
-  // ========== GET FILTERED EVENTS BASIC TESTS ==========
+  // ========== GET FILTERED EVENTS TESTS ==========
 
   @Test
-  fun getFilteredEvents_appliesBasicDateFilters() = runTest {
-    val filters =
-        Filters(startDate = LocalDate.now().minusDays(1), endDate = LocalDate.now().plusDays(1))
-    val event = createEvent(uid = "E1", title = "Event")
-    val doc = doc("E1", event)
-    val snap = qs(doc)
+  fun getFilteredEvents_appliesPopularOnlyFilter() = runTest {
+    val filters = Filters(popularOnly = true)
+    val popular = createEvent("E1", "Popular", participantIds = List(35) { "user$it" })
+    val unpopular = createEvent("E2", "Unpopular", participantIds = listOf("user1"))
+    val doc1 = doc("E1", popular)
+    val doc2 = doc("E2", unpopular)
+    val snap = qs(doc1, doc2)
 
     val queryMock = mock<Query>()
     whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
         .thenReturn(queryMock)
-    whenever(queryMock.whereLessThanOrEqualTo(any<String>(), any<Timestamp>()))
-        .thenReturn(queryMock)
     whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
     whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-    val result = repo.getFilteredEvents(filters)
+    val result = repo.getFilteredEvents(filters, "user")
 
-    assertTrue(result.isNotEmpty())
-    assertEquals("Event", result.first().title)
+    // Only popular event should be returned (>30 participants)
+    assertEquals(1, result.size)
+    assertEquals("Popular", result.first().title)
+    assertTrue(result.first().participantIds.size > 30)
+  }
+
+  @Test
+  fun getFilteredEvents_tagFilter_skipsEventsWithoutTags() = runTest {
+    val filters = Filters(tags = setOf("art"))
+
+    val taggedEvent = createEvent("E1", "Tagged", tags = listOf("art"))
+    val untaggedEvent = createEvent("E2", "No Tags")
+    val doc1 = doc("E1", taggedEvent)
+    val doc2 = doc("E2", untaggedEvent)
+    val snap = qs(doc1)
+
+    val filteredQuery = mock<Query>()
+    val orderedQuery = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(eq("date"), any())).thenReturn(filteredQuery)
+    whenever(filteredQuery.whereArrayContainsAny(any<String>(), any<List<String>>()))
+        .thenReturn(filteredQuery)
+    whenever(filteredQuery.orderBy("date", Query.Direction.DESCENDING)).thenReturn(orderedQuery)
+    whenever(orderedQuery.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getFilteredEvents(filters, "user")
+
+    // Both events returned by query, but only tagged one should match
+    assertEquals(1, result.size)
+    assertTrue("art" in result.first().tags)
+  }
+
+  @Test
+  fun getFilteredEvents_maxPrice_filtersCorrectly() = runTest {
+    val filters = Filters(maxPrice = 50)
+
+    val cheapEvent = createEvent("E1", "Cheap", price = 30.0)
+    val expensiveEvent = createEvent("E2", "Expensive", price = 100.0)
+    val doc1 = doc("E1", cheapEvent)
+    val doc2 = doc("E2", expensiveEvent)
+    val snap = qs(doc1, doc2)
+
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereLessThanOrEqualTo(eq("price"), eq(50.0))).thenReturn(queryMock)
+    whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
+    whenever(queryMock.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getFilteredEvents(filters, "user")
+
+    // Should include both in mock, but in real scenario only cheap would be returned by query
+    verify(queryMock).whereLessThanOrEqualTo("price", 50.0)
+  }
+
+  @Test
+  fun getFilteredEvents_friendsOnly_withNoFriends_returnsEmpty() = runTest {
+    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
+    try {
+      val mockAuth = mock<FirebaseAuth>()
+      val mockUser = mock<FirebaseUser>()
+      whenever(mockUser.uid).thenReturn("currentUser")
+      whenever(mockAuth.currentUser).thenReturn(mockUser)
+      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
+
+      val filters = Filters(friendsOnly = true)
+
+      // No friends
+      whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
+
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
+
+      verify(friendRepo).getFriends("currentUser")
+      assertTrue(result.isEmpty())
+    } finally {
+      firebaseAuthMock.close()
+    }
+  }
+
+  @Test
+  fun getFilteredEvents_friendsOnly_withTags_appliesTagsClientSide() = runTest {
+    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
+    try {
+      val mockAuth = mock<FirebaseAuth>()
+      val mockUser = mock<FirebaseUser>()
+      whenever(mockUser.uid).thenReturn("currentUser")
+      whenever(mockAuth.currentUser).thenReturn(mockUser)
+      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
+
+      val filters = Filters(friendsOnly = true, tags = setOf("music"))
+
+      val friend1 =
+          FriendWithProfile(
+              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+              friendshipStatus = FriendshipStatus.ACCEPTED)
+      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
+
+      val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
+      val sportEvent = createEvent("E2", "Game", ownerId = "friend1", tags = listOf("sport"))
+      val doc1 = doc("E1", musicEvent)
+      val doc2 = doc("E2", sportEvent)
+      val snap = qs(doc1, doc2)
+
+      val queryMock = mock<Query>()
+      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+          .thenReturn(queryMock)
+      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+      whenever(queryMock.get()).thenReturn(taskOf(snap))
+
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
+
+      // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
+      verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
+      assertEquals(1, result.size)
+      assertEquals("Concert", result.first().title)
+      assertTrue("music" in result.first().tags)
+    } finally {
+      firebaseAuthMock.close()
+    }
   }
 
   @Test
@@ -562,47 +682,88 @@ class EventRepositoryFirestoreTest {
     whenever(query.get()).thenReturn(Tasks.forException(RuntimeException("broken")))
 
     val filters = Filters(startDate = LocalDate.now())
-    val exception = assertFailsWith<Exception> { repo.getFilteredEvents(filters) }
+    val exception = assertFailsWith<Exception> { repo.getFilteredEvents(filters, "user") }
 
     assertTrue(exception.message!!.contains("Failed to fetch filtered events"))
   }
 
-  // ========== LISTEN TO FILTERED EVENTS BASIC TESTS ==========
-
   @Test
-  fun listenToFilteredEvents_basicImplementation_triggersCallback() = runTest {
-    val filters = Filters(startDate = LocalDate.now())
+  fun getFilteredEvents_allFilters_combinesCorrectly() = runTest {
+    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
+    try {
+      val mockAuth = mock<FirebaseAuth>()
+      val mockUser = mock<FirebaseUser>()
+      whenever(mockUser.uid).thenReturn("currentUser")
+      whenever(mockAuth.currentUser).thenReturn(mockUser)
+      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
 
-    val queryMock = mock<Query>()
-    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
-        .thenReturn(queryMock)
-    whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
+      val filters =
+          Filters(
+              friendsOnly = true,
+              tags = setOf("music"),
+              popularOnly = true,
+              maxPrice = 50,
+              startDate = LocalDate.now(),
+              endDate = LocalDate.now().plusDays(7))
 
-    val listenerCaptor = argumentCaptor<EventListener<QuerySnapshot>>()
-    val listenerRegistration = mock<ListenerRegistration>()
-    whenever(queryMock.addSnapshotListener(listenerCaptor.capture()))
-        .thenReturn(listenerRegistration)
+      val friend1 =
+          FriendWithProfile(
+              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+              friendshipStatus = FriendshipStatus.ACCEPTED)
+      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
-    var addedEvents: List<Event> = emptyList()
+      val validEvent =
+          createEvent(
+              uid = "E1",
+              title = "Valid Event",
+              ownerId = "friend1",
+              tags = listOf("music"),
+              participantIds = List(35) { "user$it" },
+              price = 30.0)
 
-    val registration = repo.listenToFilteredEvents(filters) { added, _, _ -> addedEvents = added }
+      val invalidEvent1 =
+          createEvent(
+              uid = "E2",
+              title = "Wrong Tag",
+              ownerId = "friend1",
+              tags = listOf("sport"),
+              participantIds = List(35) { "user$it" },
+              price = 30.0)
 
-    verify(queryMock).addSnapshotListener(any())
+      val invalidEvent2 =
+          createEvent(
+              uid = "E3",
+              title = "Not Popular",
+              ownerId = "friend1",
+              tags = listOf("music"),
+              participantIds = listOf("user1"),
+              price = 30.0)
 
-    val event1 = createEvent(uid = "E1", title = "Concert")
-    val doc1 = doc("E1", event1)
+      val doc1 = doc("E1", validEvent)
+      val doc2 = doc("E2", invalidEvent1)
+      val doc3 = doc("E3", invalidEvent2)
+      val snap = qs(doc1, doc2, doc3)
 
-    val snapshot = mock<QuerySnapshot>()
-    whenever(snapshot.documents).thenReturn(listOf(doc1))
+      val queryMock = mock<Query>()
+      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+          .thenReturn(queryMock)
+      whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+      whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+      whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
+      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+      whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-    listenerCaptor.firstValue.onEvent(snapshot, null)
+      val result = repo.getFilteredEvents(filters, mockUser.uid)
 
-    assertEquals(1, addedEvents.size)
-    assertEquals("Concert", addedEvents.first().title)
-
-    registration.remove()
-    verify(listenerRegistration).remove()
+      // Only validEvent should pass all filters
+      assertEquals(1, result.size)
+      assertEquals("Valid Event", result.first().title)
+    } finally {
+      firebaseAuthMock.close()
+    }
   }
+
+  // ========== LISTEN TO FILTERED EVENTS TESTS ==========
 
   @Test
   fun listenToFilteredEvents_onError_triggersCallbackWithEmptyLists() = runTest {
@@ -634,5 +795,236 @@ class EventRepositoryFirestoreTest {
     assertTrue(addedEvents!!.isEmpty())
     assertTrue(modifiedEvents!!.isEmpty())
     assertTrue(removedEvents!!.isEmpty())
+  }
+
+  @Test
+  fun listenToFilteredEvents_appliesClientSideFilters() = runTest {
+    val filters =
+        Filters(
+            tags = setOf("music"), popularOnly = true // Client-side filter
+            )
+
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereArrayContainsAny(any<String>(), any<List<String>>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
+
+    val listenerCaptor = argumentCaptor<EventListener<QuerySnapshot>>()
+    val listenerRegistration = mock<ListenerRegistration>()
+    whenever(queryMock.addSnapshotListener(listenerCaptor.capture()))
+        .thenReturn(listenerRegistration)
+
+    var addedEvents: List<Event> = emptyList()
+
+    repo.listenToFilteredEvents(filters) { added, _, _ -> addedEvents = added }
+
+    val popularEvent =
+        createEvent(
+            uid = "E1",
+            title = "Popular Concert",
+            tags = listOf("music"),
+            participantIds = List(35) { "user$it" })
+
+    val unpopularEvent =
+        createEvent(
+            uid = "E2",
+            title = "Small Concert",
+            tags = listOf("music"),
+            participantIds = listOf("user1"))
+
+    val doc1 = doc("E1", popularEvent)
+    val doc2 = doc("E2", unpopularEvent)
+
+    val change1 = mock<DocumentChange>()
+    whenever(change1.type).thenReturn(DocumentChange.Type.ADDED)
+    whenever(change1.document).thenReturn(doc1)
+
+    val change2 = mock<DocumentChange>()
+    whenever(change2.type).thenReturn(DocumentChange.Type.ADDED)
+    whenever(change2.document).thenReturn(doc2)
+
+    val snapshot = mock<QuerySnapshot>()
+    whenever(snapshot.documentChanges).thenReturn(listOf(change1, change2))
+
+    listenerCaptor.firstValue.onEvent(snapshot, null)
+
+    assertEquals(1, addedEvents.size)
+    assertEquals("Popular Concert", addedEvents.first().title)
+  }
+
+  // ========== LISTEN TO SAVED EVENTS TESTS ==========
+
+  @Test
+  fun listenToSavedEvents_detectsEventDeletion() = runTest {
+    val userId = "user123"
+    val userDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val userListenerReg = mock<ListenerRegistration>()
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+        .thenReturn(userListenerReg)
+
+    // Setup event listener
+    val eventDocRef = mock<DocumentReference>()
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerReg = mock<ListenerRegistration>()
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
+        .thenReturn(eventListenerReg)
+
+    var removedEvents: List<String> = emptyList()
+
+    val registration = repo.listenToSavedEvents(userId) { _, _, removed -> removedEvents = removed }
+
+    // Simulate user document update with saved event
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.get(SAVED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // Simulate event deletion (event document no longer exists)
+    val deletedEventSnapshot = mock<DocumentSnapshot>()
+    whenever(deletedEventSnapshot.exists()).thenReturn(false)
+    whenever(deletedEventSnapshot.id).thenReturn("E1")
+    eventListenerCaptor.firstValue.onEvent(deletedEventSnapshot, null)
+
+    // Verify removal was detected
+    assertEquals(1, removedEvents.size)
+    assertEquals("E1", removedEvents.first())
+
+    registration.remove()
+    verify(userListenerReg).remove()
+    verify(eventListenerReg).remove()
+  }
+
+  @Test
+  fun listenToSavedEvents_handlesUserDocumentNotFound() = runTest {
+    val userId = "user123"
+    val userDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val userListenerReg = mock<ListenerRegistration>()
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+        .thenReturn(userListenerReg)
+
+    var addedEvents: List<Event> = emptyList()
+    var modifiedEvents: List<Event> = emptyList()
+    var removedEvents: List<String> = emptyList()
+
+    val registration =
+        repo.listenToSavedEvents(userId) { added, modified, removed ->
+          addedEvents = added
+          modifiedEvents = modified
+          removedEvents = removed
+        }
+
+    // Simulate user document not found
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(false)
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // Should trigger callback with empty lists
+    assertTrue(addedEvents.isEmpty())
+    assertTrue(modifiedEvents.isEmpty())
+    assertTrue(removedEvents.isEmpty())
+
+    registration.remove()
+  }
+
+  @Test
+  fun listenToSavedEvents_handlesListenerError() = runTest {
+    val userId = "user123"
+    val userDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val userListenerReg = mock<ListenerRegistration>()
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+        .thenReturn(userListenerReg)
+
+    var addedEvents: List<Event> = emptyList()
+    var modifiedEvents: List<Event> = emptyList()
+    var removedEvents: List<String> = emptyList()
+
+    val registration =
+        repo.listenToSavedEvents(userId) { added, modified, removed ->
+          addedEvents = added
+          modifiedEvents = modified
+          removedEvents = removed
+        }
+
+    // Simulate error
+    val error = mock<FirebaseFirestoreException>()
+    userListenerCaptor.firstValue.onEvent(null, error)
+
+    // Should trigger callback with empty lists
+    assertTrue(addedEvents.isEmpty())
+    assertTrue(modifiedEvents.isEmpty())
+    assertTrue(removedEvents.isEmpty())
+
+    registration.remove()
+  }
+
+  // ========== LISTEN TO JOINED EVENTS TESTS ==========
+
+  @Test
+  fun listenToJoinedEvents_detectsConsecutiveModifications() = runTest {
+    val userId = "user123"
+    val userDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val userListenerReg = mock<ListenerRegistration>()
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+        .thenReturn(userListenerReg)
+
+    val eventDocRef = mock<DocumentReference>()
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerReg = mock<ListenerRegistration>()
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
+        .thenReturn(eventListenerReg)
+
+    val modifiedTitles = mutableListOf<String>()
+
+    val registration =
+        repo.listenToJoinedEvents(userId) { _, modified, _ ->
+          modifiedTitles.addAll(modified.map { it.title })
+        }
+
+    // Simulate user document with joined event
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.get(JOINED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // First modification
+    val event1 = createEvent(uid = "E1", title = "Version 1")
+    val eventSnapshot1 = doc("E1", event1)
+    whenever(eventSnapshot1.exists()).thenReturn(true)
+    eventListenerCaptor.firstValue.onEvent(eventSnapshot1, null)
+
+    // Second modification
+    val event2 = createEvent(uid = "E1", title = "Version 2")
+    val eventSnapshot2 = doc("E1", event2)
+    whenever(eventSnapshot2.exists()).thenReturn(true)
+    eventListenerCaptor.firstValue.onEvent(eventSnapshot2, null)
+
+    // Both modifications should be detected
+    assertEquals(2, modifiedTitles.size)
+    assertEquals("Version 1", modifiedTitles[0])
+    assertEquals("Version 2", modifiedTitles[1])
+
+    registration.remove()
   }
 }

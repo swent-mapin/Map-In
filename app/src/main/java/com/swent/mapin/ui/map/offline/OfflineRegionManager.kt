@@ -147,17 +147,17 @@ class OfflineRegionManager(
    * Removes a tile region from the TileStore.
    *
    * @param bounds The geographic bounds of the region to remove
-   * @param onComplete Callback invoked when removal completes or fails
+   * @return Result indicating success or failure
    */
-  fun removeTileRegion(bounds: CoordinateBounds, onComplete: (Result<Unit>) -> Unit = {}) {
-    try {
+  suspend fun removeTileRegion(bounds: CoordinateBounds): Result<Unit> {
+    return try {
       val tileRegionId = generateRegionId(bounds)
       tileStore.removeTileRegion(tileRegionId)
       Log.d(TAG, "Removed tile region: $tileRegionId")
-      onComplete(Result.success(Unit))
+      Result.success(Unit)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to remove tile region", e)
-      onComplete(Result.failure(e))
+      Result.failure(e)
     }
   }
 

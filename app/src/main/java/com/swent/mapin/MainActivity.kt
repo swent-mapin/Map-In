@@ -1,6 +1,7 @@
 package com.swent.mapin
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,13 +9,16 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
+import com.swent.mapin.notifications.FCMTokenManager
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 object HttpClientProvider {
@@ -35,8 +39,17 @@ class MainActivity : ComponentActivity() {
     EventRepositoryProvider.init(this)
     EventRepositoryProvider.getRepository()
 
-    // Initialize LocalEventRepository
-    // EventRepositoryProvider.setRepository(EventRepositoryProvider.createLocalRepository())
+    // Initialize FCM for already logged-in users (when app restarts with active session)
+    if (FirebaseAuth.getInstance().currentUser != null) {
+      lifecycleScope.launch {
+        try {
+          val fcmManager = FCMTokenManager()
+          fcmManager.initializeForCurrentUser()
+        } catch (e: Exception) {
+          Log.e("MainActivity", "Failed to initialize FCM for logged-in user", e)
+        }
+      }
+    }
 
     // Check if opened from notification with event deep link
     val eventIdFromIntent =

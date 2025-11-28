@@ -97,7 +97,7 @@ class MapScreenViewModelTest {
 
     // Mock repositories
     runBlocking {
-      whenever(mockEventRepository.getFilteredEvents(any())).thenReturn(emptyList())
+      whenever(mockEventRepository.getFilteredEvents(any(), any<String>())).thenReturn(emptyList())
       whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
       whenever(mockMemoryRepository.getNewUid()).thenReturn("newMemoryId")
       whenever(mockMemoryRepository.addMemory(any())).thenReturn(Unit)
@@ -437,7 +437,7 @@ class MapScreenViewModelTest {
   fun showMemoryForm_setsStateAndExpandsToFull() {
     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
 
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
 
     assertTrue(viewModel.showMemoryForm)
     assertEquals(BottomSheetScreen.MEMORY_FORM, viewModel.currentBottomSheetScreen)
@@ -446,7 +446,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun hideMemoryForm_hidesForm() {
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
     assertTrue(viewModel.showMemoryForm)
 
     viewModel.hideMemoryForm()
@@ -458,7 +458,7 @@ class MapScreenViewModelTest {
   @Test
   fun onMemoryCancel_hidesFormAndRestoresPreviousState() {
     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
     assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
 
     viewModel.onMemoryCancel()
@@ -469,29 +469,9 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun onMemorySave_withNoUser_setsErrorMessage() = runTest {
-    whenever(mockAuth.currentUser).thenReturn(null)
-
-    val formData =
-        MemoryFormData(
-            title = "Test",
-            description = "Description",
-            eventId = null,
-            isPublic = false,
-            mediaUris = emptyList(),
-            taggedUserIds = emptyList())
-
-    viewModel.onMemorySave(formData)
-    advanceUntilIdle()
-
-    assertNotNull(viewModel.errorMessage)
-    assertTrue(viewModel.errorMessage!!.contains("signed in"))
-  }
-
-  @Test
   fun onMemorySave_withValidData_savesMemoryAndClosesForm() = runTest {
     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
     val formData =
         MemoryFormData(
             title = "Test",
@@ -592,6 +572,15 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun `oneEditEventCancel resets to MAIN_CONTENT and COLLAPSED`() {
+    viewModel.showEditEventForm()
+    viewModel.onEditEventCancel()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
+  }
+
+  @Test
   fun `setMapStyle toggles heatmap and satellite states`() {
     assertFalse(viewModel.showHeatmap)
 
@@ -664,7 +653,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun closeEventDetail_restoresPreviousSheetStateWhenNotFromSearch() = runTest {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
     viewModel.setBottomSheetState(BottomSheetState.MEDIUM)
 
     viewModel.onEventPinClicked(testEvent)
@@ -772,7 +761,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun onJoinedEventClicked_callsOnEventPinClicked() = runTest {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
     var cameraCentered = false
     viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
@@ -833,7 +822,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun `showMemoryForm sets state correctly`() {
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
 
     assertTrue(viewModel.showMemoryForm)
     assertEquals(BottomSheetScreen.MEMORY_FORM, viewModel.currentBottomSheetScreen)
@@ -842,7 +831,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun `hideMemoryForm resets showMemoryForm and sets MAIN_CONTENT`() {
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
 
     viewModel.hideMemoryForm()
 
@@ -860,10 +849,28 @@ class MapScreenViewModelTest {
   }
 
   @Test
+  fun `showEditEventForm sets state correctly`() {
+    viewModel.showEditEventForm()
+
+    assertFalse(viewModel.showMemoryForm) // legacy boolean remains false
+    assertEquals(BottomSheetScreen.EDIT_EVENT, viewModel.currentBottomSheetScreen)
+    assertEquals(BottomSheetState.FULL, viewModel.bottomSheetState)
+  }
+
+  @Test
   fun `hideAddEventForm resets to MAIN_CONTENT`() {
     viewModel.showAddEventForm()
 
     viewModel.hideAddEventForm()
+
+    assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
+  }
+
+  @Test
+  fun `hideEditEventForm resets to MAIN_CONTENT`() {
+    viewModel.showEditEventForm()
+
+    viewModel.hideEditEventForm()
 
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
   }
@@ -1132,7 +1139,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun `showMemoryForm and showAddEventForm are mutually exclusive`() {
-    viewModel.showMemoryForm()
+    viewModel.showMemoryForm(Event())
 
     viewModel.showAddEventForm()
 
@@ -1291,7 +1298,7 @@ class MapScreenViewModelTest {
 
   @Test
   fun `toggleDirections clears directions when already displayed`() = runTest {
-    val testEvent = com.swent.mapin.model.event.LocalEventRepository.defaultSampleEvents()[0]
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
@@ -1314,9 +1321,7 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     // Directions should be cleared
-    assertTrue(
-        viewModel.directionViewModel.directionState
-            is com.swent.mapin.ui.map.directions.DirectionState.Cleared)
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
   }
 
   @Test

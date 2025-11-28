@@ -3,6 +3,7 @@ package com.swent.mapin.model.event
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.event.EventRepositoryProvider.getRepository
 
 /** Provider for [EventRepository] implementations to allow easy swapping between data sources. */
@@ -38,10 +39,7 @@ object EventRepositoryProvider {
   private fun createFirestoreRepository(): EventRepository {
     val firestore = FirebaseFirestore.getInstance()
     val localCache = appContext?.let { EventLocalCache.forContext(it) }
-    val friendRepository = FriendRequestRepository()
+    val friendRepository = FriendRequestRepository(notificationService = NotificationService())
     return EventRepositoryFirestore(firestore, friendRepository)
   }
-
-  /** Convenience helper to create a local in-memory repository populated with sample data. */
-  fun createLocalRepository(): EventRepository = LocalEventRepository()
 }

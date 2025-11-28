@@ -208,7 +208,7 @@ class EventBasedOfflineRegionManager(
                   Log.d(
                       TAG,
                       "Detected ${removedEventIds.size} removed/finished events, deleting regions")
-                  deleteRegionsForEvents(removedEventIds, activeEvents)
+                  deleteRegionsForEvents(removedEventIds)
                 }
 
                 // Update previous state for next iteration
@@ -228,16 +228,16 @@ class EventBasedOfflineRegionManager(
    * @return true if the event has finished, false otherwise
    */
   private fun isEventFinished(event: Event): Boolean {
-    val now = System.currentTimeMillis()
+    val now = com.google.firebase.Timestamp.now()
 
     // Check endDate first (if provided)
     event.endDate?.let {
-      return it.toDate().time < now
+      return it < now
     }
 
     // Fall back to start date if no endDate
     event.date?.let {
-      return it.toDate().time < now
+      return it < now
     }
 
     // If no dates at all, consider it active
@@ -248,9 +248,8 @@ class EventBasedOfflineRegionManager(
    * Deletes tile regions for the given event IDs.
    *
    * @param eventIds Set of event IDs to delete regions for
-   * @param allEvents All current events (not used, kept for consistency)
    */
-  private fun deleteRegionsForEvents(eventIds: Set<String>, allEvents: List<Event>) {
+  private fun deleteRegionsForEvents(eventIds: Set<String>) {
     scope.launch {
       for (eventId in eventIds) {
         // Get stored location for this event
@@ -261,20 +260,19 @@ class EventBasedOfflineRegionManager(
 
           Log.d(TAG, "Deleting region for removed event: $eventId")
 
-          offlineRegionManager.removeTileRegion(bounds) { result ->
-            result
-                .onSuccess {
-                  downloadedEventIds.remove(eventId)
-                  eventLocations.remove(eventId)
-                  Log.d(TAG, "Successfully deleted region for event: $eventId")
-                }
-                .onFailure { error ->
-                  Log.e(TAG, "Failed to delete region for event $eventId: $error")
-                  // Still remove from tracking even if deletion fails
-                  downloadedEventIds.remove(eventId)
-                  eventLocations.remove(eventId)
-                }
-          }
+          val result = offlineRegionManager.removeTileRegion(bounds)
+          result
+              .onSuccess {
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+                Log.d(TAG, "Successfully deleted region for event: $eventId")
+              }
+              .onFailure { error ->
+                Log.e(TAG, "Failed to delete region for event $eventId: $error")
+                // Still remove from tracking even if deletion fails
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+              }
         } else {
           // Event wasn't downloaded or location not stored, just remove from tracking
           downloadedEventIds.remove(eventId)
@@ -289,12 +287,13 @@ class EventBasedOfflineRegionManager(
    *
    * @param event The event to delete the region for
    */
-  suspend fun deleteRegionForEvent(event: Event) {
-    val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
+  fun deleteRegionForEvent(event: Event) {
+    scope.launch {
+      val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
 
-    Log.d(TAG, "Deleting region for event: ${event.title}")
+      Log.d(TAG, "Deleting region for event: ${event.title}")
 
-    offlineRegionManager.removeTileRegion(bounds) { result ->
+      val result = offlineRegionManager.removeTileRegion(bounds)
       result
           .onSuccess {
             downloadedEventIds.remove(event.uid)
