@@ -7,9 +7,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,10 +27,12 @@ import kotlinx.coroutines.launch
  * - Manage temporary edit state
  * - Validate user inputs
  * - Upload images to Firebase Storage
+ * - Calculate and update user badges
  */
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
-    private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper()
+    private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
+    private val friendRequestRepository: FriendRequestRepository? = null
 ) : ViewModel() {
 
   // Current user profile from Firestore
@@ -110,14 +114,40 @@ class ProfileViewModel(
       val currentUser = FirebaseAuth.getInstance().currentUser
 
       if (currentUser != null) {
-        // Try to load existing profile from Firestore
-        val existingProfile = repository.getUserProfile(currentUser.uid)
+        try {
+          // Try to load existing profile from Firestore
+          val existingProfile = repository.getUserProfile(currentUser.uid)
 
-        if (existingProfile != null) {
-          // Profile exists in Firestore, use it
-          _userProfile.value = existingProfile
-        } else {
-          // No profile in Firestore, create default one
+          if (existingProfile != null) {
+            // Profile exists in Firestore, use it
+            // Calculate badges on the client side (not stored in Firestore)
+            // Only calculate badges if friendRequestRepository is available (not in tests)
+            if (friendRequestRepository != null) {
+              val friendsCount = getFriendsCount()
+              val updatedBadges = BadgeManager.calculateBadges(existingProfile, friendsCount)
+              val profileWithBadges = existingProfile.copy(badges = updatedBadges)
+              _userProfile.value = profileWithBadges
+            } else {
+              // In tests, just use the profile as-is
+              _userProfile.value = existingProfile
+            }
+            println(
+                "ProfileViewModel - Profile loaded successfully: name='${existingProfile.name}', bio='${existingProfile.bio}', location='${existingProfile.location}'")
+          } else {
+            // No profile in Firestore - this should ONLY happen on first launch
+            println(
+                "ProfileViewModel - WARNING: No profile found in Firestore, creating default one")
+            val defaultProfile =
+                repository.createDefaultProfile(
+                    userId = currentUser.uid,
+                    name = currentUser.displayName ?: "Anonymous User",
+                    profilePictureUrl = currentUser.photoUrl?.toString())
+            _userProfile.value = defaultProfile
+          }
+        } catch (e: Exception) {
+          println("ProfileViewModel - ERROR loading profile: ${e.message}")
+          e.printStackTrace()
+          // On error, try to create a default profile
           val defaultProfile =
               repository.createDefaultProfile(
                   userId = currentUser.uid,
@@ -188,18 +218,20 @@ class ProfileViewModel(
       println("ProfileViewModel - Avatar URL: ${updatedProfile.avatarUrl}")
       println("ProfileViewModel - Banner URL: ${updatedProfile.bannerUrl}")
 
-      // Save to Firestore
-      val success = repository.saveUserProfile(updatedProfile)
+      // Calculate and update badges before saving
+      val friendsCount = getFriendsCount()
+      val updatedBadges = BadgeManager.calculateBadges(updatedProfile, friendsCount)
+      val profileWithBadges = updatedProfile.copy(badges = updatedBadges)
 
+      // Save to Firestore
+      val success = repository.saveUserProfile(profileWithBadges)
       println("ProfileViewModel - Save success: $success")
 
-      // Exit edit mode regardless of success/failure
+      // Update local state based on success/failure
       if (success) {
-        // Update local state only if Firestore save succeeded
-        _userProfile.value = updatedProfile
+        _userProfile.value = profileWithBadges
         println("ProfileViewModel - Profile updated successfully")
       } else {
-        // Handle error
         println("ProfileViewModel - Failed to save profile")
       }
 
@@ -445,6 +477,79 @@ class ProfileViewModel(
       }
 
       isUploadingImage = false
+    }
+  }
+
+  /**
+   * Updates the user's badges based on current profile and friends count. This method recalculates
+   * all badges and saves them to Firestore immediately. This ensures badges are always up-to-date,
+   * even when navigating between screens.
+   */
+  fun updateBadges() {
+    viewModelScope.launch {
+      val currentUser = FirebaseAuth.getInstance().currentUser
+      if (currentUser != null) {
+        val friendsCount = getFriendsCount()
+        val currentProfile = _userProfile.value
+
+        // Calculate badges
+        val updatedBadges = BadgeManager.calculateBadges(currentProfile, friendsCount)
+
+        // Update profile with new badges
+        val updatedProfile = currentProfile.copy(badges = updatedBadges)
+
+        // Save to Firestore immediately to persist badges 24/7
+        val success = repository.saveUserProfile(updatedProfile)
+
+        if (success) {
+          _userProfile.value = updatedProfile
+          println("ProfileViewModel - Badges updated and saved successfully")
+        } else {
+          println("ProfileViewModel - Failed to save updated badges")
+        }
+      }
+    }
+  }
+
+  /**
+   * Updates the user's badges locally without saving to Firestore. Used during profile loading to
+   * avoid overwriting existing data.
+   */
+  private fun updateBadgesLocalOnly() {
+    viewModelScope.launch {
+      val currentUser = FirebaseAuth.getInstance().currentUser
+      if (currentUser != null) {
+        val friendsCount = getFriendsCount()
+        val currentProfile = _userProfile.value
+
+        // Calculate badges
+        val updatedBadges = BadgeManager.calculateBadges(currentProfile, friendsCount)
+
+        // Update profile with new badges (local state only, no Firestore save)
+        _userProfile.value = currentProfile.copy(badges = updatedBadges)
+
+        println("ProfileViewModel - Badges updated locally (no Firestore save)")
+      }
+    }
+  }
+
+  /**
+   * Gets the current user's friends count.
+   *
+   * @return The number of friends the user has.
+   */
+  private suspend fun getFriendsCount(): Int {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    return if (currentUser != null) {
+      try {
+        val friends = friendRequestRepository?.getFriends(currentUser.uid)
+        friends?.size ?: 0
+      } catch (e: Exception) {
+        println("ProfileViewModel - Error getting friends count: ${e.message}")
+        0
+      }
+    } else {
+      0
     }
   }
 }
