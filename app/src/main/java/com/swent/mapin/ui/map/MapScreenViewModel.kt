@@ -27,6 +27,7 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
+import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
@@ -61,6 +62,7 @@ class MapScreenViewModel(
     private val sheetConfig: BottomSheetConfig,
     onClearFocus: () -> Unit,
     private val applicationContext: Context,
+    private val connectivityService: ConnectivityService,
     private val memoryRepository: MemoryRepository = MemoryRepositoryProvider.getRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -96,6 +98,7 @@ class MapScreenViewModel(
           auth = auth,
           scope = viewModelScope,
           filterViewModel = filterViewModel,
+          connectivityService = connectivityService,
           getSelectedEvent = { _selectedEvent },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
@@ -358,7 +361,9 @@ class MapScreenViewModel(
   }
 
   init {
+    // Observe filters and connectivity changes
     eventStateController.observeFilters()
+    eventStateController.observeConnectivity()
     // Load map style preference
     loadMapStylePreference()
 
@@ -366,6 +371,9 @@ class MapScreenViewModel(
     eventStateController.refreshEventsList()
     eventStateController.loadSavedEvents()
     eventStateController.loadJoinedEvents()
+
+    // Start listeners for real-time updates
+    eventStateController.startListeners()
 
     // Load user profile
     loadUserProfile()
@@ -467,6 +475,7 @@ class MapScreenViewModel(
             eventStateController.loadSavedEvents()
             eventStateController.loadJoinedEvents()
             eventStateController.loadOwnedEvents()
+            eventStateController.startListeners()
             loadUserProfile()
           }
         }
@@ -692,6 +701,10 @@ class MapScreenViewModel(
   override fun onCleared() {
     super.onCleared()
     cameraController.clearCallbacks()
+
+    // Stop event listeners and observers to prevent leaks
+    eventStateController.stopListeners()
+    eventStateController.stopObserving()
 
     // Cancel any active offline downloads to prevent resource leaks
     try {
@@ -928,11 +941,13 @@ fun rememberMapScreenViewModel(
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
   val appContext = context.applicationContext
+  val connectivityService = ConnectivityServiceProvider.getInstance(appContext)
 
   val mapScreenViewModel: MapScreenViewModel = viewModel {
     MapScreenViewModel(
         initialSheetState = initialSheetState,
         sheetConfig = sheetConfig,
+        connectivityService = connectivityService,
         onClearFocus = { focusManager.clearFocus(force = true) },
         applicationContext = appContext)
   }
