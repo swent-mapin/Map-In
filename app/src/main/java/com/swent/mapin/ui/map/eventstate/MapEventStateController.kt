@@ -174,8 +174,16 @@ class MapEventStateController(
           try {
             when (action) {
               is OfflineAction.LeaveEvent -> {
-                eventRepository.editEventAsUser(action.eventId, action.userId, join = false)
-                success = true
+                try {
+                  eventRepository.editEventAsUser(action.eventId, action.userId, join = false)
+                  success = true
+                } catch (e: Exception) {
+                  if (e.message?.contains("Event not found") == true) {
+                    success = true
+                  } else {
+                    throw e
+                  }
+                }
               }
               is OfflineAction.SaveEvent -> {
                 val userProfile =
