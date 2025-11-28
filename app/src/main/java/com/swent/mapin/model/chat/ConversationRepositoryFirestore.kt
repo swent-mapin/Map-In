@@ -110,4 +110,36 @@ class ConversationRepositoryFirestore(
       null
     }
   }
+  // This was written with the help of Claude Sonnet 4.5
+
+  /**
+   * Removes the current user from a conversation.
+   *
+   * @param conversationId The ID of the conversation to leave.
+   */
+  override suspend fun leaveConversation(conversationId: String) {
+    val currentUid = auth.currentUser?.uid ?: return
+
+    try {
+      val conversationRef = db.collection("conversations").document(conversationId)
+      val docSnapshot = conversationRef.get().await()
+      val conversation = docSnapshot.toObject(Conversation::class.java) ?: return
+
+      // Remove the current user from participantIds
+      val updatedParticipantIds = conversation.participantIds.filter { it != currentUid }
+
+      // Remove the current user from participants
+      val updatedParticipants = conversation.participants.filter { it.userId != currentUid }
+
+      // Update the conversation
+      conversationRef
+          .update(
+              mapOf(
+                  "participantIds" to updatedParticipantIds, "participants" to updatedParticipants))
+          .await()
+    } catch (e: Exception) {
+      Log.e("ConversationRepo", "Failed to leave conversation", e)
+      throw e
+    }
+  }
 }
