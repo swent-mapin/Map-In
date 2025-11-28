@@ -1,7 +1,5 @@
 package com.swent.mapin.model.badge
 
-import androidx.compose.ui.graphics.vector.ImageVector
-import io.mockk.mockk
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -9,13 +7,12 @@ class BadgeTest {
 
   @Test
   fun `defaults and equality`() {
-    val icon = mockk<ImageVector>()
     val b1 =
         Badge(
             id = "badge1",
             title = "Title",
             description = "Desc",
-            icon = icon,
+            iconName = "star",
             rarity = BadgeRarity.RARE)
 
     // defaults
@@ -30,13 +27,12 @@ class BadgeTest {
 
   @Test
   fun `copy modifies fields`() {
-    val icon = mockk<ImageVector>()
     val original =
         Badge(
             id = "id",
             title = "Title",
             description = "Desc",
-            icon = icon,
+            iconName = "face",
             rarity = BadgeRarity.EPIC,
             isUnlocked = true,
             progress = 1f)
@@ -53,13 +49,12 @@ class BadgeTest {
 
   @Test
   fun `toString contains fields`() {
-    val icon = mockk<ImageVector>()
     val b =
         Badge(
             id = "idToStr",
             title = "MyTitle",
             description = "MyDesc",
-            icon = icon,
+            iconName = "person",
             rarity = BadgeRarity.COMMON)
     val s = b.toString()
 
@@ -78,13 +73,12 @@ class BadgeTest {
 
   @Test
   fun `progress boundaries`() {
-    val icon = mockk<ImageVector>()
     val zero =
         Badge(
             id = "z",
             title = "t",
             description = "d",
-            icon = icon,
+            iconName = "star",
             rarity = BadgeRarity.COMMON,
             progress = 0f)
     val one =
@@ -92,7 +86,7 @@ class BadgeTest {
             id = "o",
             title = "t",
             description = "d",
-            icon = icon,
+            iconName = "star",
             rarity = BadgeRarity.COMMON,
             progress = 1f)
 
@@ -125,65 +119,47 @@ class BadgeTest {
     assertEquals(0.2f, profile.progress, 0.0f)
   }
 
-  @Test(expected = IllegalArgumentException::class)
-  fun `progress below zero throws exception`() {
-    val icon = mockk<ImageVector>()
-    Badge(
-        id = "invalid",
-        title = "Invalid",
-        description = "Should fail",
-        icon = icon,
-        rarity = BadgeRarity.COMMON,
-        progress = -0.1f)
+  @Test
+  fun `progress below zero is allowed for Firebase compatibility`() {
+    // No longer throws exception - validation happens in UI layer
+    val badge =
+        Badge(
+            id = "invalid",
+            title = "Invalid",
+            description = "Valid badge",
+            iconName = "star",
+            rarity = BadgeRarity.COMMON,
+            progress = -0.1f)
+
+    assertNotNull(badge)
+    assertEquals(-0.1f, badge.progress, 0.0f)
   }
 
-  @Test(expected = IllegalArgumentException::class)
-  fun `progress above one throws exception`() {
-    val icon = mockk<ImageVector>()
-    Badge(
-        id = "invalid",
-        title = "Invalid",
-        description = "Should fail",
-        icon = icon,
-        rarity = BadgeRarity.COMMON,
-        progress = 1.1f)
-  }
+  @Test
+  fun `progress above one is allowed for Firebase compatibility`() {
+    // No longer throws exception - validation happens in UI layer
+    val badge =
+        Badge(
+            id = "invalid",
+            title = "Invalid",
+            description = "Valid badge",
+            iconName = "star",
+            rarity = BadgeRarity.COMMON,
+            progress = 1.1f)
 
-  @Test(expected = IllegalArgumentException::class)
-  fun `progress far below zero throws exception`() {
-    val icon = mockk<ImageVector>()
-    Badge(
-        id = "invalid",
-        title = "Invalid",
-        description = "Should fail",
-        icon = icon,
-        rarity = BadgeRarity.COMMON,
-        progress = -100f)
-  }
-
-  @Test(expected = IllegalArgumentException::class)
-  fun `progress far above one throws exception`() {
-    val icon = mockk<ImageVector>()
-    Badge(
-        id = "invalid",
-        title = "Invalid",
-        description = "Should fail",
-        icon = icon,
-        rarity = BadgeRarity.COMMON,
-        progress = 100f)
+    assertNotNull(badge)
+    assertEquals(1.1f, badge.progress, 0.0f)
   }
 
   @Test
   fun `progress exactly at boundaries is valid`() {
-    val icon = mockk<ImageVector>()
-
     // 0f should be valid
     val atZero =
         Badge(
             id = "zero",
             title = "Zero",
             description = "At zero",
-            icon = icon,
+            iconName = "star",
             rarity = BadgeRarity.COMMON,
             progress = 0f)
     assertEquals(0f, atZero.progress, 0.0f)
@@ -194,7 +170,7 @@ class BadgeTest {
             id = "one",
             title = "One",
             description = "At one",
-            icon = icon,
+            iconName = "star",
             rarity = BadgeRarity.COMMON,
             progress = 1f)
     assertEquals(1f, atOne.progress, 0.0f)
