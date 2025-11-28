@@ -40,7 +40,7 @@ class TileStoreManagerTest {
 
     val quota = tileStoreManager.getDiskQuotaMB()
 
-    assertEquals(2048L, quota)
+    assertEquals(4096L, quota)
   }
 
   @Test
@@ -69,12 +69,12 @@ class TileStoreManagerTest {
 
     val quotaBytes = tileStoreManager.getDiskQuotaBytes()
 
-    assertEquals(2048L * 1024L * 1024L, quotaBytes)
+    assertEquals(4096L * 1024L * 1024L, quotaBytes)
   }
 
   @Test
-  fun `default constant is 2048 MB`() {
-    assertEquals(2048L, TileStoreManager.DEFAULT_DISK_QUOTA_MB)
+  fun `default constant is 4096 MB`() {
+    assertEquals(4096L, TileStoreManager.DEFAULT_DISK_QUOTA_MB)
   }
 
   @Test

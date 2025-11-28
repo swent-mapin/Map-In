@@ -1,8 +1,15 @@
 package com.swent.mapin.ui.event
 
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +22,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 
 @ExperimentalCoroutinesApi
 class EventViewModelTests {
@@ -22,21 +31,28 @@ class EventViewModelTests {
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var repository: EventRepository
   private lateinit var viewModel: EventViewModel
-  val stateController: MapEventStateController = Mockito.mock(MapEventStateController::class.java)
+  private val stateController: MapEventStateController =
+      Mockito.mock(MapEventStateController::class.java)
 
   @Before
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
     repository = Mockito.mock(EventRepository::class.java)
-    viewModel = EventViewModel(repository, stateController)
+
+    val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+    val mockUser = mockk<FirebaseUser>(relaxed = true)
+    every { mockUser.uid } returns "user123"
+    every { mockAuth.currentUser } returns mockUser
+
+    viewModel = EventViewModel(repository, stateController, mockAuth)
   }
 
   @After
   fun tearDown() {
     Dispatchers.resetMain()
+    unmockkAll()
   }
 
-  // 1. getNewUid
   @Test
   fun `getNewUid returns repository value`() {
     Mockito.`when`(repository.getNewUid()).thenReturn("123")
@@ -44,7 +60,6 @@ class EventViewModelTests {
     assertEquals("123", uid)
   }
 
-  // 2. addEvent
   @Test
   fun `addEvent calls repository`() = runTest {
     val event = Event("1")
@@ -53,7 +68,6 @@ class EventViewModelTests {
     Mockito.verify(repository).addEvent(event)
   }
 
-  // 3. editEvent
   @Test
   fun `editEvent calls repository`() = runTest {
     val event = Event("1")
@@ -62,7 +76,6 @@ class EventViewModelTests {
     Mockito.verify(repository).editEventAsOwner("1", event)
   }
 
-  // 4. deleteEvent
   @Test
   fun `deleteEvent calls repository`() = runTest {
     viewModel.deleteEvent("1")
@@ -70,7 +83,6 @@ class EventViewModelTests {
     Mockito.verify(repository).deleteEvent("1")
   }
 
-  // 5. addEvent handles exception and updates error StateFlow
   @Test
   fun `addEvent sets error when repository throws`() = runTest {
     val event = Event("1")
@@ -80,7 +92,6 @@ class EventViewModelTests {
     assertEquals("Write failed", viewModel.error.value)
   }
 
-  // 6. editEvent handles exception and updates error StateFlow
   @Test
   fun `editEvent sets error when repository throws`() = runTest {
     val event = Event("1")
@@ -90,12 +101,88 @@ class EventViewModelTests {
     assertEquals("Edit failed", viewModel.error.value)
   }
 
-  // 7. deleteEvent handles exception and updates error StateFlow
   @Test
   fun `deleteEvent sets error when repository throws`() = runTest {
     Mockito.doThrow(RuntimeException("Delete failed")).`when`(repository).deleteEvent("1")
     viewModel.deleteEvent("1")
     advanceUntilIdle()
     assertEquals("Delete failed", viewModel.error.value)
+  }
+
+  @Test
+  fun `selectEventToEdit updates eventToEdit`() {
+    val event = Event("1")
+    viewModel.selectEventToEdit(event)
+    assertEquals(event, viewModel.eventToEdit.value)
+  }
+
+  @Test
+  fun `clearEventToEdit clears eventToEdit`() {
+    val event = Event("1")
+    viewModel.selectEventToEdit(event)
+    viewModel.clearEventToEdit()
+    assertEquals(null, viewModel.eventToEdit.value)
+  }
+
+  @Test
+  fun `clearError clears error`() = runTest {
+    Mockito.doThrow(RuntimeException("Error")).`when`(repository).addEvent(Event("1"))
+    viewModel.addEvent(Event("1"))
+    advanceUntilIdle()
+    assertEquals("Error", viewModel.error.value)
+    viewModel.clearError()
+    assertEquals(null, viewModel.error.value)
+  }
+
+  @Test
+  fun `saveEditedEvent calls editEvent and onSuccess when user is owner`() = runTest {
+    val event = Event(uid = "1", ownerId = "user123")
+    val editedTitle = "Updated Title"
+    val editedDesc = "Updated Description"
+    val location = Location("Test", 0.0, 0.0)
+    val startTs = Timestamp.now()
+    val endTs = Timestamp.now()
+    val tagsString = "tag1 tag2"
+
+    var successCalled = false
+    viewModel.saveEditedEvent(
+        originalEvent = event,
+        title = editedTitle,
+        description = editedDesc,
+        location = location,
+        startTs = startTs,
+        endTs = endTs,
+        tagsString = tagsString,
+        onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    Mockito.verify(repository).editEventAsOwner(eq(event.uid), any())
+    assert(successCalled)
+  }
+
+  @Test
+  fun `saveEditedEvent does not call editEvent when user is not owner`() = runTest {
+    val event = Event(uid = "1", ownerId = "owner123")
+    val editedTitle = "Updated Title"
+    val editedDesc = "Updated Description"
+    val location = Location("Test", 0.0, 0.0)
+    val startTs = Timestamp.now()
+    val endTs = Timestamp.now()
+    val tagsString = "tag1 tag2"
+
+    var successCalled = false
+    viewModel.saveEditedEvent(
+        originalEvent = event,
+        title = editedTitle,
+        description = editedDesc,
+        location = location,
+        startTs = startTs,
+        endTs = endTs,
+        tagsString = tagsString,
+        onSuccess = { successCalled = true })
+    advanceUntilIdle()
+
+    Mockito.verify(repository, Mockito.never()).editEventAsOwner(eq(event.uid), any())
+    assert(!successCalled)
   }
 }

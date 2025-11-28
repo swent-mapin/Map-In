@@ -75,7 +75,11 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 }
 
 @Composable
-fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
+fun EventsSection(
+    events: List<Event>,
+    onEventClick: (Event) -> Unit = {},
+    onEditEvent: (Event) -> Unit = {}
+) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
     return
@@ -89,7 +93,8 @@ fun EventsSection(events: List<Event>, onEventClick: (Event) -> Unit) {
       SearchResultItem(
           event = event,
           modifier = Modifier.padding(horizontal = 16.dp),
-          onClick = { onEventClick(event) })
+          onClick = { onEventClick(event) },
+          onEditEvent = onEditEvent)
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
@@ -230,6 +235,7 @@ fun OwnedEventsSection(
     loading: Boolean,
     error: String?,
     onEventClick: (Event) -> Unit,
+    onEditEvent: (Event) -> Unit,
     onRetry: () -> Unit
 ) {
   when {
@@ -278,7 +284,7 @@ fun OwnedEventsSection(
       Column(
           modifier =
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
-            EventsSection(events = events, onEventClick = onEventClick)
+            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent)
           }
     }
   }

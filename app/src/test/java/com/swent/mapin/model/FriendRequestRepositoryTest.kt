@@ -3,6 +3,8 @@ package com.swent.mapin.model
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.*
 import io.mockk.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -22,6 +24,7 @@ class FriendRequestRepositoryTest {
 
   private lateinit var firestore: FirebaseFirestore
   private lateinit var userProfileRepo: UserProfileRepository
+  private lateinit var notificationService: NotificationService
   private lateinit var repository: FriendRequestRepository
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
@@ -30,6 +33,7 @@ class FriendRequestRepositoryTest {
   fun setup() {
     firestore = mockk(relaxed = true)
     userProfileRepo = mockk(relaxed = true)
+    notificationService = mockk(relaxed = true)
     mockCollection = mockk(relaxed = true)
     mockDocument = mockk(relaxed = true)
 
@@ -38,7 +42,22 @@ class FriendRequestRepositoryTest {
     every { mockCollection.document() } returns mockDocument
     every { mockDocument.id } returns "testDocId"
 
-    repository = FriendRequestRepository(firestore, userProfileRepo)
+    // Mock notification service to always succeed
+    val mockNotification =
+        Notification(
+            notificationId = "notif123",
+            title = "Test",
+            message = "Test message",
+            type = NotificationType.FRIEND_REQUEST,
+            recipientId = "user1",
+            readStatus = false)
+    coEvery {
+      notificationService.sendFriendRequestNotification(any(), any(), any(), any())
+    } returns NotificationResult.Success(mockNotification)
+    coEvery { notificationService.sendInfoNotification(any(), any(), any(), any(), any()) } returns
+        NotificationResult.Success(mockNotification)
+
+    repository = FriendRequestRepository(firestore, userProfileRepo, notificationService)
   }
 
   // ==================== Send Friend Request Tests ====================
@@ -55,6 +74,8 @@ class FriendRequestRepositoryTest {
     every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
     every { mockQuerySnapshot.isEmpty } returns true
     every { mockDocument.set(any()) } returns Tasks.forResult(null)
+    coEvery { userProfileRepo.getUserProfile(fromUser) } returns
+        UserProfile(userId = fromUser, name = "Sender User")
 
     val result = repository.sendFriendRequest(fromUser, toUser)
 
@@ -88,12 +109,61 @@ class FriendRequestRepositoryTest {
     verify(exactly = 0) { mockDocument.set(any()) }
   }
 
+  @Test
+  fun `sendFriendRequest updates REJECTED request to PENDING and sends notification`() = runTest {
+    val fromUser = "user1"
+    val toUser = "user2"
+    val existingRequestId = "rejectedReq123"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.isEmpty } returns false
+    every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns
+        FriendRequest(
+            requestId = existingRequestId,
+            fromUserId = fromUser,
+            toUserId = toUser,
+            status = FriendshipStatus.REJECTED)
+    every { mockDocument.update(any<Map<String, Any>>()) } returns Tasks.forResult(null)
+    coEvery { userProfileRepo.getUserProfile(fromUser) } returns
+        UserProfile(userId = fromUser, name = "Sender User")
+
+    val result = repository.sendFriendRequest(fromUser, toUser)
+
+    assert(result)
+    verify {
+      mockDocument.update(match<Map<String, Any>> { it["status"] == FriendshipStatus.PENDING.name })
+    }
+    coVerify {
+      notificationService.sendFriendRequestNotification(
+          toUser, fromUser, "Sender User", existingRequestId)
+    }
+    verify(exactly = 0) { mockDocument.set(any()) } // Should not create new request
+  }
+
   // ==================== Accept/Reject Request Tests ====================
 
   @Test
   fun `acceptFriendRequest updates status to ACCEPTED`() = runTest {
     val requestId = "req123"
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val friendRequest =
+        FriendRequest(
+            requestId = requestId,
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING)
+
+    every { mockDocument.get() } returns Tasks.forResult(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns friendRequest
     every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+    coEvery { userProfileRepo.getUserProfile(any()) } returns
+        UserProfile(userId = "user2", name = "Test User")
 
     val result = repository.acceptFriendRequest(requestId)
 
@@ -205,6 +275,78 @@ class FriendRequestRepositoryTest {
 
     assert(result.size == 1)
     assert(result[0].userProfile.name == "Alice Smith")
+  }
+
+  // ==================== Real-time Observation Tests ====================
+
+  @Test
+  fun `observeFriends creates Flow and sets up listeners when collected`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockListener = mockk<ListenerRegistration>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns emptyList()
+    every { mockQuery.addSnapshotListener(any()) } returns mockListener
+
+    val flow = repository.observeFriends(userId)
+
+    // Start collecting the Flow to trigger listener setup
+    val job = launch {
+      flow.collect { friends ->
+        // Immediately cancel after first emission to avoid infinite collection
+        throw kotlinx.coroutines.CancellationException("Test completed")
+      }
+    }
+
+    // Wait a bit for the Flow to set up listeners
+    delay(50)
+
+    // Verify that listeners were set up (2 listeners: sent and received)
+    verify(exactly = 2) { mockQuery.addSnapshotListener(any()) }
+
+    // Verify that getFriends was called for initial data
+    verify(atLeast = 1) { mockQuery.get() }
+
+    job.cancel()
+  }
+
+  @Test
+  fun `observePendingRequests creates Flow and sets up listener when collected`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockListener = mockk<ListenerRegistration>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns emptyList()
+    every { mockQuery.addSnapshotListener(any()) } returns mockListener
+
+    val flow = repository.observePendingRequests(userId)
+
+    // Start collecting the Flow to trigger listener setup
+    val job = launch {
+      flow.collect { requests ->
+        // Immediately cancel after first emission to avoid infinite collection
+        throw kotlinx.coroutines.CancellationException("Test completed")
+      }
+    }
+
+    // Wait a bit for the Flow to set up listener
+    delay(50)
+
+    // Verify that listener was set up
+    verify { mockQuery.addSnapshotListener(any()) }
+
+    // Verify that getPendingRequests was called for initial data
+    verify(atLeast = 1) { mockQuery.get() }
+
+    job.cancel()
   }
 
   // ==================== Error Handling Tests ====================

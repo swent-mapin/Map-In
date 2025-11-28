@@ -383,10 +383,11 @@ class MapScreenViewModel(
   }
 
   /**
-   * Starts observing saved and joined events for offline region downloads.
+   * Starts observing saved and joined events for offline region downloads and deletions.
    *
    * This is called during ViewModel initialization if event-based downloads are enabled. The
-   * manager will reactively download 2km radius regions around saved/joined events when online.
+   * manager will reactively download 2km radius regions around saved/joined events when online, and
+   * delete regions when events are unsaved or left.
    */
   private fun startEventBasedOfflineDownloads() {
     viewModelScope.launch {
@@ -394,11 +395,19 @@ class MapScreenViewModel(
         val manager = eventBasedOfflineRegionManager ?: return@launch
         val userId = auth.currentUser?.uid ?: return@launch
 
+        // Start observing for downloads
         manager.observeEvents(
             onSavedEventsFlow = eventStateController.savedEventsFlow,
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
-        Log.d("MapScreenViewModel", "Event-based offline downloads started for user: $userId")
+        // Start observing for deletions
+        manager.observeEventsForDeletion(
+            onSavedEventsFlow = eventStateController.savedEventsFlow,
+            onJoinedEventsFlow = eventStateController.joinedEventsFlow)
+
+        Log.d(
+            "MapScreenViewModel",
+            "Event-based offline downloads and deletions started for user: $userId")
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Failed to start event-based offline downloads", e)
       }
@@ -650,6 +659,17 @@ class MapScreenViewModel(
     _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
   }
 
+  fun showEditEventForm() {
+    _previousSheetState = bottomSheetState
+    _showMemoryForm = false
+    _currentBottomSheetScreen = BottomSheetScreen.EDIT_EVENT
+    setBottomSheetState(BottomSheetState.FULL)
+  }
+
+  fun hideEditEventForm() {
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+  }
+
   fun onMemorySave(formData: MemoryFormData) {
     memoryActionController.saveMemory(formData)
   }
@@ -661,6 +681,11 @@ class MapScreenViewModel(
 
   fun onAddEventCancel() {
     hideAddEventForm()
+    restorePreviousSheetState()
+  }
+
+  fun onEditEventCancel() {
+    hideEditEventForm()
     restorePreviousSheetState()
   }
 

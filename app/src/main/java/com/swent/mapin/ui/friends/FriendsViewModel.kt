@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.SearchResultWithStatus
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeManager
