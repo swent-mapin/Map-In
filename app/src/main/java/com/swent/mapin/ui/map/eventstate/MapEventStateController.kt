@@ -12,8 +12,10 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,7 +99,7 @@ class MapEventStateController(
   // Offline mode support
   private val _isOnline = MutableStateFlow(true)
   val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
-  private val offlineActionQueue = mutableListOf<OfflineAction>()
+  private val offlineActionQueue = ConcurrentLinkedQueue<OfflineAction>()
   private var isProcessingQueue = false
 
   // Listeners for real-time updates
@@ -105,32 +107,43 @@ class MapEventStateController(
   private var savedEventsListener: ListenerRegistration? = null
   private var filteredEventsListener: ListenerRegistration? = null
 
+  // Observer jobs
+  private var filterObserverJob: Job? = null
+  private var connectivityObserverJob: Job? = null
+
   /**
    * Observes filter changes from [FiltersSectionViewModel] and applies them to update [allEvents]
    * accordingly.
    */
   @OptIn(FlowPreview::class)
   fun observeFilters() {
-    scope.launch {
-      filterViewModel.filters.debounce(300).distinctUntilChanged().collect { filters ->
-        getFilteredEvents(filters)
-      }
-    }
+    filterObserverJob =
+        scope.launch {
+          filterViewModel.filters.debounce(300).distinctUntilChanged().collect { filters ->
+            getFilteredEvents(filters)
+          }
+        }
   }
 
   /** Observes connectivity changes and processes offline queue when connection is restored. */
   fun observeConnectivity() {
-    scope.launch {
-      connectivityService.connectivityState.collect { state ->
-        val wasOffline = !_isOnline.value
-        _isOnline.value = state.isConnected
+    connectivityObserverJob =
+        scope.launch {
+          connectivityService.connectivityState.collect { state ->
+            val wasOffline = !_isOnline.value
+            _isOnline.value = state.isConnected
 
-        // Process queue when connection is restored
-        if (state.isConnected && wasOffline && offlineActionQueue.isNotEmpty()) {
-          processOfflineQueue()
+            if (state.isConnected && wasOffline && offlineActionQueue.isNotEmpty()) {
+              processOfflineQueue()
+            }
+          }
         }
-      }
-    }
+  }
+
+  /** Stops observing filters and connectivity changes. */
+  fun stopObserving() {
+    filterObserverJob?.cancel()
+    connectivityObserverJob?.cancel()
   }
 
   /**
@@ -187,7 +200,7 @@ class MapEventStateController(
         }
 
         // Remove action from queue if successful or max attempts reached
-        offlineActionQueue.removeAt(0)
+        offlineActionQueue.poll()
       }
 
       // Refresh lists after processing queue

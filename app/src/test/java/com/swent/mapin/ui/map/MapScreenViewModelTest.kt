@@ -166,6 +166,7 @@ class MapScreenViewModelTest {
         MapScreenViewModel(
             initialSheetState = BottomSheetState.COLLAPSED,
             sheetConfig = config,
+            connectivityService = mockConnectivityService,
             onClearFocus = { clearFocusCalled = true },
             applicationContext = mockContext,
             memoryRepository = mockMemoryRepository,

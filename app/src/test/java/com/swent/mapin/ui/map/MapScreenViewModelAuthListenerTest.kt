@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -84,6 +85,7 @@ class MapScreenViewModelAuthListenerTest {
     vm =
         MapScreenViewModel(
             initialSheetState = BottomSheetState.COLLAPSED,
+            connectivityService = mockConnectivityService,
             sheetConfig =
                 BottomSheetConfig(
                     collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp),
@@ -103,9 +105,9 @@ class MapScreenViewModelAuthListenerTest {
     runBlocking { testDispatcher.scheduler.advanceUntilIdle() }
   }
 
-  @Before
+  @After
   fun tearDown() {
-    // Clear the ConnectivityServiceProvider for next test
+    // Clear the ConnectivityServiceProvider singleton to avoid test pollution
     ConnectivityServiceProvider.clearInstance()
   }
 
@@ -141,8 +143,6 @@ class MapScreenViewModelAuthListenerTest {
         // Update repo responses for this user
         whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
         whenever(mockRepo.getJoinedEvents("testUserId")).thenReturn(emptyList())
-        // Joined events are derived from _allEvents + uid; not required for this assertion,
-        // but you could also stub getEventsByParticipant if your VM uses it here.
 
         authListener.onAuthStateChanged(mockAuth)
         testScheduler.advanceUntilIdle()
