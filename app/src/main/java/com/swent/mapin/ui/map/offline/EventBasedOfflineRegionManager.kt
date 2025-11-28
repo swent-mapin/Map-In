@@ -42,11 +42,14 @@ class EventBasedOfflineRegionManager(
   companion object {
     private const val TAG = "EventBasedOfflineRegionManager"
     const val DEFAULT_RADIUS_KM = 2.0
-    private const val DEFAULT_MAX_REGIONS = 100 // Conservative limit below Mapbox's 750
+    private const val DEFAULT_MAX_REGIONS = 100 // Conservative limit to stay under 4GB cache
   }
 
   private var observerJob: Job? = null
+  private var deletionObserverJob: Job? = null
   private val downloadedEventIds = mutableSetOf<String>()
+  private val eventLocations = mutableMapOf<String, Pair<Double, Double>>() // eventId -> (lat, lng)
+  private var previousEventIds = setOf<String>()
 
   /**
    * Starts observing saved and joined events.
@@ -123,6 +126,8 @@ class EventBasedOfflineRegionManager(
       result
           .onSuccess {
             downloadedEventIds.add(event.uid)
+            // Store location for future deletion
+            eventLocations[event.uid] = Pair(event.location.latitude, event.location.longitude)
             Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
             onDownloadComplete(event, Result.success(Unit))
           }
@@ -169,6 +174,139 @@ class EventBasedOfflineRegionManager(
   }
 
   /**
+   * Starts observing saved and joined events for deletion.
+   *
+   * When events are removed (unsaved or left) or when events have finished (past end date),
+   * automatically deletes the corresponding map tiles to free up storage space.
+   *
+   * @param onSavedEventsFlow Flow providing saved events
+   * @param onJoinedEventsFlow Flow providing joined events
+   */
+  fun observeEventsForDeletion(
+      onSavedEventsFlow: Flow<List<Event>>,
+      onJoinedEventsFlow: Flow<List<Event>>
+  ) {
+    // Cancel any existing observation
+    deletionObserverJob?.cancel()
+
+    deletionObserverJob =
+        scope.launch {
+          // Combine saved and joined events into a single flow
+          combine(onSavedEventsFlow, onJoinedEventsFlow) { saved, joined -> saved + joined }
+              .collect { allEvents ->
+                // Remove duplicates (event may be both saved and joined)
+                val uniqueEvents = allEvents.distinctBy { it.uid }
+
+                // Filter out finished events (those that have ended)
+                val activeEvents = uniqueEvents.filter { !isEventFinished(it) }
+                val currentEventIds = activeEvents.map { it.uid }.toSet()
+
+                // Find events that were removed OR finished (in previous but not in current)
+                val removedEventIds = previousEventIds - currentEventIds
+
+                if (removedEventIds.isNotEmpty()) {
+                  Log.d(
+                      TAG,
+                      "Detected ${removedEventIds.size} removed/finished events, deleting regions")
+                  deleteRegionsForEvents(removedEventIds)
+                }
+
+                // Update previous state for next iteration
+                previousEventIds = currentEventIds
+              }
+        }
+  }
+
+  /**
+   * Checks if an event has finished based on its end date.
+   *
+   * An event is considered finished if:
+   * - It has an endDate AND the endDate is in the past, OR
+   * - It has no endDate but has a date AND the date is in the past
+   *
+   * @param event The event to check
+   * @return true if the event has finished, false otherwise
+   */
+  private fun isEventFinished(event: Event): Boolean {
+    val now = com.google.firebase.Timestamp.now()
+
+    // Check endDate first (if provided)
+    event.endDate?.let {
+      return it < now
+    }
+
+    // Fall back to start date if no endDate
+    event.date?.let {
+      return it < now
+    }
+
+    // If no dates at all, consider it active
+    return false
+  }
+
+  /**
+   * Deletes tile regions for the given event IDs.
+   *
+   * @param eventIds Set of event IDs to delete regions for
+   */
+  private fun deleteRegionsForEvents(eventIds: Set<String>) {
+    scope.launch {
+      for (eventId in eventIds) {
+        // Get stored location for this event
+        val location = eventLocations[eventId]
+        if (location != null) {
+          val (lat, lng) = location
+          val bounds = calculateBoundsForRadius(lat, lng)
+
+          Log.d(TAG, "Deleting region for removed event: $eventId")
+
+          val result = offlineRegionManager.removeTileRegion(bounds)
+          result
+              .onSuccess {
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+                Log.d(TAG, "Successfully deleted region for event: $eventId")
+              }
+              .onFailure { error ->
+                Log.e(TAG, "Failed to delete region for event $eventId: $error")
+                // Still remove from tracking even if deletion fails
+                downloadedEventIds.remove(eventId)
+                eventLocations.remove(eventId)
+              }
+        } else {
+          // Event wasn't downloaded or location not stored, just remove from tracking
+          downloadedEventIds.remove(eventId)
+          Log.d(TAG, "Removed event $eventId from tracking (no location stored)")
+        }
+      }
+    }
+  }
+
+  /**
+   * Deletes the tile region for a specific event.
+   *
+   * @param event The event to delete the region for
+   */
+  fun deleteRegionForEvent(event: Event) {
+    scope.launch {
+      val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
+
+      Log.d(TAG, "Deleting region for event: ${event.title}")
+
+      val result = offlineRegionManager.removeTileRegion(bounds)
+      result
+          .onSuccess {
+            downloadedEventIds.remove(event.uid)
+            eventLocations.remove(event.uid)
+            Log.d(TAG, "Successfully deleted region for event: ${event.title}")
+          }
+          .onFailure { error ->
+            Log.e(TAG, "Failed to delete region for event ${event.title}: $error")
+          }
+    }
+  }
+
+  /**
    * Stops observing events and cancels any active downloads.
    *
    * Should be called when the manager is no longer needed (e.g., user logs out).
@@ -176,6 +314,8 @@ class EventBasedOfflineRegionManager(
   fun stopObserving() {
     observerJob?.cancel()
     observerJob = null
+    deletionObserverJob?.cancel()
+    deletionObserverJob = null
     offlineRegionManager.cancelActiveDownload()
     Log.d(TAG, "Stopped observing events")
   }
@@ -188,7 +328,9 @@ class EventBasedOfflineRegionManager(
    */
   fun clearDownloadedEventIds() {
     downloadedEventIds.clear()
-    Log.d(TAG, "Cleared downloaded event IDs")
+    eventLocations.clear()
+    previousEventIds = setOf()
+    Log.d(TAG, "Cleared downloaded event IDs and locations")
   }
 
   /**
