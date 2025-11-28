@@ -78,4 +78,13 @@ class ConversationViewModel(
       _gotConversation.value = conversationRepository.getConversationById(conversationId)
     }
   }
+
+  /**
+   * Removes the current user from a conversation.
+   *
+   * @param conversationId The conversation's unique identifier
+   */
+  fun leaveConversation(conversationId: String) {
+    viewModelScope.launch { conversationRepository.leaveConversation(conversationId) }
+  }
 }
