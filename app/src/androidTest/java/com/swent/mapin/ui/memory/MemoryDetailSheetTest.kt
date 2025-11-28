@@ -302,4 +302,193 @@ class MemoryDetailSheetTest {
         .assertExists()
         .assertTextContains("Memory")
   }
+
+  @Test
+  fun full_gallery_mixed_images_and_videos_composes_images_on_image_pages() {
+    val urls =
+        listOf(
+            "https://example.com/a.jpg",
+            "https://example.com/b.mp4",
+            "https://example.com/c.MKV",
+            "https://example.com/d.PNG")
+
+    val memory =
+        Memory(
+            uid = "mix1",
+            title = "Mix",
+            description = "",
+            ownerId = "u1",
+            mediaUrls = urls,
+            createdAt = Timestamp(Date()))
+
+    composeTestRule.setContent {
+      MapInTheme {
+        MemoryDetailSheet(
+            memory = memory,
+            sheetState = BottomSheetState.FULL,
+            ownerName = "Alice",
+            isOwner = false,
+            taggedUserNames = emptyList(),
+            onShare = {},
+            onClose = {},
+            onEdit = {},
+            onDelete = {},
+            onOpenLinkedEvent = {})
+      }
+    }
+
+    // Verify indicators present
+    composeTestRule.onNodeWithTag("mediaIndicatorsRow").assertExists()
+    urls.indices.forEach { i -> composeTestRule.onNodeWithTag("mediaIndicator_$i").assertExists() }
+
+    val pager = composeTestRule.onNodeWithTag("mediaPager")
+    pager.assertExists()
+
+    // For each page, swipe to it (for i>0) and check if mediaItem_i exists only when URL is an
+    // image
+    for (i in urls.indices) {
+      if (i > 0) {
+        // swipe once to go to next page
+        pager.performTouchInput { swipeLeft() }
+        composeTestRule.waitForIdle()
+      }
+
+      val url = urls[i]
+      val isVideo =
+          listOf(".mp4", ".mov", ".avi", ".mkv", ".webm").any { url.lowercase().endsWith(it) }
+
+      if (!isVideo) {
+        // Wait until the image node for this page exists
+        composeTestRule.waitUntil(timeoutMillis = 3_000) {
+          try {
+            composeTestRule.onAllNodesWithTag("mediaItem_$i").fetchSemanticsNodes().isNotEmpty()
+          } catch (_: Throwable) {
+            false
+          }
+        }
+        composeTestRule.onNodeWithTag("mediaItem_$i").assertExists()
+      } else {
+        // Video page: there should be no mediaItem_$i tag
+        composeTestRule.onNodeWithTag("mediaItem_$i").assertDoesNotExist()
+      }
+    }
+  }
+
+  @Test
+  fun full_gallery_all_videos_has_no_image_tags_but_indicators_match_size() {
+    val urls = listOf("https://ex/1.mp4", "https://ex/2.MOV", "https://ex/3.webm")
+    val memory =
+        Memory(
+            uid = "vids",
+            title = "VideosOnly",
+            description = "",
+            ownerId = "u1",
+            mediaUrls = urls,
+            createdAt = Timestamp(Date()))
+
+    composeTestRule.setContent {
+      MapInTheme {
+        MemoryDetailSheet(
+            memory = memory,
+            sheetState = BottomSheetState.FULL,
+            ownerName = "Alice",
+            isOwner = false,
+            taggedUserNames = emptyList(),
+            onShare = {},
+            onClose = {},
+            onEdit = {},
+            onDelete = {},
+            onOpenLinkedEvent = {})
+      }
+    }
+
+    // Indicators should be exactly the number of urls
+    composeTestRule.onNodeWithTag("mediaIndicatorsRow").assertExists()
+    urls.indices.forEach { i -> composeTestRule.onNodeWithTag("mediaIndicator_$i").assertExists() }
+
+    // No mediaItem_X tags should exist since all are videos
+    urls.indices.forEach { i -> composeTestRule.onNodeWithTag("mediaItem_$i").assertDoesNotExist() }
+  }
+
+  @Test
+  fun video_item_single_composes_and_disposes_without_crash() {
+    val urls = listOf("https://example.com/video.mp4")
+    val memory =
+        Memory(
+            uid = "v1",
+            title = "VideoOnly",
+            description = "",
+            ownerId = "u1",
+            mediaUrls = urls,
+            createdAt = Timestamp(Date()))
+
+    // Use mutable state so we can unmount the FULL sheet to trigger DisposableEffect
+    // (player.release())
+    lateinit var sheetState: MutableState<BottomSheetState>
+    composeTestRule.runOnUiThread { sheetState = mutableStateOf(BottomSheetState.FULL) }
+
+    composeTestRule.setContent {
+      MapInTheme {
+        MemoryDetailSheet(
+            memory = memory,
+            sheetState = sheetState.value,
+            ownerName = "Alice",
+            isOwner = false,
+            taggedUserNames = emptyList(),
+            onShare = {},
+            onClose = {},
+            onEdit = {},
+            onDelete = {},
+            onOpenLinkedEvent = {})
+      }
+    }
+
+    // mediaItem_0 is not present for videos (only images have that testTag)
+    composeTestRule.onNodeWithTag("mediaItem_0").assertDoesNotExist()
+    // Indicators should still exist
+    composeTestRule.onNodeWithTag("mediaIndicatorsRow").assertExists()
+
+    // Now unmount full by switching to MEDIUM which will dispose the player
+    composeTestRule.runOnUiThread { sheetState.value = BottomSheetState.MEDIUM }
+    composeTestRule.waitForIdle()
+
+    // Ensure medium content exists after unmount (no crash)
+    composeTestRule.onNodeWithTag("memoryTitleMedium").assertExists()
+  }
+
+  @Test
+  fun invalid_video_url_does_not_crash_and_shows_indicator() {
+    val urls = listOf("not-a-valid-url.mp4")
+    val memory =
+        Memory(
+            uid = "v2",
+            title = "BadVideo",
+            description = "",
+            ownerId = "u1",
+            mediaUrls = urls,
+            createdAt = Timestamp(Date()))
+
+    composeTestRule.setContent {
+      MapInTheme {
+        MemoryDetailSheet(
+            memory = memory,
+            sheetState = BottomSheetState.FULL,
+            ownerName = "Alice",
+            isOwner = false,
+            taggedUserNames = emptyList(),
+            onShare = {},
+            onClose = {},
+            onEdit = {},
+            onDelete = {},
+            onOpenLinkedEvent = {})
+      }
+    }
+
+    // The gallery should render indicators even if the URL is malformed
+    composeTestRule.onNodeWithTag("mediaIndicatorsRow").assertExists()
+    composeTestRule.onNodeWithTag("mediaIndicator_0").assertExists()
+
+    // And there should be no image test tag for the video
+    composeTestRule.onNodeWithTag("mediaItem_0").assertDoesNotExist()
+  }
 }
