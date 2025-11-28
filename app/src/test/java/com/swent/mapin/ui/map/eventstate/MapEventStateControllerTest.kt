@@ -109,7 +109,8 @@ class MapEventStateControllerTest {
             connectivityService = mockConnectivityService,
             getSelectedEvent = mockGetSelectedEvent,
             setErrorMessage = mockSetErrorMessage,
-            clearErrorMessage = mockClearErrorMessage)
+            clearErrorMessage = mockClearErrorMessage,
+            autoRefreshEnabled = false)
   }
 
   @After

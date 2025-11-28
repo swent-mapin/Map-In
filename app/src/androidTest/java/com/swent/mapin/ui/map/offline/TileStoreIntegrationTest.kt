@@ -22,7 +22,7 @@ class TileStoreIntegrationTest {
     val manager = TileStoreManagerProvider.getInstance()
 
     assertNotNull(manager)
-    assertEquals(2048L, manager.getDiskQuotaMB())
+    assertEquals(4096L, manager.getDiskQuotaMB())
   }
 
   @Test

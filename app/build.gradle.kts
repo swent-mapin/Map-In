@@ -236,6 +236,12 @@ dependencies {
     // ------------- DataStore (for settings persistence) ------------------
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // ------------- Media ------------------
+    implementation("androidx.compose.foundation:foundation:1.7.0")
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
+
     // ------------- Unit Tests (JVM) ------------------
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test:core:1.5.0")

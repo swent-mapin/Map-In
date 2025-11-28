@@ -104,6 +104,7 @@ import com.swent.mapin.ui.map.components.mapPointerInput
 import com.swent.mapin.ui.map.components.rememberSheetInteractionMetrics
 import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.directions.RouteInfoCard
 import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
 import com.swent.mapin.ui.profile.ProfileViewModel
 import com.swent.mapin.util.EventUtils
@@ -134,8 +135,10 @@ fun MapScreen(
           fullHeight = screenHeightDp * MapConstants.FULL_HEIGHT_PERCENTAGE)
 
   val viewModel = rememberMapScreenViewModel(sheetConfig)
-  val eventViewModel =
-      EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
+  val eventViewModel = remember {
+    EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
+  }
+
   val snackbarHostState = remember { SnackbarHostState() }
   val density = LocalDensity.current
   val mediumSheetBottomPaddingPx = with(density) { sheetConfig.mediumHeight.toPx() }
@@ -437,6 +440,14 @@ fun MapScreen(
         showDownloadComplete = viewModel.showDownloadComplete,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
 
+    // Route info card when directions are displayed
+    val directionState = viewModel.directionViewModel.directionState
+    if (directionState is DirectionState.Displayed) {
+      RouteInfoCard(
+          routeInfo = directionState.routeInfo,
+          modifier = Modifier.align(Alignment.TopCenter).padding(top = 100.dp))
+    }
+
     // Overlays et contrôles au-dessus de la carte
     Box(
         modifier =
@@ -569,7 +580,15 @@ fun MapScreen(
                         viewModel.onEventClickedFromSearch(event)
                         onEventClick(event)
                       },
-                      onCreateMemoryClick = viewModel::showMemoryFormForEvent,
+                      onEditEvent = { event ->
+                        eventViewModel.selectEventToEdit(event)
+                        viewModel.showEditEventForm()
+                      },
+                      onEditEventDone = {
+                        eventViewModel.clearEventToEdit()
+                        viewModel.onEditEventCancel()
+                      },
+                      onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
                       onProfileClick = onNavigateToProfile,

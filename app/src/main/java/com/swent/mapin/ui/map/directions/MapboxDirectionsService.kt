@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.map.directions
 
+// Assisted by AI
+
 import android.util.Log
 import com.mapbox.geojson.Point
 import kotlinx.coroutines.Dispatchers
@@ -7,6 +9,9 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+
+/** Result of a directions request containing route points and information. */
+data class DirectionsResult(val routePoints: List<Point>, val routeInfo: RouteInfo)
 
 /**
  * Service responsible for fetching walking directions from the Mapbox Directions API.
@@ -30,9 +35,9 @@ class MapboxDirectionsService(private val accessToken: String) {
    *
    * @param origin Starting point (user's current location)
    * @param destination End point (event location)
-   * @return List of points forming the walking route, or null if the request fails
+   * @return DirectionsResult with route points and info, or null if the request fails
    */
-  suspend fun getDirections(origin: Point, destination: Point): List<Point>? =
+  suspend fun getDirections(origin: Point, destination: Point): DirectionsResult? =
       withContext(Dispatchers.IO) {
         try {
           val coordinates =
@@ -60,9 +65,9 @@ class MapboxDirectionsService(private val accessToken: String) {
    * Parses the Mapbox Directions API response to extract route coordinates.
    *
    * @param jsonResponse JSON string response from the API
-   * @return List of points forming the route, or null if parsing fails
+   * @return DirectionsResult with route points and info, or null if parsing fails
    */
-  private fun parseDirectionsResponse(jsonResponse: String): List<Point>? {
+  private fun parseDirectionsResponse(jsonResponse: String): DirectionsResult? {
     try {
       val json = JSONObject(jsonResponse)
       val routes = json.getJSONArray("routes")
@@ -84,7 +89,11 @@ class MapboxDirectionsService(private val accessToken: String) {
         points.add(Point.fromLngLat(lng, lat))
       }
 
-      return points
+      val distance = route.optDouble("distance", 0.0)
+      val duration = route.optDouble("duration", 0.0)
+      val routeInfo = RouteInfo(distance = distance, duration = duration)
+
+      return DirectionsResult(routePoints = points, routeInfo = routeInfo)
     } catch (e: Exception) {
       Log.e("MapboxDirections", "Error parsing response", e)
       return null

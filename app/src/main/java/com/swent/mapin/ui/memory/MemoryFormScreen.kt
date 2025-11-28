@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.UserPickerDialog
-import com.swent.mapin.ui.event.EventPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -79,24 +78,25 @@ data class MemoryFormData(
 /**
  * Event selection section for memory form
  *
- * @param selectedEvent Currently selected event or null
+ * @param selectedEvent Currently selected event (non-null)
  * @param onEventClick Callback when event picker is clicked
- * @param onEventClear Callback when selected event is cleared
  */
 @Composable
 private fun EventSelectionSection(
     selectedEvent: Event?,
-    onEventClick: () -> Unit,
-    onEventClear: () -> Unit
+    onEventClick: (Event) -> Unit,
 ) {
   Text(
-      text = "Link to event (optional)",
+      text = "Link to event",
       style = MaterialTheme.typography.labelMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       modifier = Modifier.padding(bottom = 8.dp))
 
   Card(
-      modifier = Modifier.fillMaxWidth().clickable { onEventClick() }.testTag("eventSelectionCard"),
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable { if (selectedEvent != null) onEventClick(selectedEvent) }
+              .testTag("eventSelectionCard"),
       colors =
           CardDefaults.cardColors(
               containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -105,40 +105,23 @@ private fun EventSelectionSection(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-              if (selectedEvent != null) {
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                      text = selectedEvent.title,
-                      modifier = Modifier.testTag("memoryForm_selectedEventTitle"),
-                      style = MaterialTheme.typography.bodyLarge,
-                      color = MaterialTheme.colorScheme.onSurface)
-                  Spacer(modifier = Modifier.height(4.dp))
-                  val dateStr =
-                      selectedEvent.date?.let {
-                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it.toDate())
-                      } ?: "No date"
-                  Text(
-                      text = "$dateStr • ${selectedEvent.location.name}",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(
-                    onClick = onEventClear, modifier = Modifier.testTag("clearEventButton")) {
-                      Icon(
-                          imageVector = Icons.Default.Close,
-                          contentDescription = "Clear selection",
-                          tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-              } else {
+              Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Tap to select an event",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Select event",
-                    tint = MaterialTheme.colorScheme.primary)
+                    text = selectedEvent?.title ?: "",
+                    modifier = Modifier.testTag("memoryForm_selectedEventTitle"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface)
+                Spacer(modifier = Modifier.height(4.dp))
+                val dateStr =
+                    remember(selectedEvent?.date) {
+                      selectedEvent?.date?.toDate()?.let {
+                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it)
+                      } ?: "No date"
+                    }
+                Text(
+                    text = "$dateStr • ${selectedEvent?.location?.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
             }
       }
@@ -360,13 +343,15 @@ private fun PublicSwitch(
 
 /**
  * Memory creation form screen displayed in full mode bottom sheet. Allows users to create memories
- * with optional event association, title, description, photos/videos, friends, and visibility
- * settings.
+ * with event association, title, description, photos/videos, friends, and visibility settings.
  *
  * @param scrollState ScrollState for the scrollable content
  * @param availableEvents List of existing events user can associate with this memory
  * @param onSave Callback when user saves the memory with form data
  * @param onCancel Callback when user cancels memory creation
+ * @param onEventClick Callback when an event is clicked
+ * @param modifier Modifier for the screen
+ * @param initialSelectedEvent Optional initial selected event (non-null)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -375,13 +360,12 @@ fun MemoryFormScreen(
     availableEvents: List<Event>,
     onSave: (MemoryFormData) -> Unit,
     onCancel: () -> Unit,
+    onEventClick: (Event) -> Unit,
     modifier: Modifier = Modifier,
-    // Optional initial event to prefill the form
     initialSelectedEvent: Event? = null,
 ) {
   // Form state
-  var selectedEvent by remember { mutableStateOf<Event?>(initialSelectedEvent) }
-  var showEventPicker by remember { mutableStateOf(false) }
+  var selectedEvent by remember { mutableStateOf(initialSelectedEvent) }
   var title by remember { mutableStateOf("") }
   var description by remember { mutableStateOf("") }
   var isPublic by remember { mutableStateOf(false) }
@@ -449,20 +433,7 @@ fun MemoryFormScreen(
     Spacer(modifier = Modifier.height(16.dp))
 
     Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState)) {
-      EventSelectionSection(
-          selectedEvent = selectedEvent,
-          onEventClick = { showEventPicker = true },
-          onEventClear = { selectedEvent = null })
-
-      if (showEventPicker) {
-        EventPickerDialog(
-            events = availableEvents,
-            onEventSelected = {
-              selectedEvent = it
-              showEventPicker = false
-            },
-            onDismiss = { showEventPicker = false })
-      }
+      EventSelectionSection(selectedEvent = selectedEvent, onEventClick = onEventClick)
 
       Spacer(modifier = Modifier.height(24.dp))
 

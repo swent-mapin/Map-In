@@ -1,5 +1,6 @@
 package com.swent.mapin.model
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -15,13 +16,16 @@ import kotlinx.coroutines.tasks.await
  *
  * @property firestore Firestore instance for database operations.
  * @property userProfileRepository Repository for fetching user profile information.
+ * @property notificationService Service for sending push notifications.
  */
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore)
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
+    private val notificationService: NotificationService
 ) {
   companion object {
     private const val COLLECTION = "friendRequests"
+    private const val TAG = "FriendRequestRepository"
   }
 
   /**
@@ -47,6 +51,9 @@ class FriendRequestRepository(
                       "status" to FriendshipStatus.PENDING.name,
                       "timestamp" to com.google.firebase.Timestamp.now()))
               .await()
+
+          // Send notification for re-requested friend request
+          sendFriendRequestNotificationSafely(fromUserId, toUserId, existingRequest.requestId)
           return true
         }
         // If it's already pending or accepted, don't create a new one
@@ -60,8 +67,13 @@ class FriendRequestRepository(
           .document(id)
           .set(FriendRequest(id, fromUserId, toUserId, FriendshipStatus.PENDING))
           .await()
+
+      // Send notification to the recipient
+      sendFriendRequestNotificationSafely(fromUserId, toUserId, id)
+
       true
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to send friend request", e)
       false
     }
   }
@@ -72,8 +84,31 @@ class FriendRequestRepository(
    * @param requestId The ID of the request to accept.
    * @return True if the request was accepted successfully, false on error.
    */
-  suspend fun acceptFriendRequest(requestId: String): Boolean =
-      updateStatus(requestId, FriendshipStatus.ACCEPTED)
+  suspend fun acceptFriendRequest(requestId: String): Boolean {
+    return try {
+      // Get the request details before updating
+      val requestDoc = firestore.collection(COLLECTION).document(requestId).get().await()
+      val request = requestDoc.toObject(FriendRequest::class.java)
+
+      if (request == null) {
+        Log.e(TAG, "Friend request $requestId not found")
+        return false
+      }
+
+      // Update status to ACCEPTED
+      val success = updateStatus(requestId, FriendshipStatus.ACCEPTED)
+
+      if (success) {
+        // Send notification to the original sender that their request was accepted
+        sendFriendRequestAcceptedNotificationSafely(request.toUserId, request.fromUserId)
+      }
+
+      success
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to accept friend request", e)
+      false
+    }
+  }
 
   /**
    * Rejects a friend request by updating its status to REJECTED.
@@ -335,6 +370,110 @@ class FriendRequestRepository(
               }
             }
 
+    // Send initial data
+    launch {
+      try {
+        val pendingRequests = getPendingRequests(userId)
+        trySend(pendingRequests)
+      } catch (e: Exception) {
+        close(e)
+      }
+    }
+
     awaitClose { listener.remove() }
+  }
+
+  /**
+   * Safely sends a friend request notification. Logs errors but doesn't fail the request.
+   *
+   * @param fromUserId User ID of the sender.
+   * @param toUserId User ID of the recipient.
+   * @param requestId ID of the friend request.
+   */
+  private suspend fun sendFriendRequestNotificationSafely(
+      fromUserId: String,
+      toUserId: String,
+      requestId: String
+  ) {
+    try {
+      Log.d(TAG, "=== NOTIFICATION DEBUG: Starting ===")
+      Log.d(TAG, "Sending notification - From: $fromUserId, To: $toUserId, Request: $requestId")
+
+      // Get sender profile to include name in notification
+      val senderProfile = userProfileRepository.getUserProfile(fromUserId)
+      val senderName = senderProfile?.name ?: "Someone"
+      Log.d(TAG, "Sender profile retrieved: name=$senderName")
+
+      Log.d(TAG, "Calling NotificationService.sendFriendRequestNotification()...")
+      val result =
+          notificationService.sendFriendRequestNotification(
+              recipientId = toUserId,
+              senderId = fromUserId,
+              senderName = senderName,
+              requestId = requestId)
+
+      when (result) {
+        is NotificationResult.Success -> {
+          Log.d(TAG, "✅ Notification created successfully: ${result.notification.notificationId}")
+          Log.d(
+              TAG,
+              "Notification details - Title: ${result.notification.title}, Recipient: ${result.notification.recipientId}")
+        }
+        is NotificationResult.Error -> {
+          Log.e(TAG, "❌ Notification creation failed: ${result.message}", result.exception)
+        }
+      }
+
+      Log.d(TAG, "Friend request notification process completed for $toUserId")
+    } catch (e: Exception) {
+      // Don't fail the request if notification fails
+      Log.e(TAG, "Failed to send friend request notification", e)
+    }
+  }
+
+  /**
+   * Safely sends a notification when a friend request is accepted. Notifies the original sender
+   * that their request was accepted.
+   *
+   * @param accepterId User ID of the person who accepted the request.
+   * @param originalSenderId User ID of the person who originally sent the request.
+   */
+  private suspend fun sendFriendRequestAcceptedNotificationSafely(
+      accepterId: String,
+      originalSenderId: String
+  ) {
+    try {
+      Log.d(TAG, "=== ACCEPTANCE NOTIFICATION DEBUG: Starting ===")
+      Log.d(TAG, "Accepter: $accepterId, Original Sender: $originalSenderId")
+
+      // Get accepter profile to include name in notification
+      val accepterProfile = userProfileRepository.getUserProfile(accepterId)
+      val accepterName = accepterProfile?.name ?: "Someone"
+      Log.d(TAG, "Accepter profile retrieved: name=$accepterName")
+
+      // Send an info notification about the accepted request
+      Log.d(TAG, "Calling NotificationService.sendInfoNotification()...")
+      val result =
+          notificationService.sendInfoNotification(
+              recipientId = originalSenderId,
+              title = "Friend Request Accepted",
+              message = "$accepterName accepted your friend request",
+              metadata = mapOf("userId" to accepterId, "accepterName" to accepterName),
+              actionUrl = "mapin://profile/$accepterId")
+
+      when (result) {
+        is NotificationResult.Success -> {
+          Log.d(TAG, "✅ Acceptance notification created: ${result.notification.notificationId}")
+        }
+        is NotificationResult.Error -> {
+          Log.e(TAG, "❌ Acceptance notification failed: ${result.message}", result.exception)
+        }
+      }
+
+      Log.d(TAG, "Friend request accepted notification process completed for $originalSenderId")
+    } catch (e: Exception) {
+      // Don't fail the acceptance if notification fails
+      Log.e(TAG, "Failed to send friend request accepted notification", e)
+    }
   }
 }
