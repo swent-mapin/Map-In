@@ -1,8 +1,5 @@
 package com.swent.mapin.ui.profile
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -38,7 +35,7 @@ class BadgeSectionTest {
         id = id,
         title = title,
         description = "Test description",
-        icon = Icons.Default.Star,
+        iconName = "star",
         rarity = rarity,
         isUnlocked = true,
         progress = 1f)
@@ -54,7 +51,7 @@ class BadgeSectionTest {
         id = id,
         title = title,
         description = "Locked description",
-        icon = Icons.Default.EmojiEvents,
+        iconName = "emoji_events",
         rarity = rarity,
         isUnlocked = false,
         progress = progress)
