@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.SearchResultWithStatus
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeManager
@@ -24,7 +23,9 @@ import kotlinx.coroutines.launch
  * @property profileRepo Repository for user profile operations.
  */
 class FriendsViewModel(
-    private val repo: FriendRequestRepository = FriendRequestRepository(),
+    private val repo: FriendRequestRepository =
+        FriendRequestRepository(
+            firestore = TODO(), userProfileRepository = TODO(), notificationService = TODO()),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val profileRepo: UserProfileRepository? = null
 ) : ViewModel() {
