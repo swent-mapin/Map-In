@@ -16,6 +16,18 @@ import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
 
+/**
+ * Extracts an event ID from a deep link URL if it matches the expected format.
+ *
+ * @return event ID when URL starts with mapin://events/, otherwise null.
+ */
+internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
+  val eventPrefix = "mapin://events/"
+  return if (deepLinkUrl?.startsWith(eventPrefix) == true) {
+    deepLinkUrl.removePrefix(eventPrefix)
+  } else null
+}
+
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
@@ -26,13 +38,7 @@ fun AppNavHost(
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
   // Parse deep link to extract event ID if present
-  val deepLinkEventId =
-      deepLinkUrl?.let { url ->
-        val eventPrefix = "mapin://events/"
-        if (url.startsWith(eventPrefix)) {
-          url.removePrefix(eventPrefix)
-        } else null
-      }
+  val deepLinkEventId = parseDeepLinkEventId(deepLinkUrl)
 
   NavHost(navController = navController, startDestination = startDest) {
     composable(Route.Auth.route) {

@@ -175,6 +175,8 @@ class MapScreenViewModelTest {
             userProfileRepository = mockUserProfileRepository,
             locationManager = mockLocationManager,
             filterViewModel = mockFiltersSectionViewModel,
+            ioDispatcher = testDispatcher,
+            mainDispatcher = testDispatcher,
             enableEventBasedDownloads = false)
 
     // Inject mock eventStateController using reflection
@@ -1440,5 +1442,32 @@ class MapScreenViewModelTest {
 
     // Should still be false
     assertFalse(viewModel.showDownloadComplete)
+  }
+
+  @Test
+  fun onDeepLinkEvent_selectsEventWhenAlreadyLoaded() {
+    val deepLinkEvent = testEvent.copy(uid = "deep-link-event")
+    whenever(mockEventStateController.allEvents).thenReturn(listOf(deepLinkEvent))
+
+    viewModel.onDeepLinkEvent(deepLinkEvent.uid)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(deepLinkEvent, viewModel.selectedEvent)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+  }
+
+  @Test
+  fun onDeepLinkEvent_fetchesEventWhenNotLoaded() {
+    val deepLinkEvent = testEvent.copy(uid = "deep-link-fetch")
+    whenever(mockEventStateController.allEvents).thenReturn(emptyList())
+    runBlocking {
+      whenever(mockEventRepository.getEvent(deepLinkEvent.uid)).thenReturn(deepLinkEvent)
+    }
+
+    viewModel.onDeepLinkEvent(deepLinkEvent.uid)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    assertEquals(deepLinkEvent, viewModel.selectedEvent)
+    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
   }
 }

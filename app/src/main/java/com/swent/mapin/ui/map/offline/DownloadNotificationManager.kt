@@ -22,6 +22,8 @@ class DownloadNotificationManager(private val context: Context) {
   companion object {
     // Reuse existing event notification channel from NotificationBackgroundManager
     private const val CHANNEL_ID = "mapin_event_notifications"
+    private const val GROUP_KEY = "mapin_offline_downloads"
+    private val SUMMARY_ID = GROUP_KEY.hashCode()
 
     // Notification IDs are based on event UID hash to ensure uniqueness per event
     private fun getNotificationId(eventId: String): Int {
@@ -31,6 +33,7 @@ class DownloadNotificationManager(private val context: Context) {
 
   private val notificationManager =
       context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+  private val activeNotifications = mutableMapOf<String, String>() // eventId -> title
 
   /**
    * Shows or updates a download progress notification for an event.
@@ -48,11 +51,15 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("$progressPercent% complete")
             .setProgress(100, progressPercent, false)
             .setOngoing(true) // Cannot be dismissed while downloading
+            .setGroup(GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setOnlyAlertOnce(true)
             .setSilent(true) // No sound/vibration for background downloads
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
     notificationManager.notify(getNotificationId(event.uid), notification)
+    addToSummary(event.uid, event.title)
   }
 
   /**
@@ -86,6 +93,9 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("Tap to view event details")
             .setProgress(0, 0, false) // Ensure progress bar is cleared
             .setOngoing(false)
+            .setGroup(GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true) // Dismiss when tapped
@@ -93,6 +103,7 @@ class DownloadNotificationManager(private val context: Context) {
             .build()
 
     notificationManager.notify(getNotificationId(event.uid), notification)
+    addToSummary(event.uid, event.title)
   }
 
   /**
@@ -111,12 +122,16 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("Unable to download offline map")
             .setProgress(0, 0, false)
             .setOngoing(false)
+            .setGroup(GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setOnlyAlertOnce(true)
             .setSilent(true)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
     notificationManager.notify(getNotificationId(event.uid), notification)
+    addToSummary(event.uid, event.title)
   }
 
   /**
@@ -126,5 +141,37 @@ class DownloadNotificationManager(private val context: Context) {
    */
   fun cancelNotification(eventId: String) {
     notificationManager.cancel(getNotificationId(eventId))
+    activeNotifications.remove(eventId)
+    postSummary()
+  }
+
+  private fun addToSummary(eventId: String, title: String) {
+    activeNotifications[eventId] = title
+    postSummary()
+  }
+
+  private fun postSummary() {
+    if (activeNotifications.isEmpty()) {
+      notificationManager.cancel(SUMMARY_ID)
+      return
+    }
+
+    val style = NotificationCompat.InboxStyle()
+    activeNotifications.values.take(5).forEach { title -> style.addLine(title) }
+
+    val summary =
+        NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Offline maps")
+            .setContentText("Downloads in progress/completed")
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(true)
+            .setStyle(style)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+    notificationManager.notify(SUMMARY_ID, summary)
   }
 }

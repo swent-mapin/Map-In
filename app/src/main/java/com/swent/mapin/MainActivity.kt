@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Extract deep link from initial intent
-    deepLinkUrl = intent?.getStringExtra("action_url")
+    deepLinkUrl = getDeepLinkUrlFromIntent(intent)
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
@@ -85,6 +85,10 @@ class MainActivity : ComponentActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     // Handle deep links when app is already running
-    deepLinkUrl = intent.getStringExtra("action_url")
+    deepLinkUrl = getDeepLinkUrlFromIntent(intent)
   }
+}
+
+internal fun getDeepLinkUrlFromIntent(intent: Intent?): String? {
+  return intent?.getStringExtra("action_url")
 }

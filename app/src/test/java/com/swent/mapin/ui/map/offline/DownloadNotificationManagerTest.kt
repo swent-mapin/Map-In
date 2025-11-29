@@ -1,7 +1,9 @@
 package com.swent.mapin.ui.map.offline
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
@@ -57,9 +59,10 @@ class DownloadNotificationManagerTest {
     // Verify notification was posted
     val shadowNotificationManager = shadowOf(systemNotificationManager)
     val notifications = shadowNotificationManager.allNotifications
-    assert(notifications.size == 1)
+    // One child + one summary
+    assert(notifications.size == 2)
 
-    val notification = notifications[0]
+    val notification = notifications.first { !NotificationCompat.isGroupSummary(it) }
     // Verify it's an ongoing notification (cannot be dismissed)
     assert((notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0)
   }
@@ -72,10 +75,11 @@ class DownloadNotificationManagerTest {
     // Update progress
     notificationManager.showDownloadProgress(testEvent, 0.75f)
 
-    // Should still have only one notification (updated, not added)
+    // Should still have only one child notification (updated, not added) plus summary
     val shadowNotificationManager = shadowOf(systemNotificationManager)
-    val notifications = shadowNotificationManager.allNotifications
-    assert(notifications.size == 1)
+    val childCount =
+        shadowNotificationManager.allNotifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(childCount == 1)
   }
 
   @Test
@@ -84,9 +88,10 @@ class DownloadNotificationManagerTest {
 
     val shadowNotificationManager = shadowOf(systemNotificationManager)
     val notifications = shadowNotificationManager.allNotifications
-    assert(notifications.size == 1)
+    // summary + child
+    assert(notifications.size == 2)
 
-    val notification = notifications[0]
+    val notification = notifications.first { !NotificationCompat.isGroupSummary(it) }
     // Verify it auto-cancels when tapped
     assert((notification.flags and android.app.Notification.FLAG_AUTO_CANCEL) != 0)
     // Verify it has a content intent (for deep link navigation)
@@ -105,9 +110,9 @@ class DownloadNotificationManagerTest {
 
     val shadowNotificationManager = shadowOf(systemNotificationManager)
     val notifications = shadowNotificationManager.allNotifications
-    assert(notifications.size == 1)
+    assert(notifications.size == 2) // child + summary
 
-    val notification = notifications[0]
+    val notification = notifications.first { !NotificationCompat.isGroupSummary(it) }
     // Verify it auto-cancels
     assert((notification.flags and android.app.Notification.FLAG_AUTO_CANCEL) != 0)
   }
@@ -118,16 +123,17 @@ class DownloadNotificationManagerTest {
     notificationManager.showDownloadProgress(testEvent, 0.5f)
 
     val shadowNotificationManager = shadowOf(systemNotificationManager)
-    val initialCount = shadowNotificationManager.allNotifications.size
-    assert(initialCount == 1)
+    val initialChildCount =
+        shadowNotificationManager.allNotifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(initialChildCount == 1)
 
     // Cancel it
     notificationManager.cancelNotification(testEvent.uid)
 
-    // Verify notification was cancelled
-    // After cancellation, the notification should be removed from active notifications
-    val finalCount = shadowNotificationManager.allNotifications.size
-    assert(finalCount == 0)
+    // Verify notification was cancelled (child removed, summary cleared)
+    val finalChildCount =
+        shadowNotificationManager.allNotifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(finalChildCount == 0)
   }
 
   @Test
@@ -140,8 +146,9 @@ class DownloadNotificationManagerTest {
 
     val shadowNotificationManager = shadowOf(systemNotificationManager)
     val notifications = shadowNotificationManager.allNotifications
-    // Should have two separate notifications
-    assert(notifications.size == 2)
+    // Should have two children plus summary
+    val childCount = notifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(childCount == 2)
   }
 
   @Test
@@ -149,16 +156,59 @@ class DownloadNotificationManagerTest {
     // Show progress notification
     notificationManager.showDownloadProgress(testEvent, 0.5f)
     val shadowNotificationManager = shadowOf(systemNotificationManager)
-    assert(shadowNotificationManager.allNotifications.size == 1)
+    val initialChildCount =
+        shadowNotificationManager.allNotifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(initialChildCount == 1)
 
     // Show completion notification for same event
     notificationManager.showDownloadComplete(testEvent)
 
-    // Should still have only 1 notification (completion replaced progress)
-    assert(shadowNotificationManager.allNotifications.size == 1)
+    // Should still have only 1 child notification (completion replaces progress)
+    val finalChildCount =
+        shadowNotificationManager.allNotifications.count { !NotificationCompat.isGroupSummary(it) }
+    assert(finalChildCount == 1)
 
-    val notification = shadowNotificationManager.allNotifications[0]
+    val notification =
+        shadowNotificationManager.allNotifications.first { !NotificationCompat.isGroupSummary(it) }
     // Verify it's the completion notification (auto-cancel flag)
     assert((notification.flags and android.app.Notification.FLAG_AUTO_CANCEL) != 0)
+  }
+
+  @Test
+  fun `download notifications are silent`() {
+    notificationManager.showDownloadProgress(testEvent, 0.4f)
+    notificationManager.showDownloadComplete(testEvent)
+
+    val shadowNotificationManager = shadowOf(systemNotificationManager)
+    val notifications = shadowNotificationManager.allNotifications
+    assert(notifications.isNotEmpty())
+
+    notifications.forEach { notification ->
+      assert(notification.sound == null)
+      assert(notification.vibrate == null)
+      assert(notification.defaults == 0)
+    }
+  }
+
+  @Test
+  fun `notifications are grouped with summary`() {
+    val event1 = testEvent.copy(uid = "event-1", title = "Event 1")
+    val event2 = testEvent.copy(uid = "event-2", title = "Event 2")
+
+    notificationManager.showDownloadComplete(event1)
+    notificationManager.showDownloadComplete(event2)
+
+    val shadowNotificationManager = shadowOf(systemNotificationManager)
+    val notifications = shadowNotificationManager.allNotifications
+
+    // There should be a group summary plus the two individual notifications
+    val groupSummaries =
+        notifications.filter { NotificationCompat.isGroupSummary(it) && it.group != null }
+    assert(groupSummaries.isNotEmpty())
+    // Children should share the same group key as the summary
+    val groupKey = groupSummaries.first().group
+    val childGroups =
+        notifications.filterNot { NotificationCompat.isGroupSummary(it) }.map { it.group }.toSet()
+    assert(childGroups.size == 1 && childGroups.first() == groupKey)
   }
 }
