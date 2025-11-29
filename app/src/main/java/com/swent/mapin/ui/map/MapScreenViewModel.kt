@@ -138,6 +138,7 @@ class MapScreenViewModel(
           offlineRegionManager = offlineRegionManager,
           connectivityService = ConnectivityServiceProvider.getInstance(applicationContext),
           scope = viewModelScope,
+          context = applicationContext,
           onDownloadStart = { event ->
             _downloadingEvent = event
             _downloadProgress = 0f
@@ -316,6 +317,9 @@ class MapScreenViewModel(
   private var _cameFromSearch by mutableStateOf(false)
   // Track the sheet state before opening event to restore it correctly
   private var _sheetStateBeforeEvent by mutableStateOf<BottomSheetState?>(null)
+  // Store pending deep link until events are loaded
+  private var pendingDeepLinkEventId: String? = null
+  private var deepLinkFetchAttempted = false
 
   val recentItems: List<RecentItem>
     get() = searchStateController.recentItems
@@ -763,6 +767,46 @@ class MapScreenViewModel(
       wasEditingBeforeEvent = false
       searchStateController.markSearchCommitted()
       onEventPinClicked(event, forceZoom = true)
+    }
+  }
+
+  /**
+   * Handles deep link navigation to a specific event.
+   *
+   * Finds the event by ID and displays its details with the bottom sheet.
+   *
+   * @param eventId The UID of the event to display
+   */
+  fun onDeepLinkEvent(eventId: String) {
+    pendingDeepLinkEventId = eventId
+    deepLinkFetchAttempted = false
+    viewModelScope.launch { resolvePendingDeepLinkEvent() }
+  }
+
+  /** Retry deep link handling after events refresh. */
+  fun onEventsUpdated() {
+    if (pendingDeepLinkEventId == null) return
+    viewModelScope.launch { resolvePendingDeepLinkEvent() }
+  }
+
+  private suspend fun resolvePendingDeepLinkEvent() {
+    val targetId = pendingDeepLinkEventId ?: return
+    val event =
+        eventStateController.allEvents.find { it.uid == targetId } ?: fetchDeepLinkEvent(targetId)
+    if (event != null) {
+      pendingDeepLinkEventId = null
+      deepLinkFetchAttempted = false
+      onEventPinClicked(event, forceZoom = true)
+    }
+  }
+
+  private suspend fun fetchDeepLinkEvent(eventId: String): Event? {
+    if (deepLinkFetchAttempted) return null
+    deepLinkFetchAttempted = true
+    return withContext(ioDispatcher) {
+      runCatching { eventRepository.getEvent(eventId) }
+          .onFailure { Log.w("MapScreenViewModel", "Deep link event not found: $eventId", it) }
+          .getOrNull()
     }
   }
 

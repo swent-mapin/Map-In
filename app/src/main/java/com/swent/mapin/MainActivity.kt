@@ -1,5 +1,6 @@
 package com.swent.mapin
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -8,7 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -30,6 +33,8 @@ object HttpClientProvider {
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : ComponentActivity() {
+  private var deepLinkUrl by mutableStateOf<String?>(null)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
@@ -51,6 +56,9 @@ class MainActivity : ComponentActivity() {
       }
     }
 
+    // Extract deep link from initial intent
+    deepLinkUrl = intent?.getStringExtra("action_url")
+
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
       // Cache the theme mode flow collection to prevent repeated DataStore reads
@@ -69,8 +77,14 @@ class MainActivity : ComponentActivity() {
       MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn)
+        AppNavHost(isLoggedIn = isLoggedIn, deepLinkUrl = deepLinkUrl)
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    // Handle deep links when app is already running
+    deepLinkUrl = intent.getStringExtra("action_url")
   }
 }

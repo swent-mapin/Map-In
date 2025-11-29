@@ -124,7 +124,8 @@ fun MapScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    deepLinkEventId: String? = null
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -176,6 +177,14 @@ fun MapScreen(
       viewModel.clearError()
     }
   }
+
+  // Handle deep link navigation to event
+  LaunchedEffect(deepLinkEventId) {
+    deepLinkEventId?.let { eventId -> viewModel.onDeepLinkEvent(eventId) }
+  }
+
+  // Retry deep link selection once events finish loading
+  LaunchedEffect(Unit) { snapshotFlow { viewModel.events }.collect { viewModel.onEventsUpdated() } }
 
   // Setup location management
   LaunchedEffect(Unit) {
@@ -432,13 +441,6 @@ fun MapScreen(
         isOffline = isOffline,
         isInCachedRegion = isInCachedRegion,
         modifier = Modifier.align(Alignment.TopEnd).padding(top = 60.dp, end = 16.dp))
-
-    // Download progress indicator below offline indicator
-    DownloadIndicator(
-        downloadingEvent = viewModel.downloadingEvent,
-        downloadProgress = viewModel.downloadProgress,
-        showDownloadComplete = viewModel.showDownloadComplete,
-        modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp))
 
     // Route info card when directions are displayed
     val directionState = viewModel.directionViewModel.directionState
