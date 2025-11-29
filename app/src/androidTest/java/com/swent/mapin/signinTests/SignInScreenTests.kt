@@ -759,9 +759,6 @@ class SignInScreenTests {
 
     composeTestRule.waitForIdle()
 
-    composeTestRule
-      .onNodeWithText("Continue with Microsoft")
-      .performScrollTo()
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithText("Continue with Microsoft").performScrollTo().assertIsDisplayed()
   }
 }

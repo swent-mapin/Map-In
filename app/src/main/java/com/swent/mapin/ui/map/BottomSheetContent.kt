@@ -323,7 +323,10 @@ fun BottomSheetContent(
                                   onEventClick = onEventClick)
                             } else {
                               val contentModifier =
-                                  if (isFull) Modifier.fillMaxWidth().imePadding().verticalScroll(scrollState)
+                                  if (isFull)
+                                      Modifier.fillMaxWidth()
+                                          .imePadding()
+                                          .verticalScroll(scrollState)
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {

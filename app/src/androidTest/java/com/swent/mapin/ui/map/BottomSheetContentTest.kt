@@ -19,7 +19,6 @@ import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventList
-import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags
@@ -1360,27 +1359,15 @@ class BottomSheetContentTest {
     rule.setContent { TestContentWithFilters() }
     rule.waitForIdle()
 
-    rule
-      .onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE)
-      .performScrollTo()
-      .performClick()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().performClick()
     rule.waitForIdle()
 
-    rule
-      .onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH)
-      .performScrollTo()
-      .performClick()
+    rule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performScrollTo().performClick()
     rule.waitForIdle()
 
-    rule
-      .onNodeWithTag(FiltersSectionTestTags.SEARCH_PLACE_INPUT)
-      .performScrollTo()
-      .performClick()
+    rule.onNodeWithTag(FiltersSectionTestTags.SEARCH_PLACE_INPUT).performScrollTo().performClick()
     rule.waitForIdle()
 
-    rule
-      .onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR)
-      .performScrollTo()
-      .assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR).performScrollTo().assertIsDisplayed()
   }
 }
