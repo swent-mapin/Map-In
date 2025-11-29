@@ -48,6 +48,7 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("$progressPercent% complete")
             .setProgress(100, progressPercent, false)
             .setOngoing(true) // Cannot be dismissed while downloading
+            .setSilent(true) // No sound/vibration for background downloads
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
@@ -85,6 +86,7 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("Tap to view event details")
             .setProgress(0, 0, false) // Ensure progress bar is cleared
             .setOngoing(false)
+            .setSilent(true)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true) // Dismiss when tapped
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -109,6 +111,7 @@ class DownloadNotificationManager(private val context: Context) {
             .setContentText("Unable to download offline map")
             .setProgress(0, 0, false)
             .setOngoing(false)
+            .setSilent(true)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
