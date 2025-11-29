@@ -750,4 +750,18 @@ class SignInScreenTests {
         .performScrollTo()
         .assertExists()
   }
+
+  @Test
+  fun screenCanBeScrolledToBottomWithKeyboard() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    composeTestRule.onNodeWithTag("passwordField").performScrollTo().performClick()
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+      .onNodeWithText("Continue with Microsoft")
+      .performScrollTo()
+      .assertIsDisplayed()
+  }
 }
