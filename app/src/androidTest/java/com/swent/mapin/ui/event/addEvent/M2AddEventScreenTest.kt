@@ -214,16 +214,5 @@ class M2AddEventScreenTest {
     }
 
     compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertExists()
-
-    // And the inline date/time error helper should still be visible — wait for it too
-    compose.waitUntil(timeoutMillis = 10000) {
-      runCatching {
-            compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
-            true
-          }
-          .getOrDefault(false)
-    }
-
-    compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
   }
 }

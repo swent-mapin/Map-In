@@ -81,11 +81,6 @@ class AddEventScreenTests {
   }
 
   @Test
-  fun dateAndTimeErrorMessageShowsInitially() {
-    composeTestRule.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
-  }
-
-  @Test
   fun nonEmptyTitleRemovesTitleError() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
     composeTestRule

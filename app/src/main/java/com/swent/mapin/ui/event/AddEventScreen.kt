@@ -45,8 +45,6 @@ const val LATITUDE_DEFAULT = 0.0
 
 object AddEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TITLE = "inputEventTitle"
-
-  override val DATE_TIME_ERROR = "dateTimeErrorMessage"
   override val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   override val INPUT_EVENT_TAG = "inputEventTag"
 

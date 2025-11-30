@@ -40,7 +40,6 @@ object EditEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TITLE = "EDIT_INPUT_EVENT_TITLE"
   override val INPUT_EVENT_DESCRIPTION = "EDIT_INPUT_EVENT_DESCRIPTION"
   override val INPUT_EVENT_TAG = "EDIT_INPUT_EVENT_TAG"
-  override val DATE_TIME_ERROR = "EDIT_DATE_TIME_ERROR"
 
   override val ERROR_MESSAGE = "EDIT_ERROR_MESSAGE"
   const val SCREEN = "EditEventScreen"

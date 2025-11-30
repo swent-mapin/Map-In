@@ -48,7 +48,6 @@ import java.util.Locale
 @Suppress("PropertyName")
 interface EventScreenTestTag {
   val INPUT_EVENT_TITLE: String
-  val DATE_TIME_ERROR: String
   val INPUT_EVENT_DESCRIPTION: String
   val INPUT_EVENT_TAG: String
   val EVENT_CANCEL: String
