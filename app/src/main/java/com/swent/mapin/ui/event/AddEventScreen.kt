@@ -114,8 +114,6 @@ fun AddEventTextField(
       singleLine = singleLine)
 }
 
-// TODO: Pull out shared functions to separate files
-
 /**
  * Displays a pop-up dialog for adding a new event, including fields for title, date, time,
  * location, description, and tags. Handles error checking and displays an error message if any
