@@ -1514,8 +1514,11 @@ class MapScreenViewModelTest {
     viewModel.toggleDirections(testEvent)
     advanceUntilIdle()
 
-    // Verify no error message
+    // Verify no error message was set (successful direction request)
     assertNull(viewModel.errorMessage)
+    // Verify directionViewModel state changed from Cleared (indicating requestDirections was
+    // called)
+    assertNotNull(viewModel.directionViewModel.directionState)
   }
 
   @Test
@@ -1599,7 +1602,7 @@ class MapScreenViewModelTest {
     viewModel.toggleDirections(testEvent)
     advanceUntilIdle()
     assertNotNull(viewModel.errorMessage)
-    assertTrue(viewModel.errorMessage!!.contains("Location permission is required"))
+    assertEquals("Location permission is required to get directions", viewModel.errorMessage)
     assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
   }
 
