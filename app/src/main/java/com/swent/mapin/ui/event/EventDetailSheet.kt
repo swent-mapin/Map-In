@@ -82,7 +82,8 @@ fun EventDetailSheet(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
@@ -96,7 +97,8 @@ fun EventDetailSheet(
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
             onGetDirections = onGetDirections,
-            showDirections = showDirections)
+            showDirections = showDirections,
+            hasLocationPermission = hasLocationPermission)
       }
       BottomSheetState.FULL -> {
         EventDetailHeader(onShare = onShare, onClose = onClose)
@@ -110,7 +112,8 @@ fun EventDetailSheet(
             onSaveForLater = onSaveForLater,
             onUnsaveForLater = onUnsaveForLater,
             onGetDirections = onGetDirections,
-            showDirections = showDirections)
+            showDirections = showDirections,
+            hasLocationPermission = hasLocationPermission)
       }
     }
   }
@@ -199,7 +202,8 @@ private fun MediumEventContent(
     onUnregisterEvent: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
     // Title with direction icon
@@ -216,15 +220,19 @@ private fun MediumEventContent(
           // Direction icon button
           IconButton(
               onClick = onGetDirections,
+              enabled = hasLocationPermission || showDirections,
               modifier =
                   Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
                 Icon(
                     imageVector = Icons.Default.Directions,
                     contentDescription =
-                        if (showDirections) "Clear Directions" else "Get Directions",
+                        if (showDirections) "Clear Directions"
+                        else if (hasLocationPermission) "Get Directions"
+                        else "Get Directions (Location permission required)",
                     tint =
                         if (showDirections) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary)
+                        else if (hasLocationPermission) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
               }
         }
 
@@ -317,7 +325,8 @@ private fun FullEventContent(
     onUnsaveForLater: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   val scrollState = rememberScrollState()
 
@@ -369,15 +378,19 @@ private fun FullEventContent(
               // Direction icon button
               IconButton(
                   onClick = onGetDirections,
+                  enabled = hasLocationPermission || showDirections,
                   modifier =
                       Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
                     Icon(
                         imageVector = Icons.Default.Directions,
                         contentDescription =
-                            if (showDirections) "Clear Directions" else "Get Directions",
+                            if (showDirections) "Clear Directions"
+                            else if (hasLocationPermission) "Get Directions"
+                            else "Get Directions (Location permission required)",
                         tint =
                             if (showDirections) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.primary)
+                            else if (hasLocationPermission) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
                   }
             }
 
