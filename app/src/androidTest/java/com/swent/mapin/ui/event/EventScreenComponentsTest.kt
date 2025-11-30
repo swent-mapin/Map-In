@@ -15,123 +15,126 @@ import org.junit.Rule
 import org.junit.Test
 
 class EventScreenComponentsTest {
-    @get:Rule
-    val composeTestRule = createComposeRule()
+  @get:Rule val composeTestRule = createComposeRule()
 
-    // Dummy EventScreenTestTag for testing
-    val testTags = AddEventScreenTestTags
+  // Dummy EventScreenTestTag for testing
+  val testTags = AddEventScreenTestTags
 
-    @Test
-    fun eventTopBar_rendersAndRespondsToClicks() {
-        var cancelClicked = false
-        var saveClicked = false
+  @Test
+  fun eventTopBar_rendersAndRespondsToClicks() {
+    var cancelClicked = false
+    var saveClicked = false
 
-        composeTestRule.setContent {
-            MapInTheme {
-                EventTopBar(
-                    title = "Test Event",
-                    testTags = testTags,
-                    isEventValid = true,
-                    onCancel = { cancelClicked = true },
-                    onSave = { saveClicked = true }
-                )
-            }
-        }
-
-        // Assert title is displayed
-        composeTestRule.onNodeWithText("Test Event").assertIsDisplayed()
-
-        // Test cancel button click
-        composeTestRule.onNodeWithTag(testTags.EVENT_CANCEL).performClick()
-        assert(cancelClicked)
-
-        // Test save button click
-        composeTestRule.onNodeWithTag(testTags.EVENT_SAVE).performClick()
-        assert(saveClicked)
+    composeTestRule.setContent {
+      MapInTheme {
+        EventTopBar(
+            title = "Test Event",
+            testTags = testTags,
+            isEventValid = true,
+            onCancel = { cancelClicked = true },
+            onSave = { saveClicked = true })
+      }
     }
 
-    @Test
-    fun eventTopBar_saveButtonAppearanceChangesBasedOnValidity() {
-        composeTestRule.setContent {
-            MapInTheme {
-                EventTopBar(
-                    title = "Test Event",
-                    testTags = testTags,
-                    isEventValid = false,
-                    onCancel = {},
-                    onSave = {}
-                )
-            }
-        }
+    // Assert title is displayed
+    composeTestRule.onNodeWithText("Test Event").assertIsDisplayed()
 
-        // Save button should show "disabled" appearance when event invalid
-        composeTestRule.onNodeWithTag(testTags.EVENT_SAVE)
-            .assertExists()
-            .assertIsDisplayed()
+    // Test cancel button click
+    composeTestRule.onNodeWithTag(testTags.EVENT_CANCEL).performClick()
+    assert(cancelClicked)
+
+    // Test save button click
+    composeTestRule.onNodeWithTag(testTags.EVENT_SAVE).performClick()
+    assert(saveClicked)
+  }
+
+  @Test
+  fun eventTopBar_saveButtonAppearanceChangesBasedOnValidity() {
+    composeTestRule.setContent {
+      MapInTheme {
+        EventTopBar(
+            title = "Test Event",
+            testTags = testTags,
+            isEventValid = false,
+            onCancel = {},
+            onSave = {})
+      }
     }
 
-    @Test
-    fun eventFormBody_rendersAllFieldsAndHandlesInput() {
-        val titleState = mutableStateOf("")
-        val titleError = mutableStateOf(false)
-        val dateState = mutableStateOf("")
-        val dateError = mutableStateOf(false)
-        val timeState = mutableStateOf("")
-        val timeError = mutableStateOf(false)
-        val endDateState = mutableStateOf("")
-        val endDateError = mutableStateOf(false)
-        val endTimeState = mutableStateOf("")
-        val endTimeError = mutableStateOf(false)
-        val locationState = mutableStateOf("")
-        val locationError = mutableStateOf(false)
-        val gotLocationState = mutableStateOf(Location("Test Location"))
-        val locationExpandedState = mutableStateOf(false)
-        val descriptionState = mutableStateOf("")
-        val descriptionError = mutableStateOf(false)
-        val tagState = mutableStateOf("")
-        val tagError = mutableStateOf(false)
-        val locations = listOf(Location("Test Location"))
-        val dummyLocationViewModel = LocationViewModel()
+    // Save button should show "disabled" appearance when event invalid
+    composeTestRule.onNodeWithTag(testTags.EVENT_SAVE).assertExists().assertIsDisplayed()
+  }
 
-        composeTestRule.setContent {
-            MapInTheme {
-                EventFormBody(
-                    title = titleState,
-                    titleError = titleError,
-                    isDateAndTimeValid = true,
-                    date = dateState,
-                    dateError = dateError,
-                    time = timeState,
-                    timeError = timeError,
-                    endDate = endDateState,
-                    endDateError = endDateError,
-                    endTime = endTimeState,
-                    endTimeError = endTimeError,
-                    location = locationState,
-                    locationError = locationError,
-                    locations = locations,
-                    gotLocation = gotLocationState,
-                    locationExpanded = locationExpandedState,
-                    locationViewModel = dummyLocationViewModel,
-                    description = descriptionState,
-                    descriptionError = descriptionError,
-                    tag = tagState,
-                    tagError = tagError,
-                    testTags = testTags
-                )
-            }
-        }
+  @Test
+  fun eventFormBody_rendersAllFieldsAndHandlesInput() {
+    val titleState = mutableStateOf("")
+    val titleError = mutableStateOf(false)
+    val dateState = mutableStateOf("")
+    val dateError = mutableStateOf(false)
+    val timeState = mutableStateOf("")
+    val timeError = mutableStateOf(false)
+    val endDateState = mutableStateOf("")
+    val endDateError = mutableStateOf(false)
+    val endTimeState = mutableStateOf("")
+    val endTimeError = mutableStateOf(false)
+    val locationState = mutableStateOf("")
+    val locationError = mutableStateOf(false)
+    val gotLocationState = mutableStateOf(Location("Test Location"))
+    val locationExpandedState = mutableStateOf(false)
+    val descriptionState = mutableStateOf("")
+    val descriptionError = mutableStateOf(false)
+    val tagState = mutableStateOf("")
+    val tagError = mutableStateOf(false)
+    val locations = listOf(Location("Test Location"))
+    val dummyLocationViewModel = LocationViewModel()
 
-        // Test title input
-        composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_TITLE).performScrollTo().performTextInput("My Title")
-        assert(titleState.value == "My Title")
-
-        // Test description input
-        composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_DESCRIPTION).performScrollTo().performTextInput("My Description")
-        assert(descriptionState.value == "My Description")
-
-        // Test tag input
-        composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_TAG).performScrollTo().performTextInput("#food")
-        assert(tagState.value == "#food")
+    composeTestRule.setContent {
+      MapInTheme {
+        EventFormBody(
+            title = titleState,
+            titleError = titleError,
+            isDateAndTimeValid = true,
+            date = dateState,
+            dateError = dateError,
+            time = timeState,
+            timeError = timeError,
+            endDate = endDateState,
+            endDateError = endDateError,
+            endTime = endTimeState,
+            endTimeError = endTimeError,
+            location = locationState,
+            locationError = locationError,
+            locations = locations,
+            gotLocation = gotLocationState,
+            locationExpanded = locationExpandedState,
+            locationViewModel = dummyLocationViewModel,
+            description = descriptionState,
+            descriptionError = descriptionError,
+            tag = tagState,
+            tagError = tagError,
+            testTags = testTags)
+      }
     }
+
+    // Test title input
+    composeTestRule
+        .onNodeWithTag(testTags.INPUT_EVENT_TITLE)
+        .performScrollTo()
+        .performTextInput("My Title")
+    assert(titleState.value == "My Title")
+
+    // Test description input
+    composeTestRule
+        .onNodeWithTag(testTags.INPUT_EVENT_DESCRIPTION)
+        .performScrollTo()
+        .performTextInput("My Description")
+    assert(descriptionState.value == "My Description")
+
+    // Test tag input
+    composeTestRule
+        .onNodeWithTag(testTags.INPUT_EVENT_TAG)
+        .performScrollTo()
+        .performTextInput("#food")
+    assert(tagState.value == "#food")
+  }
 }
