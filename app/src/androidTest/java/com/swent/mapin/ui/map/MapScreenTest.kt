@@ -211,6 +211,10 @@ class MapScreenTest {
     rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
     rule.waitForIdle()
 
+    // Add additional wait to ensure composition completes on slower CI environments
+    Thread.sleep(100)
+    rule.waitForIdle()
+
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
