@@ -247,6 +247,15 @@ fun ValidationBanner(errorFields: List<String>) {
       }
 }
 
+/**
+ * Top bar Composable for event screens
+ *
+ * @param title The title for the top bar
+ * @param testTags The testTag object for testing
+ * @param isEventValid Boolean indicating if the current event can be validated
+ * @param onCancel Callback invoked when pressing cancel
+ * @param onSave Callback invoked when pressing save
+ */
 @Composable
 fun EventTopBar(
     title: String,
