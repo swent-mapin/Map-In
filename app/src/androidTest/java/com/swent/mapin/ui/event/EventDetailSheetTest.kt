@@ -314,6 +314,141 @@ class EventDetailSheetTest {
     assertTrue(closeCalled)
   }
 
+  @Test
+  fun mediumState_directionsButton_withLocationPermission_isEnabled() {
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          hasLocationPermission = true)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_withoutLocationPermission_isDisabled() {
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          hasLocationPermission = false)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_withoutPermission_butShowingDirections_isEnabled() {
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          showDirections = true,
+          hasLocationPermission = false)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun fullState_directionsButton_withLocationPermission_isEnabled() {
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.FULL,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          hasLocationPermission = true)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun fullState_directionsButton_withoutLocationPermission_isDisabled() {
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.FULL,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          hasLocationPermission = false)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_callback_works() {
+    var directionsCalled = false
+    composeTestRule.setContent {
+      EventDetailSheet(
+          event = testEvent,
+          sheetState = BottomSheetState.MEDIUM,
+          isParticipating = false,
+          isSaved = false,
+          organizerName = "Test Organizer",
+          onJoinEvent = {},
+          onUnregisterEvent = {},
+          onSaveForLater = {},
+          onUnsaveForLater = {},
+          onClose = {},
+          onShare = {},
+          onGetDirections = { directionsCalled = true },
+          hasLocationPermission = true)
+    }
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").performClick()
+    assertTrue(directionsCalled)
+  }
+
   // --- SAVE / UNSAVE in FULL state ---
 
   @Test
