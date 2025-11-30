@@ -287,7 +287,11 @@ fun OwnedEventsSection(
       Column(
           modifier =
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
-            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent, onDeleteEvent = onDeleteEvent)
+            EventsSection(
+                events = events,
+                onEventClick = onEventClick,
+                onEditEvent = onEditEvent,
+                onDeleteEvent = onDeleteEvent)
           }
     }
   }

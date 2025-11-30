@@ -588,9 +588,7 @@ fun MapScreen(
                         eventViewModel.selectEventToEdit(event)
                         viewModel.showEditEventForm()
                       },
-                      onDeleteEvent = { event ->
-                        viewModel.requestDeleteEvent(event)
-                      },
+                      onDeleteEvent = { event -> viewModel.requestDeleteEvent(event) },
                       onEditEventDone = {
                         eventViewModel.clearEventToEdit()
                         viewModel.onEditEventCancel()
@@ -629,28 +627,26 @@ fun MapScreen(
     }
 
     viewModel.eventPendingDeletion?.let { eventToDelete ->
-        if (viewModel.showDeleteDialog) {
-            AlertDialog(
-                  onDismissRequest = { viewModel.cancelDelete() },
-                  title = { Text("Delete Event") },
-                  text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
-                  confirmButton = {
-                      TextButton(
-                          onClick = {
-                              eventViewModel.deleteEvent(eventToDelete.uid)
-                              viewModel.cancelDelete()
-                          }
-                      ) {
-                          Text("Delete", color = Color.Red)
-                      }
-                  },
-                  dismissButton = {
-                      TextButton(onClick = { viewModel.cancelDelete() }) {
-                          Text("Cancel")
-                      }
+      if (viewModel.showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelDelete() },
+            title = { Text("Delete Event") },
+            text = {
+              Text("Are you sure you want to delete this event? This action cannot be undone.")
+            },
+            confirmButton = {
+              TextButton(
+                  onClick = {
+                    eventViewModel.deleteEvent(eventToDelete.uid)
+                    viewModel.cancelDelete()
+                  }) {
+                    Text("Delete", color = Color.Red)
                   }
-            )
-        }
+            },
+            dismissButton = {
+              TextButton(onClick = { viewModel.cancelDelete() }) { Text("Cancel") }
+            })
+      }
     }
 
     // Indicateur de sauvegarde de mémoire
