@@ -51,10 +51,6 @@ class ProfileViewModel(
   var showBannerSelector by mutableStateOf(false)
     private set
 
-  // Whether the delete confirmation dialog is shown
-  var showDeleteConfirmation by mutableStateOf(false)
-    private set
-
   // Whether uploading an image
   var isUploadingImage by mutableStateOf(false)
     private set
@@ -336,72 +332,6 @@ class ProfileViewModel(
     _userProfile.value = UserProfile()
     isEditMode = false
     clearErrors()
-  }
-
-  /** Show delete confirmation dialog */
-  fun showDeleteDialog() {
-    showDeleteConfirmation = true
-  }
-
-  /** Hide delete confirmation dialog */
-  fun hideDeleteDialog() {
-    showDeleteConfirmation = false
-  }
-
-  /** Delete/reset profile to default values */
-  fun deleteProfile() {
-    viewModelScope.launch {
-      _isLoading.value = true
-
-      val currentUser = FirebaseAuth.getInstance().currentUser
-
-      if (currentUser != null) {
-        // Delete old avatar and banner images from Firebase Storage if they exist
-        val currentProfile = _userProfile.value
-
-        // Delete avatar image if it's a Firebase Storage URL
-        if (!currentProfile.avatarUrl.isNullOrEmpty() &&
-            currentProfile.avatarUrl!!.contains("firebasestorage")) {
-          val avatarDeleted = imageUploadHelper.deleteImage(currentProfile.avatarUrl!!)
-          if (!avatarDeleted) {
-            println("ProfileViewModel - Failed to delete avatar image")
-          }
-        }
-
-        // Delete banner image if it's a Firebase Storage URL
-        if (!currentProfile.bannerUrl.isNullOrEmpty() &&
-            currentProfile.bannerUrl!!.contains("firebasestorage")) {
-          val bannerDeleted = imageUploadHelper.deleteImage(currentProfile.bannerUrl!!)
-          if (!bannerDeleted) {
-            println("ProfileViewModel - Failed to delete banner image")
-          }
-        }
-
-        // Create a new default profile
-        val defaultProfile =
-            repository.createDefaultProfile(
-                userId = currentUser.uid,
-                name = currentUser.displayName ?: "Anonymous User",
-                profilePictureUrl = currentUser.photoUrl?.toString())
-
-        // Save the default profile to Firestore (this will overwrite the existing profile)
-        val success = repository.saveUserProfile(defaultProfile)
-
-        if (success) {
-          // Update local state
-          _userProfile.value = defaultProfile
-          println("ProfileViewModel - Profile reset to default successfully")
-          // Ensure we exit edit mode and clear any temporary selections so the UI
-          // reflects the reset profile immediately (no need to navigate away).
-          cancelEditing()
-        } else {
-          println("ProfileViewModel - Failed to reset profile")
-        }
-      }
-
-      showDeleteConfirmation = false
-      _isLoading.value = false
-    }
   }
 
   /** Upload avatar image from gallery */
