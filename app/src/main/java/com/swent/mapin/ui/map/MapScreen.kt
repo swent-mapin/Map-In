@@ -3,6 +3,7 @@ package com.swent.mapin.ui.map
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -121,6 +122,7 @@ private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
     renderMap: Boolean = true,
+    autoRequestPermissions: Boolean = true,
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
@@ -147,6 +149,18 @@ fun MapScreen(
   val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
   val coroutineScope = rememberCoroutineScope()
 
+  // Track if we should request notification permission after location permission
+  var shouldRequestNotificationPermission by remember { mutableStateOf(false) }
+
+  // Notification permission launcher (Android 13+)
+  val notificationPermissionLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+          isGranted ->
+        if (!isGranted) {
+          coroutineScope.launch { snackbarHostState.showSnackbar("Notification permission denied") }
+        }
+      }
+
   // Location permission launcher
   val locationPermissionLauncher =
       rememberLauncherForActivityResult(
@@ -162,7 +176,35 @@ fun MapScreen(
             } else {
               coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
             }
+
+            // After location permission result, request notification permission if needed
+            if (shouldRequestNotificationPermission) {
+              shouldRequestNotificationPermission = false
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+              }
+            }
           }
+
+  // Auto-request permissions on app launch (skip in test mode)
+  LaunchedEffect(autoRequestPermissions) {
+    if (autoRequestPermissions) {
+      // Request location permission if not already granted
+      viewModel.checkLocationPermission()
+      if (!viewModel.hasLocationPermission) {
+        shouldRequestNotificationPermission = true
+        locationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION))
+      } else {
+        // If location permission already granted, request notification permission directly
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+      }
+    }
+  }
 
   // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }
