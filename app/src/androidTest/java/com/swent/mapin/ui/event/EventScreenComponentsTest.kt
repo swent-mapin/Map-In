@@ -116,9 +116,7 @@ class EventScreenComponentsTest {
     }
 
     // Test title input
-    composeTestRule
-        .onNodeWithTag(testTags.INPUT_EVENT_TITLE)
-        .performTextInput("My Title")
+    composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_TITLE).performTextInput("My Title")
     assert(titleState.value == "My Title")
 
     // Test description input
@@ -128,9 +126,7 @@ class EventScreenComponentsTest {
     assert(descriptionState.value == "My Description")
 
     // Test tag input
-    composeTestRule
-        .onNodeWithTag(testTags.INPUT_EVENT_TAG)
-        .performTextInput("#food")
+    composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_TAG).performTextInput("#food")
     assert(tagState.value == "#food")
   }
 }

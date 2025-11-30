@@ -249,10 +249,7 @@ fun EditEventScreen(
 
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
-            ValidationBanner(
-                errorFields,
-                EditEventScreenTestTags
-            )
+            ValidationBanner(errorFields, EditEventScreenTestTags)
           }
 
           Spacer(modifier = Modifier.padding(5.dp))

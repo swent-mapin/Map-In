@@ -228,10 +228,7 @@ fun PublicSwitch(
  * @param errorFields List of error fields as strings
  */
 @Composable
-fun ValidationBanner(
-    errorFields: List<String>,
-    testTags: EventScreenTestTag
-) {
+fun ValidationBanner(errorFields: List<String>, testTags: EventScreenTestTag) {
   Row(
       modifier =
           Modifier.fillMaxWidth().background(color = colorResource(R.color.red)).padding(8.dp),
