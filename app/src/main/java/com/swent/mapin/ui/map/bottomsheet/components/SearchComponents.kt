@@ -158,9 +158,10 @@ fun SearchResultItem(
                           Modifier.align(Alignment.Top)
                               .height(24.dp)
                               .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                              ) { expanded = true }
+                                  indication = null,
+                                  interactionSource = remember { MutableInteractionSource() }) {
+                                    expanded = true
+                                  }
                               .testTag("eventOptionsIcon_${event.uid}"),
                       contentAlignment = Alignment.Center) {
                         Icon(
