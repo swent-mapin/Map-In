@@ -42,7 +42,7 @@ object EditEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TAG = "EDIT_INPUT_EVENT_TAG"
   override val DATE_TIME_ERROR = "EDIT_DATE_TIME_ERROR"
 
-  const val ERROR_MESSAGE = "EDIT_ERROR_MESSAGE"
+  override val ERROR_MESSAGE = "EDIT_ERROR_MESSAGE"
   const val SCREEN = "EditEventScreen"
 }
 /**
@@ -249,7 +249,10 @@ fun EditEventScreen(
 
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
-            ValidationBanner(errorFields)
+            ValidationBanner(
+                errorFields,
+                EditEventScreenTestTags
+            )
           }
 
           Spacer(modifier = Modifier.padding(5.dp))

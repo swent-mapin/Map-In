@@ -119,21 +119,18 @@ class EventScreenComponentsTest {
     // Test title input
     composeTestRule
         .onNodeWithTag(testTags.INPUT_EVENT_TITLE)
-        .performScrollTo()
         .performTextInput("My Title")
     assert(titleState.value == "My Title")
 
     // Test description input
     composeTestRule
         .onNodeWithTag(testTags.INPUT_EVENT_DESCRIPTION)
-        .performScrollTo()
         .performTextInput("My Description")
     assert(descriptionState.value == "My Description")
 
     // Test tag input
     composeTestRule
         .onNodeWithTag(testTags.INPUT_EVENT_TAG)
-        .performScrollTo()
         .performTextInput("#food")
     assert(tagState.value == "#food")
   }

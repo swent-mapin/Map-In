@@ -53,6 +53,7 @@ interface EventScreenTestTag {
   val INPUT_EVENT_TAG: String
   val EVENT_CANCEL: String
   val EVENT_SAVE: String
+  val ERROR_MESSAGE: String
 }
 
 /** Extension function for TimeStamp to convert a timestamp to a dd/MM/yyyy date string */
@@ -227,7 +228,10 @@ fun PublicSwitch(
  * @param errorFields List of error fields as strings
  */
 @Composable
-fun ValidationBanner(errorFields: List<String>) {
+fun ValidationBanner(
+    errorFields: List<String>,
+    testTags: EventScreenTestTag
+) {
   Row(
       modifier =
           Modifier.fillMaxWidth().background(color = colorResource(R.color.red)).padding(8.dp),
@@ -243,7 +247,7 @@ fun ValidationBanner(errorFields: List<String>) {
                 stringResource(R.string.validation_banner_prefix, errorFields.joinToString(", ")),
             color = Color.White,
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.testTag(AddEventScreenTestTags.ERROR_MESSAGE))
+            modifier = Modifier.testTag(testTags.ERROR_MESSAGE))
       }
 }
 

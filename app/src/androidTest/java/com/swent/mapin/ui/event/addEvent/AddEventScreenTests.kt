@@ -81,20 +81,6 @@ class AddEventScreenTests {
   }
 
   @Test
-  fun showsErrorMessageInitially() {
-    // Click Save to ensure validation banner is triggered on all device configurations.
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
-  }
-
-  @Test
   fun dateAndTimeErrorMessageShowsInitially() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
   }

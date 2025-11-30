@@ -52,11 +52,12 @@ object AddEventScreenTestTags : EventScreenTestTag {
 
   override val EVENT_CANCEL = "eventCancel"
   override val EVENT_SAVE = "eventSave"
+  override val ERROR_MESSAGE = "errorMessage"
+
   const val PICK_EVENT_DATE = "pickEventDate"
   const val PICK_EVENT_TIME = "pickEventTime"
   const val INPUT_EVENT_LOCATION = "inputEventLocation"
   const val INPUT_EVENT_PRICE = "inputEventPrice"
-  const val ERROR_MESSAGE = "errorMessage"
 
   const val PUBLIC_SWITCH = "publicSwitch"
 
@@ -308,7 +309,10 @@ fun AddEventScreen(
               })
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
-            ValidationBanner(errorFields)
+            ValidationBanner(
+                errorFields,
+                AddEventScreenTestTags
+            )
           }
 
           Spacer(modifier = Modifier.padding(5.dp))
