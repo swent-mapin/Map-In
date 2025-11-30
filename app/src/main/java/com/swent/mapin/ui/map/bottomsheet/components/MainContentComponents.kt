@@ -78,7 +78,7 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 fun EventsSection(
     events: List<Event>,
     onEventClick: (Event) -> Unit = {},
-    onEditEvent: (Event) -> Unit = {}
+    onEditEvent: ((Event) -> Unit)? = null
 ) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
@@ -94,7 +94,8 @@ fun EventsSection(
           event = event,
           modifier = Modifier.padding(horizontal = 16.dp),
           onClick = { onEventClick(event) },
-          onEditEvent = onEditEvent)
+          onEditEvent = onEditEvent,
+          onDeleteEvent = onEditEvent) // To be changed with deleteEvent backend
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
