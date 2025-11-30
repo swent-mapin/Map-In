@@ -190,7 +190,14 @@ class MapScreenTest {
 
     rule.onNodeWithTag("mapStyleToggle").ensureVisible().performClick()
     rule.waitForIdle()
+
+    // Wait for menu to be fully displayed before clicking
+    rule.onNodeWithTag("mapStyleOption_SATELLITE").assertIsDisplayed()
     rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
+    rule.waitForIdle()
+
+    // Add a small delay to allow map style transition to complete on slower CI environments
+    Thread.sleep(200)
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
