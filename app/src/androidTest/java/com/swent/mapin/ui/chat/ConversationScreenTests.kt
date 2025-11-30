@@ -51,10 +51,13 @@ class ConversationScreenTest {
             profilePictureUrl = null)
 
     val flow = MutableStateFlow<Conversation?>(fakeConversation)
+    val leaveGroupStateFlow = MutableStateFlow<LeaveGroupState>(LeaveGroupState.Idle)
 
     every { vm.gotConversation } returns flow
+    every { vm.leaveGroupState } returns leaveGroupStateFlow
     every { vm.getConversationById(any()) } just Runs
     every { vm.currentUserProfile } returns UserProfile("u1", "Alice")
+    every { vm.resetLeaveGroupState() } just Runs
 
     return vm
   }
@@ -287,16 +290,34 @@ class ConversationScreenTest {
 
   @Test
   fun conversationTopBar_showsParticipantsList() {
-    val names = listOf("Sam", "Alex")
+    val names = listOf("Sam", "Alex", "Jordan")
 
     composeTestRule.setContent {
       ConversationTopBar(
           title = "Group Chat",
           participantNames = names,
           onNavigateBack = {},
-          profilePictureUrl = null)
+          profilePictureUrl = null,
+          isGroupChat = true)
     }
-    composeTestRule.onNodeWithText("Sam, Alex").assertExists()
+    composeTestRule.onNodeWithText("Sam, Alex, Jordan").assertExists()
+  }
+
+  @Test
+  fun conversationTopBar_doesNotShowParticipantsList_forOneToOneChat() {
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat with Sam",
+          participantNames = emptyList(),
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = false)
+    }
+    // For 1-to-1 chats, participant names list should not be shown
+    // Verify the title exists
+    composeTestRule.onNodeWithText("Chat with Sam").assertExists()
+    // Verify there's only one text element (no participant list below)
+    composeTestRule.onAllNodesWithText("Chat with Sam").assertCountEquals(1)
   }
 
   // ------------------------------------------------------------
