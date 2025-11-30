@@ -122,20 +122,25 @@ class ConversationRepositoryFirestore(
 
     try {
       val conversationRef = db.collection("conversations").document(conversationId)
-      val docSnapshot = conversationRef.get().await()
-      val conversation = docSnapshot.toObject(Conversation::class.java) ?: return
 
-      // Remove the current user from participantIds
-      val updatedParticipantIds = conversation.participantIds.filter { it != currentUid }
+      db.runTransaction { transaction ->
+            val docSnapshot = transaction.get(conversationRef)
+            val conversation =
+                docSnapshot.toObject(Conversation::class.java) ?: return@runTransaction
 
-      // Remove the current user from participants
-      val updatedParticipants = conversation.participants.filter { it.userId != currentUid }
+            // Remove the current user from participantIds
+            val updatedParticipantIds = conversation.participantIds.filter { it != currentUid }
 
-      // Update the conversation
-      conversationRef
-          .update(
-              mapOf(
-                  "participantIds" to updatedParticipantIds, "participants" to updatedParticipants))
+            // Remove the current user from participants
+            val updatedParticipants = conversation.participants.filter { it.userId != currentUid }
+
+            // Update the conversation atomically
+            transaction.update(
+                conversationRef,
+                mapOf(
+                    "participantIds" to updatedParticipantIds,
+                    "participants" to updatedParticipants))
+          }
           .await()
     } catch (e: Exception) {
       Log.e("ConversationRepo", "Failed to leave conversation", e)
