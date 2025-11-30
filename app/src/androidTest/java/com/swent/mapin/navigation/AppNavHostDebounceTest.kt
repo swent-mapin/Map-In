@@ -1,8 +1,7 @@
 package com.swent.mapin.navigation
 
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -14,20 +13,39 @@ class AppNavHostDebounceTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
-  fun appNavHost_rapidBackClicks_handledGracefully() {
-    composeTestRule.setContent { AppNavHost(isLoggedIn = true, renderMap = false) }
+  fun appNavHost_rapidNavigationCalls_handledGracefully() {
+    lateinit var navController: androidx.navigation.NavHostController
+
+    composeTestRule.setContent {
+      navController = androidx.navigation.compose.rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+    }
+
     composeTestRule.waitForIdle()
 
-    // Navigate to profile
-    composeTestRule.onNodeWithTag("profileButton").performClick()
+    // Build up a navigation stack
+    composeTestRule.runOnUiThread {
+      navController.navigate("profile")
+      navController.navigate("settings")
+    }
+
+    // Wait for settings screen
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("settingsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    // Trigger back navigation rapidly through back button clicks
+    // This exercises the safePopBackStack() debouncing logic
+    // First click should navigate back to profile, second should be debounced
+    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
+
     composeTestRule.waitForIdle()
 
-    // Rapidly click back twice (tests debouncing)
-    composeTestRule.onNodeWithTag("backButton").performClick()
-    composeTestRule.onNodeWithTag("backButton").performClick()
-    composeTestRule.waitForIdle()
-
-    // Should be back on map without crash
-    composeTestRule.onNodeWithTag("mapScreen").assertExists()
+    // Should be on profile (first click succeeded, second was debounced)
+    composeTestRule.onNodeWithTag("profileScreen", useUnmergedTree = true).assertExists()
   }
 }
