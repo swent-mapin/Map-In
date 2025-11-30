@@ -949,21 +949,6 @@ class MapScreenViewModel(
     showDeleteDialog = true
   }
 
-  fun confirmDeleteEvent() {
-    val event = eventPendingDeletion ?: return
-
-    viewModelScope.launch {
-      try {
-        eventRepository.deleteEvent(event.uid)
-      } catch (e: Exception) {
-        Log.e("DeleteEventFail", "failed to delete event ${event.uid}: $e")
-      } finally {
-        eventPendingDeletion = null
-        showDeleteDialog = false
-      }
-    }
-  }
-
   fun cancelDelete() {
     eventPendingDeletion = null
     showDeleteDialog = false

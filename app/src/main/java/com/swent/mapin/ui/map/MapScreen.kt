@@ -628,22 +628,29 @@ fun MapScreen(
           event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
     }
 
-    if (viewModel.showDeleteDialog && viewModel.eventPendingDeletion != null) {
-          AlertDialog(
-              onDismissRequest = { viewModel.cancelDelete() },
-              title = { Text("Delete Event") },
-              text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
-              confirmButton = {
-                  TextButton(onClick = { viewModel.confirmDeleteEvent() }) {
-                      Text("Delete", color = Color.Red)
+    viewModel.eventPendingDeletion?.let { eventToDelete ->
+        if (viewModel.showDeleteDialog) {
+            AlertDialog(
+                  onDismissRequest = { viewModel.cancelDelete() },
+                  title = { Text("Delete Event") },
+                  text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
+                  confirmButton = {
+                      TextButton(
+                          onClick = {
+                              eventViewModel.deleteEvent(eventToDelete.uid)
+                              viewModel.cancelDelete()
+                          }
+                      ) {
+                          Text("Delete", color = Color.Red)
+                      }
+                  },
+                  dismissButton = {
+                      TextButton(onClick = { viewModel.cancelDelete() }) {
+                          Text("Cancel")
+                      }
                   }
-              },
-              dismissButton = {
-                  TextButton(onClick = { viewModel.cancelDelete() }) {
-                      Text("Cancel")
-                  }
-              }
-          )
+            )
+        }
     }
 
     // Indicateur de sauvegarde de mémoire
