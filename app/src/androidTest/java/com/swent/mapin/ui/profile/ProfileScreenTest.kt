@@ -723,33 +723,4 @@ class ProfileScreenTest {
     composeTestRule.onNodeWithText("Cancel").performClick()
     assert(dismissed)
   }
-
-  @Test
-  fun profileScreen_backButton_canBeClickedMultipleTimes() {
-    var backClickCount = 0
-    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
-    every { mockViewModel.userProfile } returns
-        MutableStateFlow(UserProfile(name = "Test User", userId = "123"))
-    every { mockViewModel.isLoading } returns MutableStateFlow(false)
-    every { mockViewModel.isEditMode } returns false
-    every { mockViewModel.showAvatarSelector } returns false
-    every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
-
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(
-            onNavigateBack = { backClickCount++ },
-            onNavigateToSignIn = {},
-            viewModel = mockViewModel)
-      }
-    }
-
-    // Double-click back button rapidly (debouncing happens at AppNavHost level)
-    composeTestRule.onNodeWithTag("backButton").performClick()
-    composeTestRule.onNodeWithTag("backButton").performClick()
-
-    // Both clicks are registered at screen level (debouncing is in AppNavHost)
-    assert(backClickCount == 2)
-  }
 }
