@@ -78,7 +78,8 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 fun EventsSection(
     events: List<Event>,
     onEventClick: (Event) -> Unit = {},
-    onEditEvent: ((Event) -> Unit)? = null
+    onEditEvent: ((Event) -> Unit)? = null,
+    onDeleteEvent: ((Event) -> Unit)? = null
 ) {
   if (events.isEmpty()) {
     NoResultsMessage(query = "", modifier = Modifier)
@@ -95,7 +96,7 @@ fun EventsSection(
           modifier = Modifier.padding(horizontal = 16.dp),
           onClick = { onEventClick(event) },
           onEditEvent = onEditEvent,
-          onDeleteEvent = onEditEvent) // To be changed with deleteEvent backend
+          onDeleteEvent = onDeleteEvent) // To be changed with deleteEvent backend
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
@@ -237,6 +238,7 @@ fun OwnedEventsSection(
     error: String?,
     onEventClick: (Event) -> Unit,
     onEditEvent: (Event) -> Unit,
+    onDeleteEvent: (Event) -> Unit,
     onRetry: () -> Unit
 ) {
   when {
@@ -285,7 +287,7 @@ fun OwnedEventsSection(
       Column(
           modifier =
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
-            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent)
+            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent, onDeleteEvent = onDeleteEvent)
           }
     }
   }

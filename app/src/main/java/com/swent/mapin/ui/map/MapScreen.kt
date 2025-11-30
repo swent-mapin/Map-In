@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -31,6 +32,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -585,6 +588,9 @@ fun MapScreen(
                         eventViewModel.selectEventToEdit(event)
                         viewModel.showEditEventForm()
                       },
+                      onDeleteEvent = { event ->
+                        viewModel.requestDeleteEvent(event)
+                      },
                       onEditEventDone = {
                         eventViewModel.clearEventToEdit()
                         viewModel.onEditEventCancel()
@@ -620,6 +626,24 @@ fun MapScreen(
     if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
       ShareEventDialog(
           event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
+    }
+
+    if (viewModel.showDeleteDialog && viewModel.eventPendingDeletion != null) {
+          AlertDialog(
+              onDismissRequest = { viewModel.cancelDelete() },
+              title = { Text("Delete Event") },
+              text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
+              confirmButton = {
+                  TextButton(onClick = { viewModel.confirmDeleteEvent() }) {
+                      Text("Delete", color = Color.Red)
+                  }
+              },
+              dismissButton = {
+                  TextButton(onClick = { viewModel.cancelDelete() }) {
+                      Text("Cancel")
+                  }
+              }
+          )
     }
 
     // Indicateur de sauvegarde de mémoire
