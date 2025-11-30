@@ -40,7 +40,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns false
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
 
     composeTestRule.setContent {
       MaterialTheme {
@@ -62,7 +61,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns false
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
 
     composeTestRule.setContent {
       MaterialTheme {
@@ -82,7 +80,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns false
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
 
     composeTestRule.setContent {
       MaterialTheme {
@@ -104,7 +101,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns false
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
 
     composeTestRule.setContent {
       MaterialTheme {
@@ -128,7 +124,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns true
     every { mockViewModel.showAvatarSelector } returns true
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
     every { mockViewModel.selectedAvatar } returns ""
 
     composeTestRule.setContent {
@@ -149,7 +144,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns true
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns true
-    every { mockViewModel.showDeleteConfirmation } returns false
     every { mockViewModel.selectedBanner } returns ""
 
     composeTestRule.setContent {
@@ -170,7 +164,6 @@ class ProfileScreenTest {
     every { mockViewModel.isEditMode } returns true
     every { mockViewModel.showAvatarSelector } returns false
     every { mockViewModel.showBannerSelector } returns false
-    every { mockViewModel.showDeleteConfirmation } returns false
     every { mockViewModel.editName } returns "Test User"
     every { mockViewModel.editBio } returns ""
     every { mockViewModel.editLocation } returns ""
