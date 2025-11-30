@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,8 +81,7 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    onEventClick: (Event) -> Unit = {},
-    onEditEvent: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -157,7 +157,10 @@ fun SearchResultItem(
                       modifier =
                           Modifier.align(Alignment.Top)
                               .height(24.dp)
-                              .clickable { expanded = true }
+                              .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                              ) { expanded = true }
                               .testTag("eventOptionsIcon_${event.uid}"),
                       contentAlignment = Alignment.Center) {
                         Icon(
