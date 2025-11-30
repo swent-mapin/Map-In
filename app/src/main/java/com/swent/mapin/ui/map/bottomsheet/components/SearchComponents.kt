@@ -155,27 +155,33 @@ fun SearchResultItem(
                 if (onEditEvent != null && onDeleteEvent != null) {
                   Box(
                       modifier =
-                          Modifier.align(Alignment.Top).height(24.dp).clickable { expanded = true },
+                          Modifier.align(Alignment.Top)
+                              .height(24.dp)
+                              .clickable { expanded = true }
+                              .testTag("eventOptionsIcon_${event.uid}"),
                       contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.MoreHoriz,
                             contentDescription = "Options",
                             modifier = Modifier.size(16.dp))
 
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                          DropdownMenuItem(
-                              text = { Text("Edit") },
-                              onClick = {
-                                onEditEvent(event)
-                                expanded = false
-                              })
-                          DropdownMenuItem(
-                              text = { Text("Delete") },
-                              onClick = {
-                                onDeleteEvent(event)
-                                expanded = false
-                              })
-                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.testTag("eventOptionsMenu_${event.uid}")) {
+                              DropdownMenuItem(
+                                  text = { Text("Edit") },
+                                  onClick = {
+                                    onEditEvent(event)
+                                    expanded = false
+                                  })
+                              DropdownMenuItem(
+                                  text = { Text("Delete") },
+                                  onClick = {
+                                    onDeleteEvent(event)
+                                    expanded = false
+                                  })
+                            }
                       }
                 }
               }
