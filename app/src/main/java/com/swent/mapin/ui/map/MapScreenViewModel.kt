@@ -804,7 +804,8 @@ class MapScreenViewModel(
   /**
    * Toggle directions display for the given event.
    *
-   * Uses the user's current location if available, otherwise falls back to a default location.
+   * Requires location permission. If permission is not granted, sets an error message instead of
+   * using default location.
    */
   fun toggleDirections(event: Event) {
     val currentState = directionViewModel.directionState
@@ -812,12 +813,20 @@ class MapScreenViewModel(
     if (currentState is DirectionState.Displayed) {
       directionViewModel.clearDirection()
     } else {
+      // Check if location permission is granted
+      if (!hasLocationPermission) {
+        _errorMessage = "Location permission is required to get directions"
+        return
+      }
+
       val userLoc = currentLocation
       val userLocation =
           if (userLoc != null) {
             Point.fromLngLat(userLoc.longitude, userLoc.latitude)
           } else {
-            Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+            // If permission is granted but location not yet available, show message
+            _errorMessage = "Waiting for location... Please try again in a moment"
+            return
           }
       val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
 
