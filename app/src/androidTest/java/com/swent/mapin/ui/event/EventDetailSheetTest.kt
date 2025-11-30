@@ -49,7 +49,10 @@ class EventDetailSheetTest {
       onSaveForLater: () -> Unit = {},
       onUnsaveForLater: () -> Unit = {},
       onClose: () -> Unit = {},
-      onShare: () -> Unit = {}
+      onShare: () -> Unit = {},
+      hasLocationPermission: Boolean = false,
+      showDirections: Boolean = false,
+      onGetDirections: () -> Unit = {}
   ) {
     composeTestRule.setContent {
       EventDetailSheet(
@@ -63,7 +66,10 @@ class EventDetailSheetTest {
           onSaveForLater = onSaveForLater,
           onUnsaveForLater = onUnsaveForLater,
           onClose = onClose,
-          onShare = onShare)
+          onShare = onShare,
+          hasLocationPermission = hasLocationPermission,
+          showDirections = showDirections,
+          onGetDirections = onGetDirections)
     }
   }
 
@@ -316,21 +322,7 @@ class EventDetailSheetTest {
 
   @Test
   fun mediumState_directionsButton_withLocationPermission_isEnabled() {
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.MEDIUM,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          hasLocationPermission = true)
-    }
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, hasLocationPermission = true)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
@@ -338,21 +330,7 @@ class EventDetailSheetTest {
 
   @Test
   fun mediumState_directionsButton_withoutLocationPermission_isDisabled() {
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.MEDIUM,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          hasLocationPermission = false)
-    }
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, hasLocationPermission = false)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
@@ -360,22 +338,8 @@ class EventDetailSheetTest {
 
   @Test
   fun mediumState_directionsButton_withoutPermission_butShowingDirections_isEnabled() {
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.MEDIUM,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          showDirections = true,
-          hasLocationPermission = false)
-    }
+    setEventDetailSheet(
+        sheetState = BottomSheetState.MEDIUM, showDirections = true, hasLocationPermission = false)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
@@ -383,21 +347,7 @@ class EventDetailSheetTest {
 
   @Test
   fun fullState_directionsButton_withLocationPermission_isEnabled() {
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.FULL,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          hasLocationPermission = true)
-    }
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, hasLocationPermission = true)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
@@ -405,21 +355,7 @@ class EventDetailSheetTest {
 
   @Test
   fun fullState_directionsButton_withoutLocationPermission_isDisabled() {
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.FULL,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          hasLocationPermission = false)
-    }
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, hasLocationPermission = false)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
     composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
@@ -428,22 +364,10 @@ class EventDetailSheetTest {
   @Test
   fun mediumState_directionsButton_callback_works() {
     var directionsCalled = false
-    composeTestRule.setContent {
-      EventDetailSheet(
-          event = testEvent,
-          sheetState = BottomSheetState.MEDIUM,
-          isParticipating = false,
-          isSaved = false,
-          organizerName = "Test Organizer",
-          onJoinEvent = {},
-          onUnregisterEvent = {},
-          onSaveForLater = {},
-          onUnsaveForLater = {},
-          onClose = {},
-          onShare = {},
-          onGetDirections = { directionsCalled = true },
-          hasLocationPermission = true)
-    }
+    setEventDetailSheet(
+        sheetState = BottomSheetState.MEDIUM,
+        onGetDirections = { directionsCalled = true },
+        hasLocationPermission = true)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").performClick()
     assertTrue(directionsCalled)
