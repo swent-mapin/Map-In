@@ -24,4 +24,11 @@ interface ConversationRepository {
    * @param conversationId the conversation’s unique identifier.
    */
   suspend fun getConversationById(conversationId: String): Conversation?
+
+  /**
+   * Removes the current user from a conversation.
+   *
+   * @param conversationId the conversation's unique identifier.
+   */
+  suspend fun leaveConversation(conversationId: String)
 }

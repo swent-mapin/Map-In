@@ -124,4 +124,15 @@ class ConversationViewModelTest {
     // The first call should have been cancelled, final value is from second call
     Assert.assertEquals(secondConversation, viewModel.gotConversation.value)
   }
+  // This was written with the help of Claude Sonnet 4.5
+
+  @Test
+  fun `leaveConversation calls repository leaveConversation`() = runTest {
+    val conversationId = "conv1"
+
+    viewModel.leaveConversation(conversationId)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    verify(conversationRepository).leaveConversation(conversationId)
+  }
 }

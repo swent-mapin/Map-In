@@ -15,6 +15,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+sealed class LeaveGroupState {
+  object Idle : LeaveGroupState()
+
+  object Loading : LeaveGroupState()
+
+  object Success : LeaveGroupState()
+
+  data class Error(val message: String) : LeaveGroupState()
+}
+
 class ConversationViewModel(
     private val conversationRepository: ConversationRepository =
         ConversationRepositoryFirestore(db = Firebase.firestore, auth = Firebase.auth),
@@ -32,6 +42,9 @@ class ConversationViewModel(
 
   private val _gotConversation = MutableStateFlow<Conversation?>(null)
   val gotConversation: StateFlow<Conversation?> = _gotConversation.asStateFlow()
+
+  private val _leaveGroupState = MutableStateFlow<LeaveGroupState>(LeaveGroupState.Idle)
+  val leaveGroupState: StateFlow<LeaveGroupState> = _leaveGroupState.asStateFlow()
 
   var currentUserProfile: UserProfile = UserProfile()
   /** Get a new unique identifier for a conversation. */
@@ -77,5 +90,27 @@ class ConversationViewModel(
     viewModelScope.launch {
       _gotConversation.value = conversationRepository.getConversationById(conversationId)
     }
+  }
+
+  /**
+   * Removes the current user from a conversation.
+   *
+   * @param conversationId The conversation's unique identifier
+   */
+  fun leaveConversation(conversationId: String) {
+    viewModelScope.launch {
+      try {
+        _leaveGroupState.value = LeaveGroupState.Loading
+        conversationRepository.leaveConversation(conversationId)
+        _leaveGroupState.value = LeaveGroupState.Success
+      } catch (e: Exception) {
+        _leaveGroupState.value = LeaveGroupState.Error(e.message ?: "Failed to leave conversation")
+      }
+    }
+  }
+
+  /** Resets the leave group state to Idle. */
+  fun resetLeaveGroupState() {
+    _leaveGroupState.value = LeaveGroupState.Idle
   }
 }
