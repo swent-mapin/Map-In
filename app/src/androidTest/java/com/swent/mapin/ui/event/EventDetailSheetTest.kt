@@ -49,7 +49,10 @@ class EventDetailSheetTest {
       onSaveForLater: () -> Unit = {},
       onUnsaveForLater: () -> Unit = {},
       onClose: () -> Unit = {},
-      onShare: () -> Unit = {}
+      onShare: () -> Unit = {},
+      hasLocationPermission: Boolean = false,
+      showDirections: Boolean = false,
+      onGetDirections: () -> Unit = {}
   ) {
     composeTestRule.setContent {
       EventDetailSheet(
@@ -63,7 +66,10 @@ class EventDetailSheetTest {
           onSaveForLater = onSaveForLater,
           onUnsaveForLater = onUnsaveForLater,
           onClose = onClose,
-          onShare = onShare)
+          onShare = onShare,
+          hasLocationPermission = hasLocationPermission,
+          showDirections = showDirections,
+          onGetDirections = onGetDirections)
     }
   }
 
@@ -312,6 +318,59 @@ class EventDetailSheetTest {
 
     composeTestRule.onNodeWithTag("closeButton").performClick()
     assertTrue(closeCalled)
+  }
+
+  @Test
+  fun mediumState_directionsButton_withLocationPermission_isEnabled() {
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, hasLocationPermission = true)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_withoutLocationPermission_isDisabled() {
+    setEventDetailSheet(sheetState = BottomSheetState.MEDIUM, hasLocationPermission = false)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_withoutPermission_butShowingDirections_isEnabled() {
+    setEventDetailSheet(
+        sheetState = BottomSheetState.MEDIUM, showDirections = true, hasLocationPermission = false)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun fullState_directionsButton_withLocationPermission_isEnabled() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, hasLocationPermission = true)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
+  }
+
+  @Test
+  fun fullState_directionsButton_withoutLocationPermission_isDisabled() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, hasLocationPermission = false)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsNotEnabled()
+  }
+
+  @Test
+  fun mediumState_directionsButton_callback_works() {
+    var directionsCalled = false
+    setEventDetailSheet(
+        sheetState = BottomSheetState.MEDIUM,
+        onGetDirections = { directionsCalled = true },
+        hasLocationPermission = true)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").performClick()
+    assertTrue(directionsCalled)
   }
 
   // --- SAVE / UNSAVE in FULL state ---
