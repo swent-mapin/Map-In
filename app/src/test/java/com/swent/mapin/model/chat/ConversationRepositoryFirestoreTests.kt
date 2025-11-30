@@ -348,13 +348,23 @@ class ConversationRepositoryFirestoreTest {
     every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } returns mockCompletedTask(docSnapshot)
 
-    // Create a completed Task<Void>
-    val updateTcs = TaskCompletionSource<Void>()
-    updateTcs.setResult(null)
-    val updateTask: Task<Void> = updateTcs.task
-    every { docRef.update(any<Map<String, Any>>()) } returns updateTask
+    // Mock the transaction
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    // Create a completed Task for runTransaction
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -363,7 +373,8 @@ class ConversationRepositoryFirestoreTest {
     repo.leaveConversation("conv1")
 
     verify {
-      docRef.update(
+      transactionMock.update(
+          docRef,
           match<Map<String, Any>> { map ->
             val participantIds = map["participantIds"] as? List<*>
             val participants = map["participants"] as? List<*>
@@ -386,8 +397,7 @@ class ConversationRepositoryFirestoreTest {
 
     repo.leaveConversation("conv1")
 
-    verify(exactly = 0) { docRef.get() }
-    verify(exactly = 0) { docRef.update(any<Map<String, Any>>()) }
+    verify(exactly = 0) { mockDb.runTransaction<Void>(any()) }
   }
 
   @OptIn(ExperimentalCoroutinesApi::class)
@@ -401,7 +411,20 @@ class ConversationRepositoryFirestoreTest {
     every { docSnapshot.toObject(Conversation::class.java) } returns null
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } returns mockCompletedTask(docSnapshot)
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -409,7 +432,7 @@ class ConversationRepositoryFirestoreTest {
 
     repo.leaveConversation("conv1")
 
-    verify(exactly = 0) { docRef.update(any<Map<String, Any>>()) }
+    verify(exactly = 0) { transactionMock.update(any(), any<Map<String, Any>>()) }
   }
 
   @OptIn(ExperimentalCoroutinesApi::class)
@@ -443,8 +466,18 @@ class ConversationRepositoryFirestoreTest {
     every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } returns mockCompletedTask(docSnapshot)
-    every { docRef.update(any<Map<String, Any>>()) } throws RuntimeException("Firestore error")
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } throws
+        RuntimeException("Firestore error")
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          throw RuntimeException("Firestore error")
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -466,7 +499,16 @@ class ConversationRepositoryFirestoreTest {
     every { mockAuth.currentUser } returns mockUser
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } throws RuntimeException("Network error")
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } throws RuntimeException("Network error")
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          throw RuntimeException("Network error")
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -479,7 +521,7 @@ class ConversationRepositoryFirestoreTest {
       assertEquals("Network error", e.message)
     }
 
-    verify(exactly = 0) { docRef.update(any<Map<String, Any>>()) }
+    verify(exactly = 0) { transactionMock.update(any(), any<Map<String, Any>>()) }
   }
 
   @OptIn(ExperimentalCoroutinesApi::class)
@@ -525,12 +567,21 @@ class ConversationRepositoryFirestoreTest {
     every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } returns mockCompletedTask(docSnapshot)
 
-    val updateTcs = TaskCompletionSource<Void>()
-    updateTcs.setResult(null)
-    val updateTask: Task<Void> = updateTcs.task
-    every { docRef.update(any<Map<String, Any>>()) } returns updateTask
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -539,7 +590,8 @@ class ConversationRepositoryFirestoreTest {
     repo.leaveConversation("conv1")
 
     verify {
-      docRef.update(
+      transactionMock.update(
+          docRef,
           match<Map<String, Any>> { map ->
             val participantIds = map["participantIds"] as? List<*>
             val participants = map["participants"] as? List<*>
@@ -581,12 +633,21 @@ class ConversationRepositoryFirestoreTest {
     every { docSnapshot.toObject(Conversation::class.java) } returns conversation
 
     val docRef = mockk<DocumentReference>()
-    every { docRef.get() } returns mockCompletedTask(docSnapshot)
 
-    val updateTcs = TaskCompletionSource<Void>()
-    updateTcs.setResult(null)
-    val updateTask: Task<Void> = updateTcs.task
-    every { docRef.update(any<Map<String, Any>>()) } returns updateTask
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
 
     val collection = mockk<CollectionReference>()
     every { collection.document("conv1") } returns docRef
@@ -595,7 +656,8 @@ class ConversationRepositoryFirestoreTest {
     repo.leaveConversation("conv1")
 
     verify {
-      docRef.update(
+      transactionMock.update(
+          docRef,
           match<Map<String, Any>> { map ->
             val participantIds = map["participantIds"] as? List<*>
             val participants = map["participants"] as? List<*>
