@@ -1353,4 +1353,21 @@ class BottomSheetContentTest {
     // Assert EditEventScreen is displayed
     rule.onNodeWithTag(EditEventScreenTestTags.SCREEN).assertExists()
   }
+
+  @Test
+  fun screenCanBeScrolledToBottomWithKeyboard() {
+    rule.setContent { TestContentWithFilters() }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.SEARCH_PLACE_INPUT).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR).performScrollTo().assertIsDisplayed()
+  }
 }
