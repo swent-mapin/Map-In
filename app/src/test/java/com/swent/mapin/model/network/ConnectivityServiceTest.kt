@@ -199,8 +199,8 @@ class ConnectivityServiceTest {
   @Test
   fun `ConnectivityServiceProvider setInstance allows custom instance`() {
     val mockService = mock(ConnectivityService::class.java)
-    ConnectivityServiceProvider.setInstance(mockService)
 
+    ConnectivityServiceProvider.setInstance(mockService)
     val instance = ConnectivityServiceProvider.getInstance(mockContext)
 
     assertEquals(mockService, instance)
@@ -209,61 +209,61 @@ class ConnectivityServiceTest {
   @Test
   fun `ConnectivityServiceProvider clearInstance resets singleton`() {
     val instance1 = ConnectivityServiceProvider.getInstance(mockContext)
+
     ConnectivityServiceProvider.clearInstance()
+
     val instance2 = ConnectivityServiceProvider.getInstance(mockContext)
 
-    // After clear, a new instance should be created
     assertNotNull(instance1)
     assertNotNull(instance2)
     // Note: We can't easily verify they're different instances due to mocking
   }
 
   @Test
-  fun `ConnectivityState with default networkType is null`() {
-    val state = ConnectivityState(isConnected = false)
-
-    assertFalse(state.isConnected)
-    assertNull(state.networkType)
-  }
-
-  @Test
-  fun `ConnectivityState equality works correctly`() {
-    val state1 = ConnectivityState(isConnected = true, networkType = NetworkType.WIFI)
-    val state2 = ConnectivityState(isConnected = true, networkType = NetworkType.WIFI)
-    val state3 = ConnectivityState(isConnected = false, networkType = null)
-
-    assertEquals(state1, state2)
-    assertTrue(state1 != state3)
-  }
-
-  @Test
-  fun `service returns correct interface type`() {
-    assertTrue(service is ConnectivityService)
-  }
-
-  @Test
-  fun `getCurrentConnectivityState handles internet capability without validation`() {
-    `when`(mockConnectivityManager.activeNetwork).thenReturn(mockNetwork)
-    `when`(mockConnectivityManager.getNetworkCapabilities(mockNetwork))
-        .thenReturn(mockNetworkCapabilities)
-    `when`(mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
-        .thenReturn(false)
-
-    val state = service.getCurrentConnectivityState()
-
-    assertFalse(state.isConnected)
-    assertNull(state.networkType)
-  }
-
-  @Test
-  fun `connectivityState flow handles errors gracefully and emits disconnected state`() = runTest {
-    // Simulate ConnectivityManager throwing an exception
-    `when`(mockConnectivityManager.activeNetwork)
-        .thenThrow(RuntimeException("ConnectivityManager error"))
+  fun `connectivityState flow handles initial state exception gracefully`() = runTest {
+    // Setup to throw exception on getCurrentConnectivityState
+    `when`(mockConnectivityManager.activeNetwork).thenThrow(RuntimeException("Test exception"))
 
     val state = service.connectivityState.first()
 
-    // Should fall back to disconnected state on error
+    // Should default to disconnected state
+    assertFalse(state.isConnected)
+    assertNull(state.networkType)
+  }
+
+  @Test
+  fun `getCurrentConnectivityState prioritizes WiFi over other transports`() {
+    setupConnectedNetwork(hasWifi = true, hasCellular = true, hasEthernet = true)
+
+    val state = service.getCurrentConnectivityState()
+
+    assertTrue(state.isConnected)
+    assertEquals(NetworkType.WIFI, state.networkType)
+  }
+
+  @Test
+  fun `getCurrentConnectivityState prioritizes Cellular over Ethernet`() {
+    setupConnectedNetwork(hasCellular = true, hasEthernet = true)
+
+    val state = service.getCurrentConnectivityState()
+
+    assertTrue(state.isConnected)
+    assertEquals(NetworkType.CELLULAR, state.networkType)
+  }
+
+  @Test
+  fun `isConnected returns false when network has no internet capability`() {
+    setupConnectedNetwork(hasInternet = false, isValidated = true, hasWifi = true)
+
+    assertFalse(service.isConnected())
+  }
+
+  @Test
+  fun `connectivityState flow emits disconnected on null network`() = runTest {
+    `when`(mockConnectivityManager.activeNetwork).thenReturn(null)
+
+    val state = service.connectivityState.first()
+
     assertFalse(state.isConnected)
     assertNull(state.networkType)
   }
