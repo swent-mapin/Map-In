@@ -7,6 +7,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.chat.ChatScreenTestTags
+import com.swent.mapin.ui.chat.ConversationScreenTestTags
+import com.swent.mapin.ui.chat.NewConversationScreenTestTags
 import org.junit.Rule
 import org.junit.Test
 
@@ -54,7 +57,7 @@ class AppNavHostTest {
     composeTestRule.waitForIdle()
 
     // Wait for profile screen to appear after navigation
-    composeTestRule.waitUntil(timeoutMillis = 15000) {
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
       composeTestRule
           .onAllNodesWithTag("profileScreen", useUnmergedTree = true)
           .fetchSemanticsNodes()
@@ -299,6 +302,16 @@ class AppNavHostTest {
     composeTestRule.runOnIdle { navController.navigate("friends") }
 
     composeTestRule.waitForIdle()
+
+    // Verify friends screen is displayed
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("friendsScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("friendsScreen", useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
@@ -313,8 +326,26 @@ class AppNavHostTest {
     composeTestRule.runOnIdle {
       // Navigate to NewConversation route
       navController.navigate("newConversation")
+    }
 
-      // Simulate confirm action (navigates back to Chat)
+    composeTestRule.waitForIdle()
+
+    // Verify NewConversation screen is displayed
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(
+              NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule
+        .onNodeWithTag(
+            NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
+
+    // Simulate confirm action (navigates back to Chat)
+    composeTestRule.runOnIdle {
       navController.navigate("chat") {
         popUpTo("chat") { inclusive = true }
         launchSingleTop = true
@@ -322,6 +353,18 @@ class AppNavHostTest {
     }
 
     composeTestRule.waitForIdle()
+
+    // Verify we're on chat screen after confirmation
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(ChatScreenTestTags.CHAT_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule
+        .onNodeWithTag(ChatScreenTestTags.CHAT_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -336,9 +379,54 @@ class AppNavHostTest {
     composeTestRule.runOnIdle {
       val encodedName = Uri.encode("Test User")
       navController.navigate("conversation/42/$encodedName")
-      navController.popBackStack()
     }
 
     composeTestRule.waitForIdle()
+
+    // Verify conversation screen is displayed
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag(ConversationScreenTestTags.CONVERSATION_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule
+        .onNodeWithTag(ConversationScreenTestTags.CONVERSATION_SCREEN, useUnmergedTree = true)
+        .assertIsDisplayed()
+
+    // Pop back and verify we return to previous screen (map)
+    composeTestRule.runOnIdle { navController.popBackStack() }
+
+    composeTestRule.waitForIdle()
+
+    // Verify we're back on map screen
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+  }
+
+  @Test
+  fun navigatesToChangePasswordScreen() {
+    lateinit var navController: NavHostController
+
+    composeTestRule.setContent {
+      navController = rememberNavController()
+      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+    }
+
+    composeTestRule.runOnIdle { navController.navigate("changePassword") }
+
+    composeTestRule.waitForIdle()
+
+    // Verify change password screen is displayed
+    composeTestRule.waitUntil(timeoutMillis = 5000) {
+      composeTestRule
+          .onAllNodesWithTag("changePasswordScreen", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    composeTestRule
+        .onNodeWithTag("changePasswordScreen", useUnmergedTree = true)
+        .assertIsDisplayed()
   }
 }
