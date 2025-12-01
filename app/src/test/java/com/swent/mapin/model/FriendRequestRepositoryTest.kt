@@ -6,6 +6,7 @@ import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
@@ -350,6 +351,258 @@ class FriendRequestRepositoryTest {
   }
 
   // ==================== Error Handling Tests ====================
+
+  @Test
+  fun `sendFriendRequest handles notification failure gracefully`() = runTest {
+    val fromUser = "user1"
+    val toUser = "user2"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+
+    // Setup mocks for successful request creation but notification fails
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.isEmpty } returns true
+    every { mockDocument.set(any()) } returns Tasks.forResult(null)
+
+    // Make notification fail - but it should still return true
+    coEvery { userProfileRepo.getUserProfile(fromUser) } throws Exception("Profile error")
+
+    val result = repository.sendFriendRequest(fromUser, toUser)
+
+    // Should still succeed even if notification fails
+    assertTrue(result)
+  }
+
+  @Test
+  fun `acceptFriendRequest returns false when request not found`() = runTest {
+    val requestId = "nonexistent"
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+
+    every { mockDocument.get() } returns Tasks.forResult(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns null
+
+    val result = repository.acceptFriendRequest(requestId)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `acceptFriendRequest returns false on exception`() = runTest {
+    val requestId = "req123"
+
+    every { mockDocument.get() } returns Tasks.forException(Exception("Error"))
+
+    val result = repository.acceptFriendRequest(requestId)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `removeFriendship returns false when no existing request`() = runTest {
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.isEmpty } returns true
+
+    val result = repository.removeFriendship(user1, user2)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `removeFriendship returns false on exception`() = runTest {
+    val user1 = "user1"
+    val user2 = "user2"
+    val mockQuery = mockk<Query>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } throws Exception("Error")
+
+    val result = repository.removeFriendship(user1, user2)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `getFriends returns empty list on exception`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } throws Exception("Error")
+
+    val result = repository.getFriends(userId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `getPendingRequests returns empty list on exception`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } throws Exception("Error")
+
+    val result = repository.getPendingRequests(userId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `searchUsersWithStatus returns empty list on blank query`() = runTest {
+    val result = repository.searchUsersWithStatus("  ", "user1")
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `searchUsersWithStatus returns empty list on exception`() = runTest {
+    val query = "alice"
+    val currentUserId = "current"
+    val mockUsersCollection = mockk<CollectionReference>(relaxed = true)
+
+    every { firestore.collection("users") } returns mockUsersCollection
+    every { mockUsersCollection.get() } throws Exception("Error")
+
+    val result = repository.searchUsersWithStatus(query, currentUserId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `getFriends filters out users with no profile`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = userId,
+            toUserId = "user2",
+            status = FriendshipStatus.ACCEPTED)
+
+    // Return null for getUserProfile to simulate missing profile
+    coEvery { userProfileRepo.getUserProfile("user2") } returns null
+
+    val result = repository.getFriends(userId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `getPendingRequests filters out senders with no profile`() = runTest {
+    val userId = "user1"
+    val mockQuery = mockk<Query>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot)
+    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user2",
+            toUserId = userId,
+            status = FriendshipStatus.PENDING)
+
+    // Return null for getUserProfile to simulate missing profile
+    coEvery { userProfileRepo.getUserProfile("user2") } returns null
+
+    val result = repository.getPendingRequests(userId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `searchUsersWithStatus excludes current user`() = runTest {
+    val query = "user"
+    val currentUserId = "current"
+    val mockUsersCollection = mockk<CollectionReference>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockDocSnapshot1 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockDocSnapshot2 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<Query>(relaxed = true)
+
+    every { firestore.collection("users") } returns mockUsersCollection
+    every { mockUsersCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot1, mockDocSnapshot2)
+    every { mockDocSnapshot1.toObject(UserProfile::class.java) } returns
+        UserProfile(currentUserId, "Current User")
+    every { mockDocSnapshot2.toObject(UserProfile::class.java) } returns
+        UserProfile("other", "Other User")
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+
+    val result = repository.searchUsersWithStatus(query, currentUserId)
+
+    assertEquals(1, result.size)
+    assertEquals("Other User", result[0].userProfile.name)
+  }
+
+  @Test
+  fun `searchUsersWithStatus excludes accepted friends`() = runTest {
+    val query = "user"
+    val currentUserId = "current"
+    val friendUserId = "friend"
+    val mockUsersCollection = mockk<CollectionReference>(relaxed = true)
+    val mockQuerySnapshot = mockk<QuerySnapshot>(relaxed = true)
+    val mockUserDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockFriendDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+    val mockQuery = mockk<Query>(relaxed = true)
+
+    every { firestore.collection("users") } returns mockUsersCollection
+    every { mockUsersCollection.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockUserDocSnapshot)
+    every { mockUserDocSnapshot.toObject(UserProfile::class.java) } returns
+        UserProfile(friendUserId, "Friend User")
+
+    every { mockCollection.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.whereEqualTo(any<String>(), any()) } returns mockQuery
+    every { mockQuery.get() } returns Tasks.forResult(mockQuerySnapshot)
+    every { mockQuerySnapshot.documents } returns listOf(mockFriendDocSnapshot)
+    every { mockFriendDocSnapshot.toObject(FriendRequest::class.java) } returns
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = currentUserId,
+            toUserId = friendUserId,
+            status = FriendshipStatus.ACCEPTED)
+
+    val result = repository.searchUsersWithStatus(query, currentUserId)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `rejectFriendRequest returns false on exception`() = runTest {
+    val requestId = "req123"
+    every { mockDocument.update(any<String>(), any()) } returns
+        Tasks.forException(Exception("Error"))
+
+    val result = repository.rejectFriendRequest(requestId)
+
+    assertFalse(result)
+  } // ==================== Error Handling Tests ====================
 
   @Test
   fun `getFriends handles exception and returns empty list`() = runTest {
