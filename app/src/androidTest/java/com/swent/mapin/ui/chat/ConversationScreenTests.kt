@@ -51,10 +51,13 @@ class ConversationScreenTest {
             profilePictureUrl = null)
 
     val flow = MutableStateFlow<Conversation?>(fakeConversation)
+    val leaveGroupStateFlow = MutableStateFlow<LeaveGroupState>(LeaveGroupState.Idle)
 
     every { vm.gotConversation } returns flow
+    every { vm.leaveGroupState } returns leaveGroupStateFlow
     every { vm.getConversationById(any()) } just Runs
     every { vm.currentUserProfile } returns UserProfile("u1", "Alice")
+    every { vm.resetLeaveGroupState() } just Runs
 
     return vm
   }
@@ -287,45 +290,185 @@ class ConversationScreenTest {
 
   @Test
   fun conversationTopBar_showsParticipantsList() {
-    val names = listOf("Sam", "Alex")
+    val names = listOf("Sam", "Alex", "Jordan")
 
     composeTestRule.setContent {
       ConversationTopBar(
           title = "Group Chat",
           participantNames = names,
           onNavigateBack = {},
-          profilePictureUrl = null)
+          profilePictureUrl = null,
+          isGroupChat = true)
     }
-    composeTestRule.onNodeWithText("Sam, Alex").assertExists()
+    composeTestRule.onNodeWithText("Sam, Alex, Jordan").assertExists()
   }
 
   @Test
-  fun conversationTopBar_callsNavigateBack_whenBackButtonClicked() {
+  fun conversationTopBar_doesNotShowParticipantsList_forOneToOneChat() {
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat with Sam",
+          participantNames = emptyList(),
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = false)
+    }
+    // For 1-to-1 chats, participant names list should not be shown
+    // Verify the title exists
+    composeTestRule.onNodeWithText("Chat with Sam").assertExists()
+    // Verify there's only one text element (no participant list below)
+    composeTestRule.onAllNodesWithText("Chat with Sam").assertCountEquals(1)
+  }
+
+  // ------------------------------------------------------------
+  // Leave Group Tests
+  // ------------------------------------------------------------
+  @Test
+  fun conversationTopBar_showsMenuButton_forGroupChat() {
+    var leaveGroupCalled = false
+
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Group Chat",
+          participantNames = listOf("Alice", "Bob", "Charlie"),
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = true,
+          onLeaveGroup = { leaveGroupCalled = true })
+    }
+
+    // Menu button should be visible for group chats
+    composeTestRule.onNodeWithTag("conversationMenuButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun conversationTopBar_hidesMenuButton_forOneToOneChat() {
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Chat with Alice",
+          participantNames = null,
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = false,
+          onLeaveGroup = null)
+    }
+
+    // Menu button should not exist for 1-to-1 chats
+    composeTestRule.onNodeWithTag("conversationMenuButton").assertDoesNotExist()
+  }
+
+  @Test
+  fun conversationTopBar_clickingLeaveGroup_triggersAction() {
+    var leaveGroupCalled = false
+
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Group Chat",
+          participantNames = listOf("Alice", "Bob", "Charlie"),
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = true,
+          onLeaveGroup = { leaveGroupCalled = true })
+    }
+
+    // Click menu button
+    composeTestRule.onNodeWithTag("conversationMenuButton").performClick()
+
+    // Click "Leave Group" menu item
+    composeTestRule.onNodeWithTag("leaveGroupMenuItem").assertIsDisplayed().performClick()
+
+    // Confirmation dialog should appear
+    composeTestRule.onNodeWithText("Leave Group?").assertIsDisplayed()
+    composeTestRule
+        .onNodeWithText(
+            "Are you sure you want to leave this group? You won't be able to undo this action.")
+        .assertIsDisplayed()
+
+    // Confirm leave
+    composeTestRule.onNodeWithTag("confirmLeaveButton").assertIsDisplayed().performClick()
+
+    // Verify the action was triggered
+    assert(leaveGroupCalled)
+  }
+
+  @Test
+  fun conversationTopBar_cancelLeaveGroup_doesNotTriggerAction() {
+    var leaveGroupCalled = false
+
+    composeTestRule.setContent {
+      ConversationTopBar(
+          title = "Group Chat",
+          participantNames = listOf("Alice", "Bob", "Charlie"),
+          onNavigateBack = {},
+          profilePictureUrl = null,
+          isGroupChat = true,
+          onLeaveGroup = { leaveGroupCalled = true })
+    }
+
+    // Click menu button
+    composeTestRule.onNodeWithTag("conversationMenuButton").performClick()
+
+    // Click "Leave Group" menu item
+    composeTestRule.onNodeWithTag("leaveGroupMenuItem").performClick()
+
+    // Cancel leave
+    composeTestRule.onNodeWithTag("cancelLeaveButton").assertIsDisplayed().performClick()
+
+    // Verify the action was NOT triggered
+    assert(!leaveGroupCalled)
+  }
+
+  @Test
+  fun conversationScreen_navigatesBack_afterSuccessfulLeave() {
+    val mockVm = mockk<MessageViewModel>(relaxed = true)
+    val mockConvVm = mockk<ConversationViewModel>(relaxed = true)
+
+    val fakeGroupConversation =
+        Conversation(
+            id = "group1",
+            participantIds = listOf("u1", "u2", "u3"),
+            participants =
+                listOf(
+                    UserProfile("u1", "Alice"),
+                    UserProfile("u2", "Bob"),
+                    UserProfile("u3", "Charlie")),
+            profilePictureUrl = null)
+
+    val conversationFlow = MutableStateFlow<Conversation?>(fakeGroupConversation)
+    val leaveGroupStateFlow = MutableStateFlow<LeaveGroupState>(LeaveGroupState.Idle)
+
+    every { mockVm.messages } returns MutableStateFlow(emptyList())
+    every { mockVm.observeMessages(any()) } just Runs
+    every { mockConvVm.gotConversation } returns conversationFlow
+    every { mockConvVm.leaveGroupState } returns leaveGroupStateFlow
+    every { mockConvVm.getConversationById(any()) } just Runs
+    every { mockConvVm.currentUserProfile } returns UserProfile("u1", "Alice")
+    every { mockConvVm.leaveConversation(any()) } answers
+        {
+          leaveGroupStateFlow.value = LeaveGroupState.Success
+        }
+    every { mockConvVm.resetLeaveGroupState() } answers
+        {
+          leaveGroupStateFlow.value = LeaveGroupState.Idle
+        }
+
     var backCalled = false
 
     composeTestRule.setContent {
-      ConversationTopBar(
-          title = "Chat",
-          participantNames = emptyList(),
-          onNavigateBack = { backCalled = true },
-          profilePictureUrl = null)
+      ConversationScreenForTest(
+          messageViewModel = mockVm,
+          conversationViewModel = mockConvVm,
+          conversationId = "group1",
+          conversationName = "Group Chat",
+          onNavigateBack = { backCalled = true })
     }
 
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).performClick()
+    // Simulate successful leave
+    leaveGroupStateFlow.value = LeaveGroupState.Success
 
+    composeTestRule.waitForIdle()
+
+    // Verify navigation back was called
     assert(backCalled)
-  }
-
-  @Test
-  fun conversationTopBar_doesNotShowBackButton_whenCallbackNull() {
-    composeTestRule.setContent {
-      ConversationTopBar(
-          title = "Chat",
-          participantNames = emptyList(),
-          onNavigateBack = null,
-          profilePictureUrl = null)
-    }
-
-    composeTestRule.onNodeWithTag(ChatScreenTestTags.BACK_BUTTON).assertDoesNotExist()
   }
 }

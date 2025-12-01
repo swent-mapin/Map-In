@@ -2,6 +2,10 @@ package com.swent.mapin.navigation
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,6 +44,18 @@ fun AppNavHost(
   // Parse deep link to extract event ID if present
   val deepLinkEventId = parseDeepLinkEventId(deepLinkUrl)
 
+  // Debounce navigation to prevent double-click issues
+  var lastNavigationTime by remember { mutableLongStateOf(0L) }
+  val navigationDebounceMs = 500L
+
+  fun safePopBackStack() {
+    val currentTime = System.currentTimeMillis()
+    if (currentTime - lastNavigationTime > navigationDebounceMs) {
+      lastNavigationTime = currentTime
+      navController.popBackStack()
+    }
+  }
+
   NavHost(navController = navController, startDestination = startDest) {
     composable(Route.Auth.route) {
       SignInScreen(
@@ -63,7 +79,7 @@ fun AppNavHost(
 
     composable(Route.Profile.route) {
       ProfileScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = { safePopBackStack() },
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
@@ -81,7 +97,7 @@ fun AppNavHost(
           navController.currentBackStackEntry?.savedStateHandle?.get<Boolean>("password_changed")
 
       SettingsScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = { safePopBackStack() },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
               // Clear the whole back stack by popping up to the nav graph's start destination
@@ -100,22 +116,20 @@ fun AppNavHost(
 
     composable(Route.ChangePassword.route) {
       ChangePasswordScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = { safePopBackStack() },
           onPasswordChanged = {
             // Set result to communicate success back to settings
             navController.previousBackStackEntry?.savedStateHandle?.set("password_changed", true)
             // Navigate back to settings
-            navController.popBackStack()
+            safePopBackStack()
           })
     }
 
-    composable(Route.Friends.route) {
-      FriendsScreen(onNavigateBack = { navController.popBackStack() })
-    }
+    composable(Route.Friends.route) { FriendsScreen(onNavigateBack = { safePopBackStack() }) }
 
     composable(Route.Chat.route) {
       ChatScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = { safePopBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
             val encodedName = Uri.encode(conversation.name)
@@ -126,7 +140,7 @@ fun AppNavHost(
 
     composable(Route.NewConversation.route) {
       NewConversationScreen(
-          onNavigateBack = { navController.popBackStack() },
+          onNavigateBack = { safePopBackStack() },
           onConfirm = {
             navController.navigate(Route.Chat.route) {
               popUpTo(Route.Chat.route) { inclusive = true }
@@ -143,7 +157,7 @@ fun AppNavHost(
       ConversationScreen(
           conversationId = conversationId,
           conversationName = name,
-          onNavigateBack = { navController.popBackStack() })
+          onNavigateBack = { safePopBackStack() })
     }
   }
 }

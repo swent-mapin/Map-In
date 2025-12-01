@@ -23,6 +23,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -117,6 +122,8 @@ fun ProfilePicture(url: String?) {
  * @param participantNames The list of participant's names.
  * @param onNavigateBack Optional callback invoked when the back button is pressed.
  * @param profilePictureUrl The profile picture URL of this conversation
+ * @param isGroupChat Whether this is a group chat (more than 2 participants)
+ * @param onLeaveGroup Callback invoked when the user wants to leave the group
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,8 +131,13 @@ fun ConversationTopBar(
     title: String,
     participantNames: List<String>? = emptyList(),
     onNavigateBack: (() -> Unit)? = null,
-    profilePictureUrl: String? = ""
+    profilePictureUrl: String? = "",
+    isGroupChat: Boolean = false,
+    onLeaveGroup: (() -> Unit)? = null
 ) {
+  var showMenu by remember { mutableStateOf(false) }
+  var showLeaveConfirmation by remember { mutableStateOf(false) }
+
   TopAppBar(
       title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,12 +171,60 @@ fun ConversationTopBar(
               }
         }
       },
+      // This was written with the help of Claude Sonnet 4.5
+      actions = {
+        if (isGroupChat && onLeaveGroup != null) {
+          Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.testTag("conversationMenuButton")) {
+                  Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More options")
+                }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+              DropdownMenuItem(
+                  text = { Text("Leave Group") },
+                  onClick = {
+                    showMenu = false
+                    showLeaveConfirmation = true
+                  },
+                  modifier = Modifier.testTag("leaveGroupMenuItem"))
+            }
+          }
+        }
+      },
       colors =
           TopAppBarDefaults.topAppBarColors(
               containerColor = MaterialTheme.colorScheme.primaryContainer,
               titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
               navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
       modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
+
+  // Confirmation dialog for leaving group
+  if (showLeaveConfirmation) {
+    AlertDialog(
+        onDismissRequest = { showLeaveConfirmation = false },
+        title = { Text("Leave Group?") },
+        text = {
+          Text("Are you sure you want to leave this group? You won't be able to undo this action.")
+        },
+        confirmButton = {
+          androidx.compose.material3.TextButton(
+              onClick = {
+                showLeaveConfirmation = false
+                onLeaveGroup?.invoke()
+              },
+              modifier = Modifier.testTag("confirmLeaveButton")) {
+                Text("Leave")
+              }
+        },
+        dismissButton = {
+          androidx.compose.material3.TextButton(
+              onClick = { showLeaveConfirmation = false },
+              modifier = Modifier.testTag("cancelLeaveButton")) {
+                Text("Cancel")
+              }
+        })
+  }
 }
 /**
  * Assisted by AI Functions representing the UI for conversations between users
@@ -203,6 +263,19 @@ fun ConversationScreen(
   val conversation by conversationViewModel.gotConversation.collectAsState()
   val participantNames = conversation?.participants?.map { participant -> participant.name }
 
+  val leaveGroupState by conversationViewModel.leaveGroupState.collectAsState()
+
+  // Handle leave group state changes
+  LaunchedEffect(leaveGroupState) {
+    when (leaveGroupState) {
+      is LeaveGroupState.Success -> {
+        conversationViewModel.resetLeaveGroupState()
+        onNavigateBack()
+      }
+      else -> {}
+    }
+  }
+
   // Dynamic loading when scrolling up
   LaunchedEffect(shouldLoadMore) {
     if (shouldLoadMore) messageViewModel.loadMoreMessages(conversationId)
@@ -227,17 +300,20 @@ fun ConversationScreen(
           // If it is a group, then use group profile picture, if not then use the other user's
           if (it > 2) {
             ConversationTopBar(
-                conversationName, participantNames, onNavigateBack, conversation?.profilePictureUrl)
+                conversationName,
+                participantNames,
+                onNavigateBack,
+                conversation?.profilePictureUrl,
+                isGroupChat = true,
+                onLeaveGroup = { conversationViewModel.leaveConversation(conversationId) })
           } else {
             val otherParticipant =
                 conversation?.participants?.firstOrNull { it ->
                   it.userId != currentUserProfile.userId
                 }
+            // For 1-to-1 chats, don't show participant names list at all
             ConversationTopBar(
-                conversationName,
-                participantNames,
-                onNavigateBack,
-                otherParticipant?.profilePictureUrl)
+                conversationName, emptyList(), onNavigateBack, otherParticipant?.profilePictureUrl)
           }
         }
       },
@@ -293,6 +369,36 @@ fun ConversationScreen(
               }
         }
       }
+
+  // Show loading dialog when leaving group
+  if (leaveGroupState is LeaveGroupState.Loading) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Leaving Group") },
+        text = {
+          Row(
+              horizontalArrangement = Arrangement.Center,
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier.fillMaxWidth()) {
+                CircularProgressIndicator()
+              }
+        },
+        confirmButton = {})
+  }
+
+  // Show error dialog if leaving group fails
+  if (leaveGroupState is LeaveGroupState.Error) {
+    AlertDialog(
+        onDismissRequest = { conversationViewModel.resetLeaveGroupState() },
+        title = { Text("Error") },
+        text = { Text((leaveGroupState as LeaveGroupState.Error).message) },
+        confirmButton = {
+          androidx.compose.material3.TextButton(
+              onClick = { conversationViewModel.resetLeaveGroupState() }) {
+                Text("OK")
+              }
+        })
+  }
 }
 
 /**

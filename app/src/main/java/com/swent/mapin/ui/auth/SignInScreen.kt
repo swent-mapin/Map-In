@@ -82,6 +82,7 @@ fun SignInScreen(
             modifier =
                 Modifier.fillMaxSize()
                     .verticalScroll(rememberScrollState())
+                    .imePadding()
                     .padding(vertical = 54.dp, horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top) {

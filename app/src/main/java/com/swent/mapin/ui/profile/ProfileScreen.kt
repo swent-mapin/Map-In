@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
@@ -197,13 +196,6 @@ fun ProfileScreen(
                   viewModel.toggleBannerSelector()
                 },
                 onDismiss = { viewModel.toggleBannerSelector() })
-          }
-
-          // Delete Confirmation Dialog
-          if (viewModel.showDeleteConfirmation) {
-            DeleteProfileConfirmationDialog(
-                onConfirm = { viewModel.deleteProfile() },
-                onDismiss = { viewModel.hideDeleteDialog() })
           }
         }
       }
@@ -623,30 +615,6 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                           }
                     }
               }
-
-          Spacer(modifier = Modifier.height(16.dp))
-
-          // Delete Profile Button
-          OutlinedButton(
-              onClick = { viewModel.showDeleteDialog() },
-              modifier = Modifier.fillMaxWidth().height(48.dp).testTag("deleteProfileButton"),
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350)),
-              border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFef5350))) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Icon(
-                          imageVector = Icons.Default.Delete,
-                          contentDescription = "Clear Profile",
-                          modifier = Modifier.size(20.dp))
-                      Spacer(modifier = Modifier.width(8.dp))
-                      Text(
-                          "Clear Profile",
-                          style = MaterialTheme.typography.bodyLarge,
-                          fontWeight = FontWeight.Bold)
-                    }
-              }
         }
       }
 }
@@ -719,43 +687,6 @@ internal fun AvatarSelectorDialog(
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(24.dp))
-}
-
-/** Confirmation dialog for profile deletion */
-@Composable
-fun DeleteProfileConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      title = {
-        Text(
-            text = "Confirm Deletion",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold)
-      },
-      text = {
-        Text(
-            text = "Are you sure you want to delete your profile? This action cannot be undone.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface)
-      },
-      confirmButton = {
-        Button(
-            onClick = onConfirm,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFef5350))) {
-              Text("Clear Profile", color = Color.White)
-            }
-      },
-      dismissButton = {
-        OutlinedButton(
-            onClick = onDismiss,
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary)) {
-              Text("Cancel")
-            }
-      },
-      containerColor = MaterialTheme.colorScheme.surface,
-      shape = RoundedCornerShape(16.dp))
 }
 
 /** Reusable button for importing images from the gallery */

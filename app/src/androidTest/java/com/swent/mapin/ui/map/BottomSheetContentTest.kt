@@ -1353,4 +1353,114 @@ class BottomSheetContentTest {
     // Assert EditEventScreen is displayed
     rule.onNodeWithTag(EditEventScreenTestTags.SCREEN).assertExists()
   }
+
+  @Test
+  fun screenCanBeScrolledToBottomWithKeyboard() {
+    rule.setContent { TestContentWithFilters() }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.SEARCH_PLACE_INPUT).performScrollTo().performClick()
+    rule.waitForIdle()
+
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_POPULAR).performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun ownedEvents_showsOptionsMenuWithEditAndDelete() {
+    val testEvents = LocalEventList.defaultSampleEvents().take(2)
+    var editedEvent: Event? = null
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+            ownedEvents = testEvents,
+            onTabEventClick = {},
+            onEditEvent = { editedEvent = it },
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify first event is displayed
+    rule.onNodeWithText(testEvents.reversed()[0].title).assertIsDisplayed()
+
+    // Click the options icon (three dots) for the first event
+    rule
+        .onNodeWithTag("eventOptionsIcon_${testEvents.reversed()[0].uid}")
+        .assertIsDisplayed()
+        .performClick()
+    rule.waitForIdle()
+
+    // Verify dropdown menu is displayed with Edit and Delete options
+    rule.onNodeWithTag("eventOptionsMenu_${testEvents.reversed()[0].uid}").assertIsDisplayed()
+    rule.onNodeWithText("Edit").assertIsDisplayed()
+    rule.onNodeWithText("Delete").assertIsDisplayed()
+
+    // Click Edit option
+    rule.onNodeWithText("Edit").performClick()
+    rule.waitForIdle()
+
+    // Verify edit callback was triggered
+    assertEquals(testEvents.reversed()[0], editedEvent)
+
+    // Open menu again for second action
+    rule.onNodeWithTag("eventOptionsIcon_${testEvents.reversed()[0].uid}").performClick()
+    rule.waitForIdle()
+  }
+
+  @Test
+  fun savedAndJoinedEvents_doNotShowOptionsMenu() {
+    val testEvents = LocalEventList.defaultSampleEvents().take(1)
+
+    rule.setContent {
+      MaterialTheme {
+        BottomSheetContent(
+            state = BottomSheetState.FULL,
+            fullEntryKey = 0,
+            searchBarState =
+                SearchBarState(
+                    query = "",
+                    shouldRequestFocus = false,
+                    onQueryChange = {},
+                    onTap = {},
+                    onFocusHandled = {},
+                    onClear = {}),
+            selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+            savedEvents = testEvents,
+            filterViewModel = filterViewModel,
+            locationViewModel = locationViewModel,
+            profileViewModel = profileViewModel,
+            eventViewModel = eventViewModel)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Verify event is displayed
+    rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
+
+    // Verify options icon does NOT exist for saved events
+    rule.onNodeWithTag("eventOptionsIcon_${testEvents[0].uid}").assertDoesNotExist()
+  }
 }

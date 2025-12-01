@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -322,7 +323,10 @@ fun BottomSheetContent(
                                   onEventClick = onEventClick)
                             } else {
                               val contentModifier =
-                                  if (isFull) Modifier.fillMaxWidth().verticalScroll(scrollState)
+                                  if (isFull)
+                                      Modifier.fillMaxWidth()
+                                          .imePadding()
+                                          .verticalScroll(scrollState)
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {

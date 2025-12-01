@@ -310,4 +310,361 @@ class ConversationRepositoryFirestoreTest {
     val result = repo.getConversationById("conv1")
     assertEquals(null, result)
   }
+  // This was written with the help of Claude Sonnet 4.5
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation removes current user from participantIds and participants`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user1"
+    every { mockAuth.currentUser } returns mockUser
+
+    val conversation =
+        Conversation(
+            id = "conv1",
+            name = "Group Chat",
+            participantIds = listOf("user1", "user2", "user3"),
+            participants =
+                listOf(
+                    UserProfile(
+                        userId = "user1",
+                        name = "User 1",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user2",
+                        name = "User 2",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user3",
+                        name = "User 3",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = "")))
+
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+
+    // Mock the transaction
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    // Create a completed Task for runTransaction
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    repo.leaveConversation("conv1")
+
+    verify {
+      transactionMock.update(
+          docRef,
+          match<Map<String, Any>> { map ->
+            val participantIds = map["participantIds"] as? List<*>
+            val participants = map["participants"] as? List<*>
+            participantIds?.size == 2 &&
+                !participantIds.contains("user1") &&
+                participants?.size == 2
+          })
+    }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation does nothing when current user is null`() = runTest {
+    every { mockAuth.currentUser } returns null
+
+    val docRef = mockk<DocumentReference>(relaxed = true)
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    repo.leaveConversation("conv1")
+
+    verify(exactly = 0) { mockDb.runTransaction<Void>(any()) }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation does nothing when conversation does not exist`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user1"
+    every { mockAuth.currentUser } returns mockUser
+
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns null
+
+    val docRef = mockk<DocumentReference>()
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    repo.leaveConversation("conv1")
+
+    verify(exactly = 0) { transactionMock.update(any(), any<Map<String, Any>>()) }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation throws exception when firestore update fails`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user1"
+    every { mockAuth.currentUser } returns mockUser
+
+    val conversation =
+        Conversation(
+            id = "conv1",
+            name = "Group Chat",
+            participantIds = listOf("user1", "user2"),
+            participants =
+                listOf(
+                    UserProfile(
+                        userId = "user1",
+                        name = "User 1",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user2",
+                        name = "User 2",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = "")))
+
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } throws
+        RuntimeException("Firestore error")
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          throw RuntimeException("Firestore error")
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    try {
+      repo.leaveConversation("conv1")
+      Assert.fail("Expected exception to be thrown")
+    } catch (e: RuntimeException) {
+      assertEquals("Firestore error", e.message)
+    }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation throws exception when firestore get fails`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user1"
+    every { mockAuth.currentUser } returns mockUser
+
+    val docRef = mockk<DocumentReference>()
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } throws RuntimeException("Network error")
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          throw RuntimeException("Network error")
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    try {
+      repo.leaveConversation("conv1")
+      Assert.fail("Expected exception to be thrown")
+    } catch (e: RuntimeException) {
+      assertEquals("Network error", e.message)
+    }
+
+    verify(exactly = 0) { transactionMock.update(any(), any<Map<String, Any>>()) }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation correctly filters participants with multiple users`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user2"
+    every { mockAuth.currentUser } returns mockUser
+
+    val conversation =
+        Conversation(
+            id = "conv1",
+            name = "Group Chat",
+            participantIds = listOf("user1", "user2", "user3", "user4"),
+            participants =
+                listOf(
+                    UserProfile(
+                        userId = "user1",
+                        name = "User 1",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user2",
+                        name = "User 2",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user3",
+                        name = "User 3",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = ""),
+                    UserProfile(
+                        userId = "user4",
+                        name = "User 4",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = "")))
+
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    repo.leaveConversation("conv1")
+
+    verify {
+      transactionMock.update(
+          docRef,
+          match<Map<String, Any>> { map ->
+            val participantIds = map["participantIds"] as? List<*>
+            val participants = map["participants"] as? List<*>
+
+            // Verify user2 is removed and others remain
+            participantIds?.size == 3 &&
+                !participantIds.contains("user2") &&
+                participantIds.contains("user1") &&
+                participantIds.contains("user3") &&
+                participantIds.contains("user4") &&
+                participants?.size == 3 &&
+                participants.none { (it as? UserProfile)?.userId == "user2" }
+          })
+    }
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun `leaveConversation handles conversation with only current user`() = runTest {
+    val mockUser = mockk<FirebaseUser>()
+    every { mockUser.uid } returns "user1"
+    every { mockAuth.currentUser } returns mockUser
+
+    val conversation =
+        Conversation(
+            id = "conv1",
+            name = "Solo Chat",
+            participantIds = listOf("user1"),
+            participants =
+                listOf(
+                    UserProfile(
+                        userId = "user1",
+                        name = "User 1",
+                        bio = "",
+                        hobbies = emptyList(),
+                        location = "")))
+
+    val docSnapshot = mockk<DocumentSnapshot>()
+    every { docSnapshot.toObject(Conversation::class.java) } returns conversation
+
+    val docRef = mockk<DocumentReference>()
+
+    val transactionMock = mockk<Transaction>()
+    every { transactionMock.get(docRef) } returns docSnapshot
+    every { transactionMock.update(docRef, any<Map<String, Any>>()) } returns transactionMock
+
+    val transactionTcs = TaskCompletionSource<Void>()
+    transactionTcs.setResult(null)
+    val transactionTask: Task<Void> = transactionTcs.task
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val transactionFunction = firstArg<Transaction.Function<Void>>()
+          transactionFunction.apply(transactionMock)
+          transactionTask
+        }
+
+    val collection = mockk<CollectionReference>()
+    every { collection.document("conv1") } returns docRef
+    every { mockDb.collection("conversations") } returns collection
+
+    repo.leaveConversation("conv1")
+
+    verify {
+      transactionMock.update(
+          docRef,
+          match<Map<String, Any>> { map ->
+            val participantIds = map["participantIds"] as? List<*>
+            val participants = map["participants"] as? List<*>
+
+            // Both lists should be empty after removing the only user
+            participantIds?.isEmpty() == true && participants?.isEmpty() == true
+          })
+    }
+  }
 }
