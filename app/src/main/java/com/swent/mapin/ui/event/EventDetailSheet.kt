@@ -82,7 +82,8 @@ fun EventDetailSheet(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
@@ -96,7 +97,8 @@ fun EventDetailSheet(
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
             onGetDirections = onGetDirections,
-            showDirections = showDirections)
+            showDirections = showDirections,
+            hasLocationPermission = hasLocationPermission)
       }
       BottomSheetState.FULL -> {
         EventDetailHeader(onShare = onShare, onClose = onClose)
@@ -110,7 +112,8 @@ fun EventDetailSheet(
             onSaveForLater = onSaveForLater,
             onUnsaveForLater = onUnsaveForLater,
             onGetDirections = onGetDirections,
-            showDirections = showDirections)
+            showDirections = showDirections,
+            hasLocationPermission = hasLocationPermission)
       }
     }
   }
@@ -136,6 +139,45 @@ private fun EventDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
               contentDescription = "Close",
               tint = MaterialTheme.colorScheme.onSurface)
         }
+      }
+}
+
+/** Title with direction icon button - shared by MEDIUM and FULL states */
+@Composable
+private fun EventTitleWithDirections(
+    title: String,
+    titleStyle: androidx.compose.ui.text.TextStyle,
+    titleTestTag: String,
+    onGetDirections: () -> Unit,
+    showDirections: Boolean,
+    hasLocationPermission: Boolean
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title,
+            style = titleStyle,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f).testTag(titleTestTag))
+
+        // Direction icon button
+        IconButton(
+            onClick = onGetDirections,
+            enabled = hasLocationPermission || showDirections,
+            modifier = Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
+              Icon(
+                  imageVector = Icons.Default.Directions,
+                  contentDescription =
+                      if (showDirections) "Clear Directions"
+                      else if (hasLocationPermission) "Get Directions"
+                      else "Get Directions (Location permission required)",
+                  tint =
+                      if (showDirections) MaterialTheme.colorScheme.error
+                      else if (hasLocationPermission) MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+            }
       }
 }
 
@@ -199,34 +241,18 @@ private fun MediumEventContent(
     onUnregisterEvent: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
     // Title with direction icon
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-          Text(
-              text = event.title,
-              style = MaterialTheme.typography.headlineSmall,
-              fontWeight = FontWeight.Bold,
-              modifier = Modifier.weight(1f).testTag("eventTitleMedium"))
-
-          // Direction icon button
-          IconButton(
-              onClick = onGetDirections,
-              modifier =
-                  Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
-                Icon(
-                    imageVector = Icons.Default.Directions,
-                    contentDescription =
-                        if (showDirections) "Clear Directions" else "Get Directions",
-                    tint =
-                        if (showDirections) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary)
-              }
-        }
+    EventTitleWithDirections(
+        title = event.title,
+        titleStyle = MaterialTheme.typography.headlineSmall,
+        titleTestTag = "eventTitleMedium",
+        onGetDirections = onGetDirections,
+        showDirections = showDirections,
+        hasLocationPermission = hasLocationPermission)
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -317,7 +343,8 @@ private fun FullEventContent(
     onUnsaveForLater: () -> Unit,
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
-    showDirections: Boolean = false
+    showDirections: Boolean = false,
+    hasLocationPermission: Boolean = false
 ) {
   val scrollState = rememberScrollState()
 
@@ -356,30 +383,13 @@ private fun FullEventContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Title with direction icon
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  text = event.title,
-                  style = MaterialTheme.typography.headlineMedium,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.weight(1f).testTag("eventTitleFull"))
-
-              // Direction icon button
-              IconButton(
-                  onClick = onGetDirections,
-                  modifier =
-                      Modifier.testTag(com.swent.mapin.testing.UiTestTags.GET_DIRECTIONS_BUTTON)) {
-                    Icon(
-                        imageVector = Icons.Default.Directions,
-                        contentDescription =
-                            if (showDirections) "Clear Directions" else "Get Directions",
-                        tint =
-                            if (showDirections) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.primary)
-                  }
-            }
+        EventTitleWithDirections(
+            title = event.title,
+            titleStyle = MaterialTheme.typography.headlineMedium,
+            titleTestTag = "eventTitleFull",
+            onGetDirections = onGetDirections,
+            showDirections = showDirections,
+            hasLocationPermission = hasLocationPermission)
 
         Spacer(modifier = Modifier.height(8.dp))
 

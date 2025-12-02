@@ -1441,4 +1441,186 @@ class MapScreenViewModelTest {
     // Should still be false
     assertFalse(viewModel.showDownloadComplete)
   }
+
+  // === Tests for toggleDirections with location requirements ===
+
+  @Test
+  fun `toggleDirections without location permission sets error message`() = runTest {
+    // Setup: no location permission
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    viewModel.checkLocationPermission()
+
+    // Clear any existing error
+    viewModel.clearError()
+    assertNull(viewModel.errorMessage)
+
+    // Try to toggle directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Should set error message and not request directions
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("Location permission is required"))
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+  }
+
+  @Test
+  fun `toggleDirections with permission but no location available sets error message`() = runTest {
+    // Setup: has permission but no location yet
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    viewModel.checkLocationPermission()
+    assertTrue(viewModel.hasLocationPermission)
+
+    // Ensure no current location
+    assertNull(viewModel.currentLocation)
+
+    // Clear any existing error
+    viewModel.clearError()
+    assertNull(viewModel.errorMessage)
+
+    // Try to toggle directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Should set error message about waiting for location
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.errorMessage!!.contains("Waiting for location"))
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+  }
+
+  @Test
+  fun `toggleDirections with permission and location requests directions successfully`() = runTest {
+    // Setup: has permission and location
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    viewModel.checkLocationPermission()
+
+    // Set a current location
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+    assertNotNull(viewModel.currentLocation)
+
+    // Clear any existing error
+    viewModel.clearError()
+    assertNull(viewModel.errorMessage)
+
+    // Toggle directions
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Verify no error message was set (successful direction request)
+    assertNull(viewModel.errorMessage)
+    // Verify directionViewModel state changed from Cleared (indicating requestDirections was
+    // called)
+    assertNotNull(viewModel.directionViewModel.directionState)
+  }
+
+  @Test
+  fun `toggleDirections error messages are correctly set for different scenarios`() = runTest {
+    // Scenario 1: No permission
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    viewModel.checkLocationPermission()
+    viewModel.clearError()
+
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    val errorMsg1 = viewModel.errorMessage
+    assertNotNull(errorMsg1)
+    assertEquals("Location permission is required to get directions", errorMsg1)
+
+    // Scenario 2: Permission but no location
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    viewModel.checkLocationPermission()
+    // Don't set a location - currentLocation should be null
+    viewModel.clearError()
+
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    val errorMsg2 = viewModel.errorMessage
+    assertNotNull(errorMsg2)
+    assertEquals("Waiting for location... Please try again in a moment", errorMsg2)
+  }
+
+  @Test
+  fun `toggleDirections clears previous error when successful`() = runTest {
+    // Setup: set an initial error
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    viewModel.checkLocationPermission()
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+    assertNotNull(viewModel.errorMessage)
+
+    // Now grant permission and set location
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(true)
+    viewModel.checkLocationPermission()
+
+    val mockLocation = org.mockito.kotlin.mock<android.location.Location>()
+    whenever(mockLocation.latitude).thenReturn(46.5)
+    whenever(mockLocation.longitude).thenReturn(6.5)
+    whenever(mockLocation.hasBearing()).thenReturn(false)
+    whenever(mockLocationManager.getLastKnownLocation(any(), any())).thenAnswer { invocation ->
+      val onSuccess = invocation.getArgument<(android.location.Location) -> Unit>(0)
+      onSuccess(mockLocation)
+    }
+    viewModel.getLastKnownLocation()
+
+    // Clear the error manually (as the UI would do)
+    viewModel.clearError()
+    assertNull(viewModel.errorMessage)
+
+    // Now toggle directions should work
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // Should not have error
+    assertNull(viewModel.errorMessage)
+  }
+
+  @Test
+  fun `toggleDirections handles multiple toggle attempts without permission`() = runTest {
+    // Setup: no permission
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    viewModel.checkLocationPermission()
+
+    // First attempt
+    viewModel.clearError()
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+    assertNotNull(viewModel.errorMessage)
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+
+    // Second attempt - should give same error
+    viewModel.clearError()
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+    assertNotNull(viewModel.errorMessage)
+    assertEquals("Location permission is required to get directions", viewModel.errorMessage)
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+  }
+
+  @Test
+  fun `toggleDirections state remains Cleared when permission check fails`() = runTest {
+    // Initial state should be Cleared
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+
+    // Try without permission
+    whenever(mockLocationManager.hasLocationPermission()).thenReturn(false)
+    viewModel.checkLocationPermission()
+    viewModel.clearError()
+
+    viewModel.toggleDirections(testEvent)
+    advanceUntilIdle()
+
+    // State should still be Cleared (not Loading or Displayed)
+    assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
+    assertNotNull(viewModel.errorMessage)
+  }
 }

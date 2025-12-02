@@ -123,7 +123,8 @@ class EventDetailSheetDirectionTest {
           onClose = {},
           onShare = {},
           onGetDirections = {},
-          showDirections = false)
+          showDirections = false,
+          hasLocationPermission = true)
     }
 
     composeTestRule
@@ -147,7 +148,8 @@ class EventDetailSheetDirectionTest {
           onClose = {},
           onShare = {},
           onGetDirections = {},
-          showDirections = true)
+          showDirections = true,
+          hasLocationPermission = true)
     }
 
     composeTestRule
@@ -173,7 +175,8 @@ class EventDetailSheetDirectionTest {
           onClose = {},
           onShare = {},
           onGetDirections = { callbackTriggered = true },
-          showDirections = false)
+          showDirections = false,
+          hasLocationPermission = true)
     }
 
     composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON).performClick()
@@ -243,7 +246,8 @@ class EventDetailSheetDirectionTest {
           onClose = {},
           onShare = {},
           onGetDirections = { clickCount++ },
-          showDirections = false)
+          showDirections = false,
+          hasLocationPermission = true)
     }
 
     val button = composeTestRule.onNodeWithTag(UiTestTags.GET_DIRECTIONS_BUTTON)
@@ -300,7 +304,8 @@ class EventDetailSheetDirectionTest {
           onClose = {},
           onShare = {},
           onGetDirections = { showDirections = !showDirections },
-          showDirections = showDirections)
+          showDirections = showDirections,
+          hasLocationPermission = true)
     }
 
     composeTestRule

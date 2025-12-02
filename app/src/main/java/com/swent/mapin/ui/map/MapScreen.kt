@@ -593,7 +593,8 @@ fun MapScreen(
                       onShare = { viewModel.showShareDialog() },
                       onGetDirections = { viewModel.toggleDirections(selectedEvent) },
                       showDirections =
-                          viewModel.directionViewModel.directionState is DirectionState.Displayed)
+                          viewModel.directionViewModel.directionState is DirectionState.Displayed,
+                      hasLocationPermission = viewModel.hasLocationPermission)
                 } else {
                   BottomSheetContent(
                       onModalShown = { shown ->

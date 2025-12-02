@@ -10,16 +10,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,13 +32,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -78,8 +81,7 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    onEventClick: (Event) -> Unit = {},
-    onEditEvent: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -116,10 +118,7 @@ fun SearchResultsSection(
 
   // Show search results
   LazyColumn(modifier = modifier.fillMaxWidth()) {
-    items(results) { event ->
-      SearchResultItem(
-          event = event, onClick = { onEventClick(event) }, onEditEvent = { onEditEvent(event) })
-    }
+    items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
 
     item { Spacer(modifier = Modifier.height(8.dp)) }
   }
@@ -130,31 +129,66 @@ fun SearchResultItem(
     event: Event,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
-    onEditEvent: (Event) -> Unit = {}
+    onEditEvent: ((Event) -> Unit)? = null,
+    onDeleteEvent: ((Event) -> Unit)? = null
 ) {
+  var expanded by remember { mutableStateOf(false) }
+
   Column(
       modifier =
           modifier.fillMaxWidth().clickable { onClick() }.testTag("eventItem_${event.uid}")) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(top = 0.dp, bottom = 8.dp, start = 16.dp, end = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = event.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
+              Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = event.title,
+                    modifier = Modifier.height(24.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
 
-                    Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
 
-                    OutlinedButton(
-                        onClick = { onEditEvent(event) },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
-                          Text("Edit event")
-                        }
-                  }
+                if (onEditEvent != null && onDeleteEvent != null) {
+                  Box(
+                      modifier =
+                          Modifier.align(Alignment.Top)
+                              .height(24.dp)
+                              .clickable(
+                                  indication = null,
+                                  interactionSource = remember { MutableInteractionSource() }) {
+                                    expanded = true
+                                  }
+                              .testTag("eventOptionsIcon_${event.uid}"),
+                      contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "Options",
+                            modifier = Modifier.size(16.dp))
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.testTag("eventOptionsMenu_${event.uid}")) {
+                              DropdownMenuItem(
+                                  text = { Text("Edit") },
+                                  onClick = {
+                                    onEditEvent(event)
+                                    expanded = false
+                                  })
+                              DropdownMenuItem(
+                                  text = { Text("Delete") },
+                                  onClick = {
+                                    onDeleteEvent(event)
+                                    expanded = false
+                                  })
+                            }
+                      }
+                }
+              }
 
               if (event.location.name.isNotBlank()) {
                 Text(
@@ -165,10 +199,6 @@ fun SearchResultItem(
                     overflow = TextOverflow.Ellipsis)
               }
             }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(start = 16.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
       }
 }
 
