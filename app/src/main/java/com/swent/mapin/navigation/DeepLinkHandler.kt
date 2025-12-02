@@ -8,6 +8,8 @@ import android.util.Log
  *
  * This object provides functions to parse and convert deep link URLs from notifications into
  * navigation routes that can be used by the app's navigation system.
+ *
+ * Assisted by AI
  */
 object DeepLinkHandler {
 
