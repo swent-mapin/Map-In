@@ -111,7 +111,12 @@ class MapEventStateController(
   // Listeners for real-time updates
   private var joinedEventsListener: ListenerRegistration? = null
   private var savedEventsListener: ListenerRegistration? = null
+  private var ownedEventsListener: ListenerRegistration? = null
   private var filteredEventsListener: ListenerRegistration? = null
+
+  // Anti-spam actions check
+  private var lastActionEventId: String? = null
+  private var lastActionTimestamp: Long = 0
 
   // Observer jobs
   private var filterObserverJob: Job? = null
@@ -150,6 +155,17 @@ class MapEventStateController(
   fun stopObserving() {
     filterObserverJob?.cancel()
     connectivityObserverJob?.cancel()
+  }
+
+  /** Check whether the user is spamming the same action. */
+  private fun isSpamming(eventId: String): Boolean {
+    val now = System.currentTimeMillis()
+    if (lastActionEventId == eventId && (now - lastActionTimestamp) < 500L) {
+      return true
+    }
+    lastActionEventId = eventId
+    lastActionTimestamp = now
+    return false
   }
 
   /**
@@ -257,8 +273,8 @@ class MapEventStateController(
   }
 
   /**
-   * Starts real-time listeners for joined and saved events. Should be called after user
-   * authentication.
+   * Starts real-time listeners for joined, saved, and owned events. Are in charge of the initial
+   * population of joined, saved and owned events. Should be called after user authentication.
    */
   fun startListeners() {
     try {
@@ -279,6 +295,14 @@ class MapEventStateController(
               onUpdate = { added, modified, removed ->
                 handleSavedEventsUpdate(added, modified, removed)
               })
+
+      // Listen to owned events
+      ownedEventsListener =
+          eventRepository.listenToOwnedEvents(
+              userId = currentUserId,
+              onUpdate = { added, modified, removed ->
+                handleOwnedEventsUpdate(added, modified, removed)
+              })
     } catch (e: Exception) {
       setErrorMessage(e.message ?: "Failed to start event listeners")
     }
@@ -291,6 +315,9 @@ class MapEventStateController(
 
     savedEventsListener?.remove()
     savedEventsListener = null
+
+    ownedEventsListener?.remove()
+    ownedEventsListener = null
 
     filteredEventsListener?.remove()
     filteredEventsListener = null
@@ -343,13 +370,29 @@ class MapEventStateController(
     _savedEventsFlow.value = _savedEvents
   }
 
+  private fun handleOwnedEventsUpdate(
+      added: List<Event>,
+      modified: List<Event>,
+      removedIds: List<String>
+  ) {
+    val currentMap = _ownedEvents.associateBy { it.uid }.toMutableMap()
+
+    // Add new events
+    added.forEach { event -> currentMap[event.uid] = event }
+
+    // Update modified events
+    modified.forEach { event -> currentMap[event.uid] = event }
+
+    // Remove deleted events
+    removedIds.forEach { id -> currentMap.remove(id) }
+
+    // Update state
+    _ownedEvents = currentMap.values.sortedByDescending { it.date }
+  }
+
   /** Refreshes [allEvents] using the current filters. */
   fun refreshEventsList() {
     getFilteredEvents(filterViewModel.filters.value)
-    loadJoinedEvents()
-    loadSavedEvents()
-    loadAttendedEvents()
-    loadOwnedEvents()
   }
 
   /**
@@ -525,21 +568,19 @@ class MapEventStateController(
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
 
-    // Check if already joined
-    if (event.participantIds.contains(currentUserId)) {
-      return
-    }
+    if (isSpamming(event.uid)) return
 
     // Check capacity before optimistic update
     if (event.capacity != null && event.participantIds.size >= event.capacity) {
       setErrorMessage(
-          "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}")
+        "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}")
       return
     }
 
     // Optimistic update: add event to joined list immediately
     val previousJoinedEvents = _joinedEvents
-    _joinedEvents = (_joinedEvents + event).sortedByDescending { it.date }
+    val optimisticEvent = event.copy(participantIds = event.participantIds + currentUserId)
+    _joinedEvents = (_joinedEvents + optimisticEvent).sortedByDescending { it.date }
     _joinedEventsFlow.value = _joinedEvents
     loadAttendedEvents()
 
@@ -547,7 +588,6 @@ class MapEventStateController(
     try {
       eventRepository.editEventAsUser(event.uid, currentUserId, join = true)
       // Success - listener will confirm the state
-      refreshEventsList()
     } catch (e: Exception) {
       // Rollback optimistic update on error
       _joinedEvents = previousJoinedEvents
@@ -569,16 +609,7 @@ class MapEventStateController(
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
 
-    // Check if event still exists in joined events
-    if (!_joinedEvents.any { it.uid == event.uid }) {
-      // Event was already removed (probably deleted)
-      return
-    }
-
-    // Check if actually joined
-    if (!event.participantIds.contains(currentUserId)) {
-      return
-    }
+    if (isSpamming(event.uid)) return
 
     // Optimistic update: remove event from joined list immediately
     val previousJoinedEvents = _joinedEvents
@@ -596,7 +627,6 @@ class MapEventStateController(
     try {
       eventRepository.editEventAsUser(event.uid, currentUserId, join = false)
       // Success - listener will confirm the state
-      refreshEventsList()
     } catch (e: Exception) {
       if (e.message?.contains("Event not found") == true) {
         // Event was deleted while user was leaving - treat as success
@@ -621,6 +651,8 @@ class MapEventStateController(
   suspend fun saveSelectedEvent() {
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
+
+    if (isSpamming(event.uid)) return
 
     // Check if already saved
     if (_savedEvents.any { it.uid == event.uid }) {
@@ -666,6 +698,8 @@ class MapEventStateController(
   suspend fun unsaveSelectedEvent() {
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
+
+    if (isSpamming(event.uid)) return
 
     // Check if actually saved
     if (!_savedEvents.any { it.uid == event.uid }) {
