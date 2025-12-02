@@ -3,6 +3,7 @@ package com.swent.mapin.ui.map
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.mapbox.geojson.Point
 import com.mapbox.maps.EdgeInsets
@@ -148,6 +150,7 @@ fun MapScreen(
   val extraBottomMarginPx = with(density) { 32.dp.toPx() }
   val bottomPaddingPx = mediumSheetBottomPaddingPx + extraBottomMarginPx
   val coroutineScope = rememberCoroutineScope()
+  val context = LocalContext.current
 
   // Track if we should request notification permission after location permission
   var shouldRequestNotificationPermission by remember { mutableStateOf(false) }
@@ -181,7 +184,14 @@ fun MapScreen(
             if (shouldRequestNotificationPermission) {
               shouldRequestNotificationPermission = false
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                val hasNotificationPermission =
+                    ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS) ==
+                        PackageManager.PERMISSION_GRANTED
+
+                if (!hasNotificationPermission) {
+                  notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
               }
             }
           }
@@ -200,7 +210,13 @@ fun MapScreen(
       } else {
         // If location permission already granted, request notification permission directly
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-          notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+          val hasNotificationPermission =
+              ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                  PackageManager.PERMISSION_GRANTED
+
+          if (!hasNotificationPermission) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+          }
         }
       }
     }
@@ -342,7 +358,6 @@ fun MapScreen(
           screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
   // Get map preferences and theme from PreferencesRepository
-  val context = LocalContext.current
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
   val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
   val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
