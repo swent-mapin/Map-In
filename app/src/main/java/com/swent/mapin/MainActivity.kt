@@ -1,5 +1,6 @@
 package com.swent.mapin
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -8,7 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -30,8 +33,21 @@ object HttpClientProvider {
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : ComponentActivity() {
+
+  // Store deep link as mutable state so it triggers recomposition
+  private var pendingDeepLink by mutableStateOf<String?>(null)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    // Extract deep link from notification intent
+    // Check both "actionUrl" (from Firebase) and "action_url" (from PendingIntent)
+    val actionUrl = intent?.getStringExtra("actionUrl") ?: intent?.getStringExtra("action_url")
+    if (actionUrl != null) {
+      Log.d("MainActivity", "Deep link from notification: $actionUrl")
+      pendingDeepLink = actionUrl
+    }
+
     enableEdgeToEdge()
     MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
 
@@ -69,8 +85,26 @@ class MainActivity : ComponentActivity() {
       MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn)
+
+        AppNavHost(isLoggedIn = isLoggedIn, deepLink = pendingDeepLink)
       }
+    }
+  }
+
+  /**
+   * Called when activity receives a new intent (e.g., from notification while app is already
+   * running).
+   */
+  override fun onNewIntent(newIntent: Intent) {
+    super.onNewIntent(newIntent)
+    setIntent(newIntent)
+
+    // Check both keys for compatibility
+    val actionUrl = newIntent.getStringExtra("actionUrl") ?: newIntent.getStringExtra("action_url")
+    actionUrl?.let {
+      Log.d("MainActivity", "Deep link from new intent: $it")
+      pendingDeepLink = it
+      recreate()
     }
   }
 }

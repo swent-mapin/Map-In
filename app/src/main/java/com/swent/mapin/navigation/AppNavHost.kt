@@ -1,7 +1,9 @@
 package com.swent.mapin.navigation
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +26,7 @@ import com.swent.mapin.ui.settings.SettingsScreen
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
+    deepLink: String? = null,
     renderMap: Boolean = true // Set to false in instrumented tests to skip Mapbox rendering
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
@@ -37,6 +40,43 @@ fun AppNavHost(
     if (currentTime - lastNavigationTime > navigationDebounceMs) {
       lastNavigationTime = currentTime
       navController.popBackStack()
+    }
+  }
+
+  // Handle deep link navigation when received
+  LaunchedEffect(deepLink) {
+    Log.d("DEEPLINK", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    Log.d("DEEPLINK", "🎯 LaunchedEffect triggered")
+    Log.d("DEEPLINK", "🔗 deepLink parameter: '$deepLink'")
+
+    if (deepLink == null) {
+      Log.d("DEEPLINK", "⚠️ Deep link is null, no navigation")
+      Log.d("DEEPLINK", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+      return@LaunchedEffect
+    }
+
+    // Wait for NavHost to be fully initialized (critical for cold start)
+    kotlinx.coroutines.delay(500)
+    Log.d("DEEPLINK", "⏰ Waited 500ms for NavHost initialization")
+
+    Log.d("DEEPLINK", "🚀 Processing deep link...")
+    val route = DeepLinkHandler.parseDeepLink(deepLink)
+
+    if (route == null) {
+      Log.w("DEEPLINK", "❌ Parser returned null")
+      Log.d("DEEPLINK", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+      return@LaunchedEffect
+    }
+
+    Log.d("DEEPLINK", "📍 Parsed route: '$route'")
+
+    try {
+      navController.navigate(route) { launchSingleTop = true }
+      Log.d("DEEPLINK", "✅ NAVIGATION SUCCESS → $route")
+      Log.d("DEEPLINK", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    } catch (e: Exception) {
+      Log.e("DEEPLINK", "❌ NAVIGATION FAILED", e)
+      Log.d("DEEPLINK", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     }
   }
 
@@ -108,6 +148,30 @@ fun AppNavHost(
           })
     }
 
+    composable(
+        route = "friends?tab={tab}",
+        arguments =
+            listOf(
+                androidx.navigation.navArgument("tab") {
+                  type = androidx.navigation.NavType.StringType
+                  nullable = true
+                  defaultValue = null
+                })) { backStackEntry ->
+          val tab = backStackEntry.arguments?.getString("tab")
+          val viewModel: com.swent.mapin.ui.friends.FriendsViewModel =
+              androidx.lifecycle.viewmodel.compose.viewModel()
+
+          // Set the tab when we have a deep link tab parameter
+          LaunchedEffect(tab) {
+            if (tab == "REQUESTS") {
+              viewModel.selectTab(com.swent.mapin.ui.friends.FriendsTab.REQUESTS)
+            }
+          }
+
+          FriendsScreen(onNavigateBack = { safePopBackStack() }, viewModel = viewModel)
+        }
+
+    // Also keep the simple friends route for backward compatibility
     composable(Route.Friends.route) { FriendsScreen(onNavigateBack = { safePopBackStack() }) }
 
     composable(Route.Chat.route) {
