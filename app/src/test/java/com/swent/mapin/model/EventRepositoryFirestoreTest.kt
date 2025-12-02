@@ -985,7 +985,7 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val userListenerReg = mock<ListenerRegistration>()
     whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-        .thenReturn(userListenerReg)
+      .thenReturn(userListenerReg)
 
     val eventDocRef = mock<DocumentReference>()
     whenever(collection.document("E1")).thenReturn(eventDocRef)
@@ -993,14 +993,16 @@ class EventRepositoryFirestoreTest {
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerReg = mock<ListenerRegistration>()
     whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-        .thenReturn(eventListenerReg)
+      .thenReturn(eventListenerReg)
 
+    val addedTitles = mutableListOf<String>()
     val modifiedTitles = mutableListOf<String>()
 
     val registration =
-        repo.listenToJoinedEvents(userId) { _, modified, _ ->
-          modifiedTitles.addAll(modified.map { it.title })
-        }
+      repo.listenToJoinedEvents(userId) { added, modified, _ ->
+        addedTitles.addAll(added.map { it.title })
+        modifiedTitles.addAll(modified.map { it.title })
+      }
 
     // Simulate user document with joined event
     val userSnapshot = mock<DocumentSnapshot>()
@@ -1008,22 +1010,132 @@ class EventRepositoryFirestoreTest {
     whenever(userSnapshot.get(JOINED_EVENT_IDS)).thenReturn(listOf("E1"))
     userListenerCaptor.firstValue.onEvent(userSnapshot, null)
 
-    // First modification
+    // First load - should be treated as "added"
     val event1 = createEvent(uid = "E1", title = "Version 1")
     val eventSnapshot1 = doc("E1", event1)
     whenever(eventSnapshot1.exists()).thenReturn(true)
     eventListenerCaptor.firstValue.onEvent(eventSnapshot1, null)
 
-    // Second modification
+    // Second load - should be treated as "modified"
     val event2 = createEvent(uid = "E1", title = "Version 2")
     val eventSnapshot2 = doc("E1", event2)
     whenever(eventSnapshot2.exists()).thenReturn(true)
     eventListenerCaptor.firstValue.onEvent(eventSnapshot2, null)
 
-    // Both modifications should be detected
-    assertEquals(2, modifiedTitles.size)
-    assertEquals("Version 1", modifiedTitles[0])
-    assertEquals("Version 2", modifiedTitles[1])
+    // First load should be in "added"
+    assertEquals(1, addedTitles.size)
+    assertEquals("Version 1", addedTitles[0])
+
+    // Second load should be in "modified"
+    assertEquals(1, modifiedTitles.size)
+    assertEquals("Version 2", modifiedTitles[0])
+
+    registration.remove()
+  }
+
+  // ========== Listen to Owned Events with Initial Population ==========
+  @Test
+  fun `listenToOwnedEvents treats first load as added and subsequent as modified`() = runTest {
+    val userId = "owner123"
+    val userDocRef = mock<DocumentReference>()
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+      .thenReturn(mock<ListenerRegistration>())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
+      .thenReturn(mock<ListenerRegistration>())
+
+    val addedEvents = mutableListOf<Event>()
+    val modifiedEvents = mutableListOf<Event>()
+
+    val registration = repo.listenToOwnedEvents(userId) { added, modified, _ ->
+      addedEvents.addAll(added)
+      modifiedEvents.addAll(modified)
+    }
+
+    // Simulate user document with owned event
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.get(OWNED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // First event load should be treated as "added"
+    val event1 = createEvent(uid = "E1", title = "Initial", ownerId = userId)
+    val eventSnapshot1 = doc("E1", event1)
+    whenever(eventSnapshot1.exists()).thenReturn(true)
+    eventListenerCaptor.firstValue.onEvent(eventSnapshot1, null)
+
+    assertEquals(1, addedEvents.size)
+    assertEquals("Initial", addedEvents.first().title)
+    assertTrue(modifiedEvents.isEmpty())
+
+    // Second load should be treated as "modified"
+    val event2 = createEvent(uid = "E1", title = "Updated", ownerId = userId)
+    val eventSnapshot2 = doc("E1", event2)
+    whenever(eventSnapshot2.exists()).thenReturn(true)
+    eventListenerCaptor.firstValue.onEvent(eventSnapshot2, null)
+
+    assertEquals(1, modifiedEvents.size)
+    assertEquals("Updated", modifiedEvents.first().title)
+
+    registration.remove()
+  }
+
+  // ========== User Document Removal Triggers Event Removal ==========
+  @Test
+  fun `listenToSavedEvents detects removal when event disappears from user document`() = runTest {
+    val userId = "user123"
+    val userDocRef = mock<DocumentReference>()
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
+      .thenReturn(mock<ListenerRegistration>())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
+      .thenReturn(mock<ListenerRegistration>())
+
+    val addedEvents = mutableListOf<Event>()
+    val removedIds = mutableListOf<String>()
+
+    val registration = repo.listenToSavedEvents(userId) { added, _, removed ->
+      addedEvents.addAll(added)
+      removedIds.addAll(removed)
+    }
+
+    // Initial: user has saved event E1
+    val userSnapshot1 = mock<DocumentSnapshot>()
+    whenever(userSnapshot1.exists()).thenReturn(true)
+    whenever(userSnapshot1.get(SAVED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot1, null)
+
+    // Event loaded initially
+    val event = createEvent(uid = "E1", title = "Saved Event")
+    val eventSnapshot = doc("E1", event)
+    whenever(eventSnapshot.exists()).thenReturn(true)
+    eventListenerCaptor.firstValue.onEvent(eventSnapshot, null)
+
+    assertEquals(1, addedEvents.size)
+
+    // User document updated: E1 removed from savedEventIds
+    val userSnapshot2 = mock<DocumentSnapshot>()
+    whenever(userSnapshot2.exists()).thenReturn(true)
+    whenever(userSnapshot2.get(SAVED_EVENT_IDS)).thenReturn(emptyList<String>())
+    userListenerCaptor.firstValue.onEvent(userSnapshot2, null)
+
+    // Should trigger removal
+    assertEquals(1, removedIds.size)
+    assertEquals("E1", removedIds.first())
 
     registration.remove()
   }
