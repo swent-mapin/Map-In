@@ -135,8 +135,6 @@ fun BottomSheetContent(
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
-    topCategories: List<String> = emptyList(),
-    onCategoryClick: (String) -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -318,8 +316,6 @@ fun BottomSheetContent(
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
                                   onShowAllRecents = { showAllRecents = true },
-                                  topCategories = topCategories,
-                                  onCategoryClick = onCategoryClick,
                                   onEventClick = onEventClick)
                             } else {
                               val contentModifier =
