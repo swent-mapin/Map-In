@@ -1,5 +1,6 @@
 package com.swent.mapin.model
 
+import androidx.datastore.preferences.core.Preferences
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -48,32 +49,42 @@ class PreferencesRepositoryTest {
   }
 
   @Test
+  @Suppress("USELESS_IS_CHECK") // Intentional: verifies keys are initialized correctly at runtime
   fun `string preference keys are of correct type`() {
-    assertTrue(
-        PreferencesRepository.THEME_MODE is androidx.datastore.preferences.core.Preferences.Key<*>)
-    assertTrue(
-        PreferencesRepository.MAP_STYLE is androidx.datastore.preferences.core.Preferences.Key<*>)
+    // Note: Due to type erasure, we cannot verify the generic type parameter (String)
+    // at runtime. We verify the keys are Preferences.Key instances, which is sufficient
+    // to catch initialization errors. The specific type (String vs Boolean) is enforced
+    // at compile time by the factory functions (stringPreferencesKey vs booleanPreferencesKey).
+    assertTrue(PreferencesRepository.THEME_MODE is Preferences.Key<*>)
+    assertTrue(PreferencesRepository.MAP_STYLE is Preferences.Key<*>)
+
+    // Additional verification: keys should have non-null names
+    assertNotNull(PreferencesRepository.THEME_MODE.name)
+    assertNotNull(PreferencesRepository.MAP_STYLE.name)
   }
 
   @Test
+  @Suppress("USELESS_IS_CHECK") // Intentional: verifies keys are initialized correctly at runtime
   fun `boolean preference keys are of correct type`() {
-    assertTrue(
-        PreferencesRepository.SHOW_POIS is androidx.datastore.preferences.core.Preferences.Key<*>)
-    assertTrue(
-        PreferencesRepository.SHOW_ROAD_NUMBERS
-            is androidx.datastore.preferences.core.Preferences.Key<*>)
-    assertTrue(
-        PreferencesRepository.SHOW_STREET_NAMES
-            is androidx.datastore.preferences.core.Preferences.Key<*>)
-    assertTrue(
-        PreferencesRepository.ENABLE_3D_VIEW
-            is androidx.datastore.preferences.core.Preferences.Key<*>)
+    // Note: Due to type erasure, we cannot verify the generic type parameter (Boolean)
+    // at runtime. We verify the keys are Preferences.Key instances and have valid names.
+    assertTrue(PreferencesRepository.SHOW_POIS is Preferences.Key<*>)
+    assertTrue(PreferencesRepository.SHOW_ROAD_NUMBERS is Preferences.Key<*>)
+    assertTrue(PreferencesRepository.SHOW_STREET_NAMES is Preferences.Key<*>)
+    assertTrue(PreferencesRepository.ENABLE_3D_VIEW is Preferences.Key<*>)
+
+    // Additional verification: keys should have non-null names
+    assertNotNull(PreferencesRepository.SHOW_POIS.name)
+    assertNotNull(PreferencesRepository.SHOW_ROAD_NUMBERS.name)
+    assertNotNull(PreferencesRepository.SHOW_STREET_NAMES.name)
+    assertNotNull(PreferencesRepository.ENABLE_3D_VIEW.name)
   }
 
   @Test
   fun `all preference keys are unique`() {
-    val keys =
-        setOf(
+    // Collect all key names in a list to check for duplicates
+    val keyNames =
+        listOf(
             PreferencesRepository.THEME_MODE.name,
             PreferencesRepository.MAP_STYLE.name,
             PreferencesRepository.SHOW_POIS.name,
@@ -81,7 +92,11 @@ class PreferencesRepositoryTest {
             PreferencesRepository.SHOW_STREET_NAMES.name,
             PreferencesRepository.ENABLE_3D_VIEW.name)
 
-    // If all keys are unique, the set size should equal the number of keys
-    assertEquals(6, keys.size)
+    // Convert to set and compare sizes - if all keys are unique, sizes should match
+    val uniqueKeyNames = keyNames.toSet()
+    assertEquals(
+        "Duplicate key names detected. All preference keys must have unique names.",
+        keyNames.size,
+        uniqueKeyNames.size)
   }
 }
