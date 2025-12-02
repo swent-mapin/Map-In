@@ -361,18 +361,14 @@ class MapScreenViewModel(
   }
 
   init {
-    // Observe filters and connectivity changes
-    eventStateController.observeFilters()
-    eventStateController.observeConnectivity()
     // Load map style preference
     loadMapStylePreference()
 
-    // Load events
+    // Observe filters and connectivity changes
+    eventStateController.observeFilters()
+    eventStateController.observeConnectivity()
+    // Load events and start listeners
     eventStateController.refreshEventsList()
-    eventStateController.loadSavedEvents()
-    eventStateController.loadJoinedEvents()
-
-    // Start listeners for real-time updates
     eventStateController.startListeners()
 
     // Load user profile
