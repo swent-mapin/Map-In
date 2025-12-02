@@ -454,7 +454,11 @@ class AppNavHostTest {
 
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = false)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = false,
+          autoRequestPermissions = false)
     }
 
     composeTestRule.runOnIdle { navController.navigate("changePassword") }
