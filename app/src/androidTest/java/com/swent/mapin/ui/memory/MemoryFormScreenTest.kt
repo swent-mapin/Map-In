@@ -169,7 +169,7 @@ class MemoryFormScreenTest {
     rule.onNodeWithText(event.title).assertIsDisplayed()
     rule.onNodeWithText("2025", substring = true).assertIsDisplayed()
     rule.onNodeWithText("20", substring = true).assertIsDisplayed()
-    rule.onNodeWithText("Oct", substring = true).assertIsDisplayed()
+    rule.onNodeWithText("oct", substring = true).assertIsDisplayed()
     rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
   }
 
@@ -196,7 +196,7 @@ class MemoryFormScreenTest {
 
     rule.onNodeWithTag("eventSelectionCard").performScrollTo()
     rule.onNodeWithText(event.title).assertIsDisplayed()
-    rule.onNodeWithText("Oct 20, 2025", substring = true).assertIsDisplayed()
+    rule.onNodeWithText("oct. 20, 2025", substring = true).assertIsDisplayed()
     rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
   }
 
