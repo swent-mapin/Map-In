@@ -626,6 +626,7 @@ fun MapScreen(
           event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
     }
 
+    //TODO test this new alert dialog
     viewModel.eventPendingDeletion?.let { eventToDelete ->
       if (viewModel.showDeleteDialog) {
         AlertDialog(
