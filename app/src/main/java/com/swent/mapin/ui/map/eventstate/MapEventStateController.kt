@@ -609,6 +609,12 @@ class MapEventStateController(
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
 
+    // Check if event still exists in joined events
+    if (!_joinedEvents.any { it.uid == event.uid }) {
+      // Event was already removed (probably deleted)
+      return
+    }
+
     if (isSpamming(event.uid)) return
 
     // Optimistic update: remove event from joined list immediately
