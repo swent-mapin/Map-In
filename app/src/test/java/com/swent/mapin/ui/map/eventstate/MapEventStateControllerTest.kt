@@ -594,7 +594,8 @@ class MapEventStateControllerTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenAnswer {
       // Assert optimistic update happened before this call
-      assertTrue(controller.joinedEvents.contains(testEvent.copy(participantIds = listOf(testUserId))))
+      assertTrue(
+          controller.joinedEvents.contains(testEvent.copy(participantIds = listOf(testUserId))))
       Unit
     }
 
@@ -851,11 +852,11 @@ class MapEventStateControllerTest {
 
     val updateCaptor = argumentCaptor<(List<Event>, List<Event>, List<String>) -> Unit>()
     whenever(mockEventRepository.listenToJoinedEvents(any(), any()))
-      .thenReturn(mock<ListenerRegistration>())
+        .thenReturn(mock<ListenerRegistration>())
     whenever(mockEventRepository.listenToSavedEvents(any(), any()))
-      .thenReturn(mock<ListenerRegistration>())
+        .thenReturn(mock<ListenerRegistration>())
     whenever(mockEventRepository.listenToOwnedEvents(any(), updateCaptor.capture()))
-      .thenReturn(mockOwnedListener)
+        .thenReturn(mockOwnedListener)
 
     controller.startListeners()
 

@@ -573,7 +573,7 @@ class MapEventStateController(
     // Check capacity before optimistic update
     if (event.capacity != null && event.participantIds.size >= event.capacity) {
       setErrorMessage(
-        "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}")
+          "Event is at full capacity: ${event.participantIds.size} out of ${event.capacity}")
       return
     }
 

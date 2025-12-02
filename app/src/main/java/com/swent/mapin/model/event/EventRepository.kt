@@ -115,9 +115,8 @@ interface EventRepository {
    *
    * IMPORTANT:
    * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration.
-   *   However it is used in such a way it first consider that there are no event at first so all
-   *   events already in the user's saved events are considered as new.
+   *   removed after registration. However it is used in such a way it first consider that there are
+   *   no event at first so all events already in the user's saved events are considered as new.
    * - There should no longer be any need for getSavedEvents(userId) separately before or after
    *   registering this listener.
    *
@@ -140,9 +139,8 @@ interface EventRepository {
    *
    * IMPORTANT:
    * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration.
-   *   However it is used in such a way it first consider that there are no event at first so all
-   *   events already in the user's joined events are considered as new.
+   *   removed after registration. However it is used in such a way it first consider that there are
+   *   no event at first so all events already in the user's joined events are considered as new.
    * - There should no longer be any need for getJoined(userId) separately before or after
    *   registering this listener.
    *
@@ -165,9 +163,8 @@ interface EventRepository {
    *
    * IMPORTANT:
    * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration.
-   *   However it is used in such a way it first consider that there are no event at first so all
-   *   events already in the user's owned events are considered as new.
+   *   removed after registration. However it is used in such a way it first consider that there are
+   *   no event at first so all events already in the user's owned events are considered as new.
    * - There should no longer be any need for getOwnedEvents(userId) separately before or after
    *   registering this listener.
    *
