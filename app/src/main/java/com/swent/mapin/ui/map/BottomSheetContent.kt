@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -366,7 +367,13 @@ fun BottomSheetContent(
                                           onClick = {
                                             onTabChange(MapScreenViewModel.BottomSheetTab.UPCOMING)
                                           },
-                                          text = { Text("Upcoming") })
+                                          text = {
+                                            Text(
+                                                text = "Upcoming",
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Clip)
+                                          })
                                       Tab(
                                           selected =
                                               selectedTab == MapScreenViewModel.BottomSheetTab.PAST,
