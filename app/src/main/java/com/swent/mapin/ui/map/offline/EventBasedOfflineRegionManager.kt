@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map.offline
 
+import android.content.Context
 import android.util.Log
 import com.mapbox.geojson.Point
 import com.swent.mapin.model.event.Event
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
  * @property offlineRegionManager Manager for downloading tile regions
  * @property connectivityService Service for monitoring network connectivity
  * @property scope Coroutine scope for asynchronous operations
+ * @property context Android context for showing system notifications
  * @property radiusKm Radius around each event to download (default: 2km)
  * @property maxRegions Maximum number of regions to cache (respects Mapbox 750 tile pack limit)
  */
@@ -32,6 +34,7 @@ class EventBasedOfflineRegionManager(
     private val offlineRegionManager: OfflineRegionManager,
     private val connectivityService: ConnectivityService,
     private val scope: CoroutineScope,
+    private val context: Context? = null,
     private val radiusKm: Double = DEFAULT_RADIUS_KM,
     private val maxRegions: Int = DEFAULT_MAX_REGIONS,
     private val onDownloadStart: (Event) -> Unit = {},
@@ -44,6 +47,9 @@ class EventBasedOfflineRegionManager(
     const val DEFAULT_RADIUS_KM = 2.0
     private const val DEFAULT_MAX_REGIONS = 100 // Conservative limit to stay under 4GB cache
   }
+
+  private val notificationManager: DownloadNotificationManager? =
+      context?.let { DownloadNotificationManager(it) }
 
   private var observerJob: Job? = null
   private var deletionObserverJob: Job? = null
@@ -120,6 +126,7 @@ class EventBasedOfflineRegionManager(
 
       // Notify UI that download is starting
       onDownloadStart(event)
+      notificationManager?.showDownloadProgress(event, 0f)
 
       // Download and wait for completion before starting next one
       val result = downloadRegionSuspend(event, bounds)
@@ -129,10 +136,12 @@ class EventBasedOfflineRegionManager(
             // Store location for future deletion
             eventLocations[event.uid] = Pair(event.location.latitude, event.location.longitude)
             Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
+            notificationManager?.showDownloadComplete(event)
             onDownloadComplete(event, Result.success(Unit))
           }
           .onFailure { error ->
             Log.e(TAG, "Failed to download region for event ${event.title}: $error")
+            notificationManager?.showDownloadFailed(event)
             onDownloadComplete(event, Result.failure(error))
           }
     }
@@ -153,6 +162,7 @@ class EventBasedOfflineRegionManager(
         onProgress = { progress ->
           Log.d(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
           onDownloadProgress(event, progress)
+          notificationManager?.showDownloadProgress(event, progress)
         },
         onComplete = { result -> deferred.complete(result) })
 
