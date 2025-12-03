@@ -207,7 +207,7 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.showMemoryForm)
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
     assertFalse(viewModel.showShareDialog)
-    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED, viewModel.selectedBottomSheetTab)
     assertNull(viewModel.selectedEvent)
   }
 
@@ -700,8 +700,8 @@ class MapScreenViewModelTest {
 
   @Test
   fun `setBottomSheetTab updates selected tab`() {
-    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
+    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.UPCOMING)
+    assertEquals(MapScreenViewModel.BottomSheetTab.UPCOMING, viewModel.selectedBottomSheetTab)
   }
 
   @Test
@@ -779,9 +779,9 @@ class MapScreenViewModelTest {
 
   @Test
   fun setBottomSheetTab_updatesSelectedTab() {
-    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
-    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED, viewModel.selectedBottomSheetTab)
+    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.UPCOMING)
+    assertEquals(MapScreenViewModel.BottomSheetTab.UPCOMING, viewModel.selectedBottomSheetTab)
   }
 
   @Test

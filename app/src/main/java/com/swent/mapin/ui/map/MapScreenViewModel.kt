@@ -288,12 +288,13 @@ class MapScreenViewModel(
     get() = eventStateController.ownedError
 
   enum class BottomSheetTab {
-    SAVED_EVENTS,
-    JOINED_EVENTS,
-    OWNED_EVENTS
+    SAVED,
+    UPCOMING,
+    PAST,
+    OWNED
   }
 
-  private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.SAVED_EVENTS)
+  private var _selectedBottomSheetTab by mutableStateOf(BottomSheetTab.SAVED)
   val selectedBottomSheetTab: BottomSheetTab
     get() = _selectedBottomSheetTab
 

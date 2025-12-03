@@ -1,19 +1,28 @@
 package com.swent.mapin.ui.map.bottomsheet.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -31,46 +40,34 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** Row of quick action buttons (Create Memory, Create Event, Friends). */
+/** Creates a button to create a new event. */
 @Composable
-fun QuickActionsSection(modifier: Modifier = Modifier, onCreateEventClick: () -> Unit) {
-  Column(modifier = modifier.fillMaxWidth()) {
-    Text(
-        text = "Quick Actions",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(bottom = 16.dp))
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-      QuickActionButton(
-          text = "Create Event", modifier = Modifier.weight(1f), onClick = onCreateEventClick)
-      // TODO : Add show memories button that switches to a map with past events and their memories
-      QuickActionButton(text = "Show Memories", modifier = Modifier.weight(1f), onClick = {})
-    }
-  }
-}
-
-/** button for quick actions - modern, minimalist with consistent height */
-@Composable
-private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun CreateEventSection(modifier: Modifier = Modifier, onCreateEventClick: () -> Unit) {
   Button(
-      onClick = onClick,
+      onClick = onCreateEventClick,
       modifier = modifier.height(56.dp),
       shape = RoundedCornerShape(16.dp),
       colors =
           ButtonDefaults.buttonColors(
               containerColor = MaterialTheme.colorScheme.primary,
               contentColor = MaterialTheme.colorScheme.onPrimary)) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            style = MaterialTheme.typography.labelLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(text = "Create Event", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                  contentDescription = null)
+            }
       }
 }
 
@@ -78,22 +75,21 @@ private fun QuickActionButton(text: String, modifier: Modifier = Modifier, onCli
 fun EventsSection(
     events: List<Event>,
     onEventClick: (Event) -> Unit = {},
-    onEditEvent: ((Event) -> Unit)? = null
+    onAddMemoryClick: ((Event) -> Unit)? = null,
+    onEditEvent: ((Event) -> Unit)? = null,
+    onDeletedEvent: ((Event) -> Unit)? = null
 ) {
-  if (events.isEmpty()) {
-    NoResultsMessage(query = "", modifier = Modifier)
-    return
-  }
-  val invertedEvents = events.reversed()
+
   var expanded by remember { mutableStateOf(false) }
-  val visible = if (expanded) invertedEvents else invertedEvents.take(3)
+  val visible = if (expanded) events else events.take(3)
 
   Column(modifier = Modifier.fillMaxWidth()) {
     visible.forEach { event ->
-      SearchResultItem(
+      EventRow(
           event = event,
-          modifier = Modifier.padding(horizontal = 16.dp),
-          onClick = { onEventClick(event) },
+          modifier = Modifier.padding(horizontal = 0.dp),
+          onRowClick = { onEventClick(event) },
+          onAddMemoryClick = onAddMemoryClick,
           onEditEvent = onEditEvent,
           onDeleteEvent = onEditEvent) // To be changed with deleteEvent backend
       Spacer(modifier = Modifier.height(8.dp))
@@ -121,65 +117,64 @@ fun AttendedEventsSection(
     // Accepts the selected event to prefill memory creation (or null)
     onCreateMemoryClick: (Event) -> Unit
 ) {
-  var expanded by remember { mutableStateOf(false) }
-  val visible = if (expanded) attendedEvents else attendedEvents.take(3)
-
-  Text(
-      text = "Attended Events",
-      style = MaterialTheme.typography.titleMedium,
-      modifier = Modifier.padding(bottom = 8.dp))
-
   if (attendedEvents.isEmpty()) {
-    Text(
-        text = "No attended events yet",
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(horizontal = 16.dp))
+    NoEventsMessage(
+        title = "No past events yet.", subtitle = "Once you attend events, they’ll appear here.")
   } else {
-    Column(modifier = Modifier.fillMaxWidth()) {
-      visible.forEach { event ->
-        EventRow(
-            event = event,
-            modifier = Modifier.padding(horizontal = 0.dp),
-            onRowClick = { onEventClick(it) },
-            onAddMemoryClick = {
-              // trigger memory creation for this event
-              onCreateMemoryClick(it)
-            })
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-        Spacer(modifier = Modifier.height(8.dp))
-      }
-    }
-    if (attendedEvents.size > 3) {
-      Spacer(modifier = Modifier.height(4.dp))
-      TextButton(
-          onClick = { expanded = !expanded },
-          modifier =
-              Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("eventsShowMoreButton")) {
-            Text(if (expanded) "Show less" else "Show more (${attendedEvents.size - 3} more)")
-          }
-    }
+    EventsSection(attendedEvents, onEventClick, onCreateMemoryClick)
+  }
+}
+
+@Composable
+fun SavedEventsSection(savedEvents: List<Event>, onEventClick: (Event) -> Unit) {
+  if (savedEvents.isEmpty()) {
+    NoEventsMessage(
+        title = "No saved events yet.",
+        subtitle = "Start exploring and save the ones you don’t want to miss.")
+  } else {
+    EventsSection(savedEvents, onEventClick)
+  }
+}
+
+@Composable
+fun UpcomingEventsSection(upcomingEvents: List<Event>, onEventClick: (Event) -> Unit) {
+  if (upcomingEvents.isEmpty()) {
+    NoEventsMessage(
+        title = "No upcoming events yet.",
+        subtitle = "Find something interesting and join to see it here.")
+  } else {
+    EventsSection(upcomingEvents, onEventClick)
   }
 }
 
 /**
  * A single row representing an event with title, formatted date, location and a '+' button to
- * create a memory quickly.
+ * create a memory quickly or an edit/delete button.
+ *
+ * @param event The event to display
+ * @param modifier Modifier to apply to the row
+ * @param onRowClick Callback invoked when the row is clicked
+ * @param onAddMemoryClick Callback invoked when the '+' button is clicked
+ * @param onEditEvent Callback invoked when the edit button is clicked
+ * @param onDeleteEvent Callback invoked when the delete button is clicked
  */
 @Composable
 fun EventRow(
     event: Event,
     modifier: Modifier = Modifier,
     onRowClick: (Event) -> Unit,
-    onAddMemoryClick: (Event) -> Unit
+    onAddMemoryClick: ((Event) -> Unit)? = null,
+    onEditEvent: ((Event) -> Unit)? = null,
+    onDeleteEvent: ((Event) -> Unit)? = null
 ) {
+  var expanded by remember { mutableStateOf(false) }
+
   // Simple date formatter for the endDate (local zone)
   val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
   val dateText =
       try {
-        event.endDate?.toDate()?.time?.let { millis ->
-          formatter.format(Instant.ofEpochMilli(millis))
-        } ?: ""
+        event.date?.toDate()?.time?.let { millis -> formatter.format(Instant.ofEpochMilli(millis)) }
+            ?: ""
       } catch (_: Exception) {
         ""
       }
@@ -192,23 +187,72 @@ fun EventRow(
               .padding(vertical = 12.dp, horizontal = 16.dp),
       verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-          Text(text = event.title, style = MaterialTheme.typography.titleMedium)
+          Text(
+              text = event.title,
+              style = MaterialTheme.typography.titleMedium,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis)
           Spacer(modifier = Modifier.height(4.dp))
           Text(text = dateText, style = MaterialTheme.typography.bodySmall)
           Spacer(modifier = Modifier.height(2.dp))
-          Text(text = event.location.name, style = MaterialTheme.typography.bodySmall)
+          if (event.location.name.isNotBlank()) {
+            Text(
+                text = event.location.name,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+          }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
+        if (onAddMemoryClick != null) {
+          IconButton(
+              onClick = { onAddMemoryClick(event) },
+              modifier = Modifier.testTag("event_add_memory_${event.uid}"),
+              colors =
+                  IconButtonDefaults.iconButtonColors(
+                      contentColor = MaterialTheme.colorScheme.primary)) {
+                Text(text = "+", style = MaterialTheme.typography.titleLarge)
+              }
+        }
 
-        IconButton(
-            onClick = { onAddMemoryClick(event) },
-            modifier = Modifier.testTag("event_add_memory_${event.uid}"),
-            colors =
-                IconButtonDefaults.iconButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary)) {
-              Text(text = "+", style = MaterialTheme.typography.titleLarge)
-            }
+        if (onEditEvent != null && onDeleteEvent != null) {
+          Box(
+              modifier =
+                  Modifier.size(32.dp)
+                      .clickable(
+                          indication = null,
+                          interactionSource = remember { MutableInteractionSource() }) {
+                            expanded = true
+                          }
+                      .testTag("eventOptionsIcon_${event.uid}"),
+              contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Options",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp))
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.testTag("eventOptionsMenu_${event.uid}")) {
+                      DropdownMenuItem(
+                          text = { Text("Edit") },
+                          onClick = {
+                            onEditEvent(event)
+                            expanded = false
+                          })
+                      DropdownMenuItem(
+                          text = { Text("Delete") },
+                          onClick = {
+                            onDeleteEvent(event)
+                            expanded = false
+                          })
+                    }
+              }
+        }
       }
 }
 /**
@@ -273,12 +317,9 @@ fun OwnedEventsSection(
       }
     }
     events.isEmpty() -> {
-      NoResultsMessage(
-          query = "You have not created any events yet.",
-          modifier =
-              Modifier.semantics {
-                contentDescription = "No owned events. You have not created any events yet."
-              })
+      NoEventsMessage(
+          title = "You haven’t created any events yet.",
+          subtitle = "Organize your first event and it will show up here.")
     }
     else -> {
       // Reuse EventsSection behaviour for listing
@@ -287,6 +328,21 @@ fun OwnedEventsSection(
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
             EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent)
           }
+    }
+  }
+}
+
+@Composable
+fun NoEventsMessage(title: String, subtitle: String) {
+  Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Text(text = title, style = MaterialTheme.typography.titleMedium)
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+          text = subtitle,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center)
     }
   }
 }
