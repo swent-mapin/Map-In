@@ -120,35 +120,47 @@ class ProfileViewModel(
     private set
 
   init {
-    loadUserProfile()
+    try {
+      loadUserProfile()
+    } catch (e: Exception) {
+      // Gracefully handle initialization errors (e.g., Firebase not initialized in tests)
+      println("ProfileViewModel - Init error: ${e.message}")
+      _isLoading.value = false
+    }
   }
 
   /** Load user profile from Firestore. If profile doesn't exist, creates a default one. */
   fun loadUserProfile() {
     viewModelScope.launch {
-      _isLoading.value = true
-      val currentUser = FirebaseAuth.getInstance().currentUser
+      try {
+        _isLoading.value = true
+        val currentUser = FirebaseAuth.getInstance().currentUser
 
-      if (currentUser != null) {
-        // Try to load existing profile from Firestore
-        val existingProfile = repository.getUserProfile(currentUser.uid)
+        if (currentUser != null) {
+          // Try to load existing profile from Firestore
+          val existingProfile = repository.getUserProfile(currentUser.uid)
 
-        if (existingProfile != null) {
-          // Profile exists in Firestore, use it
-          _userProfile.value = existingProfile
-        } else {
-          // No profile in Firestore, create default one
-          val defaultProfile =
-              repository.createDefaultProfile(
-                  userId = currentUser.uid,
-                  name = currentUser.displayName ?: "Anonymous User",
-                  profilePictureUrl = currentUser.photoUrl?.toString())
-          _userProfile.value = defaultProfile
+          if (existingProfile != null) {
+            // Profile exists in Firestore, use it
+            _userProfile.value = existingProfile
+          } else {
+            // No profile in Firestore, create default one
+            val defaultProfile =
+                repository.createDefaultProfile(
+                    userId = currentUser.uid,
+                    name = currentUser.displayName ?: "Anonymous User",
+                    profilePictureUrl = currentUser.photoUrl?.toString())
+            _userProfile.value = defaultProfile
+          }
+          // Calculate and load badges after profile is loaded
+          calculateAndUpdateBadges()
         }
-        // Calculate and load badges after profile is loaded
-        calculateAndUpdateBadges()
+      } catch (e: Exception) {
+        // Handle Firebase/Firestore errors gracefully
+        println("ProfileViewModel - Error loading profile: ${e.message}")
+      } finally {
+        _isLoading.value = false
       }
-      _isLoading.value = false
     }
   }
 
