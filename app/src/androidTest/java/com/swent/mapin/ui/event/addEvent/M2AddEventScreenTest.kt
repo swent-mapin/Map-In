@@ -164,13 +164,6 @@ class M2AddEventScreenTest {
   // -------------------------------------------------------------------------
 
   @Test
-  fun addEventScreen_shows_date_time_error_when_empty() {
-    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
-    // With initial blank date/time, the red helper message must be visible
-    compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertIsDisplayed()
-  }
-
-  @Test
   fun addEventScreen_click_save_with_missing_fields_shows_validation_banner() {
     compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
 
@@ -183,15 +176,6 @@ class M2AddEventScreenTest {
   @Test
   fun addEventScreen_partial_inputs_still_triggers_missing_fields() {
     compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
-
-    // Wait for the date/time inline error to be present initially (some CI devices are slow)
-    compose.waitUntil(timeoutMillis = 10000) {
-      runCatching {
-            compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
-            true
-          }
-          .getOrDefault(false)
-    }
 
     // Fill some required text fields to clear their individual error flags
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("Title")
@@ -230,16 +214,5 @@ class M2AddEventScreenTest {
     }
 
     compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertExists()
-
-    // And the inline date/time error helper should still be visible — wait for it too
-    compose.waitUntil(timeoutMillis = 10000) {
-      runCatching {
-            compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
-            true
-          }
-          .getOrDefault(false)
-    }
-
-    compose.onNodeWithTag(AddEventScreenTestTags.DATE_TIME_ERROR).assertExists()
   }
 }

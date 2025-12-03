@@ -175,6 +175,8 @@ class MapScreenViewModelTest {
             userProfileRepository = mockUserProfileRepository,
             locationManager = mockLocationManager,
             filterViewModel = mockFiltersSectionViewModel,
+            ioDispatcher = testDispatcher,
+            mainDispatcher = testDispatcher,
             enableEventBasedDownloads = false)
 
     // Inject mock eventStateController using reflection
@@ -205,7 +207,7 @@ class MapScreenViewModelTest {
     assertFalse(viewModel.showMemoryForm)
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
     assertFalse(viewModel.showShareDialog)
-    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED, viewModel.selectedBottomSheetTab)
     assertNull(viewModel.selectedEvent)
   }
 
@@ -698,8 +700,8 @@ class MapScreenViewModelTest {
 
   @Test
   fun `setBottomSheetTab updates selected tab`() {
-    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
+    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.UPCOMING)
+    assertEquals(MapScreenViewModel.BottomSheetTab.UPCOMING, viewModel.selectedBottomSheetTab)
   }
 
   @Test
@@ -777,9 +779,9 @@ class MapScreenViewModelTest {
 
   @Test
   fun setBottomSheetTab_updatesSelectedTab() {
-    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS, viewModel.selectedBottomSheetTab)
-    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS)
-    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, viewModel.selectedBottomSheetTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.SAVED, viewModel.selectedBottomSheetTab)
+    viewModel.setBottomSheetTab(MapScreenViewModel.BottomSheetTab.UPCOMING)
+    assertEquals(MapScreenViewModel.BottomSheetTab.UPCOMING, viewModel.selectedBottomSheetTab)
   }
 
   @Test
@@ -1440,6 +1442,35 @@ class MapScreenViewModelTest {
 
     // Should still be false
     assertFalse(viewModel.showDownloadComplete)
+  }
+
+  @Test
+  fun onDeepLinkEvent_selectsEventWhenAlreadyLoaded() {
+    val deepLinkEvent = testEvent.copy(uid = "deep-link-event")
+    whenever(mockEventStateController.allEvents).thenReturn(listOf(deepLinkEvent))
+
+    viewModel.onDeepLinkEvent(deepLinkEvent.uid)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // ViewModel now exposes the event via resolvedDeepLinkEvent instead of directly calling
+    // onEventPinClicked
+    assertEquals(deepLinkEvent, viewModel.resolvedDeepLinkEvent)
+  }
+
+  @Test
+  fun onDeepLinkEvent_fetchesEventWhenNotLoaded() {
+    val deepLinkEvent = testEvent.copy(uid = "deep-link-fetch")
+    whenever(mockEventStateController.allEvents).thenReturn(emptyList())
+    runBlocking {
+      whenever(mockEventRepository.getEvent(deepLinkEvent.uid)).thenReturn(deepLinkEvent)
+    }
+
+    viewModel.onDeepLinkEvent(deepLinkEvent.uid)
+    testDispatcher.scheduler.advanceUntilIdle()
+
+    // ViewModel now exposes the event via resolvedDeepLinkEvent instead of directly calling
+    // onEventPinClicked
+    assertEquals(deepLinkEvent, viewModel.resolvedDeepLinkEvent)
   }
 
   // === Tests for toggleDirections with location requirements ===

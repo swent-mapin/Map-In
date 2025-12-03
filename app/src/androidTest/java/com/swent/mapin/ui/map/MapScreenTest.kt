@@ -44,7 +44,7 @@ class MapScreenTest {
   fun mapScreen_initialState_showsCollapsedSheet() {
     rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Saved Events").assertExists()
+    rule.onNodeWithText("Saved").assertExists()
   }
 
   @Test
