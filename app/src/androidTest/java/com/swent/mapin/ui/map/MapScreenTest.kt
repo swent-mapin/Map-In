@@ -783,7 +783,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
       }
     }
 
@@ -812,7 +812,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
       }
     }
 
@@ -840,7 +840,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
       }
     }
 
