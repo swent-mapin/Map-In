@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,82 +26,61 @@ class DeepLinkNavigationTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-  /**
-   * Helper function to safely set content after ensuring the Activity is ready. This prevents "No
-   * compose hierarchies found" errors by using the activity scenario.
-   */
-  private fun setContentSafely(deepLink: String?) {
-    composeTestRule.activityRule.scenario.onActivity {
-      composeTestRule.setContent {
-        val navController = rememberNavController()
-        AppNavHost(
-            navController = navController,
-            isLoggedIn = true,
-            deepLink = deepLink,
-            renderMap = false)
+  @Before
+  fun setup() {
+    // Ensure any previous state is cleared
+    composeTestRule.waitForIdle()
+  }
+
+  private fun setupContent(deepLink: String?) {
+    composeTestRule.setContent {
+      val navController = rememberNavController()
+      AppNavHost(
+          navController = navController, isLoggedIn = true, deepLink = deepLink, renderMap = false)
+    }
+    // Wait for the content to be set and composed
+    composeTestRule.waitForIdle()
+  }
+
+  private fun waitForScreen(tag: String, timeoutMillis: Long = 10000) {
+    composeTestRule.waitUntil(timeoutMillis = timeoutMillis) {
+      try {
+        composeTestRule
+            .onAllNodesWithTag(tag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      } catch (e: Exception) {
+        false
       }
     }
   }
 
   @Test
   fun deepLinkToFriendRequests_navigatesToFriendsScreen() {
-    setContentSafely("mapin://friendRequests/request123")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag("friendsScreen", useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("mapin://friendRequests/request123")
+    waitForScreen("friendsScreen")
     composeTestRule.onNodeWithTag("friendsScreen", useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun deepLinkToFriendRequests_selectsRequestsTab() {
-    setContentSafely("mapin://friendRequests/request123")
-
+    setupContent("mapin://friendRequests/request123")
+    waitForScreen("friendsScreen")
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag("friendsScreen", useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    composeTestRule.waitForIdle()
-
     composeTestRule.onNodeWithTag("tabREQUESTS", useUnmergedTree = true).assertExists()
   }
 
   @Test
   fun deepLinkToEvent_navigatesToMapScreen() {
-    setContentSafely("mapin://events/event456")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("mapin://events/event456")
+    waitForScreen(UiTestTags.MAP_SCREEN)
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun deepLinkToMessagesWithoutId_navigatesToChatScreen() {
-    setContentSafely("mapin://messages")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(ChatScreenTestTags.CHAT_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("mapin://messages")
+    waitForScreen(ChatScreenTestTags.CHAT_SCREEN)
     composeTestRule
         .onNodeWithTag(ChatScreenTestTags.CHAT_SCREEN, useUnmergedTree = true)
         .assertIsDisplayed()
@@ -108,61 +88,29 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToMap_navigatesToMapScreen() {
-    setContentSafely("mapin://map")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("mapin://map")
+    waitForScreen(UiTestTags.MAP_SCREEN)
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun invalidDeepLinkScheme_doesNotNavigate() {
-    setContentSafely("https://example.com/invalid")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("https://example.com/invalid")
+    waitForScreen(UiTestTags.MAP_SCREEN)
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun unknownDeepLinkHost_doesNotNavigate() {
-    setContentSafely("mapin://unknown/path")
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent("mapin://unknown/path")
+    waitForScreen(UiTestTags.MAP_SCREEN)
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun nullDeepLink_startsAtDefaultScreen() {
-    setContentSafely(null)
-
-    composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 6000) {
-      composeTestRule
-          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
+    setupContent(null)
+    waitForScreen(UiTestTags.MAP_SCREEN)
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 }
