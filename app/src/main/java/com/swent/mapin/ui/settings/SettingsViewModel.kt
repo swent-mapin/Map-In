@@ -103,6 +103,13 @@ class SettingsViewModel(
               started = SharingStarted.WhileSubscribed(5000),
               initialValue = MapPreferences())
 
+  // Biometric unlock state - cached from DataStore
+  val biometricUnlockEnabled: StateFlow<Boolean> =
+      preferencesRepository.biometricUnlockFlow.stateIn(
+          scope = viewModelScope,
+          started = SharingStarted.WhileSubscribed(5000),
+          initialValue = false)
+
   // Loading state for async operations
   private val _isLoading = MutableStateFlow(false)
   val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -172,6 +179,18 @@ class SettingsViewModel(
         preferencesRepository.setEnable3DView(enable)
       } catch (e: Exception) {
         _errorMessage.value = "Failed to update 3D view setting: ${e.message}"
+      }
+    }
+  }
+
+  /** Update biometric unlock setting */
+  fun updateBiometricUnlockEnabled(enabled: Boolean) {
+    viewModelScope.launch {
+      try {
+        // Just update DataStore - stateIn() will automatically emit the new value
+        preferencesRepository.setBiometricUnlockEnabled(enabled)
+      } catch (e: Exception) {
+        _errorMessage.value = "Failed to update biometric unlock setting: ${e.message}"
       }
     }
   }

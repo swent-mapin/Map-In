@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Palette
@@ -59,6 +60,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,8 +72,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
+import com.swent.mapin.util.BiometricAuthManager
+import kotlinx.coroutines.launch
 
 /**
  * Settings screen with theme, map style, map preferences and account management.
@@ -109,10 +114,18 @@ fun SettingsScreen(
 
   val themeMode by viewModel.themeMode.collectAsState()
   val mapPreferences by viewModel.mapPreferences.collectAsState()
+  val biometricUnlockEnabled by viewModel.biometricUnlockEnabled.collectAsState()
   val errorMessage by viewModel.errorMessage.collectAsState()
   var showDeleteConfirmation by remember { mutableStateOf(false) }
   var showLogoutConfirmation by remember { mutableStateOf(false) }
   val snackbarHostState = remember { SnackbarHostState() }
+
+  // Initialize BiometricAuthManager and get activity context
+  val biometricAuthManager = remember { BiometricAuthManager() }
+  val activity = context as? FragmentActivity
+  val canUseBiometric =
+      remember(activity) { activity?.let { biometricAuthManager.canUseBiometric(it) } ?: false }
+  val coroutineScope = rememberCoroutineScope()
 
   // Display error messages in Snackbar
   LaunchedEffect(errorMessage) {
@@ -245,6 +258,42 @@ fun SettingsScreen(
                     SettingsSectionTitle(title = "Account", icon = Icons.Default.Settings)
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    // Biometric Unlock Toggle (only show if device supports it)
+                    if (canUseBiometric) {
+                      SettingsToggleItem(
+                          title = "Biometric Unlock",
+                          subtitle = "Use fingerprint or face to unlock the app",
+                          icon = Icons.Default.Fingerprint,
+                          isEnabled = biometricUnlockEnabled,
+                          onToggle = { enabled ->
+                            if (enabled) {
+                              // When enabling, first verify biometric works
+                              activity?.let { fragmentActivity ->
+                                biometricAuthManager.authenticate(
+                                    activity = fragmentActivity,
+                                    onSuccess = { viewModel.updateBiometricUnlockEnabled(true) },
+                                    onError = { error ->
+                                      // Show error and don't enable
+                                      viewModel.clearErrorMessage()
+                                      coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            "Biometric authentication failed: $error")
+                                      }
+                                    },
+                                    onFallback = {
+                                      // User cancelled, don't enable
+                                    })
+                              }
+                            } else {
+                              // Disabling doesn't require authentication
+                              viewModel.updateBiometricUnlockEnabled(false)
+                            }
+                          },
+                          testTag = "biometricUnlockToggle")
+
+                      Spacer(modifier = Modifier.height(12.dp))
+                    }
 
                     // Change Password Button (only for email/password users)
                     if (isEmailPasswordUser) {
