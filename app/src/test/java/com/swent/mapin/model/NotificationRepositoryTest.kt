@@ -300,4 +300,139 @@ class NotificationRepositoryTest {
     assertEquals(1, notifications.size)
     assertEquals(NotificationType.ALERT, notifications[0].type)
   }
+
+  @Test
+  fun `markMultipleAsRead returns false on error`() = runTest {
+    val mockBatch = mock(WriteBatch::class.java)
+    whenever(mockFirestore.batch()).thenReturn(mockBatch)
+    whenever(mockBatch.update(any<DocumentReference>(), anyString(), any())).thenReturn(mockBatch)
+    whenever(mockBatch.commit()).thenReturn(Tasks.forException(Exception("Error")))
+
+    val success = repository.markMultipleAsRead(listOf("notif1", "notif2"))
+
+    assertFalse(success)
+  }
+
+  @Test
+  fun `markMultipleAsRead succeeds with empty list`() = runTest {
+    val mockBatch = mock(WriteBatch::class.java)
+    whenever(mockFirestore.batch()).thenReturn(mockBatch)
+    whenever(mockBatch.commit()).thenReturn(Tasks.forResult(null))
+
+    val success = repository.markMultipleAsRead(emptyList())
+
+    assertTrue(success)
+    // Verify no update operations were invoked for empty list (but batch/commit still called)
+    verify(mockBatch, never()).update(any<DocumentReference>(), anyString(), any())
+    verify(mockBatch).commit()
+  }
+
+  @Test
+  fun `markAllAsRead returns false on error`() = runTest {
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forException(Exception("Error")))
+
+    val success = repository.markAllAsRead("user123")
+
+    assertFalse(success)
+  }
+
+  @Test
+  fun `deleteAllNotifications returns false on error`() = runTest {
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forException(Exception("Error")))
+
+    val success = repository.deleteAllNotifications("user123")
+
+    assertFalse(success)
+  }
+
+  @Test
+  fun `getNotificationsForUser returns empty list on error`() = runTest {
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.orderBy(anyString(), any<Query.Direction>())).thenReturn(mockQuery)
+    whenever(mockQuery.limit(any<Long>())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forException(Exception("Error")))
+
+    val notifications = repository.getNotificationsForUser("user123")
+
+    assertTrue(notifications.isEmpty())
+  }
+
+  @Test
+  fun `getNotificationsForUser with custom limit`() = runTest {
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.orderBy(anyString(), any<Query.Direction>())).thenReturn(mockQuery)
+    whenever(mockQuery.limit(any<Long>())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forResult(mockQuerySnapshot))
+    whenever(mockQuerySnapshot.documents).thenReturn(emptyList())
+
+    repository.getNotificationsForUser("user123", includeRead = true, limit = 100)
+
+    verify(mockQuery).limit(100L)
+  }
+
+  @Test
+  fun `deleteAllNotifications with empty query succeeds`() = runTest {
+    val mockBatch = mock(WriteBatch::class.java)
+
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forResult(mockQuerySnapshot))
+    whenever(mockQuerySnapshot.documents).thenReturn(emptyList())
+    whenever(mockFirestore.batch()).thenReturn(mockBatch)
+    whenever(mockBatch.commit()).thenReturn(Tasks.forResult(null))
+
+    val success = repository.deleteAllNotifications("user123")
+
+    assertTrue(success)
+    verify(mockBatch, never()).delete(any())
+  }
+
+  @Test
+  fun `send notification with generated ID handles firestore exception`() = runTest {
+    whenever(mockDocumentReference.set(any()))
+        .thenReturn(Tasks.forException(Exception("Network error")))
+
+    val notification = Notification(title = "Test", message = "Test", recipientId = "user123")
+    val result = repository.send(notification)
+
+    assertTrue(result is NotificationResult.Error)
+    if (result is NotificationResult.Error) {
+      assertTrue(result.message.contains("Failed to send notification"))
+      assertNotNull(result.exception)
+    }
+  }
+
+  @Test
+  fun `markAllAsRead with batch commit failure`() = runTest {
+    val mockBatch = mock(WriteBatch::class.java)
+    val mockDoc = mock(DocumentSnapshot::class.java)
+    val mockDocRef = mock(DocumentReference::class.java)
+
+    whenever(mockDoc.reference).thenReturn(mockDocRef)
+    whenever(mockCollectionReference.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.whereEqualTo(anyString(), any())).thenReturn(mockQuery)
+    whenever(mockQuery.get()).thenReturn(Tasks.forResult(mockQuerySnapshot))
+    whenever(mockQuerySnapshot.documents).thenReturn(listOf(mockDoc))
+    whenever(mockFirestore.batch()).thenReturn(mockBatch)
+    whenever(mockBatch.update(any<DocumentReference>(), anyString(), any())).thenReturn(mockBatch)
+    whenever(mockBatch.commit()).thenReturn(Tasks.forException(Exception("Commit failed")))
+
+    val success = repository.markAllAsRead("user123")
+
+    assertFalse(success)
+  }
+
+  @Test
+  fun `getNotification with document conversion returns null`() = runTest {
+    whenever(mockDocumentReference.get()).thenReturn(Tasks.forResult(mockDocumentSnapshot))
+    whenever(mockDocumentSnapshot.toObject(Notification::class.java)).thenReturn(null)
+
+    val result = repository.getNotification("notif123")
+
+    assertNull(result)
+  }
 }

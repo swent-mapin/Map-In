@@ -37,7 +37,8 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
     renderMap: Boolean = true, // Set to false in instrumented tests to skip Mapbox rendering
-    deepLinkUrl: String? = null
+    deepLinkUrl: String? = null,
+    autoRequestPermissions: Boolean = true // Set to false in tests to skip permission dialogs
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
@@ -74,7 +75,8 @@ fun AppNavHost(
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap,
-          deepLinkEventId = deepLinkEventId)
+          deepLinkEventId = deepLinkEventId,
+          autoRequestPermissions = autoRequestPermissions)
     }
 
     composable(Route.Profile.route) {

@@ -335,7 +335,11 @@ class EndToEndM2 {
   fun m1_completeUserFlow_loginEditProfileAndLogout_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -435,7 +439,11 @@ class EndToEndM2 {
   fun m1_profileEdit_cancelButton_shouldDiscardChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -485,7 +493,11 @@ class EndToEndM2 {
   fun m2_completeEventFlow_createViewAndInteract_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -518,7 +530,11 @@ class EndToEndM2 {
   fun m2_completeFriendsFlow_searchSendRequestAndManage_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -578,7 +594,11 @@ class EndToEndM2 {
   fun m2_completeChatFlow_navigateCreateAndMessage_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -638,7 +658,11 @@ class EndToEndM2 {
   fun m2_completeMemoryFlow_createAndManageMemory_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -659,7 +683,11 @@ class EndToEndM2 {
   fun m2_completeMapSearchFlow_searchNavigateAndFilter_shouldWorkCorrectly() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 

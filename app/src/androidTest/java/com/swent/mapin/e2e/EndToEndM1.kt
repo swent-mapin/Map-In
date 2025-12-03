@@ -198,7 +198,11 @@ class EndToEndM1 {
     // Start with logged in state - simulating user already authenticated
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
     composeTestRule.waitForIdle()
 
@@ -363,7 +367,11 @@ class EndToEndM1 {
   fun profileEdit_cancelButton_shouldDiscardChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
 
     composeTestRule.waitForIdle()
@@ -433,7 +441,11 @@ class EndToEndM1 {
   fun profileEdit_navigationBackAndForth_shouldPersistChanges() {
     composeTestRule.setContent {
       navController = rememberNavController()
-      AppNavHost(navController = navController, isLoggedIn = true, renderMap = renderMapInTests)
+      AppNavHost(
+          navController = navController,
+          isLoggedIn = true,
+          renderMap = renderMapInTests,
+          autoRequestPermissions = false)
     }
 
     composeTestRule.waitForIdle()
