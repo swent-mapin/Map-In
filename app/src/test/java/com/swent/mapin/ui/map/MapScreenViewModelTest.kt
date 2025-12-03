@@ -1452,8 +1452,9 @@ class MapScreenViewModelTest {
     viewModel.onDeepLinkEvent(deepLinkEvent.uid)
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(deepLinkEvent, viewModel.selectedEvent)
-    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    // ViewModel now exposes the event via resolvedDeepLinkEvent instead of directly calling
+    // onEventPinClicked
+    assertEquals(deepLinkEvent, viewModel.resolvedDeepLinkEvent)
   }
 
   @Test
@@ -1467,8 +1468,9 @@ class MapScreenViewModelTest {
     viewModel.onDeepLinkEvent(deepLinkEvent.uid)
     testDispatcher.scheduler.advanceUntilIdle()
 
-    assertEquals(deepLinkEvent, viewModel.selectedEvent)
-    assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
+    // ViewModel now exposes the event via resolvedDeepLinkEvent instead of directly calling
+    // onEventPinClicked
+    assertEquals(deepLinkEvent, viewModel.resolvedDeepLinkEvent)
   }
 
   // === Tests for toggleDirections with location requirements ===

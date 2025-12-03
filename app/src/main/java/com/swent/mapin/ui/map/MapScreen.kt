@@ -129,7 +129,8 @@ fun MapScreen(
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    deepLinkEventId: String? = null
+    deepLinkEventId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {}
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -238,11 +239,22 @@ fun MapScreen(
 
   // Handle deep link navigation to event
   LaunchedEffect(deepLinkEventId) {
-    deepLinkEventId?.let { eventId -> viewModel.onDeepLinkEvent(eventId) }
+    deepLinkEventId?.let { eventId ->
+      viewModel.onDeepLinkEvent(eventId)
+      onDeepLinkConsumed()
+    }
   }
 
   // Retry deep link selection once events finish loading
   LaunchedEffect(Unit) { snapshotFlow { viewModel.events }.collect { viewModel.onEventsUpdated() } }
+
+  // Handle resolved deep link event from ViewModel (separates VM logic from UI navigation)
+  LaunchedEffect(viewModel.resolvedDeepLinkEvent) {
+    viewModel.resolvedDeepLinkEvent?.let { event ->
+      viewModel.onEventPinClicked(event, forceZoom = true)
+      viewModel.clearResolvedDeepLinkEvent()
+    }
+  }
 
   // Setup location management
   LaunchedEffect(Unit) {

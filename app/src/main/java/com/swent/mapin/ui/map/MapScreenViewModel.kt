@@ -320,6 +320,10 @@ class MapScreenViewModel(
   // Store pending deep link until events are loaded
   private var pendingDeepLinkEventId: String? = null
   private var deepLinkFetchAttempted = false
+  // Expose resolved deep link event for UI to handle
+  private var _resolvedDeepLinkEvent by mutableStateOf<Event?>(null)
+  val resolvedDeepLinkEvent: Event?
+    get() = _resolvedDeepLinkEvent
 
   val recentItems: List<RecentItem>
     get() = searchStateController.recentItems
@@ -796,8 +800,14 @@ class MapScreenViewModel(
     if (event != null) {
       pendingDeepLinkEventId = null
       deepLinkFetchAttempted = false
-      onEventPinClicked(event, forceZoom = true)
+      // Expose event via state for UI to handle navigation
+      _resolvedDeepLinkEvent = event
     }
+  }
+
+  /** Clears the resolved deep link event after UI consumes it. */
+  fun clearResolvedDeepLinkEvent() {
+    _resolvedDeepLinkEvent = null
   }
 
   private suspend fun fetchDeepLinkEvent(eventId: String): Event? {

@@ -9,9 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -33,7 +32,8 @@ object HttpClientProvider {
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : ComponentActivity() {
-  private var deepLinkUrl by mutableStateOf<String?>(null)
+  // Use a queue to handle multiple deep links instead of overwriting
+  private val deepLinkQueue = mutableStateListOf<String>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -56,8 +56,8 @@ class MainActivity : ComponentActivity() {
       }
     }
 
-    // Extract deep link from initial intent
-    deepLinkUrl = getDeepLinkUrlFromIntent(intent)
+    // Extract deep link from initial intent and add to queue
+    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
@@ -77,15 +77,15 @@ class MainActivity : ComponentActivity() {
       MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn, deepLinkUrl = deepLinkUrl)
+        AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
       }
     }
   }
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    // Handle deep links when app is already running
-    deepLinkUrl = getDeepLinkUrlFromIntent(intent)
+    // Handle deep links when app is already running - add to queue
+    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
   }
 }
 
