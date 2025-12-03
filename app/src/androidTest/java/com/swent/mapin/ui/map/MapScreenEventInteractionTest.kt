@@ -31,7 +31,10 @@ class MapScreenEventInteractionTest {
   @Composable
   private fun MapScreenWithTestableCallbacks(onCenterCameraCalled: (Event) -> Unit = {}) {
     MaterialTheme {
-      MapScreen(renderMap = false, onEventClick = { event -> onCenterCameraCalled(event) })
+      MapScreen(
+          renderMap = false,
+          autoRequestPermissions = false,
+          onEventClick = { event -> onCenterCameraCalled(event) })
     }
   }
 
@@ -50,7 +53,7 @@ class MapScreenEventInteractionTest {
 
     rule.setContent {
       var selectedEvent by remember { mutableStateOf<Event?>(testEvent) }
-      MaterialTheme { MapScreen(renderMap = false) }
+      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
     }
     rule.waitForIdle()
 
@@ -103,7 +106,9 @@ class MapScreenEventInteractionTest {
   fun mapScreen_withMultipleEvents_rendersWithoutCrashing() {
     val testEvents = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents().take(3)
 
-    rule.setContent { MaterialTheme { MapScreen(renderMap = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+    }
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
