@@ -995,6 +995,19 @@ class MapScreenViewModel(
   fun loadOwnedEvents() {
     eventStateController.loadOwnedEvents()
   }
+
+  var eventPendingDeletion by mutableStateOf<Event?>(null)
+  var showDeleteDialog by mutableStateOf(false)
+
+  fun requestDeleteEvent(event: Event) {
+    eventPendingDeletion = event
+    showDeleteDialog = true
+  }
+
+  fun cancelDelete() {
+    eventPendingDeletion = null
+    showDeleteDialog = false
+  }
 }
 
 @Composable

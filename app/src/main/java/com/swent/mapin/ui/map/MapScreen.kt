@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -33,6 +34,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -656,6 +660,7 @@ fun MapScreen(
                         eventViewModel.selectEventToEdit(event)
                         viewModel.showEditEventForm()
                       },
+                      onDeleteEvent = { event -> viewModel.requestDeleteEvent(event) },
                       onEditEventDone = {
                         eventViewModel.clearEventToEdit()
                         viewModel.onEditEventCancel()
@@ -691,6 +696,27 @@ fun MapScreen(
     if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
       ShareEventDialog(
           event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
+    }
+
+    viewModel.eventPendingDeletion?.let { eventToDelete ->
+      if (viewModel.showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelDelete() },
+            title = { Text(stringResource(R.string.delete_event)) },
+            text = { Text(stringResource(R.string.delete_alert_text)) },
+            confirmButton = {
+              TextButton(
+                  onClick = {
+                    eventViewModel.deleteEvent(eventToDelete.uid)
+                    viewModel.cancelDelete()
+                  }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                  }
+            },
+            dismissButton = {
+              TextButton(onClick = { viewModel.cancelDelete() }) { Text("Cancel") }
+            })
+      }
     }
 
     // Indicateur de sauvegarde de mémoire

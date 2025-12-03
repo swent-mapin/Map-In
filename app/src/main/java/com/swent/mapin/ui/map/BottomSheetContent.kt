@@ -168,6 +168,7 @@ fun BottomSheetContent(
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onTabEventClick: (Event) -> Unit = {},
     onEditEvent: (Event) -> Unit = {},
+    onDeleteEvent: (Event) -> Unit = {},
     onEditEventDone: () -> Unit = {},
     // Profile/Filters support
     avatarUrl: String? = null,
@@ -433,6 +434,7 @@ fun BottomSheetContent(
                                         error = ownedError,
                                         onEventClick = onTabEventClick,
                                         onEditEvent = onEditEvent,
+                                        onDeleteEvent = onDeleteEvent,
                                         onRetry = onRetryOwnedEvents)
                                   }
                                 }
