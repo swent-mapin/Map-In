@@ -1,6 +1,7 @@
 package com.swent.mapin.navigation
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,6 +19,8 @@ import com.swent.mapin.ui.chat.ChatScreen
 import com.swent.mapin.ui.chat.ConversationScreen
 import com.swent.mapin.ui.chat.NewConversationScreen
 import com.swent.mapin.ui.friends.FriendsScreen
+import com.swent.mapin.ui.friends.FriendsTab
+import com.swent.mapin.ui.friends.FriendsViewModel
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
@@ -26,8 +29,7 @@ import com.swent.mapin.ui.settings.SettingsScreen
 /**
  * Extracts an event ID from a deep link URL using proper URI parsing.
  *
- * Supports the format: mapin://events/{eventId} Extensible for future deep link types (e.g.,
- * mapin://profile/{userId})
+ * Supports the format: mapin://events/{eventId}
  *
  * @return event ID when URL matches mapin://events/{id}, otherwise null.
  */
@@ -36,17 +38,13 @@ internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
 
   return try {
     val uri = Uri.parse(deepLinkUrl)
-    // Check scheme and host
     if (uri.scheme == "mapin" && uri.host == "events") {
-      // Extract event ID from path segments (works in instrumented tests)
       val eventId = uri.pathSegments?.firstOrNull()
-      // Fallback for unit tests where pathSegments might be empty
       eventId ?: uri.path?.removePrefix("/")?.takeIf { it.isNotEmpty() }
     } else {
       null
     }
   } catch (e: Exception) {
-    // Fallback to string parsing if Uri.parse fails or isn't available
     if (deepLinkUrl.startsWith("mapin://events/")) {
       deepLinkUrl.substringAfter("mapin://events/").takeIf { it.isNotEmpty() }
     } else {
@@ -55,26 +53,102 @@ internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
   }
 }
 
+/** Checks if a deep link URL is a friend request deep link. */
+internal fun isFriendRequestDeepLink(deepLinkUrl: String?): Boolean {
+  if (deepLinkUrl == null) return false
+  return deepLinkUrl.startsWith("mapin://friendRequests")
+}
+
+/** Checks if a deep link URL is a friend accepted deep link. */
+internal fun isFriendAcceptedDeepLink(deepLinkUrl: String?): Boolean {
+  if (deepLinkUrl == null) return false
+  // Support both formats: mapin://friendAccepted and mapin://profile/...
+  return deepLinkUrl.startsWith("mapin://friendAccepted") ||
+      deepLinkUrl.startsWith("mapin://profile/")
+}
+
+/** Checks if a deep link URL is a messages deep link. */
+internal fun isMessagesDeepLink(deepLinkUrl: String?): Boolean {
+  if (deepLinkUrl == null) return false
+  return deepLinkUrl.startsWith("mapin://messages")
+}
+
+/** Checks if a deep link URL is a map deep link. */
+internal fun isMapDeepLink(deepLinkUrl: String?): Boolean {
+  if (deepLinkUrl == null) return false
+  return deepLinkUrl.startsWith("mapin://map")
+}
+
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
-    renderMap: Boolean = true, // Set to false in instrumented tests to skip Mapbox rendering
+    renderMap: Boolean = true,
     deepLinkQueue: SnapshotStateList<String> = remember {
       androidx.compose.runtime.mutableStateListOf()
-    }, // Queue of deep links to process
-    autoRequestPermissions: Boolean = true // Set to false in tests to skip permission dialogs
+    },
+    autoRequestPermissions: Boolean = true
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
   // Track current deep link being processed
   var currentDeepLinkEventId by remember { mutableStateOf<String?>(null) }
 
+  // Track pending friends tab for deep link navigation
+  var pendingFriendsTab by remember { mutableStateOf<String?>(null) }
+
   // Process deep links from queue with LaunchedEffect
   LaunchedEffect(deepLinkQueue.size) {
+    Log.d("DEEPLINK", "=== LaunchedEffect triggered ===")
+    Log.d("DEEPLINK", "Queue size: ${deepLinkQueue.size}")
+
     if (deepLinkQueue.isNotEmpty()) {
       val deepLinkUrl = deepLinkQueue.removeAt(0)
-      currentDeepLinkEventId = parseDeepLinkEventId(deepLinkUrl)
+      Log.d("DEEPLINK", "Processing URL: $deepLinkUrl")
+
+      val eventId = parseDeepLinkEventId(deepLinkUrl)
+      Log.d("DEEPLINK", "Event ID parsed: $eventId")
+
+      if (eventId != null) {
+        Log.d("DEEPLINK", "-> Event deep link")
+        currentDeepLinkEventId = eventId
+      } else if (isFriendRequestDeepLink(deepLinkUrl)) {
+        Log.d("DEEPLINK", "-> Friend request deep link detected!")
+        try {
+          pendingFriendsTab = "REQUESTS"
+          navController.navigate(Route.Friends.route) { launchSingleTop = true }
+          Log.d("DEEPLINK", "-> Navigation SUCCESS")
+        } catch (e: Exception) {
+          Log.e("DEEPLINK", "-> Navigation FAILED", e)
+        }
+      } else if (isFriendAcceptedDeepLink(deepLinkUrl)) {
+        Log.d("DEEPLINK", "-> Friend accepted deep link detected!")
+        try {
+          pendingFriendsTab = "FRIENDS"
+          navController.navigate(Route.Friends.route) { launchSingleTop = true }
+          Log.d("DEEPLINK", "-> Navigation SUCCESS")
+        } catch (e: Exception) {
+          Log.e("DEEPLINK", "-> Navigation FAILED", e)
+        }
+      } else if (isMessagesDeepLink(deepLinkUrl)) {
+        Log.d("DEEPLINK", "-> Messages deep link detected!")
+        try {
+          navController.navigate(Route.Chat.route) { launchSingleTop = true }
+          Log.d("DEEPLINK", "-> Navigation SUCCESS")
+        } catch (e: Exception) {
+          Log.e("DEEPLINK", "-> Navigation FAILED", e)
+        }
+      } else if (isMapDeepLink(deepLinkUrl)) {
+        Log.d("DEEPLINK", "-> Map deep link detected!")
+        try {
+          navController.navigate(Route.Map.route) { launchSingleTop = true }
+          Log.d("DEEPLINK", "-> Navigation SUCCESS")
+        } catch (e: Exception) {
+          Log.e("DEEPLINK", "-> Navigation FAILED", e)
+        }
+      } else {
+        Log.d("DEEPLINK", "-> Unknown deep link type")
+      }
     }
   }
 
@@ -119,7 +193,6 @@ fun AppNavHost(
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              // Clear the whole back stack by popping up to the nav graph's start destination
               popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
@@ -128,7 +201,6 @@ fun AppNavHost(
     }
 
     composable(Route.Settings.route) {
-      // Check if returning from password change with success result
       val passwordChangeResult =
           navController.currentBackStackEntry?.savedStateHandle?.get<Boolean>("password_changed")
 
@@ -136,7 +208,6 @@ fun AppNavHost(
           onNavigateBack = { safePopBackStack() },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              // Clear the whole back stack by popping up to the nav graph's start destination
               popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
@@ -144,7 +215,6 @@ fun AppNavHost(
           onNavigateToChangePassword = { navController.navigate(Route.ChangePassword.route) },
           passwordChangeSuccess = passwordChangeResult)
 
-      // Clear the result after reading it
       if (passwordChangeResult != null) {
         navController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("password_changed")
       }
@@ -154,14 +224,32 @@ fun AppNavHost(
       ChangePasswordScreen(
           onNavigateBack = { safePopBackStack() },
           onPasswordChanged = {
-            // Set result to communicate success back to settings
             navController.previousBackStackEntry?.savedStateHandle?.set("password_changed", true)
-            // Navigate back to settings
             safePopBackStack()
           })
     }
 
-    composable(Route.Friends.route) { FriendsScreen(onNavigateBack = { safePopBackStack() }) }
+    composable(Route.Friends.route) {
+      val viewModel: FriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+      // Handle deep link tab selection
+      LaunchedEffect(pendingFriendsTab) {
+        Log.d("DEEPLINK", "FriendsScreen LaunchedEffect - pendingTab: $pendingFriendsTab")
+        when (pendingFriendsTab) {
+          "REQUESTS" -> {
+            Log.d("DEEPLINK", "-> Selecting REQUESTS tab")
+            viewModel.selectTab(FriendsTab.REQUESTS)
+          }
+          "FRIENDS" -> {
+            Log.d("DEEPLINK", "-> Selecting FRIENDS tab")
+            viewModel.selectTab(FriendsTab.FRIENDS)
+          }
+        }
+        pendingFriendsTab = null
+      }
+
+      FriendsScreen(onNavigateBack = { safePopBackStack() }, viewModel = viewModel)
+    }
 
     composable(Route.Chat.route) {
       ChatScreen(
@@ -184,6 +272,7 @@ fun AppNavHost(
             }
           })
     }
+
     composable("conversation/{conversationId}/{name}") { backStackEntry ->
       val conversationId =
           backStackEntry.arguments?.getString("conversationId") ?: return@composable

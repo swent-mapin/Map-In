@@ -28,7 +28,7 @@ object HttpClientProvider {
 }
 
 /**
- * Main activity of the app.* Role: - Android entry point that hosts the Jetpack Compose UI. -
+ * Main activity of the app. Role: - Android entry point that hosts the Jetpack Compose UI. -
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : ComponentActivity() {
@@ -57,7 +57,10 @@ class MainActivity : ComponentActivity() {
     }
 
     // Extract deep link from initial intent and add to queue
-    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
+    getDeepLinkUrlFromIntent(intent)?.let {
+      Log.d("MainActivity", "Deep link from notification: $it")
+      deepLinkQueue.add(it)
+    }
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
@@ -84,11 +87,17 @@ class MainActivity : ComponentActivity() {
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
+    setIntent(intent)
     // Handle deep links when app is already running - add to queue
-    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
+    getDeepLinkUrlFromIntent(intent)?.let {
+      Log.d("MainActivity", "Deep link from new intent: $it")
+      deepLinkQueue.add(it)
+    }
   }
 }
 
+/** Extracts deep link URL from intent, checking both Firebase and PendingIntent keys. */
 internal fun getDeepLinkUrlFromIntent(intent: Intent?): String? {
-  return intent?.getStringExtra("action_url")
+  // Check both "actionUrl" (from Firebase) and "action_url" (from PendingIntent)
+  return intent?.getStringExtra("actionUrl") ?: intent?.getStringExtra("action_url")
 }

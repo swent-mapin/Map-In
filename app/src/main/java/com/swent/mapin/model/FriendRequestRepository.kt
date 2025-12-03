@@ -453,13 +453,15 @@ class FriendRequestRepository(
 
       // Send an info notification about the accepted request
       Log.d(TAG, "Calling NotificationService.sendInfoNotification()...")
+      val actionUrl = "mapin://friendAccepted"
+      Log.d(TAG, "🔗 ACTION URL BEING SENT: $actionUrl")
       val result =
           notificationService.sendInfoNotification(
               recipientId = originalSenderId,
               title = "Friend Request Accepted",
               message = "$accepterName accepted your friend request",
               metadata = mapOf("userId" to accepterId, "accepterName" to accepterName),
-              actionUrl = "mapin://profile/$accepterId")
+              actionUrl = actionUrl)
 
       when (result) {
         is NotificationResult.Success -> {
