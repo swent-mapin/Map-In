@@ -601,7 +601,7 @@ class EventRepositoryFirestoreTest {
     whenever(queryMock.orderBy(any<String>(), any<Query.Direction>())).thenReturn(queryMock)
     whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-    val result = repo.getFilteredEvents(filters, "user")
+    repo.getFilteredEvents(filters, "user")
 
     // Should include both in mock, but in real scenario only cheap would be returned by query
     verify(queryMock).whereLessThanOrEqualTo("price", 50.0)
@@ -1046,10 +1046,8 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
 
-    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-        .thenReturn(mock<ListenerRegistration>())
-    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-        .thenReturn(mock<ListenerRegistration>())
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture())).thenReturn(mock())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture())).thenReturn(mock())
 
     val addedEvents = mutableListOf<Event>()
     val modifiedEvents = mutableListOf<Event>()
@@ -1101,10 +1099,8 @@ class EventRepositoryFirestoreTest {
     val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
     val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
 
-    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture()))
-        .thenReturn(mock<ListenerRegistration>())
-    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture()))
-        .thenReturn(mock<ListenerRegistration>())
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture())).thenReturn(mock())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture())).thenReturn(mock())
 
     val addedEvents = mutableListOf<Event>()
     val removedIds = mutableListOf<String>()
@@ -1138,6 +1134,98 @@ class EventRepositoryFirestoreTest {
     // Should trigger removal
     assertEquals(1, removedIds.size)
     assertEquals("E1", removedIds.first())
+
+    registration.remove()
+  }
+
+  @Test
+  fun `listenToOwnedEvents handles null event parsing gracefully`() = runTest {
+    val userId = "owner123"
+    val userDocRef = mock<DocumentReference>()
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture())).thenReturn(mock())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture())).thenReturn(mock())
+
+    val addedEvents = mutableListOf<Event>()
+    val modifiedEvents = mutableListOf<Event>()
+
+    val registration =
+        repo.listenToOwnedEvents(userId) { added, modified, _ ->
+          addedEvents.addAll(added)
+          modifiedEvents.addAll(modified)
+        }
+
+    // Simulate user document with owned event
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.get(OWNED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // Simulate event snapshot that fails to parse (toObject returns null)
+    val corruptedSnapshot = mock<DocumentSnapshot>()
+    whenever(corruptedSnapshot.exists()).thenReturn(true)
+    whenever(corruptedSnapshot.id).thenReturn("E1")
+    whenever(corruptedSnapshot.toObject(Event::class.java)).thenReturn(null)
+    eventListenerCaptor.firstValue.onEvent(corruptedSnapshot, null)
+
+    // No events should be added or modified when parsing fails
+    assertTrue(addedEvents.isEmpty())
+    assertTrue(modifiedEvents.isEmpty())
+
+    registration.remove()
+  }
+
+  @Test
+  fun `listenToOwnedEvents handles event listener error and logs it`() = runTest {
+    val userId = "owner123"
+    val userDocRef = mock<DocumentReference>()
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(userId)).thenReturn(userDocRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+
+    val userListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+    val eventListenerCaptor = argumentCaptor<EventListener<DocumentSnapshot>>()
+
+    whenever(userDocRef.addSnapshotListener(userListenerCaptor.capture())).thenReturn(mock())
+    whenever(eventDocRef.addSnapshotListener(eventListenerCaptor.capture())).thenReturn(mock())
+
+    var callbackInvoked = false
+    val addedEvents = mutableListOf<Event>()
+    val modifiedEvents = mutableListOf<Event>()
+    val removedIds = mutableListOf<String>()
+
+    val registration =
+        repo.listenToOwnedEvents(userId) { added, modified, removed ->
+          callbackInvoked = true
+          addedEvents.addAll(added)
+          modifiedEvents.addAll(modified)
+          removedIds.addAll(removed)
+        }
+
+    // Simulate user document with owned event
+    val userSnapshot = mock<DocumentSnapshot>()
+    whenever(userSnapshot.exists()).thenReturn(true)
+    whenever(userSnapshot.get(OWNED_EVENT_IDS)).thenReturn(listOf("E1"))
+    userListenerCaptor.firstValue.onEvent(userSnapshot, null)
+
+    // Simulate Firestore error on event listener
+    val error = mock<FirebaseFirestoreException>()
+    whenever(error.message).thenReturn("Network error")
+    eventListenerCaptor.firstValue.onEvent(null, error)
+
+    // Verify callback was invoked with empty lists (or appropriate error handling)
+    assertTrue(callbackInvoked)
+    assertTrue(addedEvents.isEmpty())
+    assertTrue(modifiedEvents.isEmpty())
+    assertTrue(removedIds.isEmpty())
 
     registration.remove()
   }

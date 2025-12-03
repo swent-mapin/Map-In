@@ -601,6 +601,10 @@ class EventRepositoryFirestore(
         db.collection(USERS_COLLECTION_PATH).document(userId).addSnapshotListener { snapshot, error
           ->
           if (error != null) {
+            Log.e(
+                "EventRepository",
+                "Error listening to user $userId ${source.fieldName}: ${error.message}",
+                error)
             onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }
@@ -617,8 +621,10 @@ class EventRepositoryFirestore(
           val currentEventIds =
               try {
                 @Suppress("UNCHECKED_CAST")
-                (snapshot.get(source.fieldName) as? List<String>)?.toSet() ?: emptySet()
-              } catch (_: Exception) {
+                (snapshot.get(source.fieldName) as? List<*>)?.filterIsInstance<String>()?.toSet()
+                    ?: emptySet()
+              } catch (e: Exception) {
+                Log.e("EventRepository", "Error parsing event IDs", e)
                 emptySet()
               }
 
@@ -672,6 +678,11 @@ class EventRepositoryFirestore(
             eventSnapshot,
             eventError ->
           if (eventError != null) {
+            Log.e(
+                "EventRepository",
+                "Error listening to event $eventId: ${eventError.message}",
+                eventError)
+            onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }
 
@@ -709,7 +720,8 @@ class EventRepositoryFirestore(
         Log.w("EventRepositoryFirestore", "User $userId not found")
         throw Exception("User $userId not found")
       } else {
-        @Suppress("UNCHECKED_CAST") (snap.get(source.fieldName) as List<String>)
+        @Suppress("UNCHECKED_CAST")
+        (snap.get(source.fieldName) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
       }
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to fetch event IDs for $source", e)

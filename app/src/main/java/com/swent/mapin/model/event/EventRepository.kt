@@ -113,20 +113,26 @@ interface EventRepository {
   /**
    * Listen to real-time changes in the user's saved events.
    *
-   * IMPORTANT:
-   * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration. However it is used in such a way it first consider that there are
-   *   no event at first so all events already in the user's saved events are considered as new.
-   * - There should no longer be any need for getSavedEvents(userId) separately before or after
-   *   registering this listener.
+   * BEHAVIOR:
+   * - On first invocation after registration, ALL existing events in Firestore will be reported as
+   *   "added" in the onUpdate callback. This is by design to sync initial state.
+   * - Subsequent invocations report only actual changes (additions, modifications, deletions).
+   * - Callers do NOT need to call getSavedEvents() separately - this listener provides complete
+   *   state synchronization.
    *
-   * Callback details:
+   * USAGE:
+   * 1. Register this listener BEFORE accessing any saved events
+   * 2. The first callback will populate your initial state with all existing events
+   * 3. Further callbacks will update your state incrementally
+   *
+   * TECHNICAL DETAILS:
    * - Callbacks are delivered on a Firestore background thread (not the Android main thread).
    * - In case of transient errors, empty updates may be emitted; permanent failures are logged.
    * - Removed events are represented by a minimal Event object (only uid is guaranteed valid).
    *
    * @param userId The user ID
-   * @param onUpdate Callback receiving only incremental changes
+   * @param onUpdate Callback receiving changes: first call contains all existing events as "added",
+   *   subsequent calls contain only incremental changes
    * @return ListenerRegistration to remove the listener
    */
   fun listenToSavedEvents(
@@ -135,22 +141,28 @@ interface EventRepository {
   ): ListenerRegistration
 
   /**
-   * Listen to real-time changes in the user's joined events.
+   * Listen to real-time changes in the user's owned events.
    *
-   * IMPORTANT:
-   * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration. However it is used in such a way it first consider that there are
-   *   no event at first so all events already in the user's joined events are considered as new.
-   * - There should no longer be any need for getJoined(userId) separately before or after
-   *   registering this listener.
+   * BEHAVIOR:
+   * - On first invocation after registration, ALL existing events in Firestore will be reported as
+   *   "added" in the onUpdate callback. This is by design to sync initial state.
+   * - Subsequent invocations report only actual changes (additions, modifications, deletions).
+   * - Callers do NOT need to call getOwnedEvents() separately - this listener provides complete
+   *   state synchronization.
    *
-   * Callback details:
+   * USAGE:
+   * 1. Register this listener BEFORE accessing any owned events
+   * 2. The first callback will populate your initial state with all existing events
+   * 3. Further callbacks will update your state incrementally
+   *
+   * TECHNICAL DETAILS:
    * - Callbacks are delivered on a Firestore background thread (not the Android main thread).
    * - In case of transient errors, empty updates may be emitted; permanent failures are logged.
    * - Removed events are represented by a minimal Event object (only uid is guaranteed valid).
    *
    * @param userId The user ID
-   * @param onUpdate Callback receiving only incremental changes
+   * @param onUpdate Callback receiving changes: first call contains all existing events as "added",
+   *   subsequent calls contain only incremental changes
    * @return ListenerRegistration to remove the listener
    */
   fun listenToOwnedEvents(
@@ -159,22 +171,28 @@ interface EventRepository {
   ): ListenerRegistration
 
   /**
-   * Listen to real-time changes in the user's owned events.
+   * Listen to real-time changes in the user's joined events.
    *
-   * IMPORTANT:
-   * - The first invocation of onUpdate only happens when an event is actually added, modified, or
-   *   removed after registration. However it is used in such a way it first consider that there are
-   *   no event at first so all events already in the user's owned events are considered as new.
-   * - There should no longer be any need for getOwnedEvents(userId) separately before or after
-   *   registering this listener.
+   * BEHAVIOR:
+   * - On first invocation after registration, ALL existing events in Firestore will be reported as
+   *   "added" in the onUpdate callback. This is by design to sync initial state.
+   * - Subsequent invocations report only actual changes (additions, modifications, deletions).
+   * - Callers do NOT need to call getJoinedEvents() separately - this listener provides complete
+   *   state synchronization.
    *
-   * Callback details:
+   * USAGE:
+   * 1. Register this listener BEFORE accessing any joined events
+   * 2. The first callback will populate your initial state with all existing events
+   * 3. Further callbacks will update your state incrementally
+   *
+   * TECHNICAL DETAILS:
    * - Callbacks are delivered on a Firestore background thread (not the Android main thread).
    * - In case of transient errors, empty updates may be emitted; permanent failures are logged.
    * - Removed events are represented by a minimal Event object (only uid is guaranteed valid).
    *
    * @param userId The user ID
-   * @param onUpdate Callback receiving only incremental changes
+   * @param onUpdate Callback receiving changes: first call contains all existing events as "added",
+   *   subsequent calls contain only incremental changes
    * @return ListenerRegistration to remove the listener
    */
   fun listenToJoinedEvents(

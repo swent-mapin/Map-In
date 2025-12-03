@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map.eventstate
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,29 @@ sealed class OfflineAction {
   data class UnsaveEvent(val eventId: String, val userId: String) : OfflineAction()
 }
 
+/** Anti spam debounce */
+const val ANTI_SPAM_DEBOUNCE: Long = 500
+
+interface TimeProvider {
+  fun currentTimeMillis(): Long
+}
+
+/** Provides the current time in milliseconds. */
+class SystemTimeProvider : TimeProvider {
+  override fun currentTimeMillis() = System.currentTimeMillis()
+}
+
+/** Provides a chosen time in milliseconds for tests */
+class FakeTimeProvider : TimeProvider {
+  var currentTime = 0L
+
+  override fun currentTimeMillis() = currentTime
+
+  fun advance(millis: Long) {
+    currentTime += millis
+  }
+}
+
 /**
  * Encapsulates all event-related state (filtered, search results, joined, saved) and repository
  * interactions (join, save, etc.) so the ViewModel only coordinates UI state.
@@ -53,7 +77,8 @@ class MapEventStateController(
     // Indicates whether the code is not running inside a unit test environment.
     // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
     // auto-refresh loops) which would otherwise block or hang the test runner.
-    private val autoRefreshEnabled: Boolean = true
+    private val autoRefreshEnabled: Boolean = true,
+    private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -159,8 +184,8 @@ class MapEventStateController(
 
   /** Check whether the user is spamming the same action. */
   private fun isSpamming(eventId: String): Boolean {
-    val now = System.currentTimeMillis()
-    if (lastActionEventId == eventId && (now - lastActionTimestamp) < 500L) {
+    val now = timeProvider.currentTimeMillis()
+    if (lastActionEventId == eventId && (now - lastActionTimestamp) < ANTI_SPAM_DEBOUNCE) {
       return true
     }
     lastActionEventId = eventId
@@ -274,11 +299,26 @@ class MapEventStateController(
 
   /**
    * Starts real-time listeners for joined, saved, and owned events. Are in charge of the initial
-   * population of joined, saved and owned events. Should be called after user authentication.
+   * population of joined, saved and owned events.
+   *
+   * LIFECYCLE:
+   * - Should be called once after user authentication
+   * - Must call stopListeners() before calling this again to avoid duplicate listeners
+   * - Calling this multiple times without stopListeners() will create memory leaks
+   *
+   * @throws IllegalStateException if listeners are already active
    */
   fun startListeners() {
     try {
       val currentUserId = getUserId()
+
+      // Guard against duplicate listeners
+      if (joinedEventsListener != null ||
+          savedEventsListener != null ||
+          ownedEventsListener != null) {
+        Log.w("MapEventStateController", "Listeners already active. Call stopListeners() first.")
+        return
+      }
 
       // Listen to joined events
       joinedEventsListener =

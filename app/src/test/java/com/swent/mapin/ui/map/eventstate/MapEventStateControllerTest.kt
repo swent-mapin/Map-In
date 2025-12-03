@@ -61,6 +61,7 @@ class MapEventStateControllerTest {
   @Mock private lateinit var mockConnectivityService: ConnectivityService
 
   private lateinit var controller: MapEventStateController
+  private lateinit var fakeTimeProvider: FakeTimeProvider
   private val testUserId = "testUserId"
   private val testEvent =
       Event(
@@ -76,6 +77,7 @@ class MapEventStateControllerTest {
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
+    fakeTimeProvider = FakeTimeProvider()
 
     // Mock Firebase Auth
     whenever(mockAuth.currentUser).thenReturn(mockUser)
@@ -110,7 +112,8 @@ class MapEventStateControllerTest {
             getSelectedEvent = mockGetSelectedEvent,
             setErrorMessage = mockSetErrorMessage,
             clearErrorMessage = mockClearErrorMessage,
-            autoRefreshEnabled = false)
+            autoRefreshEnabled = false,
+            timeProvider = fakeTimeProvider)
   }
 
   @After
@@ -879,23 +882,29 @@ class MapEventStateControllerTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenReturn(Unit)
 
-    // First call should succeed
+    // First call should succeed (t=0)
     controller.joinSelectedEvent()
-    advanceUntilIdle()
-
-    // Immediate second call should be blocked (spam)
-    controller.joinSelectedEvent()
-    advanceUntilIdle()
-
-    // Should only call repository once
+    testDispatcher.scheduler.advanceUntilIdle()
     verify(mockEventRepository, times(1)).editEventAsUser(testEvent.uid, testUserId, true)
 
-    // But different event should work immediately
+    // Immediate second call should be blocked (t=0)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository, times(1)).editEventAsUser(any(), any(), any()) // Still 1
+
+    // Advance fake time by 500ms
+    fakeTimeProvider.advance(500)
+
+    // Now it should work (t=500)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository, times(2)).editEventAsUser(testEvent.uid, testUserId, true)
+
+    // Different event works immediately
     val event2 = testEvent.copy(uid = "event2")
     whenever(mockGetSelectedEvent()).thenReturn(event2)
     controller.joinSelectedEvent()
-    advanceUntilIdle()
-
+    testDispatcher.scheduler.advanceUntilIdle()
     verify(mockEventRepository).editEventAsUser(event2.uid, testUserId, true)
   }
 }
