@@ -27,13 +27,15 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToFriendRequests_navigatesToFriendsScreen() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://friendRequests/request123",
-          renderMap = false)
+    composeTestRule.activity.runOnUiThread {
+      composeTestRule.setContent {
+        val navController = rememberNavController()
+        AppNavHost(
+            navController = navController,
+            isLoggedIn = true,
+            deepLink = "mapin://friendRequests/request123",
+            renderMap = false)
+      }
     }
 
     composeTestRule.waitForIdle()
