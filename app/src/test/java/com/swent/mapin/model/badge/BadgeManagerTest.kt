@@ -45,14 +45,14 @@ class BadgeManagerTest {
 
   @Test
   fun `calculateBadges returns Profile Pro badge unlocked when all fields completed`() {
-    val profile = UserProfile(
-        userId = "user1",
-        name = "Test User",
-        bio = "I love coding",
-        location = "Paris",
-        hobbies = listOf("Reading", "Gaming"),
-        avatarUrl = "https://example.com/avatar.jpg"
-    )
+    val profile =
+        UserProfile(
+            userId = "user1",
+            name = "Test User",
+            bio = "I love coding",
+            location = "Paris",
+            hobbies = listOf("Reading", "Gaming"),
+            avatarUrl = "https://example.com/avatar.jpg")
     val friendsCount = 0
 
     val badges = BadgeManager.calculateBadges(profile, friendsCount)
@@ -65,14 +65,14 @@ class BadgeManagerTest {
 
   @Test
   fun `calculateBadges returns Profile Pro badge with partial progress`() {
-    val profile = UserProfile(
-        userId = "user1",
-        name = "Test User",
-        bio = "I love coding",
-        location = "Paris",
-        hobbies = emptyList(),
-        avatarUrl = null
-    )
+    val profile =
+        UserProfile(
+            userId = "user1",
+            name = "Test User",
+            bio = "I love coding",
+            location = "Paris",
+            hobbies = emptyList(),
+            avatarUrl = null)
     val friendsCount = 0
 
     val badges = BadgeManager.calculateBadges(profile, friendsCount)
@@ -84,40 +84,46 @@ class BadgeManagerTest {
 
   @Test
   fun `calculateBadges ignores default placeholder values`() {
-    val profile = UserProfile(
-        userId = "user1",
-        name = "Test User",
-        bio = "Tell us about yourself...",
-        location = "Unknown",
-        hobbies = listOf("Reading"),
-        avatarUrl = "person"
-    )
+    val profile =
+        UserProfile(
+            userId = "user1",
+            name = "Test User",
+            bio = "Tell us about yourself...",
+            location = "Unknown",
+            hobbies = listOf("Reading"),
+            avatarUrl = "person")
     val friendsCount = 0
 
     val badges = BadgeManager.calculateBadges(profile, friendsCount)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
-    assertFalse("Profile Pro badge should be locked with default values", profileProBadge!!.isUnlocked)
-    assertEquals("Progress should be 40% (only name and hobbies counted)", 0.4f, profileProBadge.progress, 0.001f)
+    assertFalse(
+        "Profile Pro badge should be locked with default values", profileProBadge!!.isUnlocked)
+    assertEquals(
+        "Progress should be 40% (only name and hobbies counted)",
+        0.4f,
+        profileProBadge.progress,
+        0.001f)
   }
 
   @Test
   fun `calculateBadges accepts profilePictureUrl as valid avatar`() {
-    val profile = UserProfile(
-        userId = "user1",
-        name = "Test User",
-        bio = "I love coding",
-        location = "Paris",
-        hobbies = listOf("Reading"),
-        avatarUrl = null,
-        profilePictureUrl = "https://example.com/profile.jpg"
-    )
+    val profile =
+        UserProfile(
+            userId = "user1",
+            name = "Test User",
+            bio = "I love coding",
+            location = "Paris",
+            hobbies = listOf("Reading"),
+            avatarUrl = null,
+            profilePictureUrl = "https://example.com/profile.jpg")
     val friendsCount = 0
 
     val badges = BadgeManager.calculateBadges(profile, friendsCount)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
-    assertTrue("Profile Pro badge should be unlocked with profilePictureUrl", profileProBadge!!.isUnlocked)
+    assertTrue(
+        "Profile Pro badge should be unlocked with profilePictureUrl", profileProBadge!!.isUnlocked)
     assertEquals("Profile Pro badge progress should be 100%", 1f, profileProBadge.progress, 0.001f)
   }
 }

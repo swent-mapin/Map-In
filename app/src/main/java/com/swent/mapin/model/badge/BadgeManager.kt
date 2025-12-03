@@ -5,8 +5,8 @@ import com.swent.mapin.model.UserProfile
 /**
  * Singleton object responsible for calculating badge unlock status and progress.
  *
- * This manager handles all badge-related calculations in a stateless, thread-safe manner.
- * Each badge type has its own calculation logic based on user profile data and social metrics.
+ * This manager handles all badge-related calculations in a stateless, thread-safe manner. Each
+ * badge type has its own calculation logic based on user profile data and social metrics.
  *
  * Usage:
  * ```
@@ -18,25 +18,21 @@ object BadgeManager {
   /**
    * Calculate all badges for a user based on their profile and social metrics.
    *
-   * This method recalculates all badge statuses and progress values from scratch.
-   * It is thread-safe and can be called concurrently from multiple coroutines.
+   * This method recalculates all badge statuses and progress values from scratch. It is thread-safe
+   * and can be called concurrently from multiple coroutines.
    *
    * @param userProfile The user's profile containing all profile data
    * @param friendsCount The number of friends the user has
    * @return List of all badges with updated unlock status and progress
    */
   fun calculateBadges(userProfile: UserProfile, friendsCount: Int): List<Badge> {
-    return listOf(
-        calculateFriendlyBadge(friendsCount),
-        calculateProfileProBadge(userProfile)
-    )
+    return listOf(calculateFriendlyBadge(friendsCount), calculateProfileProBadge(userProfile))
   }
 
   /**
    * Calculate the "Friendly" badge (COMMON rarity).
    *
-   * Unlock criteria: User has at least 1 friend
-   * Progress: Binary (0% or 100%)
+   * Unlock criteria: User has at least 1 friend Progress: Binary (0% or 100%)
    *
    * @param friendsCount Number of friends the user has
    * @return Badge with unlock status and progress
@@ -52,8 +48,7 @@ object BadgeManager {
         iconName = "face",
         rarity = BadgeRarity.COMMON,
         isUnlocked = isUnlocked,
-        progress = progress
-    )
+        progress = progress)
   }
 
   /**
@@ -80,14 +75,12 @@ object BadgeManager {
     }
 
     // Check 2: Bio is filled (not default placeholder)
-    if (userProfile.bio.isNotEmpty() &&
-        userProfile.bio != "Tell us about yourself...") {
+    if (userProfile.bio.isNotEmpty() && userProfile.bio != "Tell us about yourself...") {
       completedFields++
     }
 
     // Check 3: Location is filled (not "Unknown")
-    if (userProfile.location.isNotEmpty() &&
-        userProfile.location != "Unknown") {
+    if (userProfile.location.isNotEmpty() && userProfile.location != "Unknown") {
       completedFields++
     }
 
@@ -99,8 +92,8 @@ object BadgeManager {
     // Check 5: Profile picture exists (check both avatarUrl and profilePictureUrl)
     // Accept if either avatarUrl is valid (not null, not empty, not default "person")
     // OR profilePictureUrl is valid (not null, not empty)
-    val hasValidAvatarUrl = !userProfile.avatarUrl.isNullOrEmpty() &&
-        userProfile.avatarUrl != "person"
+    val hasValidAvatarUrl =
+        !userProfile.avatarUrl.isNullOrEmpty() && userProfile.avatarUrl != "person"
     val hasValidProfilePictureUrl = !userProfile.profilePictureUrl.isNullOrEmpty()
     val hasProfilePicture = hasValidAvatarUrl || hasValidProfilePictureUrl
 
@@ -119,8 +112,6 @@ object BadgeManager {
         iconName = "person",
         rarity = BadgeRarity.RARE,
         isUnlocked = isUnlocked,
-        progress = progress
-    )
+        progress = progress)
   }
 }
-

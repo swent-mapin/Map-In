@@ -158,15 +158,13 @@ private fun BadgeItem(badge: Badge, onClick: () -> Unit) {
                                 Brush.radialGradient(
                                     colors = rarityColors,
                                     center = androidx.compose.ui.geometry.Offset(28f, 28f),
-                                    radius = 40f
-                                )
+                                    radius = 40f)
                               } else {
                                 Brush.radialGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.surfaceVariant,
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                )
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.colorScheme.surfaceVariant))
                               })
                       .border(
                           width = 2.dp,

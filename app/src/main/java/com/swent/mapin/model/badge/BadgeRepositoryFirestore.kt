@@ -6,8 +6,8 @@ import kotlinx.coroutines.tasks.await
 /**
  * Firestore implementation of BadgeRepository.
  *
- * This implementation stores badges in the user's profile document under the "badges" field.
- * It includes caching to minimize Firestore reads and retry logic for transient failures.
+ * This implementation stores badges in the user's profile document under the "badges" field. It
+ * includes caching to minimize Firestore reads and retry logic for transient failures.
  *
  * Firestore structure:
  * ```
@@ -31,8 +31,8 @@ class BadgeRepositoryFirestore(
   /**
    * Save badge progress for a user to Firestore.
    *
-   * Updates the badges field in the user's document. If the document doesn't exist,
-   * this operation will fail gracefully and return false.
+   * Updates the badges field in the user's document. If the document doesn't exist, this operation
+   * will fail gracefully and return false.
    *
    * @param userId The unique identifier of the user
    * @param badges The list of badges to save
@@ -41,16 +41,13 @@ class BadgeRepositoryFirestore(
   override suspend fun saveBadgeProgress(userId: String, badges: List<Badge>): Boolean {
     return executeWithRetry {
       try {
-        firestore
-            .collection(COLLECTION_USERS)
-            .document(userId)
-            .update(FIELD_BADGES, badges)
-            .await()
+        firestore.collection(COLLECTION_USERS).document(userId).update(FIELD_BADGES, badges).await()
 
         // Update cache on successful save
         badgeCache[userId] = badges
 
-        println("BadgeRepositoryFirestore - Successfully saved ${badges.size} badges for user $userId")
+        println(
+            "BadgeRepositoryFirestore - Successfully saved ${badges.size} badges for user $userId")
         true
       } catch (e: Exception) {
         println("BadgeRepositoryFirestore - Error saving badges: ${e.message}")
@@ -63,8 +60,8 @@ class BadgeRepositoryFirestore(
   /**
    * Retrieve badges for a user from Firestore.
    *
-   * First checks the cache, then fetches from Firestore if not cached.
-   * Returns null if the user document doesn't exist or if an error occurs.
+   * First checks the cache, then fetches from Firestore if not cached. Returns null if the user
+   * document doesn't exist or if an error occurs.
    *
    * @param userId The unique identifier of the user
    * @return List of badges if found, null otherwise
@@ -78,35 +75,28 @@ class BadgeRepositoryFirestore(
 
     return executeWithRetry {
       try {
-        val document =
-            firestore
-                .collection(COLLECTION_USERS)
-                .document(userId)
-                .get()
-                .await()
+        val document = firestore.collection(COLLECTION_USERS).document(userId).get().await()
 
         if (document.exists()) {
           @Suppress("UNCHECKED_CAST")
           val badgesData = document.get(FIELD_BADGES) as? List<Map<String, Any>>
 
-          val badges = badgesData?.mapNotNull { badgeMap ->
-            try {
-              Badge(
-                  id = badgeMap["id"] as? String ?: "",
-                  title = badgeMap["title"] as? String ?: "",
-                  description = badgeMap["description"] as? String ?: "",
-                  iconName = badgeMap["iconName"] as? String ?: "",
-                  rarity = BadgeRarity.valueOf(
-                      badgeMap["rarity"] as? String ?: "COMMON"
-                  ),
-                  isUnlocked = badgeMap["isUnlocked"] as? Boolean ?: false,
-                  progress = (badgeMap["progress"] as? Number)?.toFloat() ?: 0f
-              )
-            } catch (e: Exception) {
-              println("BadgeRepositoryFirestore - Error parsing badge: ${e.message}")
-              null
-            }
-          } ?: emptyList()
+          val badges =
+              badgesData?.mapNotNull { badgeMap ->
+                try {
+                  Badge(
+                      id = badgeMap["id"] as? String ?: "",
+                      title = badgeMap["title"] as? String ?: "",
+                      description = badgeMap["description"] as? String ?: "",
+                      iconName = badgeMap["iconName"] as? String ?: "",
+                      rarity = BadgeRarity.valueOf(badgeMap["rarity"] as? String ?: "COMMON"),
+                      isUnlocked = badgeMap["isUnlocked"] as? Boolean ?: false,
+                      progress = (badgeMap["progress"] as? Number)?.toFloat() ?: 0f)
+                } catch (e: Exception) {
+                  println("BadgeRepositoryFirestore - Error parsing badge: ${e.message}")
+                  null
+                }
+              } ?: emptyList()
 
           // Cache the result
           if (badges.isNotEmpty()) {
@@ -130,13 +120,14 @@ class BadgeRepositoryFirestore(
   /**
    * Update the unlock status of a specific badge.
    *
-   * This method updates a single badge within the badges array without affecting others.
-   * Note: This implementation refetches all badges, updates the specific one, and saves back.
+   * This method updates a single badge within the badges array without affecting others. Note: This
+   * implementation refetches all badges, updates the specific one, and saves back.
    *
    * @param userId The unique identifier of the user
    * @param badgeId The unique identifier of the badge
    * @param isUnlocked The new unlock status
-   * @param timestamp The timestamp when the badge was unlocked (currently unused but kept for interface compatibility)
+   * @param timestamp The timestamp when the badge was unlocked (currently unused but kept for
+   *   interface compatibility)
    * @return True if update succeeded, false otherwise
    */
   override suspend fun updateBadgeUnlockStatus(
@@ -151,13 +142,14 @@ class BadgeRepositoryFirestore(
         val currentBadges = getUserBadges(userId) ?: return@executeWithRetry false
 
         // Update the specific badge
-        val updatedBadges = currentBadges.map { badge ->
-          if (badge.id == badgeId) {
-            badge.copy(isUnlocked = isUnlocked)
-          } else {
-            badge
-          }
-        }
+        val updatedBadges =
+            currentBadges.map { badge ->
+              if (badge.id == badgeId) {
+                badge.copy(isUnlocked = isUnlocked)
+              } else {
+                badge
+              }
+            }
 
         // Save back to Firestore
         saveBadgeProgress(userId, updatedBadges)
@@ -194,4 +186,3 @@ class BadgeRepositoryFirestore(
     return null
   }
 }
-

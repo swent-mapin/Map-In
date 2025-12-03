@@ -7,11 +7,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.ImageUploadHelper
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeManager
 import com.swent.mapin.model.badge.BadgeRepository
@@ -37,16 +37,18 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
     private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
-    private val badgeRepository: BadgeRepository? = try {
-        BadgeRepositoryFirestore()
-    } catch (e: Exception) {
-        null
-    },
-    private val friendRequestRepository: FriendRequestRepository? = try {
-        FriendRequestRepository(notificationService = NotificationService())
-    } catch (e: Exception) {
-        null
-    }
+    private val badgeRepository: BadgeRepository? =
+        try {
+          BadgeRepositoryFirestore()
+        } catch (e: Exception) {
+          null
+        },
+    private val friendRequestRepository: FriendRequestRepository? =
+        try {
+          FriendRequestRepository(notificationService = NotificationService())
+        } catch (e: Exception) {
+          null
+        }
 ) : ViewModel() {
 
   // Current user profile from Firestore
@@ -170,12 +172,13 @@ class ProfileViewModel(
     val profile = _userProfile.value
 
     // Get friend count
-    val friendsCount = try {
-      friendRequestRepository.getFriends(currentUser.uid).size
-    } catch (e: Exception) {
-      println("ProfileViewModel - Error fetching friends: ${e.message}")
-      0
-    }
+    val friendsCount =
+        try {
+          friendRequestRepository.getFriends(currentUser.uid).size
+        } catch (e: Exception) {
+          println("ProfileViewModel - Error fetching friends: ${e.message}")
+          0
+        }
 
     // Calculate badges
     val calculatedBadges = BadgeManager.calculateBadges(profile, friendsCount)

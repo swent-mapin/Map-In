@@ -24,26 +24,24 @@ class BadgeRepositoryFirestoreTest {
   private lateinit var repository: BadgeRepositoryFirestore
 
   private val testUserId = "testUser123"
-  private val testBadges = listOf(
-      Badge(
-          id = "friendly",
-          title = "Friendly",
-          description = "Make your first friend",
-          iconName = "face",
-          rarity = BadgeRarity.COMMON,
-          isUnlocked = true,
-          progress = 1f
-      ),
-      Badge(
-          id = "profile_pro",
-          title = "Profile Pro",
-          description = "Complete all profile fields",
-          iconName = "person",
-          rarity = BadgeRarity.RARE,
-          isUnlocked = false,
-          progress = 0.6f
-      )
-  )
+  private val testBadges =
+      listOf(
+          Badge(
+              id = "friendly",
+              title = "Friendly",
+              description = "Make your first friend",
+              iconName = "face",
+              rarity = BadgeRarity.COMMON,
+              isUnlocked = true,
+              progress = 1f),
+          Badge(
+              id = "profile_pro",
+              title = "Profile Pro",
+              description = "Complete all profile fields",
+              iconName = "person",
+              rarity = BadgeRarity.RARE,
+              isUnlocked = false,
+              progress = 0.6f))
 
   @Before
   fun setup() {
@@ -53,9 +51,8 @@ class BadgeRepositoryFirestoreTest {
     repository = BadgeRepositoryFirestore(mockFirestore)
 
     // Setup default mock chain
-    every { mockFirestore.collection("users") } returns mockk(relaxed = true) {
-      every { document(any()) } returns mockDocumentReference
-    }
+    every { mockFirestore.collection("users") } returns
+        mockk(relaxed = true) { every { document(any()) } returns mockDocumentReference }
   }
 
   @After
@@ -96,17 +93,16 @@ class BadgeRepositoryFirestoreTest {
   @Test
   fun `getUserBadges retrieves badges from Firestore successfully`() = runTest {
     // Arrange
-    val badgesData = listOf(
-        mapOf(
-            "id" to "friendly",
-            "title" to "Friendly",
-            "description" to "Make your first friend",
-            "iconName" to "face",
-            "rarity" to "COMMON",
-            "isUnlocked" to true,
-            "progress" to 1.0
-        )
-    )
+    val badgesData =
+        listOf(
+            mapOf(
+                "id" to "friendly",
+                "title" to "Friendly",
+                "description" to "Make your first friend",
+                "iconName" to "face",
+                "rarity" to "COMMON",
+                "isUnlocked" to true,
+                "progress" to 1.0))
 
     coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
     every { mockDocumentSnapshot.exists() } returns true
@@ -125,8 +121,7 @@ class BadgeRepositoryFirestoreTest {
   @Test
   fun `getUserBadges returns null on Firestore exception`() = runTest {
     // Arrange
-    coEvery { mockDocumentReference.get() } returns
-        Tasks.forException(Exception("Network error"))
+    coEvery { mockDocumentReference.get() } returns Tasks.forException(Exception("Network error"))
 
     // Act
     val result = repository.getUserBadges(testUserId)
@@ -138,21 +133,17 @@ class BadgeRepositoryFirestoreTest {
   @Test
   fun `getUserBadges handles malformed badge data gracefully`() = runTest {
     // Arrange - One valid badge, one malformed
-    val badgesData = listOf(
-        mapOf(
-            "id" to "friendly",
-            "title" to "Friendly",
-            "description" to "Make your first friend",
-            "iconName" to "face",
-            "rarity" to "COMMON",
-            "isUnlocked" to true,
-            "progress" to 1.0
-        ),
-        mapOf(
-            "id" to "invalid_badge",
-            "rarity" to "INVALID_RARITY"
-        )
-    )
+    val badgesData =
+        listOf(
+            mapOf(
+                "id" to "friendly",
+                "title" to "Friendly",
+                "description" to "Make your first friend",
+                "iconName" to "face",
+                "rarity" to "COMMON",
+                "isUnlocked" to true,
+                "progress" to 1.0),
+            mapOf("id" to "invalid_badge", "rarity" to "INVALID_RARITY"))
 
     coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
     every { mockDocumentSnapshot.exists() } returns true
