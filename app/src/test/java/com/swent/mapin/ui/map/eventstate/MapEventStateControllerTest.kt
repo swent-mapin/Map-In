@@ -708,9 +708,6 @@ class MapEventStateControllerTest {
     // Mock repository response for queue processing
     whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenReturn(Unit)
     whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getJoinedEvents(any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getOwnedEvents(any())).thenReturn(emptyList())
 
     // Go back online
     connectivityFlow.emit(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI))
