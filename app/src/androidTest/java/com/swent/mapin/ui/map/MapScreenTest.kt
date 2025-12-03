@@ -859,6 +859,7 @@ class MapScreenTest {
 
     // Assert UI state changed — event no longer selected
     rule.runOnIdle { assertNull(viewModel.eventPendingDeletion) }
+    assertFalse(viewModel.ownedEvents.contains(testEvent))
   }
 }
 

@@ -96,7 +96,7 @@ fun EventsSection(
           modifier = Modifier.padding(horizontal = 16.dp),
           onClick = { onEventClick(event) },
           onEditEvent = onEditEvent,
-          onDeleteEvent = onDeleteEvent) // To be changed with deleteEvent backend
+          onDeleteEvent = onDeleteEvent)
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))

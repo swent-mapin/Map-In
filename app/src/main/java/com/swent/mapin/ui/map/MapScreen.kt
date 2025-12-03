@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -687,9 +688,9 @@ fun MapScreen(
       if (viewModel.showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelDelete() },
-            title = { Text("Delete Event") },
+            title = { Text(stringResource(R.string.delete_event)) },
             text = {
-              Text("Are you sure you want to delete this event? This action cannot be undone.")
+              Text(stringResource(R.string.delete_alert_text))
             },
             confirmButton = {
               TextButton(
@@ -697,7 +698,7 @@ fun MapScreen(
                     eventViewModel.deleteEvent(eventToDelete.uid)
                     viewModel.cancelDelete()
                   }) {
-                    Text("Delete", color = Color.Red)
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                   }
             },
             dismissButton = {
