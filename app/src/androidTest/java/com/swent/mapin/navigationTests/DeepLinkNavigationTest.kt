@@ -25,18 +25,26 @@ class DeepLinkNavigationTest {
 
   @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-  @Test
-  fun deepLinkToFriendRequests_navigatesToFriendsScreen() {
-    composeTestRule.activity.runOnUiThread {
+  /**
+   * Helper function to safely set content after ensuring the Activity is ready. This prevents "No
+   * compose hierarchies found" errors by using the activity scenario.
+   */
+  private fun setContentSafely(deepLink: String?) {
+    composeTestRule.activityRule.scenario.onActivity {
       composeTestRule.setContent {
         val navController = rememberNavController()
         AppNavHost(
             navController = navController,
             isLoggedIn = true,
-            deepLink = "mapin://friendRequests/request123",
+            deepLink = deepLink,
             renderMap = false)
       }
     }
+  }
+
+  @Test
+  fun deepLinkToFriendRequests_navigatesToFriendsScreen() {
+    setContentSafely("mapin://friendRequests/request123")
 
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 6000) {
@@ -51,14 +59,7 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToFriendRequests_selectsRequestsTab() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://friendRequests/request123",
-          renderMap = false)
-    }
+    setContentSafely("mapin://friendRequests/request123")
 
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 6000) {
@@ -75,14 +76,7 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToEvent_navigatesToMapScreen() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://events/event456",
-          renderMap = false)
-    }
+    setContentSafely("mapin://events/event456")
 
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 6000) {
@@ -97,14 +91,7 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToMessagesWithoutId_navigatesToChatScreen() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://messages",
-          renderMap = false)
-    }
+    setContentSafely("mapin://messages")
 
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 6000) {
@@ -121,14 +108,7 @@ class DeepLinkNavigationTest {
 
   @Test
   fun deepLinkToMap_navigatesToMapScreen() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://map",
-          renderMap = false)
-    }
+    setContentSafely("mapin://map")
 
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 6000) {
@@ -143,45 +123,45 @@ class DeepLinkNavigationTest {
 
   @Test
   fun invalidDeepLinkScheme_doesNotNavigate() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "https://example.com/invalid",
-          renderMap = false)
-    }
+    setContentSafely("https://example.com/invalid")
 
     composeTestRule.waitForIdle()
+    composeTestRule.waitUntil(timeoutMillis = 6000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun unknownDeepLinkHost_doesNotNavigate() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController,
-          isLoggedIn = true,
-          deepLink = "mapin://unknown/path",
-          renderMap = false)
-    }
+    setContentSafely("mapin://unknown/path")
 
     composeTestRule.waitForIdle()
+    composeTestRule.waitUntil(timeoutMillis = 6000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
 
   @Test
   fun nullDeepLink_startsAtDefaultScreen() {
-    composeTestRule.setContent {
-      val navController = rememberNavController()
-      AppNavHost(
-          navController = navController, isLoggedIn = true, deepLink = null, renderMap = false)
-    }
+    setContentSafely(null)
 
     composeTestRule.waitForIdle()
+    composeTestRule.waitUntil(timeoutMillis = 6000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
 
     composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
   }
