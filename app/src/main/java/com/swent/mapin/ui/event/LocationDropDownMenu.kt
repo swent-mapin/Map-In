@@ -20,6 +20,7 @@ fun LocationDropDownMenu(
     location: MutableState<String>,
     locationError: MutableState<Boolean>,
     locationViewModel: LocationViewModel,
+    testTag: EventScreenTestTag,
     expanded: MutableState<Boolean>,
     locations: List<Location>,
     gotLocation: MutableState<Location>,
@@ -30,7 +31,7 @@ fun LocationDropDownMenu(
         locationError,
         stringResource(R.string.location_place_holder),
         isLocation = true,
-        modifier = Modifier.testTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION),
+        modifier = Modifier.testTag(testTag.INPUT_EVENT_LOCATION),
         locationQuery = {
           locationViewModel.onQueryChanged(location.value)
           expanded.value = true
