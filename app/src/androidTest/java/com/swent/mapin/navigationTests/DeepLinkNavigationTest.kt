@@ -36,7 +36,11 @@ class DeepLinkNavigationTest {
     composeTestRule.setContent {
       val navController = rememberNavController()
       AppNavHost(
-          navController = navController, isLoggedIn = true, deepLink = deepLink, renderMap = false)
+          navController = navController,
+          isLoggedIn = true,
+          deepLink = deepLink,
+          renderMap = false,
+          autoRequestPermissions = false)
     }
     // Wait for the content to be set and composed
     composeTestRule.waitForIdle()
