@@ -10,6 +10,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.NotificationService
+import com.swent.mapin.model.badge.Badge
+import com.swent.mapin.model.badge.BadgeManager
+import com.swent.mapin.model.badge.BadgeRepository
+import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,10 +31,22 @@ import kotlinx.coroutines.launch
  * - Manage temporary edit state
  * - Validate user inputs
  * - Upload images to Firebase Storage
+ * - Calculate and persist user badges
+ * - Track badge unlock notifications
  */
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
-    private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper()
+    private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
+    private val badgeRepository: BadgeRepository? = try {
+        BadgeRepositoryFirestore()
+    } catch (e: Exception) {
+        null
+    },
+    private val friendRequestRepository: FriendRequestRepository? = try {
+        FriendRequestRepository(notificationService = NotificationService())
+    } catch (e: Exception) {
+        null
+    }
 ) : ViewModel() {
 
   // Current user profile from Firestore
@@ -38,6 +56,10 @@ class ProfileViewModel(
   // Loading state
   private val _isLoading = MutableStateFlow(false)
   val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+  // Badges state
+  private val _badges = MutableStateFlow<List<Badge>>(emptyList())
+  val badges: StateFlow<List<Badge>> = _badges.asStateFlow()
 
   // Whether the profile is in edit mode
   var isEditMode by mutableStateOf(false)
@@ -121,8 +143,61 @@ class ProfileViewModel(
                   profilePictureUrl = currentUser.photoUrl?.toString())
           _userProfile.value = defaultProfile
         }
+        // Calculate and load badges after profile is loaded
+        calculateAndUpdateBadges()
       }
       _isLoading.value = false
+    }
+  }
+
+  /**
+   * Calculate badges based on current profile data and persist to Firestore.
+   *
+   * This method:
+   * 1. Fetches the friend count from FriendRequestRepository
+   * 2. Calculates all badges using BadgeManager
+   * 3. Updates the userProfile with the new badges
+   * 4. Saves updated profile (with badges) to Firestore
+   */
+  private suspend fun calculateAndUpdateBadges() {
+    // Skip badge calculation if dependencies are not available (e.g., in tests)
+    if (badgeRepository == null || friendRequestRepository == null) {
+      println("ProfileViewModel - Skipping badge calculation (dependencies not available)")
+      return
+    }
+
+    val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+    val profile = _userProfile.value
+
+    // Get friend count
+    val friendsCount = try {
+      friendRequestRepository.getFriends(currentUser.uid).size
+    } catch (e: Exception) {
+      println("ProfileViewModel - Error fetching friends: ${e.message}")
+      0
+    }
+
+    // Calculate badges
+    val calculatedBadges = BadgeManager.calculateBadges(profile, friendsCount)
+
+    // Update userProfile with calculated badges
+    val updatedProfile = profile.copy(badges = calculatedBadges)
+    _userProfile.value = updatedProfile
+
+    // Also update the separate badges StateFlow for backward compatibility
+    _badges.value = calculatedBadges
+
+    // Persist to Firestore
+    try {
+      val success = badgeRepository.saveBadgeProgress(currentUser.uid, calculatedBadges)
+      if (success) {
+        println("ProfileViewModel - Successfully saved ${calculatedBadges.size} badges")
+      } else {
+        println("ProfileViewModel - Failed to save badges to Firestore")
+      }
+    } catch (e: Exception) {
+      println("ProfileViewModel - Exception saving badges: ${e.message}")
+      e.printStackTrace()
     }
   }
 
@@ -194,6 +269,9 @@ class ProfileViewModel(
         // Update local state only if Firestore save succeeded
         _userProfile.value = updatedProfile
         println("ProfileViewModel - Profile updated successfully")
+
+        // Recalculate badges after profile update
+        calculateAndUpdateBadges()
       } else {
         // Handle error
         println("ProfileViewModel - Failed to save profile")
@@ -320,6 +398,7 @@ class ProfileViewModel(
    * This method performs the following actions:
    * - Signs out the user from Firebase Authentication.
    * - Resets the user profile to a default, empty state.
+   * - Clears all badges.
    * - Exits edit mode.
    * - Clears any validation or input errors.
    *
@@ -330,6 +409,7 @@ class ProfileViewModel(
     FirebaseAuth.getInstance().signOut()
     // Reset the profile state
     _userProfile.value = UserProfile()
+    _badges.value = emptyList()
     isEditMode = false
     clearErrors()
   }
