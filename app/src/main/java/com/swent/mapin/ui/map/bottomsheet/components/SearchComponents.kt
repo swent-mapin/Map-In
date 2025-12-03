@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,11 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -125,14 +120,7 @@ fun SearchResultsSection(
 }
 
 @Composable
-fun SearchResultItem(
-    event: Event,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-    onEditEvent: ((Event) -> Unit)? = null,
-    onDeleteEvent: ((Event) -> Unit)? = null
-) {
-  var expanded by remember { mutableStateOf(false) }
+fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
 
   Column(
       modifier =
@@ -149,45 +137,6 @@ fun SearchResultItem(
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                if (onEditEvent != null && onDeleteEvent != null) {
-                  Box(
-                      modifier =
-                          Modifier.align(Alignment.Top)
-                              .height(24.dp)
-                              .clickable(
-                                  indication = null,
-                                  interactionSource = remember { MutableInteractionSource() }) {
-                                    expanded = true
-                                  }
-                              .testTag("eventOptionsIcon_${event.uid}"),
-                      contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.MoreHoriz,
-                            contentDescription = "Options",
-                            modifier = Modifier.size(16.dp))
-
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier.testTag("eventOptionsMenu_${event.uid}")) {
-                              DropdownMenuItem(
-                                  text = { Text("Edit") },
-                                  onClick = {
-                                    onEditEvent(event)
-                                    expanded = false
-                                  })
-                              DropdownMenuItem(
-                                  text = { Text("Delete") },
-                                  onClick = {
-                                    onDeleteEvent(event)
-                                    expanded = false
-                                  })
-                            }
-                      }
-                }
               }
 
               if (event.location.name.isNotBlank()) {
