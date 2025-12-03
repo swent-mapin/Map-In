@@ -359,7 +359,13 @@ fun BottomSheetContent(
                                           onClick = {
                                             onTabChange(MapScreenViewModel.BottomSheetTab.SAVED)
                                           },
-                                          text = { Text("Saved") })
+                                          text = {
+                                            Text(
+                                                text = "Saved",
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis)
+                                          })
                                       Tab(
                                           selected =
                                               selectedTab ==
@@ -372,7 +378,7 @@ fun BottomSheetContent(
                                                 text = "Upcoming",
                                                 maxLines = 1,
                                                 softWrap = false,
-                                                overflow = TextOverflow.Clip)
+                                                overflow = TextOverflow.Ellipsis)
                                           })
                                       Tab(
                                           selected =
@@ -380,7 +386,13 @@ fun BottomSheetContent(
                                           onClick = {
                                             onTabChange(MapScreenViewModel.BottomSheetTab.PAST)
                                           },
-                                          text = { Text("Past") })
+                                          text = {
+                                            Text(
+                                                text = "Past",
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis)
+                                          })
                                       Tab(
                                           selected =
                                               selectedTab ==
@@ -388,7 +400,13 @@ fun BottomSheetContent(
                                           onClick = {
                                             onTabChange(MapScreenViewModel.BottomSheetTab.OWNED)
                                           },
-                                          text = { Text("Owned") })
+                                          text = {
+                                            Text(
+                                                text = "Owned",
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis)
+                                          })
                                     }
                                 Spacer(modifier = Modifier.height(16.dp))
 
