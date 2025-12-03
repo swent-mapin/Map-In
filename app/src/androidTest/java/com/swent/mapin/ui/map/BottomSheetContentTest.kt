@@ -97,7 +97,7 @@ class BottomSheetContentTest {
                   onFocusHandled = {},
                   onClear = {}),
           savedEvents = events,
-          selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+          selectedTab = MapScreenViewModel.BottomSheetTab.SAVED,
           onTabEventClick = onEventClick,
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
@@ -161,15 +161,18 @@ class BottomSheetContentTest {
     rule.onNodeWithText("Search activities").assertIsDisplayed()
   }
 
-  // Les tests liés aux Quick Actions (Create Memory / Create Event / Quick Actions)
-  // ont été supprimés car ces éléments UI ont été retirés. Cela évite des échecs
-  // lorsque les textes ou boutons n'existent plus dans l'implémentation.
   @Test
-  fun quickActions_placeholder_noCrash() {
-    // Placeholder test: quick actions were removed from UI. Keep a minimal smoke test so file
-    // compiles.
+  fun fullState_showsCreateEvent() {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
+    rule.onNodeWithText("Create Event").assertIsDisplayed()
+  }
+
+  @Test
+  fun mediumState_showsCreateEvent() {
+    rule.setContent { TestContent(state = BottomSheetState.MEDIUM) }
+    rule.waitForIdle()
+    rule.onNodeWithText("Create Event").assertIsDisplayed()
   }
 
   @Test
@@ -177,8 +180,10 @@ class BottomSheetContentTest {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
     rule.onNodeWithText("Search activities").assertIsDisplayed()
-    rule.onNodeWithText("Saved Events").assertIsDisplayed()
-    rule.onNodeWithText("Joined Events").assertIsDisplayed()
+    rule.onNodeWithText("Saved").assertIsDisplayed()
+    rule.onNodeWithText("Upcoming").assertIsDisplayed()
+    rule.onNodeWithText("Past").assertIsDisplayed()
+    rule.onNodeWithText("Owned").assertIsDisplayed()
   }
 
   @Test
@@ -234,7 +239,7 @@ class BottomSheetContentTest {
                   onFocusHandled = {},
                   onClear = {}),
           joinedEvents = events,
-          selectedTab = MapScreenViewModel.BottomSheetTab.JOINED_EVENTS,
+          selectedTab = MapScreenViewModel.BottomSheetTab.UPCOMING,
           onTabEventClick = onEventClick,
           onTabChange = onTabChange,
           filterViewModel = filterViewModel,
@@ -249,7 +254,7 @@ class BottomSheetContentTest {
     val testEvents = LocalEventList.defaultSampleEvents().take(3)
     rule.setContent { JoinedEventsContent(events = testEvents) }
     rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
+    rule.onNodeWithText("Upcoming").performClick()
     rule.waitForIdle()
 
     testEvents.forEach { event ->
@@ -270,7 +275,7 @@ class BottomSheetContentTest {
       JoinedEventsContent(events = testEvents, onEventClick = { clickedEvent = it })
     }
     rule.waitForIdle()
-    rule.onNodeWithText("Joined Events").performClick()
+    rule.onNodeWithText("Upcoming").performClick()
     rule.waitForIdle()
 
     // Verify event is clickable and callback works
@@ -282,7 +287,7 @@ class BottomSheetContentTest {
   @Test
   fun tabSwitch_betweenSavedEventsAndJoinedEvents() {
     val testEvents = LocalEventList.defaultSampleEvents().take(1)
-    var currentTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS
+    var currentTab = MapScreenViewModel.BottomSheetTab.SAVED
 
     rule.setContent {
       MaterialTheme {
@@ -313,12 +318,12 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // Switch to Joined Events tab
-    rule.onNodeWithText("Joined Events").performClick()
+    rule.onNodeWithText("Upcoming").performClick()
     rule.waitForIdle()
 
     // Should now show joined events
     rule.onNodeWithText(testEvents[0].title).assertIsDisplayed()
-    assertEquals(MapScreenViewModel.BottomSheetTab.JOINED_EVENTS, currentTab)
+    assertEquals(MapScreenViewModel.BottomSheetTab.UPCOMING, currentTab)
   }
 
   @Composable
@@ -411,7 +416,7 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // Ensure Saved Events tab title is visible (it is selected by default in this content)
-    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText("Saved").assertIsDisplayed()
 
     testEvents.forEach { event ->
       rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
@@ -462,8 +467,8 @@ class BottomSheetContentTest {
 
     // EventsSection displays events in reversed order (latest first). Compute expected
     // visible/hidden sets.
-    val visibleInitially = testEvents.reversed().take(3)
-    val hiddenInitially = testEvents.reversed().drop(3)
+    val visibleInitially = testEvents.take(3)
+    val hiddenInitially = testEvents.drop(3)
 
     // Initially only the last 3 (reversed first 3) are visible; earlier ones are not yet shown
     visibleInitially.forEach { e ->
@@ -510,9 +515,7 @@ class BottomSheetContentTest {
 
     rule.setContent {
       MaterialTheme {
-        var selectedTab by remember {
-          mutableStateOf(MapScreenViewModel.BottomSheetTab.SAVED_EVENTS)
-        }
+        var selectedTab by remember { mutableStateOf(MapScreenViewModel.BottomSheetTab.SAVED) }
         BottomSheetContent(
             state = BottomSheetState.FULL,
             fullEntryKey = 0,
@@ -537,11 +540,11 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // On Saved tab first
-    rule.onNodeWithText("Saved Events").assertIsDisplayed()
+    rule.onNodeWithText("Saved").assertIsDisplayed()
     rule.onNodeWithText(saved[0].title).assertIsDisplayed()
 
     // Switch to Joined tab
-    rule.onNodeWithText("Joined Events").performClick()
+    rule.onNodeWithText("Upcoming").performClick()
     rule.waitForIdle()
 
     // Joined event title visible; saved no longer present
@@ -1216,7 +1219,7 @@ class BottomSheetContentTest {
                   onTap = {},
                   onFocusHandled = {},
                   onClear = {}),
-          selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+          selectedTab = MapScreenViewModel.BottomSheetTab.OWNED,
           ownedEvents = events,
           ownedLoading = loading,
           ownedError = error,
@@ -1258,10 +1261,8 @@ class BottomSheetContentTest {
     rule.setContent { OwnedEventsContent(events = emptyList()) }
     rule.waitForIdle()
 
-    // NoResultsMessage for owned events uses the non-blank query path and therefore shows
-    // the generic "No results found" copy
-    rule.onNodeWithText("No results found").assertIsDisplayed()
-    rule.onNodeWithText("Try a different keyword or check the spelling.").assertIsDisplayed()
+    rule.onNodeWithText("You haven’t created any events yet.").assertIsDisplayed()
+    rule.onNodeWithText("Organize your first event and it will show up here.").assertIsDisplayed()
   }
 
   @Test
@@ -1273,8 +1274,8 @@ class BottomSheetContentTest {
     rule.waitForIdle()
 
     // Initially only 3 most recent (reversed) should be shown
-    val visibleInitially = testEvents.reversed().take(3)
-    val hiddenInitially = testEvents.reversed().drop(3)
+    val visibleInitially = testEvents.take(3)
+    val hiddenInitially = testEvents.drop(3)
 
     visibleInitially.forEach { e ->
       rule.onNodeWithText(e.title, substring = true).assertIsDisplayed()
@@ -1389,7 +1390,7 @@ class BottomSheetContentTest {
                     onTap = {},
                     onFocusHandled = {},
                     onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED_EVENTS,
+            selectedTab = MapScreenViewModel.BottomSheetTab.OWNED,
             ownedEvents = testEvents,
             onTabEventClick = {},
             onEditEvent = { editedEvent = it },
@@ -1446,7 +1447,7 @@ class BottomSheetContentTest {
                     onTap = {},
                     onFocusHandled = {},
                     onClear = {}),
-            selectedTab = MapScreenViewModel.BottomSheetTab.SAVED_EVENTS,
+            selectedTab = MapScreenViewModel.BottomSheetTab.SAVED,
             savedEvents = testEvents,
             filterViewModel = filterViewModel,
             locationViewModel = locationViewModel,
