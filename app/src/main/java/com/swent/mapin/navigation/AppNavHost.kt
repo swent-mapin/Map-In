@@ -2,10 +2,13 @@ package com.swent.mapin.navigation
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,14 +23,60 @@ import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
 
+/**
+ * Extracts an event ID from a deep link URL using proper URI parsing.
+ *
+ * Supports the format: mapin://events/{eventId} Extensible for future deep link types (e.g.,
+ * mapin://profile/{userId})
+ *
+ * @return event ID when URL matches mapin://events/{id}, otherwise null.
+ */
+internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
+  if (deepLinkUrl == null) return null
+
+  return try {
+    val uri = Uri.parse(deepLinkUrl)
+    // Check scheme and host
+    if (uri.scheme == "mapin" && uri.host == "events") {
+      // Extract event ID from path segments (works in instrumented tests)
+      val eventId = uri.pathSegments?.firstOrNull()
+      // Fallback for unit tests where pathSegments might be empty
+      eventId ?: uri.path?.removePrefix("/")?.takeIf { it.isNotEmpty() }
+    } else {
+      null
+    }
+  } catch (e: Exception) {
+    // Fallback to string parsing if Uri.parse fails or isn't available
+    if (deepLinkUrl.startsWith("mapin://events/")) {
+      deepLinkUrl.substringAfter("mapin://events/").takeIf { it.isNotEmpty() }
+    } else {
+      null
+    }
+  }
+}
+
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
     renderMap: Boolean = true, // Set to false in instrumented tests to skip Mapbox rendering
+    deepLinkQueue: SnapshotStateList<String> = remember {
+      androidx.compose.runtime.mutableStateListOf()
+    }, // Queue of deep links to process
     autoRequestPermissions: Boolean = true // Set to false in tests to skip permission dialogs
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
+
+  // Track current deep link being processed
+  var currentDeepLinkEventId by remember { mutableStateOf<String?>(null) }
+
+  // Process deep links from queue with LaunchedEffect
+  LaunchedEffect(deepLinkQueue.size) {
+    if (deepLinkQueue.isNotEmpty()) {
+      val deepLinkUrl = deepLinkQueue.removeAt(0)
+      currentDeepLinkEventId = parseDeepLinkEventId(deepLinkUrl)
+    }
+  }
 
   // Debounce navigation to prevent double-click issues
   var lastNavigationTime by remember { mutableLongStateOf(0L) }
@@ -59,6 +108,8 @@ fun AppNavHost(
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap,
+          deepLinkEventId = currentDeepLinkEventId,
+          onDeepLinkConsumed = { currentDeepLinkEventId = null },
           autoRequestPermissions = autoRequestPermissions)
     }
 
