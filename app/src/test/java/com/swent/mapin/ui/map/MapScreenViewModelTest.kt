@@ -1665,5 +1665,4 @@ class MapScreenViewModelTest {
     assertNull(viewModel.eventPendingDeletion)
     assertFalse(viewModel.showDeleteDialog)
   }
-
 }

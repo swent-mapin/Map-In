@@ -776,7 +776,7 @@ class MapScreenTest {
   @Test
   fun mapScreen_deleteDialog_showsWhenRequested() {
     val config =
-      BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
     val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
@@ -795,8 +795,9 @@ class MapScreenTest {
 
     // Assert dialog is shown
     rule.onNodeWithText("Delete Event").assertIsDisplayed()
-    rule.onNodeWithText("Are you sure you want to delete this event? This action cannot be undone.")
-      .assertIsDisplayed()
+    rule
+        .onNodeWithText("Are you sure you want to delete this event? This action cannot be undone.")
+        .assertIsDisplayed()
     rule.onNodeWithText("Delete").assertIsDisplayed()
     rule.onNodeWithText("Cancel").assertIsDisplayed()
   }
@@ -804,7 +805,7 @@ class MapScreenTest {
   @Test
   fun mapScreen_deleteDialog_cancelClosesDialog() {
     val config =
-      BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
     val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
@@ -832,7 +833,7 @@ class MapScreenTest {
   @Test
   fun mapScreen_deleteDialog_confirmDeletesAndClosesDialog() {
     val config =
-      BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
     val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
 
@@ -859,7 +860,6 @@ class MapScreenTest {
     // Assert UI state changed — event no longer selected
     rule.runOnIdle { assertNull(viewModel.eventPendingDeletion) }
   }
-
 }
 
 private fun SemanticsNodeInteraction.ensureVisible(): SemanticsNodeInteraction {
