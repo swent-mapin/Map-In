@@ -236,6 +236,9 @@ dependencies {
     // ------------- DataStore (for settings persistence) ------------------
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // ------------- Biometric Authentication ------------------
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // ------------- Media ------------------
     implementation("androidx.compose.foundation:foundation:1.7.0")
     implementation("androidx.compose.material3:material3:1.2.0")

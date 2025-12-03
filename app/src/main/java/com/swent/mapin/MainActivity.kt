@@ -3,14 +3,17 @@ package com.swent.mapin
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -18,8 +21,10 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.notifications.FCMTokenManager
+import com.swent.mapin.ui.auth.BiometricLockScreen
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
+import com.swent.mapin.util.BiometricAuthManager
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
@@ -31,7 +36,7 @@ object HttpClientProvider {
  * Main activity of the app.* Role: - Android entry point that hosts the Jetpack Compose UI. -
  * Applies the Material 3 theme and shows the map screen.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
   // Use a queue to handle multiple deep links instead of overwriting
   private val deepLinkQueue = mutableStateListOf<String>()
 
@@ -74,10 +79,70 @@ class MainActivity : ComponentActivity() {
             ThemeMode.SYSTEM -> isSystemInDarkTheme()
           }
 
+      // Biometric authentication state
+      var biometricAuthRequired by remember { mutableStateOf(false) }
+      var biometricAuthCompleted by remember { mutableStateOf(false) }
+      var isAuthenticating by remember { mutableStateOf(false) }
+      var authErrorMessage by remember { mutableStateOf<String?>(null) }
+      var failedAttempts by remember { mutableIntStateOf(0) }
+
+      val biometricAuthManager = remember { BiometricAuthManager() }
+
+      // Check if biometric authentication is required on launch
+      val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+      val biometricUnlockEnabled by
+          remember(preferencesRepository) { preferencesRepository.biometricUnlockFlow }
+              .collectAsState(initial = false)
+      val canUseBiometric =
+          remember(biometricAuthManager) { biometricAuthManager.canUseBiometric(this@MainActivity) }
+
+      // Determine if we need to show the biometric lock screen
+      if (isLoggedIn && biometricUnlockEnabled && canUseBiometric && !biometricAuthCompleted) {
+        biometricAuthRequired = true
+      }
+
       MapInTheme(darkTheme = darkTheme) {
-        // Check if user is already authenticated with Firebase
-        val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
+        if (biometricAuthRequired && !biometricAuthCompleted) {
+          // Show biometric lock screen
+          BiometricLockScreen(
+              isAuthenticating = isAuthenticating,
+              errorMessage = authErrorMessage,
+              onRetry = {
+                isAuthenticating = true
+                authErrorMessage = null
+                biometricAuthManager.authenticate(
+                    activity = this@MainActivity,
+                    onSuccess = {
+                      isAuthenticating = false
+                      biometricAuthCompleted = true
+                      failedAttempts = 0
+                    },
+                    onError = { error ->
+                      isAuthenticating = false
+                      failedAttempts++
+                      authErrorMessage =
+                          if (failedAttempts >= 3) {
+                            "Too many failed attempts. Please use another account or try again later."
+                          } else {
+                            error
+                          }
+                    },
+                    onFallback = {
+                      isAuthenticating = false
+                      authErrorMessage = "Authentication cancelled. Please try again."
+                    })
+              },
+              onUseAnotherAccount = {
+                // Logout and go to sign-in
+                FirebaseAuth.getInstance().signOut()
+                biometricAuthRequired = false
+                biometricAuthCompleted = true
+              })
+        } else {
+          // Show normal app flow with deep link support
+          val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+          AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
+        }
       }
     }
   }
