@@ -1,12 +1,11 @@
 package com.swent.mapin.ui.map
 
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -59,7 +58,7 @@ class AttendedEventsSectionTest {
         price = 0.0)
   }
 
-  @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+  @get:Rule val composeTestRule = createComposeRule()
 
   @Test
   fun attendedEventsSection_showsEmptyMessage_whenNoAttendedEvents() {
@@ -70,7 +69,10 @@ class AttendedEventsSectionTest {
       }
     }
 
-    composeTestRule.onNodeWithText("No attended events yet").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No past events yet.").assertIsDisplayed()
+    composeTestRule
+        .onNodeWithText("Once you attend events, they’ll appear here.")
+        .assertIsDisplayed()
   }
 
   @Test
