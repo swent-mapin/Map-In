@@ -322,7 +322,9 @@ class NotificationRepositoryTest {
     val success = repository.markMultipleAsRead(emptyList())
 
     assertTrue(success)
+    // Verify no update operations were invoked for empty list (but batch/commit still called)
     verify(mockBatch, never()).update(any<DocumentReference>(), anyString(), any())
+    verify(mockBatch).commit()
   }
 
   @Test

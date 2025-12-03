@@ -31,14 +31,18 @@ class MessageRepositoryFirestoreTest {
   @Test
   fun `sendMessage does nothing for blank text`() = runTest {
     repo.sendMessage("conversation1", "   ")
+    // Verify no writes happen anywhere in the repository
     verify(db, never()).collection(anyString())
+    verify(db, never()).runBatch(any())
   }
 
   @Test
   fun `sendMessage does nothing when user is null`() = runTest {
     `when`(auth.currentUser).thenReturn(null)
     repo.sendMessage("conversation1", "Hello!")
+    // Verify no writes happen anywhere in the repository
     verify(db, never()).collection(anyString())
+    verify(db, never()).runBatch(any())
   }
 
   @Test
@@ -87,7 +91,9 @@ class MessageRepositoryFirestoreTest {
     `when`(mockQuery.limit(50L)).thenReturn(mockQuery)
     `when`(mockQuery.get()).thenReturn(Tasks.forResult(mockQuerySnapshot))
 
-    // Mock message documents
+    // Mock message documents with explicit timestamps for stable ordering
+    // Note: Firestore returns in DESCENDING order (2000L, then 1000L)
+    // Implementation reverses to ascending (1000L, then 2000L) for chat display
     `when`(mockMessageDoc1.getString("senderId")).thenReturn("user1")
     `when`(mockMessageDoc1.getLong("timestamp")).thenReturn(1000L)
     `when`(mockMessageDoc1.getString("text")).thenReturn("Hello")
@@ -96,16 +102,21 @@ class MessageRepositoryFirestoreTest {
     `when`(mockMessageDoc2.getLong("timestamp")).thenReturn(2000L)
     `when`(mockMessageDoc2.getString("text")).thenReturn("Hi there")
 
-    `when`(mockQuerySnapshot.documents).thenReturn(listOf(mockMessageDoc1, mockMessageDoc2))
+    // Return documents in Firestore DESCENDING order (newest first: 2000L, 1000L)
+    `when`(mockQuerySnapshot.documents).thenReturn(listOf(mockMessageDoc2, mockMessageDoc1))
 
     val (messages, lastDoc) = repo.loadMoreMessages("conversation1", mockLastVisible)
 
     assert(messages.size == 2)
-    assert(messages[0].text == "Hi there") // Reversed order
-    assert(messages[0].isMe) // User's own message
-    assert(messages[1].text == "Hello")
-    assert(!messages[1].isMe) // Other user's message
-    assert(lastDoc == mockMessageDoc2)
+    // After reversal, messages should be in ascending timestamp order (oldest first)
+    assert(messages[0].text == "Hello")
+    assert(messages[0].timestamp == 1000L)
+    assert(!messages[0].isMe) // Other user's message
+    assert(messages[1].text == "Hi there")
+    assert(messages[1].timestamp == 2000L)
+    assert(messages[1].isMe) // User's own message
+    // Last visible document should be the last one returned by Firestore query
+    assert(lastDoc == mockMessageDoc1)
   }
 
   @Test
@@ -208,7 +219,9 @@ class MessageRepositoryFirestoreTest {
   @Test
   fun `sendMessage handles empty text after trim`() = runTest {
     repo.sendMessage("conversation1", "   \n\t  ")
+    // Verify no writes happen anywhere in the repository
     verify(db, never()).collection(anyString())
+    verify(db, never()).runBatch(any())
   }
 
   @Test

@@ -4,6 +4,8 @@ import android.content.Context
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -119,23 +121,26 @@ class EventRepositoryProviderTest {
   }
 
   @Test
-  fun `getRepository with custom instance is thread-safe`() {
+  fun `getRepository with custom instance is thread-safe`() = runTest {
     val customRepo = mockk<EventRepository>()
     EventRepositoryProvider.setRepository(customRepo)
 
-    val instances = mutableSetOf<EventRepository>()
-    val threads =
-        List(10) {
-          Thread {
+    // Use concurrent set for thread-safe access
+    val instances = java.util.concurrent.ConcurrentHashMap.newKeySet<EventRepository>()
+
+    // Launch multiple coroutines concurrently to test thread safety
+    val jobs =
+        List(100) {
+          launch(kotlinx.coroutines.Dispatchers.Default) {
             val instance = EventRepositoryProvider.getRepository()
-            synchronized(instances) { instances.add(instance) }
+            instances.add(instance)
           }
         }
 
-    threads.forEach { it.start() }
-    threads.forEach { it.join() }
+    // Wait for all coroutines to complete
+    jobs.forEach { it.join() }
 
-    // All threads should get the same instance
+    // All coroutines should get the same instance
     assertEquals(1, instances.size)
   }
 }
