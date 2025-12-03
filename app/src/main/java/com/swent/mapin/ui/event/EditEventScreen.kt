@@ -42,6 +42,11 @@ object EditEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TAG = "EDIT_INPUT_EVENT_TAG"
 
   override val ERROR_MESSAGE = "EDIT_ERROR_MESSAGE"
+  override val PICK_EVENT_DATE = "EDIT_PICK_DATE"
+  override val PICK_END_DATE = "EDIT_PICK_END_DATE"
+  override val PICK_EVENT_TIME = "EDIT_PICK_TIME"
+  override val PICK_END_TIME = "eEDIT_PICK_END_TIME"
+  override val INPUT_EVENT_LOCATION = "EDIT_INPUT_LOCATION"
   const val SCREEN = "EditEventScreen"
 }
 /**
@@ -146,15 +151,6 @@ fun EditEventScreen(
           if (priceError.value) stringResource(R.string.price_field) else null)
 
   val isEventValid = !error && isLoggedIn.value
-  val isDateAndTimeValid =
-      dateError.value ||
-          timeError.value ||
-          date.value.isBlank() ||
-          time.value.isBlank() ||
-          endDateError.value ||
-          endTimeError.value ||
-          endDate.value.isBlank() ||
-          endTime.value.isBlank()
   val showValidation = remember { mutableStateOf(false) }
 
   Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
@@ -256,7 +252,6 @@ fun EditEventScreen(
           EventFormBody(
               title = title,
               titleError = titleError,
-              isDateAndTimeValid = isDateAndTimeValid,
               date = date,
               dateError = dateError,
               time = time,

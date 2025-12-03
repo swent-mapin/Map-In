@@ -52,9 +52,11 @@ object AddEventScreenTestTags : EventScreenTestTag {
   override val EVENT_SAVE = "eventSave"
   override val ERROR_MESSAGE = "errorMessage"
 
-  const val PICK_EVENT_DATE = "pickEventDate"
-  const val PICK_EVENT_TIME = "pickEventTime"
-  const val INPUT_EVENT_LOCATION = "inputEventLocation"
+  override val PICK_EVENT_DATE = "pickEventDate"
+  override val PICK_END_DATE = "pickEventEndDate"
+  override val PICK_EVENT_TIME = "pickEventTime"
+  override val PICK_END_TIME = "pickEventEndTime"
+  override val INPUT_EVENT_LOCATION = "inputEventLocation"
   const val INPUT_EVENT_PRICE = "inputEventPrice"
 
   const val PUBLIC_SWITCH = "publicSwitch"
@@ -200,15 +202,6 @@ fun AddEventScreen(
           if (priceError.value) stringResource(R.string.price_field) else null)
 
   val isEventValid = !error && isLoggedIn.value
-  val isDateAndTimeValid =
-      dateError.value ||
-          timeError.value ||
-          date.value.isBlank() ||
-          time.value.isBlank() ||
-          endDateError.value ||
-          endTimeError.value ||
-          endDate.value.isBlank() ||
-          endTime.value.isBlank()
   val showValidation = remember { mutableStateOf(false) }
 
   val scrollState = rememberScrollState()
@@ -315,7 +308,6 @@ fun AddEventScreen(
           EventFormBody(
               title = title,
               titleError = titleError,
-              isDateAndTimeValid = isDateAndTimeValid,
               date = date,
               dateError = dateError,
               time = time,

@@ -92,7 +92,6 @@ class EventScreenComponentsTest {
         EventFormBody(
             title = titleState,
             titleError = titleError,
-            isDateAndTimeValid = true,
             date = dateState,
             dateError = dateError,
             time = timeState,
@@ -128,5 +127,9 @@ class EventScreenComponentsTest {
     // Test tag input
     composeTestRule.onNodeWithTag(testTags.INPUT_EVENT_TAG).performTextInput("#food")
     assert(tagState.value == "#food")
+
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_DATE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.PICK_EVENT_TIME).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION).assertIsDisplayed()
   }
 }

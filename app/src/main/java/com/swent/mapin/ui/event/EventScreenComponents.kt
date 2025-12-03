@@ -53,6 +53,11 @@ interface EventScreenTestTag {
   val EVENT_CANCEL: String
   val EVENT_SAVE: String
   val ERROR_MESSAGE: String
+  val PICK_EVENT_DATE: String
+  val PICK_END_DATE: String
+  val PICK_EVENT_TIME: String
+  val PICK_END_TIME: String
+  val INPUT_EVENT_LOCATION: String
 }
 
 /** Extension function for TimeStamp to convert a timestamp to a dd/MM/yyyy date string */
@@ -78,6 +83,7 @@ fun Timestamp.toTimeString(): String =
 @Composable
 fun DatePickerButton(
     selectedDate: MutableState<String>,
+    testTag: String = AddEventScreenTestTags.PICK_EVENT_DATE,
     onDateClick: (() -> Unit)? = null,
     onDateChanged: (() -> Unit)? = null
 ) {
@@ -123,7 +129,7 @@ fun DatePickerButton(
               contentColor = Color.Unspecified,
               disabledContentColor = Color.Unspecified,
               disabledContainerColor = Color.Unspecified),
-      modifier = Modifier.width(200.dp).testTag(AddEventScreenTestTags.PICK_EVENT_DATE)) {
+      modifier = Modifier.width(200.dp).testTag(testTag)) {
         Text("Select Date: ${selectedDate.value}", color = MaterialTheme.colorScheme.onPrimary)
       }
 }
@@ -141,6 +147,7 @@ fun DatePickerButton(
 @Composable
 fun TimePickerButton(
     selectedTime: MutableState<String>,
+    testTag: String = AddEventScreenTestTags.PICK_EVENT_TIME,
     onTimeClick: (() -> Unit)? = null,
     onTimeChanged: (() -> Unit)? = null
 ) {
@@ -169,7 +176,7 @@ fun TimePickerButton(
               .show()
         }
       },
-      modifier = Modifier.width(200.dp).testTag(AddEventScreenTestTags.PICK_EVENT_TIME),
+      modifier = Modifier.width(200.dp).testTag(testTag),
       shape = RoundedCornerShape(4.dp),
       colors =
           ButtonDefaults.buttonColors(
@@ -311,7 +318,6 @@ fun EventTopBar(
  *
  * @param title Mutable state for the event title text.
  * @param titleError Mutable state indicating whether the title is invalid.
- * @param isDateAndTimeValid Overall validity flag for date and time fields.
  * @param date Mutable state for the event start date.
  * @param dateError Mutable state indicating whether the start date is invalid.
  * @param time Mutable state for the event start time.
@@ -335,7 +341,6 @@ fun EventTopBar(
 fun EventFormBody(
     title: MutableState<String>,
     titleError: MutableState<Boolean>,
-    isDateAndTimeValid: Boolean,
     date: MutableState<String>,
     dateError: MutableState<Boolean>,
     time: MutableState<String>,
@@ -384,6 +389,7 @@ fun EventFormBody(
       verticalAlignment = Alignment.CenterVertically) {
         DatePickerButton(
             date,
+            testTag = testTags.PICK_EVENT_DATE,
             onDateChanged = {
               dateError.value = (date.value.isBlank())
               validateStartEndLogic(
@@ -393,6 +399,7 @@ fun EventFormBody(
 
         TimePickerButton(
             time,
+            testTag = testTags.PICK_EVENT_TIME,
             onTimeChanged = {
               timeError.value = (time.value.isBlank())
               validateStartEndLogic(
@@ -413,6 +420,7 @@ fun EventFormBody(
       verticalAlignment = Alignment.CenterVertically) {
         DatePickerButton(
             endDate,
+            testTag = testTags.PICK_END_DATE,
             onDateChanged = {
               endDateError.value = (endDate.value.isBlank())
               validateStartEndLogic(
@@ -422,6 +430,7 @@ fun EventFormBody(
 
         TimePickerButton(
             endTime,
+            testTag = testTags.PICK_END_TIME,
             onTimeChanged = {
               endTimeError.value = (endTime.value.isBlank())
               validateStartEndLogic(
@@ -439,6 +448,7 @@ fun EventFormBody(
       location,
       locationError,
       locationViewModel,
+      testTag = testTags,
       locationExpanded,
       locations,
       gotLocation,

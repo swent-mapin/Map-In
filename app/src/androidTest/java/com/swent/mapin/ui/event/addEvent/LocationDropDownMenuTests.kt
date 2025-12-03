@@ -33,6 +33,7 @@ class LocationDropDownMenuTests {
           location = location,
           locationError = locationError,
           locationViewModel = fakeViewModel,
+          testTag = AddEventScreenTestTags,
           expanded = expanded,
           locations = locations,
           gotLocation = gotLocation)
