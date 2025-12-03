@@ -941,7 +941,6 @@ class MapScreenViewModel(
     eventStateController.loadOwnedEvents()
   }
 
-  //TODO test these 2 new functions
   var eventPendingDeletion by mutableStateOf<Event?>(null)
   var showDeleteDialog by mutableStateOf(false)
 
