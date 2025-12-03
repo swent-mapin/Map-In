@@ -689,9 +689,7 @@ fun MapScreen(
         AlertDialog(
             onDismissRequest = { viewModel.cancelDelete() },
             title = { Text(stringResource(R.string.delete_event)) },
-            text = {
-              Text(stringResource(R.string.delete_alert_text))
-            },
+            text = { Text(stringResource(R.string.delete_alert_text)) },
             confirmButton = {
               TextButton(
                   onClick = {
