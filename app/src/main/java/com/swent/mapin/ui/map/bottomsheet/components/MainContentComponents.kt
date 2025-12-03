@@ -173,9 +173,8 @@ fun EventRow(
   val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
   val dateText =
       try {
-        event.endDate?.toDate()?.time?.let { millis ->
-          formatter.format(Instant.ofEpochMilli(millis))
-        } ?: ""
+        event.date?.toDate()?.time?.let { millis -> formatter.format(Instant.ofEpochMilli(millis)) }
+            ?: ""
       } catch (_: Exception) {
         ""
       }
