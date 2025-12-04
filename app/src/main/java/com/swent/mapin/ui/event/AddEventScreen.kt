@@ -162,8 +162,6 @@ fun AddEventScreen(
   }
   val locations by locationViewModel.locations.collectAsState()
 
-  // Show missing/incorrect fields either when the user requested validation (clicked Save)
-  // or when a per-field error flag is set, or when a required field is empty.
   val error =
       titleError.value ||
           title.value.isBlank() ||
@@ -206,169 +204,164 @@ fun AddEventScreen(
   val scrollState = rememberScrollState()
 
   Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
-    Column(
-        modifier =
-            modifier
-                .padding(padding)
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .navigationBarsPadding()) {
-          // TopBar
-          EventTopBar(
-              title = "New Event",
-              testTags = AddEventScreenTestTags,
-              isEventValid = isEventValid,
-              onCancel = onCancel,
-              onSave = {
-                // Show validation feedback when user attempts to save
-                showValidation.value = true
+    Column(modifier = modifier.padding(padding).fillMaxWidth().navigationBarsPadding()) {
+      // TopBar
+      EventTopBar(
+          title = "New Event",
+          testTags = AddEventScreenTestTags,
+          isEventValid = isEventValid,
+          onCancel = onCancel,
+          onSave = {
+            // Show validation feedback when user attempts to save
+            showValidation.value = true
 
-                // update per-field error flags from current values so UI shows them
-                // immediately
-                titleError.value = title.value.isBlank()
-                descriptionError.value = description.value.isBlank()
-                locationError.value = location.value.isBlank()
-                dateError.value = date.value.isBlank()
-                timeError.value = time.value.isBlank()
-                endDateError.value = endDate.value.isBlank()
-                endTimeError.value = endTime.value.isBlank()
-                tagError.value = !isValidTagInput(tag.value)
-                priceError.value = !isValidPriceInput(price.value)
+            // update per-field error flags from current values so UI shows them
+            // immediately
+            titleError.value = title.value.isBlank()
+            descriptionError.value = description.value.isBlank()
+            locationError.value = location.value.isBlank()
+            dateError.value = date.value.isBlank()
+            timeError.value = time.value.isBlank()
+            endDateError.value = endDate.value.isBlank()
+            endTimeError.value = endTime.value.isBlank()
+            tagError.value = !isValidTagInput(tag.value)
+            priceError.value = !isValidPriceInput(price.value)
 
-                // Run relational validation for start/end (may clear or set end errors)
-                validateStartEndLogic(
-                    date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+            // Run relational validation for start/end (may clear or set end errors)
+            validateStartEndLogic(
+                date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
-                // compute validity based on flags (fresh values)
-                val nowValid =
-                    !(titleError.value ||
-                        descriptionError.value ||
-                        locationError.value ||
-                        dateError.value ||
-                        timeError.value ||
-                        endDateError.value ||
-                        endTimeError.value ||
-                        tagError.value ||
-                        priceError.value) && isLoggedIn.value
-                if (!nowValid) return@EventTopBar
+            // compute validity based on flags (fresh values)
+            val nowValid =
+                !(titleError.value ||
+                    descriptionError.value ||
+                    locationError.value ||
+                    dateError.value ||
+                    timeError.value ||
+                    endDateError.value ||
+                    endTimeError.value ||
+                    tagError.value ||
+                    priceError.value) && isLoggedIn.value
+            if (!nowValid) return@EventTopBar
 
-                val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                sdf.timeZone = java.util.TimeZone.getDefault()
-                val rawTime =
-                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val rawEndTime =
-                    if (endTime.value.contains("h")) endTime.value.replace("h", "")
-                    else endTime.value
+            val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+            sdf.timeZone = java.util.TimeZone.getDefault()
+            val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
+            val rawEndTime =
+                if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
 
-                val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
+            val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+            val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
 
-                if (parsedStart == null) {
-                  dateError.value = true
-                  return@EventTopBar
-                }
-                if (parsedEnd == null) {
-                  endDateError.value = true
-                  return@EventTopBar
-                }
+            if (parsedStart == null) {
+              dateError.value = true
+              return@EventTopBar
+            }
+            if (parsedEnd == null) {
+              endDateError.value = true
+              return@EventTopBar
+            }
 
-                val startTs = Timestamp(parsedStart)
-                val endTs = Timestamp(parsedEnd)
+            val startTs = Timestamp(parsedStart)
+            val endTs = Timestamp(parsedEnd)
 
-                if (!endTs.toDate().after(startTs.toDate())) {
-                  // end must be strictly after start
-                  // mark end date invalid (don't force changing time)
-                  endDateError.value = true
-                  endTimeError.value = false
-                  return@EventTopBar
-                }
+            if (!endTs.toDate().after(startTs.toDate())) {
+              // end must be strictly after start
+              // mark end date invalid (don't force changing time)
+              endDateError.value = true
+              endTimeError.value = false
+              return@EventTopBar
+            }
 
-                saveEvent(
-                    eventViewModel,
-                    title.value,
-                    description.value,
-                    gotLocation.value,
-                    startTs,
-                    endTs,
-                    Firebase.auth.currentUser?.uid,
-                    extractTags(tag.value),
-                    isPublic.value,
-                    onDone,
-                    price.value.toDoubleOrNull() ?: 0.0)
-              })
-          // Prominent validation banner shown right after the top bar when user attempted to save
-          if (showValidation.value && !isEventValid) {
-            ValidationBanner(errorFields, AddEventScreenTestTags)
-          }
+            saveEvent(
+                eventViewModel,
+                title.value,
+                description.value,
+                gotLocation.value,
+                startTs,
+                endTs,
+                Firebase.auth.currentUser?.uid,
+                extractTags(tag.value),
+                isPublic.value,
+                onDone,
+                price.value.toDoubleOrNull() ?: 0.0)
+          })
+      // Prominent validation banner shown right after the top bar when user attempted to save
+      if (showValidation.value && !isEventValid) {
+        ValidationBanner(errorFields, AddEventScreenTestTags)
+      }
 
-          Spacer(modifier = Modifier.padding(5.dp))
+      Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+        Spacer(modifier = Modifier.padding(5.dp))
 
-          EventFormBody(
-              title = title,
-              titleError = titleError,
-              date = date,
-              dateError = dateError,
-              time = time,
-              timeError = timeError,
-              endDate = endDate,
-              endDateError = endDateError,
-              endTime = endTime,
-              endTimeError = endTimeError,
-              location = location,
-              locationError = locationError,
-              locations = locations,
-              gotLocation = gotLocation,
-              locationExpanded = locationExpanded,
-              locationViewModel = locationViewModel,
-              description = description,
-              descriptionError = descriptionError,
-              tag = tag,
-              tagError = tagError,
-              testTags = AddEventScreenTestTags)
+        EventFormBody(
+            title = title,
+            titleError = titleError,
+            date = date,
+            dateError = dateError,
+            time = time,
+            timeError = timeError,
+            endDate = endDate,
+            endDateError = endDateError,
+            endTime = endTime,
+            endTimeError = endTimeError,
+            location = location,
+            locationError = locationError,
+            locations = locations,
+            gotLocation = gotLocation,
+            locationExpanded = locationExpanded,
+            locationViewModel = locationViewModel,
+            description = description,
+            descriptionError = descriptionError,
+            tag = tag,
+            tagError = tagError,
+            testTags = AddEventScreenTestTags)
 
-          Spacer(modifier = Modifier.padding(bottom = 10.dp))
-          // Price field
+        Spacer(modifier = Modifier.padding(bottom = 10.dp))
+
+        // Price field
+        Text(
+            stringResource(R.string.price_text),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          AddEventTextField(
+              price,
+              priceError,
+              stringResource(R.string.price_place_holder),
+              modifier =
+                  Modifier.fillMaxWidth(0.3f).testTag(AddEventScreenTestTags.INPUT_EVENT_PRICE),
+              singleLine = true,
+              isPrice = true)
+          Spacer(modifier = Modifier.padding(horizontal = 5.dp))
           Text(
-              stringResource(R.string.price_text),
-              style = MaterialTheme.typography.labelMedium,
+              stringResource(R.string.currency_switzerland),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp))
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            AddEventTextField(
-                price,
-                priceError,
-                stringResource(R.string.price_place_holder),
-                modifier =
-                    Modifier.fillMaxWidth(0.3f).testTag(AddEventScreenTestTags.INPUT_EVENT_PRICE),
-                singleLine = true,
-                isPrice = true)
-            Spacer(modifier = Modifier.padding(horizontal = 5.dp))
-            Text(
-                stringResource(R.string.currency_switzerland),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-
-          Spacer(modifier = Modifier.padding(bottom = 5.dp))
-
-          // Public/Private switch
-          if (isPublic.value) {
-            PublicSwitch(
-                isPublic = isPublic.value,
-                onPublicChange = { isPublic.value = it },
-                "This event will be public",
-                "Others can see this event on the map",
-                Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
-                Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
-          } else {
-            PublicSwitch(
-                isPublic = isPublic.value,
-                onPublicChange = { isPublic.value = it },
-                "This event will be private",
-                "Others will not see this event on the map",
-                Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
-                Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
-          }
+          )
         }
+
+        Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
+        // Public/Private switch
+        if (isPublic.value) {
+          PublicSwitch(
+              isPublic = isPublic.value,
+              onPublicChange = { isPublic.value = it },
+              "This event will be public",
+              "Others can see this event on the map",
+              Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
+              Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
+        } else {
+          PublicSwitch(
+              isPublic = isPublic.value,
+              onPublicChange = { isPublic.value = it },
+              "This event will be private",
+              "Others will not see this event on the map",
+              Modifier.testTag(AddEventScreenTestTags.PUBLIC_SWITCH),
+              Modifier.testTag(AddEventScreenTestTags.PUBLIC_TEXT))
+        }
+      }
+    }
   }
 }

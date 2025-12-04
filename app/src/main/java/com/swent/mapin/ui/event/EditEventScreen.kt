@@ -155,129 +155,132 @@ fun EditEventScreen(
 
   Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
     Column(
-        modifier =
-            modifier
-                .padding(padding)
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .imePadding()
-                .navigationBarsPadding()) {
-          // TopBar
-          EventTopBar(
-              title = "Edit Event",
-              testTags = EditEventScreenTestTags,
-              isEventValid = isEventValid,
-              onCancel = onCancel,
-              onSave = {
-                // Show validation feedback when user attempts to save
-                showValidation.value = true
+      modifier =
+        modifier
+          .padding(padding)
+          .fillMaxWidth()
+          .navigationBarsPadding()) {
 
-                // update per-field error flags from current values so UI shows them
-                // immediately
-                titleError.value = title.value.isBlank()
-                descriptionError.value = description.value.isBlank()
-                locationError.value = location.value.isBlank()
-                dateError.value = date.value.isBlank()
-                timeError.value = time.value.isBlank()
-                endDateError.value = endDate.value.isBlank()
-                endTimeError.value = endTime.value.isBlank()
-                tagError.value = !isValidTagInput(tag.value)
-                priceError.value = !isValidPriceInput(price.value)
+      // TopBar
+      EventTopBar(
+          title = "Edit Event",
+          testTags = EditEventScreenTestTags,
+          isEventValid = isEventValid,
+          onCancel = onCancel,
+          onSave = {
+            // Show validation feedback when user attempts to save
+            showValidation.value = true
 
-                // Run relational validation for start/end (may clear or set end errors)
-                validateStartEnd()
+            // update per-field error flags from current values so UI shows them
+            // immediately
+            titleError.value = title.value.isBlank()
+            descriptionError.value = description.value.isBlank()
+            locationError.value = location.value.isBlank()
+            dateError.value = date.value.isBlank()
+            timeError.value = time.value.isBlank()
+            endDateError.value = endDate.value.isBlank()
+            endTimeError.value = endTime.value.isBlank()
+            tagError.value = !isValidTagInput(tag.value)
+            priceError.value = !isValidPriceInput(price.value)
 
-                // compute validity based on flags (fresh values)
-                val nowValid =
-                    !(titleError.value ||
-                        descriptionError.value ||
-                        locationError.value ||
-                        dateError.value ||
-                        timeError.value ||
-                        endDateError.value ||
-                        endTimeError.value ||
-                        tagError.value ||
-                        priceError.value) && isLoggedIn.value
-                if (!nowValid) return@EventTopBar
+            // Run relational validation for start/end (may clear or set end errors)
+            validateStartEnd()
 
-                val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                sdf.timeZone = TimeZone.getDefault()
-                val rawTime =
-                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val rawEndTime =
-                    if (endTime.value.contains("h")) endTime.value.replace("h", "")
-                    else endTime.value
+            // compute validity based on flags (fresh values)
+            val nowValid =
+                !(titleError.value ||
+                    descriptionError.value ||
+                    locationError.value ||
+                    dateError.value ||
+                    timeError.value ||
+                    endDateError.value ||
+                    endTimeError.value ||
+                    tagError.value ||
+                    priceError.value) && isLoggedIn.value
+            if (!nowValid) return@EventTopBar
 
-                val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
+            val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+            sdf.timeZone = TimeZone.getDefault()
+            val rawTime =
+              if (time.value.contains("h")) time.value.replace("h", "") else time.value
+            val rawEndTime =
+                if (endTime.value.contains("h")) endTime.value.replace("h", "")
+                else endTime.value
 
-                if (parsedStart == null) {
-                  dateError.value = true
-                  return@EventTopBar
-                }
-                if (parsedEnd == null) {
-                  endDateError.value = true
-                  return@EventTopBar
-                }
+            val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+            val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
 
-                val startTs = Timestamp(parsedStart)
-                val endTs = Timestamp(parsedEnd)
+            if (parsedStart == null) {
+              dateError.value = true
+              return@EventTopBar
+            }
+            if (parsedEnd == null) {
+              endDateError.value = true
+              return@EventTopBar
+            }
 
-                if (!endTs.toDate().after(startTs.toDate())) {
-                  // end must be strictly after start
-                  // mark end date invalid (don't force changing time)
-                  endDateError.value = true
-                  endTimeError.value = false
-                  return@EventTopBar
-                }
-                eventViewModel.saveEditedEvent(
-                    originalEvent = event,
-                    title = title.value,
-                    description = description.value,
-                    location = gotLocation.value,
-                    startTs = startTs,
-                    endTs = endTs,
-                    tagsString = tag.value,
-                    onSuccess = { onDone() },
-                )
-              })
+            val startTs = Timestamp(parsedStart)
+            val endTs = Timestamp(parsedEnd)
 
-          // Prominent validation banner shown right after the top bar when user attempted to save
-          if (showValidation.value && !isEventValid) {
-            ValidationBanner(errorFields, EditEventScreenTestTags)
-          }
+            if (!endTs.toDate().after(startTs.toDate())) {
+              // end must be strictly after start
+              // mark end date invalid (don't force changing time)
+              endDateError.value = true
+              endTimeError.value = false
+              return@EventTopBar
+            }
+            eventViewModel.saveEditedEvent(
+                originalEvent = event,
+                title = title.value,
+                description = description.value,
+                location = gotLocation.value,
+                startTs = startTs,
+                endTs = endTs,
+                tagsString = tag.value,
+                onSuccess = { onDone() },
+            )
+          })
 
-          Spacer(modifier = Modifier.padding(5.dp))
+      // Prominent validation banner shown right after the top bar when user attempted to save
+      if (showValidation.value && !isEventValid) {
+        ValidationBanner(errorFields, EditEventScreenTestTags)
+      }
 
-          EventFormBody(
-              title = title,
-              titleError = titleError,
-              date = date,
-              dateError = dateError,
-              time = time,
-              timeError = timeError,
-              endDate = endDate,
-              endDateError = endDateError,
-              endTime = endTime,
-              endTimeError = endTimeError,
-              location = location,
-              locationError = locationError,
-              locations = locations,
-              gotLocation = gotLocation,
-              locationExpanded = locationExpanded,
-              locationViewModel = locationViewModel,
-              description = description,
-              descriptionError = descriptionError,
-              tag = tag,
-              tagError = tagError,
-              testTags = EditEventScreenTestTags)
+      // Contenu scrollable
+      Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState).imePadding()) {
+        Spacer(modifier = Modifier.padding(5.dp))
 
-          Spacer(modifier = Modifier.padding(bottom = 5.dp))
-          Text(
-              "Accessibility and Price cannot be modified to avoid being unfair to participants!",
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(bottom = 8.dp))
-        }
+        EventFormBody(
+            title = title,
+            titleError = titleError,
+            date = date,
+            dateError = dateError,
+            time = time,
+            timeError = timeError,
+            endDate = endDate,
+            endDateError = endDateError,
+            endTime = endTime,
+            endTimeError = endTimeError,
+            location = location,
+            locationError = locationError,
+            locations = locations,
+            gotLocation = gotLocation,
+            locationExpanded = locationExpanded,
+            locationViewModel = locationViewModel,
+            description = description,
+            descriptionError = descriptionError,
+            tag = tag,
+            tagError = tagError,
+            testTags = EditEventScreenTestTags)
+
+        Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
+        Text(
+            "Accessibility and Price cannot be modified to avoid being unfair to participants!",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp))
+      }
+    }
   }
 }
