@@ -14,17 +14,17 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummary maps basic event fields correctly`() {
-    val event = Event(
-        uid = "event123",
-        title = "Tech Conference",
-        date = Timestamp.now(),
-        endDate = null,
-        tags = listOf("tech", "networking"),
-        location = Location("EPFL", 46.5197, 6.5657),
-        capacity = null,
-        participantIds = emptyList(),
-        price = 0.0
-    )
+    val event =
+        Event(
+            uid = "event123",
+            title = "Tech Conference",
+            date = Timestamp.now(),
+            endDate = null,
+            tags = listOf("tech", "networking"),
+            location = Location("EPFL", 46.5197, 6.5657),
+            capacity = null,
+            participantIds = emptyList(),
+            price = 0.0)
 
     val summary = event.toAiEventSummary()
 
@@ -41,15 +41,15 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummary calculates capacity remaining correctly`() {
-    val event = Event(
-        uid = "event456",
-        title = "Workshop",
-        date = Timestamp.now(),
-        location = Location("Room 101", 0.0, 0.0),
-        capacity = 50,
-        participantIds = listOf("user1", "user2", "user3"),
-        price = 25.0
-    )
+    val event =
+        Event(
+            uid = "event456",
+            title = "Workshop",
+            date = Timestamp.now(),
+            location = Location("Room 101", 0.0, 0.0),
+            capacity = 50,
+            participantIds = listOf("user1", "user2", "user3"),
+            price = 25.0)
 
     val summary = event.toAiEventSummary()
 
@@ -59,14 +59,14 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummary handles full capacity`() {
-    val event = Event(
-        uid = "event789",
-        title = "Full Event",
-        date = Timestamp.now(),
-        location = Location("Venue", 0.0, 0.0),
-        capacity = 3,
-        participantIds = listOf("user1", "user2", "user3")
-    )
+    val event =
+        Event(
+            uid = "event789",
+            title = "Full Event",
+            date = Timestamp.now(),
+            location = Location("Venue", 0.0, 0.0),
+            capacity = 3,
+            participantIds = listOf("user1", "user2", "user3"))
 
     val summary = event.toAiEventSummary()
 
@@ -75,14 +75,14 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummary handles over capacity gracefully`() {
-    val event = Event(
-        uid = "event999",
-        title = "Overbooked Event",
-        date = Timestamp.now(),
-        location = Location("Venue", 0.0, 0.0),
-        capacity = 2,
-        participantIds = listOf("user1", "user2", "user3", "user4")
-    )
+    val event =
+        Event(
+            uid = "event999",
+            title = "Overbooked Event",
+            date = Timestamp.now(),
+            location = Location("Venue", 0.0, 0.0),
+            capacity = 2,
+            participantIds = listOf("user1", "user2", "user3", "user4"))
 
     val summary = event.toAiEventSummary()
 
@@ -92,17 +92,14 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummary uses custom distance and location description`() {
-    val event = Event(
-        uid = "event111",
-        title = "Local Event",
-        date = Timestamp.now(),
-        location = Location("Default Location", 0.0, 0.0)
-    )
+    val event =
+        Event(
+            uid = "event111",
+            title = "Local Event",
+            date = Timestamp.now(),
+            location = Location("Default Location", 0.0, 0.0))
 
-    val summary = event.toAiEventSummary(
-        distanceKm = 2.5,
-        locationDescription = "Near city center"
-    )
+    val summary = event.toAiEventSummary(distanceKm = 2.5, locationDescription = "Near city center")
 
     assertEquals(2.5, summary.distanceKm)
     assertEquals("Near city center", summary.locationDescription)
@@ -110,11 +107,23 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummaries converts list of events`() {
-    val events = listOf(
-        Event(uid = "e1", title = "Event 1", date = Timestamp.now(), location = Location("Loc1", 0.0, 0.0)),
-        Event(uid = "e2", title = "Event 2", date = Timestamp.now(), location = Location("Loc2", 0.0, 0.0)),
-        Event(uid = "e3", title = "Event 3", date = Timestamp.now(), location = Location("Loc3", 0.0, 0.0))
-    )
+    val events =
+        listOf(
+            Event(
+                uid = "e1",
+                title = "Event 1",
+                date = Timestamp.now(),
+                location = Location("Loc1", 0.0, 0.0)),
+            Event(
+                uid = "e2",
+                title = "Event 2",
+                date = Timestamp.now(),
+                location = Location("Loc2", 0.0, 0.0)),
+            Event(
+                uid = "e3",
+                title = "Event 3",
+                date = Timestamp.now(),
+                location = Location("Loc3", 0.0, 0.0)))
 
     val summaries = events.toAiEventSummaries()
 
@@ -127,10 +136,18 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummaries with distance provider`() {
-    val events = listOf(
-        Event(uid = "e1", title = "Event 1", date = Timestamp.now(), location = Location("Loc1", 0.0, 0.0)),
-        Event(uid = "e2", title = "Event 2", date = Timestamp.now(), location = Location("Loc2", 0.0, 0.0))
-    )
+    val events =
+        listOf(
+            Event(
+                uid = "e1",
+                title = "Event 1",
+                date = Timestamp.now(),
+                location = Location("Loc1", 0.0, 0.0)),
+            Event(
+                uid = "e2",
+                title = "Event 2",
+                date = Timestamp.now(),
+                location = Location("Loc2", 0.0, 0.0)))
 
     val distanceProvider: (String) -> Double? = { eventId ->
       when (eventId) {
@@ -148,10 +165,18 @@ class AiEventMappingExtensionsTest {
 
   @Test
   fun `toAiEventSummaries with location description provider`() {
-    val events = listOf(
-        Event(uid = "e1", title = "Event 1", date = Timestamp.now(), location = Location("Loc1", 0.0, 0.0)),
-        Event(uid = "e2", title = "Event 2", date = Timestamp.now(), location = Location("Loc2", 0.0, 0.0))
-    )
+    val events =
+        listOf(
+            Event(
+                uid = "e1",
+                title = "Event 1",
+                date = Timestamp.now(),
+                location = Location("Loc1", 0.0, 0.0)),
+            Event(
+                uid = "e2",
+                title = "Event 2",
+                date = Timestamp.now(),
+                location = Location("Loc2", 0.0, 0.0)))
 
     val locationProvider: (String) -> String? = { eventId ->
       when (eventId) {
@@ -167,4 +192,3 @@ class AiEventMappingExtensionsTest {
     assertEquals("Geneva Center", summaries[1].locationDescription)
   }
 }
-

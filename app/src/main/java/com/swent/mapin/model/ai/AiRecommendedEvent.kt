@@ -8,8 +8,4 @@ package com.swent.mapin.model.ai
  * @property id Event identifier (matches AiEventSummary.id)
  * @property reason Short textual explanation of why this event was recommended
  */
-data class AiRecommendedEvent(
-    val id: String,
-    val reason: String
-)
-
+data class AiRecommendedEvent(val id: String, val reason: String)

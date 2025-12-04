@@ -14,4 +14,3 @@ data class AiRecommendationResponse(
     val recommendedEvents: List<AiRecommendedEvent>,
     val followupQuestions: List<String>? = null
 )
-

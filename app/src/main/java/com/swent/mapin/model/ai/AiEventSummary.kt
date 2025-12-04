@@ -7,8 +7,8 @@ import com.google.firebase.Timestamp
 /**
  * A compact representation of an Event that will be sent to the AI recommendation backend.
  *
- * This class serves as the stable contract between the app and the backend, so field names
- * and types should remain consistent.
+ * This class serves as the stable contract between the app and the backend, so field names and
+ * types should remain consistent.
  *
  * @property id Unique identifier of the event
  * @property title Event title
@@ -31,4 +31,3 @@ data class AiEventSummary(
     val capacityRemaining: Int? = null,
     val price: Double = 0.0
 )
-

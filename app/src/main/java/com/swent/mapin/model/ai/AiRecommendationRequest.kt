@@ -14,4 +14,3 @@ data class AiRecommendationRequest(
     val userContext: AiUserContext,
     val events: List<AiEventSummary>
 )
-

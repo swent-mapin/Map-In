@@ -11,26 +11,26 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import java.lang.reflect.Type
+import java.util.Date
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import org.junit.Before
 import org.junit.Test
-import java.lang.reflect.Type
-import java.util.Date
 
 /**
  * Tests for JSON serialization/deserialization of AI model classes.
  *
- * These tests ensure that the data classes can be properly serialized to JSON
- * for communication with the backend, and deserialized back to Kotlin objects.
+ * These tests ensure that the data classes can be properly serialized to JSON for communication
+ * with the backend, and deserialized back to Kotlin objects.
  */
 class AiModelSerializationTest {
 
   private lateinit var gson: Gson
 
   /**
-   * Custom Gson serializer for Firebase Timestamp.
-   * Converts Timestamp to seconds since epoch for JSON representation.
+   * Custom Gson serializer for Firebase Timestamp. Converts Timestamp to seconds since epoch for
+   * JSON representation.
    */
   class TimestampSerializer : JsonSerializer<Timestamp> {
     override fun serialize(
@@ -43,8 +43,8 @@ class AiModelSerializationTest {
   }
 
   /**
-   * Custom Gson deserializer for Firebase Timestamp.
-   * Converts seconds since epoch back to Timestamp object.
+   * Custom Gson deserializer for Firebase Timestamp. Converts seconds since epoch back to Timestamp
+   * object.
    */
   class TimestampDeserializer : JsonDeserializer<Timestamp> {
     override fun deserialize(
@@ -60,20 +60,21 @@ class AiModelSerializationTest {
   @Before
   fun setup() {
     // Create Gson instance with custom Timestamp serializers
-    gson = GsonBuilder()
-        .registerTypeAdapter(Timestamp::class.java, TimestampSerializer())
-        .registerTypeAdapter(Timestamp::class.java, TimestampDeserializer())
-        .create()
+    gson =
+        GsonBuilder()
+            .registerTypeAdapter(Timestamp::class.java, TimestampSerializer())
+            .registerTypeAdapter(Timestamp::class.java, TimestampDeserializer())
+            .create()
   }
 
   @Test
   fun `AiUserContext serializes and deserializes correctly`() {
-    val original = AiUserContext(
-        approxLocation = "Lausanne, Switzerland",
-        maxDistanceKm = 10.0,
-        timeWindowStart = Timestamp(Date(1700000000000)),
-        timeWindowEnd = Timestamp(Date(1700100000000))
-    )
+    val original =
+        AiUserContext(
+            approxLocation = "Lausanne, Switzerland",
+            maxDistanceKm = 10.0,
+            timeWindowStart = Timestamp(Date(1700000000000)),
+            timeWindowEnd = Timestamp(Date(1700100000000)))
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiUserContext::class.java)
@@ -86,12 +87,12 @@ class AiModelSerializationTest {
 
   @Test
   fun `AiUserContext with null fields serializes correctly`() {
-    val original = AiUserContext(
-        approxLocation = null,
-        maxDistanceKm = null,
-        timeWindowStart = null,
-        timeWindowEnd = null
-    )
+    val original =
+        AiUserContext(
+            approxLocation = null,
+            maxDistanceKm = null,
+            timeWindowStart = null,
+            timeWindowEnd = null)
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiUserContext::class.java)
@@ -104,17 +105,17 @@ class AiModelSerializationTest {
 
   @Test
   fun `AiEventSummary serializes and deserializes correctly`() {
-    val original = AiEventSummary(
-        id = "event123",
-        title = "Tech Conference",
-        startTime = Timestamp(Date(1700000000000)),
-        endTime = Timestamp(Date(1700100000000)),
-        tags = listOf("tech", "networking"),
-        distanceKm = 5.5,
-        locationDescription = "EPFL Campus",
-        capacityRemaining = 50,
-        price = 25.0
-    )
+    val original =
+        AiEventSummary(
+            id = "event123",
+            title = "Tech Conference",
+            startTime = Timestamp(Date(1700000000000)),
+            endTime = Timestamp(Date(1700100000000)),
+            tags = listOf("tech", "networking"),
+            distanceKm = 5.5,
+            locationDescription = "EPFL Campus",
+            capacityRemaining = 50,
+            price = 25.0)
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiEventSummary::class.java)
@@ -131,22 +132,14 @@ class AiModelSerializationTest {
   @Test
   fun `AiRecommendationRequest serializes and deserializes correctly`() {
     val userContext = AiUserContext(approxLocation = "Geneva")
-    val event1 = AiEventSummary(
-        id = "e1",
-        title = "Event One",
-        tags = listOf("music")
-    )
-    val event2 = AiEventSummary(
-        id = "e2",
-        title = "Event Two",
-        tags = listOf("sports")
-    )
+    val event1 = AiEventSummary(id = "e1", title = "Event One", tags = listOf("music"))
+    val event2 = AiEventSummary(id = "e2", title = "Event Two", tags = listOf("sports"))
 
-    val original = AiRecommendationRequest(
-        userQuery = "Find fun events this weekend",
-        userContext = userContext,
-        events = listOf(event1, event2)
-    )
+    val original =
+        AiRecommendationRequest(
+            userQuery = "Find fun events this weekend",
+            userContext = userContext,
+            events = listOf(event1, event2))
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiRecommendationRequest::class.java)
@@ -160,10 +153,8 @@ class AiModelSerializationTest {
 
   @Test
   fun `AiRecommendedEvent serializes and deserializes correctly`() {
-    val original = AiRecommendedEvent(
-        id = "event456",
-        reason = "Matches your interests in technology"
-    )
+    val original =
+        AiRecommendedEvent(id = "event456", reason = "Matches your interests in technology")
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiRecommendedEvent::class.java)
@@ -174,16 +165,16 @@ class AiModelSerializationTest {
 
   @Test
   fun `AiRecommendationResponse serializes and deserializes correctly`() {
-    val recommendedEvents = listOf(
-        AiRecommendedEvent(id = "e1", reason = "Great for tech enthusiasts"),
-        AiRecommendedEvent(id = "e2", reason = "Popular in your area")
-    )
+    val recommendedEvents =
+        listOf(
+            AiRecommendedEvent(id = "e1", reason = "Great for tech enthusiasts"),
+            AiRecommendedEvent(id = "e2", reason = "Popular in your area"))
 
-    val original = AiRecommendationResponse(
-        assistantMessage = "I found 2 events that match your interests!",
-        recommendedEvents = recommendedEvents,
-        followupQuestions = listOf("Want more details?", "Looking for similar events?")
-    )
+    val original =
+        AiRecommendationResponse(
+            assistantMessage = "I found 2 events that match your interests!",
+            recommendedEvents = recommendedEvents,
+            followupQuestions = listOf("Want more details?", "Looking for similar events?"))
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiRecommendationResponse::class.java)
@@ -198,11 +189,11 @@ class AiModelSerializationTest {
 
   @Test
   fun `AiRecommendationResponse with null followupQuestions serializes correctly`() {
-    val original = AiRecommendationResponse(
-        assistantMessage = "No events found",
-        recommendedEvents = emptyList(),
-        followupQuestions = null
-    )
+    val original =
+        AiRecommendationResponse(
+            assistantMessage = "No events found",
+            recommendedEvents = emptyList(),
+            followupQuestions = null)
 
     val json = gson.toJson(original)
     val deserialized = gson.fromJson(json, AiRecommendationResponse::class.java)
@@ -217,11 +208,7 @@ class AiModelSerializationTest {
     // This test verifies that field names in JSON match expectations
     // Important for backend contract stability
 
-    val event = AiEventSummary(
-        id = "test",
-        title = "Test Event",
-        tags = listOf("tag1")
-    )
+    val event = AiEventSummary(id = "test", title = "Test Event", tags = listOf("tag1"))
 
     val json = gson.toJson(event)
 
@@ -235,31 +222,26 @@ class AiModelSerializationTest {
   @Test
   fun `Complete round trip preserves data integrity`() {
     // Create a complete request
-    val request = AiRecommendationRequest(
-        userQuery = "Show me outdoor events",
-        userContext = AiUserContext(
-            approxLocation = "Zurich",
-            maxDistanceKm = 20.0
-        ),
-        events = listOf(
-            AiEventSummary(
-                id = "hiking1",
-                title = "Mountain Hiking",
-                tags = listOf("outdoor", "sports"),
-                price = 15.0,
-                distanceKm = 8.5
-            )
-        )
-    )
+    val request =
+        AiRecommendationRequest(
+            userQuery = "Show me outdoor events",
+            userContext = AiUserContext(approxLocation = "Zurich", maxDistanceKm = 20.0),
+            events =
+                listOf(
+                    AiEventSummary(
+                        id = "hiking1",
+                        title = "Mountain Hiking",
+                        tags = listOf("outdoor", "sports"),
+                        price = 15.0,
+                        distanceKm = 8.5)))
 
     // Create a response
-    val response = AiRecommendationResponse(
-        assistantMessage = "Perfect for outdoor enthusiasts!",
-        recommendedEvents = listOf(
-            AiRecommendedEvent(id = "hiking1", reason = "Great mountain views")
-        ),
-        followupQuestions = listOf("Need hiking gear recommendations?")
-    )
+    val response =
+        AiRecommendationResponse(
+            assistantMessage = "Perfect for outdoor enthusiasts!",
+            recommendedEvents =
+                listOf(AiRecommendedEvent(id = "hiking1", reason = "Great mountain views")),
+            followupQuestions = listOf("Need hiking gear recommendations?"))
 
     // Serialize both
     val requestJson = gson.toJson(request)
@@ -278,4 +260,3 @@ class AiModelSerializationTest {
     assertEquals(response.recommendedEvents[0].id, deserializedResponse.recommendedEvents[0].id)
   }
 }
-
