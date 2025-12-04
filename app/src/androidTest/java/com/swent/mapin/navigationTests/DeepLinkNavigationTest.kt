@@ -37,11 +37,11 @@ class DeepLinkNavigationTest {
       val navController = rememberNavController()
       val deepLinkQueue =
           androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateListOf<String>().also {
-              if (deepLink != null) {
-                it.add(deepLink)
-              }
+            val list = androidx.compose.runtime.mutableStateListOf<String>()
+            if (deepLink != null) {
+              list.add(deepLink)
             }
+            list
           }
       AppNavHost(
           navController = navController,
