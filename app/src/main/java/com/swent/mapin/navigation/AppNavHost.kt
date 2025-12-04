@@ -103,6 +103,9 @@ fun AppNavHost(
     Log.d("DEEPLINK", "Queue size: ${deepLinkQueue.size}")
 
     if (deepLinkQueue.isNotEmpty()) {
+      // Small delay to ensure NavHost is initialized (critical for cold start)
+      kotlinx.coroutines.delay(500)
+
       val deepLinkUrl = deepLinkQueue.removeAt(0)
       Log.d("DEEPLINK", "Processing URL: $deepLinkUrl")
 

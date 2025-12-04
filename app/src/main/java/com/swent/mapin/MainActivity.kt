@@ -59,6 +59,10 @@ class MainActivity : ComponentActivity() {
     // Extract deep link from initial intent and add to queue
     getDeepLinkUrlFromIntent(intent)?.let {
       Log.d("MainActivity", "Deep link from notification: $it")
+      Log.d("MainActivity", "Intent extras: ${intent?.extras?.keySet()?.joinToString()}")
+      intent?.extras?.keySet()?.forEach { key ->
+        Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
+      }
       deepLinkQueue.add(it)
     }
 
@@ -91,6 +95,10 @@ class MainActivity : ComponentActivity() {
     // Handle deep links when app is already running - add to queue
     getDeepLinkUrlFromIntent(intent)?.let {
       Log.d("MainActivity", "Deep link from new intent: $it")
+      Log.d("MainActivity", "Intent extras: ${intent.extras?.keySet()?.joinToString()}")
+      intent.extras?.keySet()?.forEach { key ->
+        Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
+      }
       deepLinkQueue.add(it)
     }
   }
