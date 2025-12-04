@@ -129,7 +129,7 @@ class ProfileViewModel(
     }
   }
 
-  /** Load user profile from Firestore. If profile doesn't exist, creates a default one. */
+  /** Load user profile from Firestore. Throws error if profile doesn't exist. */
   fun loadUserProfile() {
     viewModelScope.launch {
       try {
@@ -143,21 +143,27 @@ class ProfileViewModel(
           if (existingProfile != null) {
             // Profile exists in Firestore, use it
             _userProfile.value = existingProfile
+            // Calculate and load badges after profile is loaded
+            calculateAndUpdateBadges()
           } else {
-            // No profile in Firestore, create default one
-            val defaultProfile =
-                repository.createDefaultProfile(
-                    userId = currentUser.uid,
-                    name = currentUser.displayName ?: "Anonymous User",
-                    profilePictureUrl = currentUser.photoUrl?.toString())
-            _userProfile.value = defaultProfile
+            // No profile in Firestore - this is a critical data consistency error
+            val errorMessage =
+                "User profile not found in Firestore for authenticated user: ${currentUser.uid}"
+            println("ProfileViewModel - ERROR: $errorMessage")
+            throw IllegalStateException(errorMessage)
           }
-          // Calculate and load badges after profile is loaded
-          calculateAndUpdateBadges()
+        } else {
+          // No authenticated user
+          val errorMessage = "Cannot load profile: No authenticated user"
+          println("ProfileViewModel - ERROR: $errorMessage")
+          throw IllegalStateException(errorMessage)
         }
       } catch (e: Exception) {
         // Handle Firebase/Firestore errors gracefully
         println("ProfileViewModel - Error loading profile: ${e.message}")
+        e.printStackTrace()
+        // Re-throw to ensure the error is properly handled upstream
+        throw e
       } finally {
         _isLoading.value = false
       }
