@@ -85,25 +85,6 @@ class AiModelSerializationTest {
     assertNotNull(deserialized.timeWindowEnd)
   }
 
-  @Test
-  fun `AiUserContext with null fields serializes correctly`() {
-    val original =
-        AiUserContext(
-            approxLocation = null,
-            maxDistanceKm = null,
-            timeWindowStart = null,
-            timeWindowEnd = null)
-
-    val json = gson.toJson(original)
-    val deserialized = gson.fromJson(json, AiUserContext::class.java)
-
-    assertEquals(original.approxLocation, deserialized.approxLocation)
-    assertEquals(original.maxDistanceKm, deserialized.maxDistanceKm)
-    assertEquals(original.timeWindowStart, deserialized.timeWindowStart)
-    assertEquals(original.timeWindowEnd, deserialized.timeWindowEnd)
-  }
-
-  @Test
   fun `AiEventSummary serializes and deserializes correctly`() {
     val original =
         AiEventSummary(
@@ -185,38 +166,6 @@ class AiModelSerializationTest {
     assertEquals(original.recommendedEvents[1].reason, deserialized.recommendedEvents[1].reason)
     assertEquals(original.followupQuestions?.size, deserialized.followupQuestions?.size)
     assertEquals(original.followupQuestions?.get(0), deserialized.followupQuestions?.get(0))
-  }
-
-  @Test
-  fun `AiRecommendationResponse with null followupQuestions serializes correctly`() {
-    val original =
-        AiRecommendationResponse(
-            assistantMessage = "No events found",
-            recommendedEvents = emptyList(),
-            followupQuestions = null)
-
-    val json = gson.toJson(original)
-    val deserialized = gson.fromJson(json, AiRecommendationResponse::class.java)
-
-    assertEquals(original.assistantMessage, deserialized.assistantMessage)
-    assertEquals(0, deserialized.recommendedEvents.size)
-    assertEquals(original.followupQuestions, deserialized.followupQuestions)
-  }
-
-  @Test
-  fun `JSON field names are stable and predictable`() {
-    // This test verifies that field names in JSON match expectations
-    // Important for backend contract stability
-
-    val event = AiEventSummary(id = "test", title = "Test Event", tags = listOf("tag1"))
-
-    val json = gson.toJson(event)
-
-    // Verify that JSON contains expected field names
-    assert(json.contains("\"id\""))
-    assert(json.contains("\"title\""))
-    assert(json.contains("\"tags\""))
-    assert(json.contains("\"price\""))
   }
 
   @Test

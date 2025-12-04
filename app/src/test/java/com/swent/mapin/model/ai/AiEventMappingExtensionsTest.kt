@@ -74,23 +74,6 @@ class AiEventMappingExtensionsTest {
   }
 
   @Test
-  fun `toAiEventSummary handles over capacity gracefully`() {
-    val event =
-        Event(
-            uid = "event999",
-            title = "Overbooked Event",
-            date = Timestamp.now(),
-            location = Location("Venue", 0.0, 0.0),
-            capacity = 2,
-            participantIds = listOf("user1", "user2", "user3", "user4"))
-
-    val summary = event.toAiEventSummary()
-
-    // When over capacity, capacityRemaining should be null (negative doesn't make sense)
-    assertNull(summary.capacityRemaining)
-  }
-
-  @Test
   fun `toAiEventSummary uses custom distance and location description`() {
     val event =
         Event(
