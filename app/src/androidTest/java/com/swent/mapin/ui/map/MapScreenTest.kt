@@ -548,9 +548,7 @@ class MapScreenTest {
     rule.waitForIdle()
 
     // Verify the onCenterOnUserLocation callback was set
-    rule.runOnIdle {
-      assertNotNull(viewModel.onCenterOnUserLocation)
-    }
+    rule.runOnIdle { assertNotNull(viewModel.onCenterOnUserLocation) }
 
     rule.waitForIdle()
   }
