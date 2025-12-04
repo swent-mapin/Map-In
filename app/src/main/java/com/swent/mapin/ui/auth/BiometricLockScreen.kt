@@ -86,79 +86,101 @@ fun BiometricLockScreen(
               Spacer(modifier = Modifier.height(48.dp))
 
               // Clickable Fingerprint Icon
-              Box(
-                  modifier =
-                      Modifier.size(120.dp)
-                          .clip(CircleShape)
-                          .clickable(enabled = !isAuthenticating) { onRetry() }
-                          .background(
-                              brush =
-                                  Brush.linearGradient(
-                                      colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))))
-                          .testTag("biometricLockScreen_fingerprintButton"),
-                  contentAlignment = Alignment.Center) {
-                    if (isAuthenticating) {
-                      CircularProgressIndicator(
-                          modifier = Modifier.size(60.dp), color = Color.White, strokeWidth = 4.dp)
-                    } else {
-                      Icon(
-                          imageVector = Icons.Default.Fingerprint,
-                          contentDescription = "Tap to unlock with fingerprint",
-                          tint = Color.White,
-                          modifier =
-                              Modifier.size(70.dp).testTag("biometricLockScreen_fingerprintIcon"))
-                    }
-                  }
+              FingerprintButton(isAuthenticating = isAuthenticating, onRetry = onRetry)
 
               Spacer(modifier = Modifier.height(24.dp))
 
               // Status Text
-              Text(
-                  text =
-                      if (isAuthenticating) {
-                        "Verifying..."
-                      } else if (errorMessage != null) {
-                        "Tap to try again"
-                      } else {
-                        "Tap to unlock"
-                      },
-                  style = MaterialTheme.typography.bodyLarge,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.testTag("biometricLockScreen_statusText"))
+              StatusText(isAuthenticating = isAuthenticating, hasError = errorMessage != null)
 
               // Error Message
-              if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = errorMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier =
-                        Modifier.padding(horizontal = 24.dp)
-                            .testTag("biometricLockScreen_errorMessage"))
-              }
+              ErrorMessage(errorMessage = errorMessage)
 
               Spacer(modifier = Modifier.height(48.dp))
 
               // Use Another Account Button
-              if (!isAuthenticating) {
-                OutlinedButton(
-                    onClick = onUseAnotherAccount,
-                    modifier =
-                        Modifier.padding(horizontal = 24.dp)
-                            .height(56.dp)
-                            .testTag("biometricLockScreen_useAnotherAccountButton"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary)) {
-                      Text(
-                          text = "Use another account",
-                          style = MaterialTheme.typography.labelLarge,
-                          fontWeight = FontWeight.Bold)
-                    }
-              }
+              UseAnotherAccountButton(
+                  isAuthenticating = isAuthenticating, onUseAnotherAccount = onUseAnotherAccount)
             }
       }
+}
+
+/** Clickable fingerprint button with loading state. */
+@Composable
+private fun FingerprintButton(isAuthenticating: Boolean, onRetry: () -> Unit) {
+  Box(
+      modifier =
+          Modifier.size(120.dp)
+              .clip(CircleShape)
+              .clickable(enabled = !isAuthenticating) { onRetry() }
+              .background(
+                  brush =
+                      Brush.linearGradient(colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))))
+              .testTag("biometricLockScreen_fingerprintButton"),
+      contentAlignment = Alignment.Center) {
+        if (isAuthenticating) {
+          CircularProgressIndicator(
+              modifier = Modifier.size(60.dp), color = Color.White, strokeWidth = 4.dp)
+        } else {
+          Icon(
+              imageVector = Icons.Default.Fingerprint,
+              contentDescription = "Tap to unlock with fingerprint",
+              tint = Color.White,
+              modifier = Modifier.size(70.dp).testTag("biometricLockScreen_fingerprintIcon"))
+        }
+      }
+}
+
+/** Determines the status text based on authentication state. */
+private fun getStatusText(isAuthenticating: Boolean, hasError: Boolean): String {
+  return when {
+    isAuthenticating -> "Verifying..."
+    hasError -> "Tap to try again"
+    else -> "Tap to unlock"
+  }
+}
+
+/** Status text showing current authentication state. */
+@Composable
+private fun StatusText(isAuthenticating: Boolean, hasError: Boolean) {
+  Text(
+      text = getStatusText(isAuthenticating, hasError),
+      style = MaterialTheme.typography.bodyLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.testTag("biometricLockScreen_statusText"))
+}
+
+/** Error message displayed when authentication fails. */
+@Composable
+private fun ErrorMessage(errorMessage: String?) {
+  if (errorMessage != null) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = errorMessage,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(horizontal = 24.dp).testTag("biometricLockScreen_errorMessage"))
+  }
+}
+
+/** Button to switch to another account. */
+@Composable
+private fun UseAnotherAccountButton(isAuthenticating: Boolean, onUseAnotherAccount: () -> Unit) {
+  if (!isAuthenticating) {
+    OutlinedButton(
+        onClick = onUseAnotherAccount,
+        modifier =
+            Modifier.padding(horizontal = 24.dp)
+                .height(56.dp)
+                .testTag("biometricLockScreen_useAnotherAccountButton"),
+        shape = RoundedCornerShape(12.dp),
+        colors =
+            ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
+          Text(
+              text = "Use another account",
+              style = MaterialTheme.typography.labelLarge,
+              fontWeight = FontWeight.Bold)
+        }
+  }
 }

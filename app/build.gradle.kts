@@ -234,10 +234,10 @@ dependencies {
     kapt("androidx.room:room-compiler:2.8.3")
 
     // ------------- DataStore (for settings persistence) ------------------
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation(libs.androidx.datastore.preferences)
 
     // ------------- Biometric Authentication ------------------
-    implementation("androidx.biometric:biometric:1.1.0")
+    implementation(libs.androidx.biometric)
 
     // ------------- Media ------------------
     implementation("androidx.compose.foundation:foundation:1.7.0")

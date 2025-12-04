@@ -49,17 +49,7 @@ class MainActivity : FragmentActivity() {
     EventRepositoryProvider.init(this)
     EventRepositoryProvider.getRepository()
 
-    // Initialize FCM for already logged-in users (when app restarts with active session)
-    if (FirebaseAuth.getInstance().currentUser != null) {
-      lifecycleScope.launch {
-        try {
-          val fcmManager = FCMTokenManager()
-          fcmManager.initializeForCurrentUser()
-        } catch (e: Exception) {
-          Log.e("MainActivity", "Failed to initialize FCM for logged-in user", e)
-        }
-      }
-    }
+    initializeFcmIfLoggedIn()
 
     // Extract deep link from initial intent and add to queue
     getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
@@ -89,57 +79,36 @@ class MainActivity : FragmentActivity() {
       val biometricAuthManager = remember { BiometricAuthManager() }
 
       // Check if biometric authentication is required on launch
-      val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
       val biometricUnlockEnabled by
           remember(preferencesRepository) { preferencesRepository.biometricUnlockFlow }
               .collectAsState(initial = false)
-      val canUseBiometric =
-          remember(biometricAuthManager) { biometricAuthManager.canUseBiometric(this@MainActivity) }
 
       // Determine if we need to show the biometric lock screen
-      if (isLoggedIn && biometricUnlockEnabled && canUseBiometric && !biometricAuthCompleted) {
+      if (shouldRequireBiometric(biometricAuthManager, biometricUnlockEnabled) &&
+          !biometricAuthCompleted) {
         biometricAuthRequired = true
       }
 
       MapInTheme(darkTheme = darkTheme) {
         if (biometricAuthRequired && !biometricAuthCompleted) {
-          // Show biometric lock screen
           BiometricLockScreen(
               isAuthenticating = isAuthenticating,
               errorMessage = authErrorMessage,
               onRetry = {
-                isAuthenticating = true
-                authErrorMessage = null
-                biometricAuthManager.authenticate(
-                    activity = this@MainActivity,
-                    onSuccess = {
-                      isAuthenticating = false
-                      biometricAuthCompleted = true
-                      failedAttempts = 0
-                    },
-                    onError = { error ->
-                      isAuthenticating = false
-                      failedAttempts++
-                      authErrorMessage =
-                          if (failedAttempts >= 3) {
-                            "Too many failed attempts. Please use another account or try again later."
-                          } else {
-                            error
-                          }
-                    },
-                    onFallback = {
-                      isAuthenticating = false
-                      authErrorMessage = "Authentication cancelled. Please try again."
-                    })
+                handleBiometricRetry(
+                    biometricAuthManager = biometricAuthManager,
+                    failedAttempts = failedAttempts,
+                    onAuthenticating = { isAuthenticating = it },
+                    onAuthCompleted = { biometricAuthCompleted = it },
+                    onFailedAttempts = { failedAttempts = it },
+                    onErrorMessage = { authErrorMessage = it })
               },
               onUseAnotherAccount = {
-                // Logout and go to sign-in
-                FirebaseAuth.getInstance().signOut()
-                biometricAuthRequired = false
-                biometricAuthCompleted = true
+                handleUseAnotherAccount(
+                    onAuthRequired = { biometricAuthRequired = it },
+                    onAuthCompleted = { biometricAuthCompleted = it })
               })
         } else {
-          // Show normal app flow with deep link support
           val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
           AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
         }
@@ -151,6 +120,72 @@ class MainActivity : FragmentActivity() {
     super.onNewIntent(intent)
     // Handle deep links when app is already running - add to queue
     getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
+  }
+
+  /** Initialize FCM for already logged-in users (when app restarts with active session). */
+  private fun initializeFcmIfLoggedIn() {
+    val user = FirebaseAuth.getInstance().currentUser ?: return
+    lifecycleScope.launch {
+      try {
+        FCMTokenManager().initializeForCurrentUser()
+      } catch (e: Exception) {
+        Log.e("MainActivity", "Failed to initialize FCM for logged-in user", e)
+      }
+    }
+  }
+
+  /** Determine if biometric authentication should be required. */
+  private fun shouldRequireBiometric(
+      biometricAuthManager: BiometricAuthManager,
+      biometricUnlockEnabled: Boolean
+  ): Boolean {
+    val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+    return isLoggedIn && biometricUnlockEnabled && biometricAuthManager.canUseBiometric(this)
+  }
+
+  /** Handle biometric authentication retry logic. */
+  private fun handleBiometricRetry(
+      biometricAuthManager: BiometricAuthManager,
+      failedAttempts: Int,
+      onAuthenticating: (Boolean) -> Unit,
+      onAuthCompleted: (Boolean) -> Unit,
+      onFailedAttempts: (Int) -> Unit,
+      onErrorMessage: (String?) -> Unit
+  ) {
+    onAuthenticating(true)
+    onErrorMessage(null)
+    biometricAuthManager.authenticate(
+        activity = this,
+        onSuccess = {
+          onAuthenticating(false)
+          onAuthCompleted(true)
+          onFailedAttempts(0)
+        },
+        onError = { error ->
+          onAuthenticating(false)
+          val newFailedAttempts = failedAttempts + 1
+          onFailedAttempts(newFailedAttempts)
+          onErrorMessage(
+              if (newFailedAttempts >= 3) {
+                "Too many failed attempts. Please use another account or try again later."
+              } else {
+                error
+              })
+        },
+        onFallback = {
+          onAuthenticating(false)
+          onErrorMessage("Authentication cancelled. Please try again.")
+        })
+  }
+
+  /** Handle switching to another account by signing out. */
+  private fun handleUseAnotherAccount(
+      onAuthRequired: (Boolean) -> Unit,
+      onAuthCompleted: (Boolean) -> Unit
+  ) {
+    FirebaseAuth.getInstance().signOut()
+    onAuthRequired(false)
+    onAuthCompleted(true)
   }
 }
 

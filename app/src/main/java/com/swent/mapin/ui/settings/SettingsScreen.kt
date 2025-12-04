@@ -261,36 +261,19 @@ fun SettingsScreen(
 
                     // Biometric Unlock Toggle (only show if device supports it)
                     if (canUseBiometric) {
-                      SettingsToggleItem(
-                          title = "Biometric Unlock",
-                          subtitle = "Use fingerprint or face to unlock the app",
-                          icon = Icons.Default.Fingerprint,
+                      BiometricUnlockToggle(
                           isEnabled = biometricUnlockEnabled,
-                          onToggle = { enabled ->
-                            if (enabled) {
-                              // When enabling, first verify biometric works
-                              activity?.let { fragmentActivity ->
-                                biometricAuthManager.authenticate(
-                                    activity = fragmentActivity,
-                                    onSuccess = { viewModel.updateBiometricUnlockEnabled(true) },
-                                    onError = { error ->
-                                      // Show error and don't enable
-                                      viewModel.clearErrorMessage()
-                                      coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "Biometric authentication failed: $error")
-                                      }
-                                    },
-                                    onFallback = {
-                                      // User cancelled, don't enable
-                                    })
-                              }
-                            } else {
-                              // Disabling doesn't require authentication
-                              viewModel.updateBiometricUnlockEnabled(false)
+                          biometricAuthManager = biometricAuthManager,
+                          activity = activity,
+                          onEnableSuccess = { viewModel.updateBiometricUnlockEnabled(true) },
+                          onEnableError = { error ->
+                            viewModel.clearErrorMessage()
+                            coroutineScope.launch {
+                              snackbarHostState.showSnackbar(
+                                  "Biometric authentication failed: $error")
                             }
                           },
-                          testTag = "biometricUnlockToggle")
+                          onDisable = { viewModel.updateBiometricUnlockEnabled(false) })
 
                       Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -540,6 +523,56 @@ internal fun SettingsToggleItem(
                   modifier = Modifier.testTag("${testTag}_switch"))
             }
       }
+}
+
+/** Biometric unlock toggle with authentication verification. */
+@Composable
+private fun BiometricUnlockToggle(
+    isEnabled: Boolean,
+    biometricAuthManager: BiometricAuthManager,
+    activity: FragmentActivity?,
+    onEnableSuccess: () -> Unit,
+    onEnableError: (String) -> Unit,
+    onDisable: () -> Unit
+) {
+  SettingsToggleItem(
+      title = "Biometric Unlock",
+      subtitle = "Use fingerprint or face to unlock the app",
+      icon = Icons.Default.Fingerprint,
+      isEnabled = isEnabled,
+      onToggle = { enabled ->
+        handleBiometricToggle(
+            enabled = enabled,
+            biometricAuthManager = biometricAuthManager,
+            activity = activity,
+            onEnableSuccess = onEnableSuccess,
+            onEnableError = onEnableError,
+            onDisable = onDisable)
+      },
+      testTag = "biometricUnlockToggle")
+}
+
+/** Handles the biometric toggle state change with authentication when enabling. */
+private fun handleBiometricToggle(
+    enabled: Boolean,
+    biometricAuthManager: BiometricAuthManager,
+    activity: FragmentActivity?,
+    onEnableSuccess: () -> Unit,
+    onEnableError: (String) -> Unit,
+    onDisable: () -> Unit
+) {
+  if (!enabled) {
+    onDisable()
+    return
+  }
+
+  activity?.let { fragmentActivity ->
+    biometricAuthManager.authenticate(
+        activity = fragmentActivity,
+        onSuccess = onEnableSuccess,
+        onError = onEnableError,
+        onFallback = { /* User cancelled, don't enable */})
+  }
 }
 
 /** Action button for settings (Logout, Delete Account, etc.) */

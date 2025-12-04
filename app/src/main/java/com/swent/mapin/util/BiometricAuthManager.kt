@@ -77,6 +77,12 @@ class BiometricAuthManager {
       onError: (String) -> Unit,
       onFallback: () -> Unit
   ) {
+    // Early check: ensure biometric authentication is available
+    if (!canUseBiometric(activity)) {
+      onError("Biometric authentication not available on this device.")
+      return
+    }
+
     val executor = ContextCompat.getMainExecutor(activity)
 
     val biometricPrompt =
@@ -155,7 +161,7 @@ class BiometricAuthManager {
           hasStrong && hasWeak -> "Use fingerprint or face to continue"
           hasStrong -> "Verify your fingerprint"
           hasWeak -> "Verify your face"
-          else -> "Verify your identity"
+          else -> "Use your device PIN, pattern, or password"
         }
 
     // Build prompt info based on authenticator type

@@ -190,6 +190,7 @@ class SettingsViewModel(
         // Just update DataStore - stateIn() will automatically emit the new value
         preferencesRepository.setBiometricUnlockEnabled(enabled)
       } catch (e: Exception) {
+        android.util.Log.e("SettingsViewModel", "Failed to update biometric unlock setting", e)
         _errorMessage.value = "Failed to update biometric unlock setting: ${e.message}"
       }
     }
