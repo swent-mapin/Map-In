@@ -65,7 +65,7 @@ class OfflineRegionManager(
         }
 
     if (!isConnected) {
-      Log.d(TAG, "Device offline, skipping download")
+      Log.i(TAG, "Device offline, skipping download")
       onComplete(Result.failure(IllegalStateException("Device is offline")))
       return
     }
@@ -113,7 +113,7 @@ class OfflineRegionManager(
               }) { expected ->
                 currentDownload = null
                 if (expected.isValue) {
-                  Log.d(TAG, "Region download completed: $tileRegionId")
+                  Log.i(TAG, "Region download completed: $tileRegionId")
                   onComplete(Result.success(Unit))
                 } else {
                   expected.error?.let { error ->
@@ -123,7 +123,7 @@ class OfflineRegionManager(
                 }
               }
 
-      Log.d(TAG, "Started download for region: $tileRegionId")
+      Log.i(TAG, "Started download for region: $tileRegionId")
     } catch (e: Exception) {
       Log.e(TAG, "Failed to start region download", e)
       currentDownload = null
@@ -140,7 +140,7 @@ class OfflineRegionManager(
   fun cancelActiveDownload() {
     currentDownload?.cancel()
     currentDownload = null
-    Log.d(TAG, "Active download cancelled")
+    Log.i(TAG, "Active download cancelled")
   }
 
   /**
@@ -153,7 +153,7 @@ class OfflineRegionManager(
     return try {
       val tileRegionId = generateRegionId(bounds)
       tileStore.removeTileRegion(tileRegionId)
-      Log.d(TAG, "Removed tile region: $tileRegionId")
+      Log.i(TAG, "Removed tile region: $tileRegionId")
       Result.success(Unit)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to remove tile region", e)
