@@ -85,6 +85,7 @@ class AiModelSerializationTest {
     assertNotNull(deserialized.timeWindowEnd)
   }
 
+  @Test
   fun `AiEventSummary serializes and deserializes correctly`() {
     val original =
         AiEventSummary(
