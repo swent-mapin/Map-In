@@ -9,11 +9,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -21,7 +19,6 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.notifications.FCMTokenManager
-import com.swent.mapin.ui.auth.BiometricLockScreen
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
 import com.swent.mapin.util.BiometricAuthManager
