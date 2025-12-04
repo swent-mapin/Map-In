@@ -154,12 +154,7 @@ fun EditEventScreen(
   val showValidation = remember { mutableStateOf(false) }
 
   Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
-    Column(
-      modifier =
-        modifier
-          .padding(padding)
-          .fillMaxWidth()
-          .navigationBarsPadding()) {
+    Column(modifier = modifier.padding(padding).fillMaxWidth().navigationBarsPadding()) {
 
       // TopBar
       EventTopBar(
@@ -201,11 +196,9 @@ fun EditEventScreen(
 
             val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
             sdf.timeZone = TimeZone.getDefault()
-            val rawTime =
-              if (time.value.contains("h")) time.value.replace("h", "") else time.value
+            val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
             val rawEndTime =
-                if (endTime.value.contains("h")) endTime.value.replace("h", "")
-                else endTime.value
+                if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
 
             val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
             val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()

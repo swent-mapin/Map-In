@@ -297,51 +297,35 @@ class AddEventScreenTests {
 
   @Test
   fun topBarRemainsStickyWhenScrolling() {
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL).assertIsDisplayed()
 
     composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
-      .assertIsDisplayed()
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .assertIsDisplayed()
 
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
-      .performScrollTo()
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
 
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-      .assertIsDisplayed()
-
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL).assertIsDisplayed()
   }
 
   @Test
   fun validationBannerRemainsStickyWhenScrolling() {
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-      .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
 
     composeTestRule.waitForIdle()
 
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
 
     composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
-      .performScrollTo()
-      .assertIsDisplayed()
+        .onNodeWithTag(AddEventScreenTestTags.PUBLIC_SWITCH)
+        .performScrollTo()
+        .assertIsDisplayed()
 
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
 
-    composeTestRule
-      .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
   }
 }
