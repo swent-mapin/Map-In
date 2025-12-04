@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -33,7 +34,7 @@ object HttpClientProvider {
  * Main activity of the app. Role: - Android entry point that hosts the Jetpack Compose UI. -
  * Applies the Material 3 theme and shows the map screen.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
   // Simple deep link state instead of queue
   private var deepLink by mutableStateOf<String?>(null)
 
