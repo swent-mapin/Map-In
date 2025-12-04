@@ -36,6 +36,9 @@ class PreferencesRepository(private val context: Context) {
     val SHOW_ROAD_NUMBERS = booleanPreferencesKey("show_road_numbers")
     val SHOW_STREET_NAMES = booleanPreferencesKey("show_street_names")
     val ENABLE_3D_VIEW = booleanPreferencesKey("enable_3d_view")
+
+    // Biometric authentication preferences
+    val BIOMETRIC_UNLOCK_ENABLED = booleanPreferencesKey("biometric_unlock_enabled")
   }
 
   /** Flow for theme mode: "light", "dark", or "system" */
@@ -61,6 +64,10 @@ class PreferencesRepository(private val context: Context) {
   /** Flow for 3D view setting */
   val enable3DViewFlow: Flow<Boolean> =
       context.dataStore.data.map { preferences -> preferences[ENABLE_3D_VIEW] ?: true }
+
+  /** Flow for biometric unlock setting */
+  val biometricUnlockFlow: Flow<Boolean> =
+      context.dataStore.data.map { preferences -> preferences[BIOMETRIC_UNLOCK_ENABLED] ?: false }
 
   /** Update theme mode */
   suspend fun setThemeMode(mode: String) {
@@ -90,5 +97,10 @@ class PreferencesRepository(private val context: Context) {
   /** Update 3D view setting */
   suspend fun setEnable3DView(enable: Boolean) {
     context.dataStore.edit { preferences -> preferences[ENABLE_3D_VIEW] = enable }
+  }
+
+  /** Update biometric unlock setting */
+  suspend fun setBiometricUnlockEnabled(enabled: Boolean) {
+    context.dataStore.edit { preferences -> preferences[BIOMETRIC_UNLOCK_ENABLED] = enabled }
   }
 }
