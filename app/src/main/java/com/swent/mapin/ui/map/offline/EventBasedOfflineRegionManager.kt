@@ -78,13 +78,13 @@ class EventBasedOfflineRegionManager(
                 // Remove duplicates (event may be both saved and joined)
                 val uniqueEvents = allEvents.distinctBy { it.uid }
 
-                Log.d(TAG, "Events updated: ${uniqueEvents.size} unique events to process")
+                Log.i(TAG, "Events updated: ${uniqueEvents.size} unique events to process")
 
                 // Only download if online
                 if (connectivityService.isConnected()) {
                   downloadRegionsForEvents(uniqueEvents)
                 } else {
-                  Log.d(TAG, "Device offline, skipping region downloads")
+                  Log.i(TAG, "Device offline, skipping region downloads")
                 }
               }
         }
@@ -112,14 +112,14 @@ class EventBasedOfflineRegionManager(
     for (event in eventsToDownload) {
       // Skip if already downloaded
       if (downloadedEventIds.contains(event.uid)) {
-        Log.d(TAG, "Event ${event.uid} already downloaded, skipping")
+        Log.i(TAG, "Event ${event.uid} already downloaded, skipping")
         continue
       }
 
       // Calculate 2km radius bounds
       val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
 
-      Log.d(
+      Log.i(
           TAG,
           "Downloading region for event: ${event.title} " +
               "(${event.location.latitude}, ${event.location.longitude})")
@@ -135,7 +135,7 @@ class EventBasedOfflineRegionManager(
             downloadedEventIds.add(event.uid)
             // Store location for future deletion
             eventLocations[event.uid] = Pair(event.location.latitude, event.location.longitude)
-            Log.d(TAG, "Successfully downloaded region for event: ${event.title}")
+            Log.i(TAG, "Successfully downloaded region for event: ${event.title}")
             notificationManager?.showDownloadComplete(event)
             onDownloadComplete(event, Result.success(Unit))
           }
@@ -160,7 +160,7 @@ class EventBasedOfflineRegionManager(
     offlineRegionManager.downloadRegion(
         bounds = bounds,
         onProgress = { progress ->
-          Log.d(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
+          Log.i(TAG, "Event ${event.uid} download progress: ${(progress * 100).toInt()}%")
           onDownloadProgress(event, progress)
           notificationManager?.showDownloadProgress(event, progress)
         },
@@ -215,7 +215,7 @@ class EventBasedOfflineRegionManager(
                 val removedEventIds = previousEventIds - currentEventIds
 
                 if (removedEventIds.isNotEmpty()) {
-                  Log.d(
+                  Log.i(
                       TAG,
                       "Detected ${removedEventIds.size} removed/finished events, deleting regions")
                   deleteRegionsForEvents(removedEventIds)
@@ -268,14 +268,14 @@ class EventBasedOfflineRegionManager(
           val (lat, lng) = location
           val bounds = calculateBoundsForRadius(lat, lng)
 
-          Log.d(TAG, "Deleting region for removed event: $eventId")
+          Log.i(TAG, "Deleting region for removed event: $eventId")
 
           val result = offlineRegionManager.removeTileRegion(bounds)
           result
               .onSuccess {
                 downloadedEventIds.remove(eventId)
                 eventLocations.remove(eventId)
-                Log.d(TAG, "Successfully deleted region for event: $eventId")
+                Log.i(TAG, "Successfully deleted region for event: $eventId")
               }
               .onFailure { error ->
                 Log.e(TAG, "Failed to delete region for event $eventId: $error")
@@ -286,7 +286,7 @@ class EventBasedOfflineRegionManager(
         } else {
           // Event wasn't downloaded or location not stored, just remove from tracking
           downloadedEventIds.remove(eventId)
-          Log.d(TAG, "Removed event $eventId from tracking (no location stored)")
+          Log.i(TAG, "Removed event $eventId from tracking (no location stored)")
         }
       }
     }
@@ -301,14 +301,14 @@ class EventBasedOfflineRegionManager(
     scope.launch {
       val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
 
-      Log.d(TAG, "Deleting region for event: ${event.title}")
+      Log.i(TAG, "Deleting region for event: ${event.title}")
 
       val result = offlineRegionManager.removeTileRegion(bounds)
       result
           .onSuccess {
             downloadedEventIds.remove(event.uid)
             eventLocations.remove(event.uid)
-            Log.d(TAG, "Successfully deleted region for event: ${event.title}")
+            Log.i(TAG, "Successfully deleted region for event: ${event.title}")
           }
           .onFailure { error ->
             Log.e(TAG, "Failed to delete region for event ${event.title}: $error")
@@ -327,7 +327,7 @@ class EventBasedOfflineRegionManager(
     deletionObserverJob?.cancel()
     deletionObserverJob = null
     offlineRegionManager.cancelActiveDownload()
-    Log.d(TAG, "Stopped observing events")
+    Log.i(TAG, "Stopped observing events")
   }
 
   /**
@@ -340,7 +340,7 @@ class EventBasedOfflineRegionManager(
     downloadedEventIds.clear()
     eventLocations.clear()
     previousEventIds = setOf()
-    Log.d(TAG, "Cleared downloaded event IDs and locations")
+    Log.i(TAG, "Cleared downloaded event IDs and locations")
   }
 
   /**
