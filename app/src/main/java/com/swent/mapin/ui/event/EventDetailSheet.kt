@@ -43,6 +43,7 @@ import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.BottomSheetState
+import com.swent.mapin.ui.map.OrganizerState
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -56,7 +57,7 @@ import java.util.TimeZone
  * @param event The event to display
  * @param sheetState Current bottom sheet state
  * @param isParticipating Whether the current user is already participating in this event
- * @param organizerName Name of the event organizer
+ * @param organizerState Name of the event organizer
  * @param onJoinEvent Callback when user clicks "Join event"
  * @param onUnregisterEvent Callback when user clicks "Unregister"
  * @param onSaveForLater Callback when user clicks "Save for later"
@@ -73,7 +74,7 @@ fun EventDetailSheet(
     sheetState: BottomSheetState,
     isParticipating: Boolean,
     isSaved: Boolean,
-    organizerName: String,
+    organizerState: OrganizerState,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
@@ -106,7 +107,7 @@ fun EventDetailSheet(
             event = event,
             isParticipating = isParticipating,
             isSaved = isSaved,
-            organizerName = organizerName,
+            organizerState = organizerState,
             onJoinEvent = onJoinEvent,
             onUnregisterEvent = onUnregisterEvent,
             onSaveForLater = onSaveForLater,
@@ -336,7 +337,7 @@ private fun FullEventContent(
     event: Event,
     isParticipating: Boolean,
     isSaved: Boolean,
-    organizerName: String,
+    organizerState: OrganizerState,
     onJoinEvent: () -> Unit,
     onUnregisterEvent: () -> Unit,
     onSaveForLater: () -> Unit,
@@ -421,11 +422,31 @@ private fun FullEventContent(
               text = "Organized by: ",
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Text(
-              text = organizerName,
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.SemiBold,
-              modifier = Modifier.testTag("organizerName"))
+          when (organizerState) {
+            is OrganizerState.Loading -> {
+              Text(
+                  text = "Loading...",
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                  modifier = Modifier.testTag("organizerName"))
+            }
+            is OrganizerState.Loaded -> {
+              Text(
+                  text = organizerState.name,
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.SemiBold,
+                  modifier = Modifier.testTag("organizerName"))
+            }
+            is OrganizerState.Error -> {
+              Text(
+                  text = "Unknown",
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.error,
+                  modifier = Modifier.testTag("organizerName"))
+            }
+          }
         }
 
         Spacer(modifier = Modifier.height(8.dp))

@@ -602,7 +602,7 @@ fun MapScreen(
                       isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
                       // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
                       isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
-                      organizerName = viewModel.organizerName,
+                      organizerState = viewModel.organizerState,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },

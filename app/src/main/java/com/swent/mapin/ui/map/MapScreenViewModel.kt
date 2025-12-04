@@ -54,6 +54,15 @@ import kotlinx.coroutines.withContext
 
 // Assisted by AI tools
 
+/** Sealed class to handle the state of the name of the owner of the current event */
+sealed class OrganizerState {
+  object Loading : OrganizerState()
+
+  data class Loaded(val name: String) : OrganizerState()
+
+  object Error : OrganizerState()
+}
+
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
  */
@@ -306,9 +315,9 @@ class MapScreenViewModel(
   val memoryFormInitialEvent: Event?
     get() = _memoryFormInitialEvent
 
-  private var _organizerName by mutableStateOf("")
-  val organizerName: String
-    get() = _organizerName
+  private var _organizerState by mutableStateOf<OrganizerState>(OrganizerState.Loading)
+  val organizerState: OrganizerState
+    get() = _organizerState
 
   private var _showShareDialog by mutableStateOf(false)
   val showShareDialog: Boolean
@@ -742,7 +751,24 @@ class MapScreenViewModel(
     // Save current sheet state before opening event detail
     _sheetStateBeforeEvent = bottomSheetState
     _selectedEvent = event
-    _organizerName = "User ${event.ownerId.take(6)}"
+    _organizerState = OrganizerState.Loading
+
+    // Try to fetch the name of the owner
+    viewModelScope.launch {
+      try {
+        val ownerProfile = userProfileRepository.getUserProfile(event.ownerId)
+        _organizerState =
+            if (ownerProfile?.name != null) {
+              OrganizerState.Loaded(ownerProfile.name)
+            } else {
+              OrganizerState.Loaded("Unknown")
+            }
+      } catch (e: Exception) {
+        Log.e("MapScreenViewModel", "Error loading organizer profile", e)
+        _organizerState = OrganizerState.Error
+      }
+    }
+
     setBottomSheetState(BottomSheetState.MEDIUM)
 
     viewModelScope.launch { cameraController.centerOnEvent(event, forceZoom) }
@@ -823,7 +849,7 @@ class MapScreenViewModel(
 
   fun closeEventDetail() {
     _selectedEvent = null
-    _organizerName = ""
+    _organizerState = OrganizerState.Loaded("")
 
     // Clear directions when closing event detail
     directionViewModel.clearDirection()
