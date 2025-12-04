@@ -265,7 +265,7 @@ fun MapScreen(
     viewModel.checkLocationPermission()
     if (viewModel.hasLocationPermission) {
       viewModel.startLocationUpdates()
-      viewModel.getLastKnownLocation(centerCamera = true)
+      viewModel.getLastKnownLocation(centerCamera = false)
     }
 
     viewModel.onRequestLocationPermission = {
