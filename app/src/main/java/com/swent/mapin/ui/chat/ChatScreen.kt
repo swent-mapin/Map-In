@@ -65,7 +65,9 @@ data class Conversation(
 @Composable
 fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
   TopAppBar(
-      title = { Text(title) },
+      title = {
+        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+      },
       navigationIcon = {
         if (onNavigateBack != null) {
           IconButton(
@@ -77,9 +79,9 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
       },
       colors =
           TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.primaryContainer,
-              titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+              containerColor = MaterialTheme.colorScheme.surface,
+              titleContentColor = MaterialTheme.colorScheme.onSurface,
+              navigationIconContentColor = MaterialTheme.colorScheme.onSurface),
       modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 

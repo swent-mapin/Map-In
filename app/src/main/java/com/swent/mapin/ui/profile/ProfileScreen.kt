@@ -127,8 +127,8 @@ fun ProfileScreen(
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White))
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
           Column(
@@ -366,7 +366,7 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                   Icon(
                       imageVector = Icons.Default.Edit,
                       contentDescription = null,
-                      tint = Color.White,
+                      tint = MaterialTheme.colorScheme.onPrimary,
                       modifier = Modifier.size(14.dp))
                 }
             Spacer(modifier = Modifier.width(8.dp))
@@ -610,7 +610,7 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
                                       "Save",
                                       fontWeight = FontWeight.Bold,
                                       style = MaterialTheme.typography.bodySmall,
-                                      color = Color.White)
+                                      color = MaterialTheme.colorScheme.onPrimary)
                                 }
                           }
                     }

@@ -548,7 +548,7 @@ private fun SettingsActionButton(
                       text = label,
                       style = MaterialTheme.typography.labelLarge,
                       fontWeight = FontWeight.SemiBold,
-                      color = contentColor) // use contentColor
+                      color = MaterialTheme.colorScheme.onSurface)
                   Spacer(modifier = Modifier.height(4.dp))
                   Text(
                       text = description,
