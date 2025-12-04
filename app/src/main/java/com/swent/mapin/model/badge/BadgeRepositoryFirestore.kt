@@ -1,6 +1,7 @@
 package com.swent.mapin.model.badge
 
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -26,7 +27,7 @@ class BadgeRepositoryFirestore(
   }
 
   // Simple in-memory cache to minimize Firestore reads
-  private val badgeCache = mutableMapOf<String, List<Badge>>()
+  private val badgeCache = ConcurrentHashMap<String, List<Badge>>()
 
   /**
    * Save badge progress for a user to Firestore.
