@@ -9,8 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -32,8 +33,8 @@ object HttpClientProvider {
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : ComponentActivity() {
-  // Use a queue to handle multiple deep links instead of overwriting
-  private val deepLinkQueue = mutableStateListOf<String>()
+  // Simple deep link state instead of queue
+  private var deepLink by mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -56,14 +57,14 @@ class MainActivity : ComponentActivity() {
       }
     }
 
-    // Extract deep link from initial intent and add to queue
-    getDeepLinkUrlFromIntent(intent)?.let {
+    // Extract deep link from initial intent
+    deepLink = getDeepLinkUrlFromIntent(intent)
+    deepLink?.let {
       Log.d("MainActivity", "Deep link from notification: $it")
       Log.d("MainActivity", "Intent extras: ${intent?.extras?.keySet()?.joinToString()}")
       intent?.extras?.keySet()?.forEach { key ->
         Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
       }
-      deepLinkQueue.add(it)
     }
 
     setContent {
@@ -84,7 +85,7 @@ class MainActivity : ComponentActivity() {
       MapInTheme(darkTheme = darkTheme) {
         // Check if user is already authenticated with Firebase
         val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
+        AppNavHost(isLoggedIn = isLoggedIn, deepLink = deepLink)
       }
     }
   }
@@ -92,14 +93,14 @@ class MainActivity : ComponentActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
-    // Handle deep links when app is already running - add to queue
+    // Handle deep links when app is already running
     getDeepLinkUrlFromIntent(intent)?.let {
       Log.d("MainActivity", "Deep link from new intent: $it")
       Log.d("MainActivity", "Intent extras: ${intent.extras?.keySet()?.joinToString()}")
       intent.extras?.keySet()?.forEach { key ->
         Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
       }
-      deepLinkQueue.add(it)
+      deepLink = it
     }
   }
 }

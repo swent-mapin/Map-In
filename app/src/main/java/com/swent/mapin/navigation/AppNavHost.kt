@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -53,40 +52,12 @@ internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
   }
 }
 
-/** Checks if a deep link URL is a friend request deep link. */
-internal fun isFriendRequestDeepLink(deepLinkUrl: String?): Boolean {
-  if (deepLinkUrl == null) return false
-  return deepLinkUrl.startsWith("mapin://friendRequests")
-}
-
-/** Checks if a deep link URL is a friend accepted deep link. */
-internal fun isFriendAcceptedDeepLink(deepLinkUrl: String?): Boolean {
-  if (deepLinkUrl == null) return false
-  // Support both formats: mapin://friendAccepted and mapin://profile/...
-  return deepLinkUrl.startsWith("mapin://friendAccepted") ||
-      deepLinkUrl.startsWith("mapin://profile/")
-}
-
-/** Checks if a deep link URL is a messages deep link. */
-internal fun isMessagesDeepLink(deepLinkUrl: String?): Boolean {
-  if (deepLinkUrl == null) return false
-  return deepLinkUrl.startsWith("mapin://messages")
-}
-
-/** Checks if a deep link URL is a map deep link. */
-internal fun isMapDeepLink(deepLinkUrl: String?): Boolean {
-  if (deepLinkUrl == null) return false
-  return deepLinkUrl.startsWith("mapin://map")
-}
-
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
     renderMap: Boolean = true,
-    deepLinkQueue: SnapshotStateList<String> = remember {
-      androidx.compose.runtime.mutableStateListOf()
-    },
+    deepLink: String? = null,
     autoRequestPermissions: Boolean = true
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
@@ -97,54 +68,37 @@ fun AppNavHost(
   // Track pending friends tab for deep link navigation
   var pendingFriendsTab by remember { mutableStateOf<String?>(null) }
 
-  // Process deep links from queue with LaunchedEffect
-  LaunchedEffect(deepLinkQueue.size) {
+  // Process deep link with LaunchedEffect
+  LaunchedEffect(deepLink) {
     Log.d("DEEPLINK", "=== LaunchedEffect triggered ===")
-    Log.d("DEEPLINK", "Queue size: ${deepLinkQueue.size}")
+    Log.d("DEEPLINK", "Deep link: $deepLink")
 
-    if (deepLinkQueue.isNotEmpty()) {
+    if (deepLink != null) {
       // Small delay to ensure NavHost is initialized (critical for cold start)
       kotlinx.coroutines.delay(500)
 
-      val deepLinkUrl = deepLinkQueue.removeAt(0)
-      Log.d("DEEPLINK", "Processing URL: $deepLinkUrl")
+      Log.d("DEEPLINK", "Processing URL: $deepLink")
 
-      val eventId = parseDeepLinkEventId(deepLinkUrl)
-      Log.d("DEEPLINK", "Event ID parsed: $eventId")
+      val route = DeepLinkHandler.parseDeepLink(deepLink)
+      Log.d("DEEPLINK", "Route parsed: $route")
 
-      if (eventId != null) {
-        Log.d("DEEPLINK", "-> Event deep link")
-        currentDeepLinkEventId = eventId
-      } else if (isFriendRequestDeepLink(deepLinkUrl)) {
-        Log.d("DEEPLINK", "-> Friend request deep link detected!")
+      if (route != null) {
         try {
-          pendingFriendsTab = "REQUESTS"
-          navController.navigate(Route.Friends.route) { launchSingleTop = true }
-          Log.d("DEEPLINK", "-> Navigation SUCCESS")
-        } catch (e: Exception) {
-          Log.e("DEEPLINK", "-> Navigation FAILED", e)
-        }
-      } else if (isFriendAcceptedDeepLink(deepLinkUrl)) {
-        Log.d("DEEPLINK", "-> Friend accepted deep link detected!")
-        try {
-          pendingFriendsTab = "FRIENDS"
-          navController.navigate(Route.Friends.route) { launchSingleTop = true }
-          Log.d("DEEPLINK", "-> Navigation SUCCESS")
-        } catch (e: Exception) {
-          Log.e("DEEPLINK", "-> Navigation FAILED", e)
-        }
-      } else if (isMessagesDeepLink(deepLinkUrl)) {
-        Log.d("DEEPLINK", "-> Messages deep link detected!")
-        try {
-          navController.navigate(Route.Chat.route) { launchSingleTop = true }
-          Log.d("DEEPLINK", "-> Navigation SUCCESS")
-        } catch (e: Exception) {
-          Log.e("DEEPLINK", "-> Navigation FAILED", e)
-        }
-      } else if (isMapDeepLink(deepLinkUrl)) {
-        Log.d("DEEPLINK", "-> Map deep link detected!")
-        try {
-          navController.navigate(Route.Map.route) { launchSingleTop = true }
+          // Handle special cases for event deep links
+          val eventId = parseDeepLinkEventId(deepLink)
+          if (eventId != null) {
+            Log.d("DEEPLINK", "-> Event deep link with ID: $eventId")
+            currentDeepLinkEventId = eventId
+          } else if (route.startsWith("friends?tab=")) {
+            // Extract tab from route
+            val tab = route.substringAfter("friends?tab=")
+            Log.d("DEEPLINK", "-> Friends tab: $tab")
+            pendingFriendsTab = tab
+            navController.navigate(Route.Friends.route) { launchSingleTop = true }
+          } else {
+            Log.d("DEEPLINK", "-> Navigating to: $route")
+            navController.navigate(route) { launchSingleTop = true }
+          }
           Log.d("DEEPLINK", "-> Navigation SUCCESS")
         } catch (e: Exception) {
           Log.e("DEEPLINK", "-> Navigation FAILED", e)
