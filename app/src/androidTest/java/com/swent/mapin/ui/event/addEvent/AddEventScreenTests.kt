@@ -40,14 +40,8 @@ class AddEventScreenTests {
 
   @Test
   fun displayAllComponents() {
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
-        .performScrollTo()
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
         .performScrollTo()
@@ -83,15 +77,9 @@ class AddEventScreenTests {
   @Test
   fun nonEmptyTitleRemovesTitleError() {
     composeTestRule.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE)
         .performTextInput("title")
@@ -105,15 +93,9 @@ class AddEventScreenTests {
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION)
         .performTextInput("description")
@@ -124,10 +106,7 @@ class AddEventScreenTests {
 
   @Test
   fun clickingCancelInvokesCallback() {
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_CANCEL).performClick()
     assert(cancelClicked)
   }
 
@@ -172,14 +151,10 @@ class AddEventScreenTests {
         .assertIsDisplayed()
         .performTextInput("Invalid Tag !!")
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
         .assert(hasText("Tags", substring = true, ignoreCase = true))
   }
 
@@ -243,10 +218,7 @@ class AddEventScreenTests {
     tagNode.performScrollTo()
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("3.0")
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
@@ -261,14 +233,10 @@ class AddEventScreenTests {
     tagNode.performScrollTo()
     tagNode.assertIsDisplayed()
     tagNode.performTextInput("InvalidPrice")
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     composeTestRule.waitForIdle()
     composeTestRule
         .onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
         .assert(hasText("Price", substring = true, ignoreCase = true))
   }
 
@@ -285,10 +253,7 @@ class AddEventScreenTests {
         .performTextInput("This is a valid description")
 
     // The Save button is clickable by design; clicking it should NOT call onDone when form invalid.
-    composeTestRule
-        .onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     // onDone should not have been called
     assert(!saveClicked)
     // And the validation banner / error message should be visible

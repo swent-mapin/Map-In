@@ -70,14 +70,8 @@ class EditEventScreenTests {
         .onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG)
         .performScrollTo()
         .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .assertIsDisplayed()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.EVENT_CANCEL)
-        .performScrollTo()
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_CANCEL).assertIsDisplayed()
   }
 
   @Test
@@ -100,14 +94,8 @@ class EditEventScreenTests {
   @Test
   fun emptyFieldsShowValidationError() {
     setEditEventScreen()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
-        .assertIsDisplayed()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
   }
 
   @Test
@@ -115,14 +103,10 @@ class EditEventScreenTests {
     setEditEventScreen()
     val tagNode = composeTestRule.onNodeWithTag(EditEventScreenTestTags.INPUT_EVENT_TAG)
     tagNode.performScrollTo().performTextInput("invalid tag !!")
-    composeTestRule
-        .onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE)
-        .performScrollTo()
-        .performClick()
+    composeTestRule.onNodeWithTag(EditEventScreenTestTags.EVENT_SAVE).performClick()
 
     composeTestRule
         .onNodeWithTag(EditEventScreenTestTags.ERROR_MESSAGE)
-        .performScrollTo()
         .assert(hasText("Tags", substring = true, ignoreCase = true))
   }
 
