@@ -61,6 +61,7 @@ class MapEventStateControllerTest {
   @Mock private lateinit var mockConnectivityService: ConnectivityService
 
   private lateinit var controller: MapEventStateController
+  private lateinit var fakeTimeProvider: FakeTimeProvider
   private val testUserId = "testUserId"
   private val testEvent =
       Event(
@@ -76,6 +77,7 @@ class MapEventStateControllerTest {
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
+    fakeTimeProvider = FakeTimeProvider()
 
     // Mock Firebase Auth
     whenever(mockAuth.currentUser).thenReturn(mockUser)
@@ -110,7 +112,8 @@ class MapEventStateControllerTest {
             getSelectedEvent = mockGetSelectedEvent,
             setErrorMessage = mockSetErrorMessage,
             clearErrorMessage = mockClearErrorMessage,
-            autoRefreshEnabled = false)
+            autoRefreshEnabled = false,
+            timeProvider = fakeTimeProvider)
   }
 
   @After
@@ -177,20 +180,14 @@ class MapEventStateControllerTest {
 
   // ========== Refresh Tests ==========
   @Test
-  fun `refreshEventsList refreshes all event lists`() = runTest {
+  fun `refreshEventsList refreshes filteredEvents list`() = runTest {
     val filteredEvents = listOf(testEvent)
-    val joinedEvents = listOf(testEvent.copy(participantIds = listOf(testUserId)))
-    val savedEvents = listOf(testEvent)
     whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(filteredEvents)
-    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(joinedEvents)
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(savedEvents)
 
     controller.refreshEventsList()
     advanceUntilIdle()
 
     assertEquals(filteredEvents, controller.allEvents)
-    assertEquals(joinedEvents, controller.joinedEvents)
-    assertEquals(savedEvents, controller.savedEvents)
   }
 
   @Test
@@ -305,16 +302,12 @@ class MapEventStateControllerTest {
     // Mock selected event and repository responses
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     val updatedEvent = testEvent.copy(participantIds = listOf(testUserId))
-    whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(listOf(updatedEvent))
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
-    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(listOf(updatedEvent))
 
     // Execute the method
     controller.joinSelectedEvent()
     advanceUntilIdle()
 
     // Assertions
-    assertEquals(listOf(updatedEvent), controller.allEvents)
     assertEquals(listOf(updatedEvent), controller.joinedEvents)
     verify(mockEventRepository).editEventAsUser(testEvent.uid, testUserId, true)
   }
@@ -365,16 +358,9 @@ class MapEventStateControllerTest {
     controller.setJoinedEventsForTest(listOf(joinedEvent))
     whenever(mockGetSelectedEvent()).thenReturn(joinedEvent)
 
-    val updatedEvent = testEvent.copy(participantIds = emptyList())
-    whenever(mockEventRepository.getFilteredEvents(any<Filters>(), any<String>()))
-        .thenReturn(listOf(updatedEvent))
-    whenever(mockEventRepository.getJoinedEvents(testUserId)).thenReturn(emptyList())
-    whenever(mockEventRepository.getSavedEvents(testUserId)).thenReturn(emptyList())
-
     controller.leaveSelectedEvent()
     advanceUntilIdle()
 
-    assertEquals(listOf(updatedEvent), controller.allEvents)
     assertEquals(emptyList<Event>(), controller.joinedEvents)
     verify(mockEventRepository).editEventAsUser(testEvent.uid, testUserId, false)
   }
@@ -611,7 +597,8 @@ class MapEventStateControllerTest {
     whenever(mockGetSelectedEvent()).thenReturn(testEvent)
     whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenAnswer {
       // Assert optimistic update happened before this call
-      assertTrue(controller.joinedEvents.contains(testEvent))
+      assertTrue(
+          controller.joinedEvents.contains(testEvent.copy(participantIds = listOf(testUserId))))
       Unit
     }
 
@@ -724,9 +711,6 @@ class MapEventStateControllerTest {
     // Mock repository response for queue processing
     whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenReturn(Unit)
     whenever(mockEventRepository.getFilteredEvents(any(), any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getSavedEvents(any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getJoinedEvents(any())).thenReturn(emptyList())
-    whenever(mockEventRepository.getOwnedEvents(any())).thenReturn(emptyList())
 
     // Go back online
     connectivityFlow.emit(ConnectivityState(isConnected = true, networkType = NetworkType.WIFI))
@@ -858,5 +842,69 @@ class MapEventStateControllerTest {
     advanceUntilIdle()
 
     assertFalse(controller.isOnline.value)
+  }
+
+  // ========== Listen to Owned Events Test ==========
+  @Test
+  fun `startListeners initializes owned event listener and handles updates`() = runTest {
+    val mockOwnedListener = mock<ListenerRegistration>()
+    val ownedEvent = testEvent.copy(uid = "owned1", ownerId = testUserId)
+
+    val updateCaptor = argumentCaptor<(List<Event>, List<Event>, List<String>) -> Unit>()
+    whenever(mockEventRepository.listenToJoinedEvents(any(), any()))
+        .thenReturn(mock<ListenerRegistration>())
+    whenever(mockEventRepository.listenToSavedEvents(any(), any()))
+        .thenReturn(mock<ListenerRegistration>())
+    whenever(mockEventRepository.listenToOwnedEvents(any(), updateCaptor.capture()))
+        .thenReturn(mockOwnedListener)
+
+    controller.startListeners()
+
+    // Verify listener was created
+    verify(mockEventRepository).listenToOwnedEvents(eq(testUserId), any())
+
+    // Simulate adding an owned event
+    updateCaptor.firstValue.invoke(listOf(ownedEvent), emptyList(), emptyList())
+    assertTrue(controller.ownedEvents.contains(ownedEvent))
+
+    // Simulate removing the owned event
+    updateCaptor.firstValue.invoke(emptyList(), emptyList(), listOf(ownedEvent.uid))
+    assertTrue(controller.ownedEvents.isEmpty())
+
+    // Verify listener is removed on stop
+    controller.stopListeners()
+    verify(mockOwnedListener).remove()
+  }
+
+  // ========== Anti-Spam Test ==========
+  @Test
+  fun `spam prevention blocks repeated actions within 500ms on same event`() = runTest {
+    whenever(mockGetSelectedEvent()).thenReturn(testEvent)
+    whenever(mockEventRepository.editEventAsUser(any(), any(), any())).thenReturn(Unit)
+
+    // First call should succeed (t=0)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository, times(1)).editEventAsUser(testEvent.uid, testUserId, true)
+
+    // Immediate second call should be blocked (t=0)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository, times(1)).editEventAsUser(any(), any(), any()) // Still 1
+
+    // Advance fake time by 500ms
+    fakeTimeProvider.advance(500)
+
+    // Now it should work (t=500)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository, times(2)).editEventAsUser(testEvent.uid, testUserId, true)
+
+    // Different event works immediately
+    val event2 = testEvent.copy(uid = "event2")
+    whenever(mockGetSelectedEvent()).thenReturn(event2)
+    controller.joinSelectedEvent()
+    testDispatcher.scheduler.advanceUntilIdle()
+    verify(mockEventRepository).editEventAsUser(event2.uid, testUserId, true)
   }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,7 +66,9 @@ data class Conversation(
 @Composable
 fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
   TopAppBar(
-      title = { Text(title) },
+      title = {
+        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+      },
       navigationIcon = {
         if (onNavigateBack != null) {
           IconButton(
@@ -77,9 +80,9 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
       },
       colors =
           TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.primaryContainer,
-              titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+              containerColor = MaterialTheme.colorScheme.surface,
+              titleContentColor = MaterialTheme.colorScheme.onSurface,
+              navigationIconContentColor = MaterialTheme.colorScheme.onSurface),
       modifier = Modifier.testTag(ChatScreenTestTags.CHAT_TOP_BAR))
 }
 

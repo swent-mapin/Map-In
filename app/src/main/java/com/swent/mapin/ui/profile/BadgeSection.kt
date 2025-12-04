@@ -150,23 +150,28 @@ private fun BadgeItem(badge: Badge, onClick: () -> Unit) {
           Box(
               modifier =
                   Modifier.size(56.dp)
+                      .alpha(alpha)
                       .clip(CircleShape)
                       .background(
                           brush =
-                              Brush.radialGradient(
-                                  colors =
-                                      if (badge.isUnlocked) rarityColors
-                                      else
-                                          listOf(
-                                              MaterialTheme.colorScheme.surfaceVariant,
-                                              MaterialTheme.colorScheme.surfaceVariant)))
+                              if (badge.isUnlocked) {
+                                Brush.radialGradient(
+                                    colors = rarityColors,
+                                    center = androidx.compose.ui.geometry.Offset(28f, 28f),
+                                    radius = 40f)
+                              } else {
+                                Brush.radialGradient(
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.colorScheme.surfaceVariant))
+                              })
                       .border(
                           width = 2.dp,
                           color =
                               if (badge.isUnlocked) rarityColors.first().copy(alpha = 0.8f)
                               else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                          shape = CircleShape)
-                      .alpha(alpha),
+                          shape = CircleShape),
               contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector =
