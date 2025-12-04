@@ -55,7 +55,8 @@ import java.util.TimeZone
  *
  * @param event The event to display
  * @param sheetState Current bottom sheet state
- * @param isParticipating Whether the current user is already participating in this event
+ * @param isParticipating Whether the user is already participating in this event
+ * @param isSaved Whether the event is currently saved
  * @param organizerName Name of the event organizer
  * @param onJoinEvent Callback when user clicks "Join event"
  * @param onUnregisterEvent Callback when user clicks "Unregister"

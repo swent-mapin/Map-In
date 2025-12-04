@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.map.eventstate
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,29 @@ sealed class OfflineAction {
   data class UnsaveEvent(val eventId: String, val userId: String) : OfflineAction()
 }
 
+/** Anti spam debounce */
+const val ANTI_SPAM_DEBOUNCE: Long = 500
+
+interface TimeProvider {
+  fun currentTimeMillis(): Long
+}
+
+/** Provides the current time in milliseconds. */
+class SystemTimeProvider : TimeProvider {
+  override fun currentTimeMillis() = System.currentTimeMillis()
+}
+
+/** Provides a chosen time in milliseconds for tests */
+class FakeTimeProvider : TimeProvider {
+  var currentTime = 0L
+
+  override fun currentTimeMillis() = currentTime
+
+  fun advance(millis: Long) {
+    currentTime += millis
+  }
+}
+
 /**
  * Encapsulates all event-related state (filtered, search results, joined, saved) and repository
  * interactions (join, save, etc.) so the ViewModel only coordinates UI state.
@@ -53,7 +77,8 @@ class MapEventStateController(
     // Indicates whether the code is not running inside a unit test environment.
     // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
     // auto-refresh loops) which would otherwise block or hang the test runner.
-    private val autoRefreshEnabled: Boolean = true
+    private val autoRefreshEnabled: Boolean = true,
+    private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -111,7 +136,12 @@ class MapEventStateController(
   // Listeners for real-time updates
   private var joinedEventsListener: ListenerRegistration? = null
   private var savedEventsListener: ListenerRegistration? = null
+  private var ownedEventsListener: ListenerRegistration? = null
   private var filteredEventsListener: ListenerRegistration? = null
+
+  // Anti-spam actions check
+  private var lastActionEventId: String? = null
+  private var lastActionTimestamp: Long = 0
 
   // Observer jobs
   private var filterObserverJob: Job? = null
@@ -150,6 +180,17 @@ class MapEventStateController(
   fun stopObserving() {
     filterObserverJob?.cancel()
     connectivityObserverJob?.cancel()
+  }
+
+  /** Check whether the user is spamming the same action. */
+  private fun isSpamming(eventId: String): Boolean {
+    val now = timeProvider.currentTimeMillis()
+    if (lastActionEventId == eventId && (now - lastActionTimestamp) < ANTI_SPAM_DEBOUNCE) {
+      return true
+    }
+    lastActionEventId = eventId
+    lastActionTimestamp = now
+    return false
   }
 
   /**
@@ -257,12 +298,27 @@ class MapEventStateController(
   }
 
   /**
-   * Starts real-time listeners for joined and saved events. Should be called after user
-   * authentication.
+   * Starts real-time listeners for joined, saved, and owned events. Are in charge of the initial
+   * population of joined, saved and owned events.
+   *
+   * LIFECYCLE:
+   * - Should be called once after user authentication
+   * - Must call stopListeners() before calling this again to avoid duplicate listeners
+   * - Calling this multiple times without stopListeners() will create memory leaks
+   *
+   * @throws IllegalStateException if listeners are already active
    */
   fun startListeners() {
     try {
       val currentUserId = getUserId()
+
+      // Guard against duplicate listeners
+      if (joinedEventsListener != null ||
+          savedEventsListener != null ||
+          ownedEventsListener != null) {
+        Log.w("MapEventStateController", "Listeners already active. Call stopListeners() first.")
+        return
+      }
 
       // Listen to joined events
       joinedEventsListener =
@@ -279,6 +335,14 @@ class MapEventStateController(
               onUpdate = { added, modified, removed ->
                 handleSavedEventsUpdate(added, modified, removed)
               })
+
+      // Listen to owned events
+      ownedEventsListener =
+          eventRepository.listenToOwnedEvents(
+              userId = currentUserId,
+              onUpdate = { added, modified, removed ->
+                handleOwnedEventsUpdate(added, modified, removed)
+              })
     } catch (e: Exception) {
       setErrorMessage(e.message ?: "Failed to start event listeners")
     }
@@ -291,6 +355,9 @@ class MapEventStateController(
 
     savedEventsListener?.remove()
     savedEventsListener = null
+
+    ownedEventsListener?.remove()
+    ownedEventsListener = null
 
     filteredEventsListener?.remove()
     filteredEventsListener = null
@@ -343,13 +410,29 @@ class MapEventStateController(
     _savedEventsFlow.value = _savedEvents
   }
 
+  private fun handleOwnedEventsUpdate(
+      added: List<Event>,
+      modified: List<Event>,
+      removedIds: List<String>
+  ) {
+    val currentMap = _ownedEvents.associateBy { it.uid }.toMutableMap()
+
+    // Add new events
+    added.forEach { event -> currentMap[event.uid] = event }
+
+    // Update modified events
+    modified.forEach { event -> currentMap[event.uid] = event }
+
+    // Remove deleted events
+    removedIds.forEach { id -> currentMap.remove(id) }
+
+    // Update state
+    _ownedEvents = currentMap.values.sortedByDescending { it.date }
+  }
+
   /** Refreshes [allEvents] using the current filters. */
   fun refreshEventsList() {
     getFilteredEvents(filterViewModel.filters.value)
-    loadJoinedEvents()
-    loadSavedEvents()
-    loadAttendedEvents()
-    loadOwnedEvents()
   }
 
   /**
@@ -525,10 +608,7 @@ class MapEventStateController(
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
 
-    // Check if already joined
-    if (event.participantIds.contains(currentUserId)) {
-      return
-    }
+    if (isSpamming(event.uid)) return
 
     // Check capacity before optimistic update
     if (event.capacity != null && event.participantIds.size >= event.capacity) {
@@ -539,7 +619,8 @@ class MapEventStateController(
 
     // Optimistic update: add event to joined list immediately
     val previousJoinedEvents = _joinedEvents
-    _joinedEvents = (_joinedEvents + event).sortedByDescending { it.date }
+    val optimisticEvent = event.copy(participantIds = event.participantIds + currentUserId)
+    _joinedEvents = (_joinedEvents + optimisticEvent).sortedByDescending { it.date }
     _joinedEventsFlow.value = _joinedEvents
     loadAttendedEvents()
 
@@ -547,7 +628,6 @@ class MapEventStateController(
     try {
       eventRepository.editEventAsUser(event.uid, currentUserId, join = true)
       // Success - listener will confirm the state
-      refreshEventsList()
     } catch (e: Exception) {
       // Rollback optimistic update on error
       _joinedEvents = previousJoinedEvents
@@ -575,10 +655,7 @@ class MapEventStateController(
       return
     }
 
-    // Check if actually joined
-    if (!event.participantIds.contains(currentUserId)) {
-      return
-    }
+    if (isSpamming(event.uid)) return
 
     // Optimistic update: remove event from joined list immediately
     val previousJoinedEvents = _joinedEvents
@@ -596,7 +673,6 @@ class MapEventStateController(
     try {
       eventRepository.editEventAsUser(event.uid, currentUserId, join = false)
       // Success - listener will confirm the state
-      refreshEventsList()
     } catch (e: Exception) {
       if (e.message?.contains("Event not found") == true) {
         // Event was deleted while user was leaving - treat as success
@@ -621,6 +697,8 @@ class MapEventStateController(
   suspend fun saveSelectedEvent() {
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
+
+    if (isSpamming(event.uid)) return
 
     // Check if already saved
     if (_savedEvents.any { it.uid == event.uid }) {
@@ -666,6 +744,8 @@ class MapEventStateController(
   suspend fun unsaveSelectedEvent() {
     val event = getSelectedEvent() ?: return
     val currentUserId = getUserId()
+
+    if (isSpamming(event.uid)) return
 
     // Check if actually saved
     if (!_savedEvents.any { it.uid == event.uid }) {

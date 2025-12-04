@@ -41,6 +41,8 @@
     <string name="password_hide">Hide password</string>
     <string name="change_password">Change Password</string>
     <string name="change_password_description">Update your account password</string>
+    <string name="delete_event">Delete Event</string>
+    <string name="delete_alert_text">Are you sure you want to delete this event? This action cannot be undone.</string>
 
     <!-- Password Requirements -->
     <string name="password_requirements_title">Password Requirements</string>

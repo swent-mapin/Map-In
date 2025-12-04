@@ -1654,4 +1654,46 @@ class MapScreenViewModelTest {
     assertTrue(viewModel.directionViewModel.directionState is DirectionState.Cleared)
     assertNotNull(viewModel.errorMessage)
   }
+
+  @Test
+  fun `requestDeleteEvent sets event and shows dialog`() {
+    val event = Event("123")
+
+    viewModel.requestDeleteEvent(event)
+
+    assertEquals(event, viewModel.eventPendingDeletion)
+    assertTrue(viewModel.showDeleteDialog)
+  }
+
+  @Test
+  fun `requestDeleteEvent overrides previous pending event`() {
+    val first = Event("first")
+    val second = Event("second")
+
+    viewModel.requestDeleteEvent(first)
+    viewModel.requestDeleteEvent(second)
+
+    assertEquals(second, viewModel.eventPendingDeletion)
+    assertTrue(viewModel.showDeleteDialog)
+  }
+
+  @Test
+  fun `cancelDelete clears event and hides dialog`() {
+    val event = Event("toDelete")
+
+    viewModel.requestDeleteEvent(event)
+    viewModel.cancelDelete()
+
+    assertNull(viewModel.eventPendingDeletion)
+    assertFalse(viewModel.showDeleteDialog)
+  }
+
+  @Test
+  fun `cancelDelete works when no event is pending`() {
+
+    viewModel.cancelDelete()
+
+    assertNull(viewModel.eventPendingDeletion)
+    assertFalse(viewModel.showDeleteDialog)
+  }
 }

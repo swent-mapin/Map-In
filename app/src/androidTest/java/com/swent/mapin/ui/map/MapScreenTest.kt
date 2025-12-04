@@ -11,6 +11,7 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -770,6 +771,95 @@ class MapScreenTest {
 
     // Screen should remain functional
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_deleteDialog_showsWhenRequested() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Trigger delete dialog
+    rule.runOnIdle { viewModel.requestDeleteEvent(testEvent) }
+    rule.waitForIdle()
+
+    // Assert dialog is shown
+    rule.onNodeWithText("Delete Event").assertIsDisplayed()
+    rule
+        .onNodeWithText("Are you sure you want to delete this event? This action cannot be undone.")
+        .assertIsDisplayed()
+    rule.onNodeWithText("Delete").assertIsDisplayed()
+    rule.onNodeWithText("Cancel").assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_deleteDialog_cancelClosesDialog() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Trigger delete dialog
+    rule.runOnIdle { viewModel.requestDeleteEvent(testEvent) }
+    rule.waitForIdle()
+
+    // Click cancel
+    rule.onNodeWithText("Cancel").performClick()
+    rule.waitForIdle()
+
+    // Dialog disappears
+    rule.onNodeWithText("Delete Event").assertDoesNotExist()
+  }
+
+  @Test
+  fun mapScreen_deleteDialog_confirmDeletesAndClosesDialog() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(renderMap = false, autoRequestPermissions = false)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Trigger dialog
+    rule.runOnIdle { viewModel.requestDeleteEvent(testEvent) }
+    rule.waitForIdle()
+
+    // Click delete
+    rule.onNodeWithText("Delete").performClick()
+    rule.waitForIdle()
+
+    // Dialog disappears
+    rule.onNodeWithText("Delete Event").assertDoesNotExist()
+
+    // Assert UI state changed — event no longer selected
+    rule.runOnIdle { assertNull(viewModel.eventPendingDeletion) }
+    assertFalse(viewModel.ownedEvents.contains(testEvent))
   }
 }
 
