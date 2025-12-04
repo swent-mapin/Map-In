@@ -71,7 +71,7 @@ class SignInViewModel(context: Context) : ViewModel() {
 
     viewModelScope.launch {
       try {
-        Log.d(TAG, "Starting Google Sign-In process with GetGoogleIdOption...")
+        Log.w(TAG, "Starting Google Sign-In process with GetGoogleIdOption...")
 
         val googleIdOption =
             GetGoogleIdOption.Builder()
@@ -86,14 +86,14 @@ class SignInViewModel(context: Context) : ViewModel() {
         val credential = credentialResult.credential
 
         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-        Log.d(TAG, "Google ID Token created successfully")
+        Log.w(TAG, "Google ID Token created successfully")
 
         val googleCredential =
             GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
         val authResult = auth.signInWithCredential(googleCredential).await()
 
         authResult.user?.let { user ->
-          Log.d(TAG, "Sign-in successful for user: ${user.displayName}")
+          Log.w(TAG, "Sign-in successful for user: ${user.displayName}")
           _uiState.value =
               _uiState.value.copy(
                   isLoading = false,
@@ -169,7 +169,7 @@ class SignInViewModel(context: Context) : ViewModel() {
             .startActivityForSignInWithProvider(activity, provider)
             .addOnSuccessListener { authResult ->
               authResult.user?.let { user ->
-                Log.d(TAG, "Microsoft sign-in successful for: ${user.displayName}")
+                Log.w(TAG, "Microsoft sign-in successful for: ${user.displayName}")
                 _uiState.value =
                     _uiState.value.copy(
                         isLoading = false,
@@ -222,7 +222,7 @@ class SignInViewModel(context: Context) : ViewModel() {
       try {
         val authResult = auth.signInWithEmailAndPassword(email, password).await()
         authResult.user?.let { user ->
-          Log.d(TAG, "Email sign-in successful for: ${user.email}")
+          Log.w(TAG, "Email sign-in successful for: ${user.email}")
           _uiState.value =
               _uiState.value.copy(
                   isLoading = false,
@@ -294,7 +294,7 @@ class SignInViewModel(context: Context) : ViewModel() {
       try {
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
         authResult.user?.let { user ->
-          Log.d(TAG, "Email sign-up successful for: ${user.email}")
+          Log.w(TAG, "Email sign-up successful for: ${user.email}")
           _uiState.value =
               _uiState.value.copy(
                   isLoading = false,
@@ -336,7 +336,7 @@ class SignInViewModel(context: Context) : ViewModel() {
         val fcmManager = com.swent.mapin.notifications.FCMTokenManager()
         val success = fcmManager.initializeForCurrentUser()
         if (success) {
-          Log.d(TAG, "FCM token registered successfully")
+          Log.w(TAG, "FCM token registered successfully")
         } else {
           Log.w(TAG, "Failed to register FCM token")
         }
