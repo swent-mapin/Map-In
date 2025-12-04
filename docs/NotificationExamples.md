@@ -187,7 +187,7 @@ suspend fun debugFCMToken(): String? {
 ```kotlin
 lifecycleScope.launch {
     val token = debugFCMToken()
-    Log.w("FCM", "Token: $token")
+    Log.i("FCM", "Token: $token")
 }
 ```
 

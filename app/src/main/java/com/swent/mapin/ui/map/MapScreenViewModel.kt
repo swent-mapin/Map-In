@@ -816,7 +816,7 @@ class MapScreenViewModel(
     deepLinkFetchAttempted = true
     return withContext(ioDispatcher) {
       runCatching { eventRepository.getEvent(eventId) }
-          .onFailure { Log.w("MapScreenViewModel", "Deep link event not found: $eventId", it) }
+          .onFailure { Log.i("MapScreenViewModel", "Deep link event not found: $eventId", it) }
           .getOrNull()
     }
   }

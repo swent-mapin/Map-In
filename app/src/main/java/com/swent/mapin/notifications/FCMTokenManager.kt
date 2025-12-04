@@ -75,7 +75,7 @@ class FCMTokenManager(
           .document(userId)
           .update(FIELD_FCM_TOKENS, com.google.firebase.firestore.FieldValue.arrayUnion(fcmToken))
           .await()
-      Log.w(TAG, "FCM token added successfully for user: $userId")
+      Log.i(TAG, "FCM token added successfully for user: $userId")
       true
     } catch (e: Exception) {
       // If update fails, try set with merge
@@ -87,7 +87,7 @@ class FCMTokenManager(
                 mapOf(FIELD_FCM_TOKENS to listOf(fcmToken)),
                 com.google.firebase.firestore.SetOptions.merge())
             .await()
-        Log.w(TAG, "FCM token added successfully for user: $userId (via set)")
+        Log.i(TAG, "FCM token added successfully for user: $userId (via set)")
         true
       } catch (e2: Exception) {
         Log.e(
@@ -113,7 +113,7 @@ class FCMTokenManager(
           .document(userId)
           .update(FIELD_FCM_TOKENS, com.google.firebase.firestore.FieldValue.arrayRemove(fcmToken))
           .await()
-      Log.w(TAG, "FCM token removed successfully for user: $userId")
+      Log.i(TAG, "FCM token removed successfully for user: $userId")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to remove FCM token for user: $userId", e)
@@ -130,7 +130,7 @@ class FCMTokenManager(
   suspend fun subscribeToTopic(topic: String): Boolean {
     return try {
       messaging.subscribeToTopic(topic).await()
-      Log.w(TAG, "Subscribed to topic: $topic")
+      Log.i(TAG, "Subscribed to topic: $topic")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to subscribe to topic: $topic", e)
@@ -146,7 +146,7 @@ class FCMTokenManager(
   suspend fun unsubscribeFromTopic(topic: String): Boolean {
     return try {
       messaging.unsubscribeFromTopic(topic).await()
-      Log.w(TAG, "Unsubscribed from topic: $topic")
+      Log.i(TAG, "Unsubscribed from topic: $topic")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to unsubscribe from topic: $topic", e)
@@ -161,7 +161,7 @@ class FCMTokenManager(
   suspend fun deleteToken(): Boolean {
     return try {
       messaging.deleteToken().await()
-      Log.w(TAG, "Token deleted")
+      Log.i(TAG, "Token deleted")
       true
     } catch (e: Exception) {
       Log.e(TAG, "Failed to delete FCM token", e)
@@ -184,7 +184,7 @@ class FCMTokenManager(
       val existingTokens = userDoc.get(FIELD_FCM_TOKENS) as? List<*> ?: emptyList<String>()
 
       if (existingTokens.contains(token)) {
-        Log.w(TAG, "FCM token already registered for user: $userId")
+        Log.i(TAG, "FCM token already registered for user: $userId")
         return true // Already registered, no-op
       }
 

@@ -74,7 +74,7 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
   override fun onMessageReceived(remoteMessage: RemoteMessage) {
     super.onMessageReceived(remoteMessage)
 
-    Log.w(TAG, "Message received from: ${remoteMessage.from}")
+    Log.i(TAG, "Message received from: ${remoteMessage.from}")
 
     // Check if message contains a notification payload
     remoteMessage.notification?.let { notification ->
@@ -100,7 +100,7 @@ open class NotificationBackgroundManager : FirebaseMessagingService() {
 
     // Check if message contains a data payload (only if no notification payload)
     if (remoteMessage.data.isNotEmpty()) {
-      Log.w(TAG, "Message data payload: ${remoteMessage.data}")
+      Log.i(TAG, "Message data payload: ${remoteMessage.data}")
 
       // Handle data payload (for background notifications)
       val title = remoteMessage.data["title"] ?: "Map-In"
