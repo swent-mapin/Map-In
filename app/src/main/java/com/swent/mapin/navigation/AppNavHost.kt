@@ -10,9 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.chat.ChatScreen
 import com.swent.mapin.ui.chat.ConversationScreen
@@ -65,46 +67,22 @@ fun AppNavHost(
   // Track current deep link being processed
   var currentDeepLinkEventId by remember { mutableStateOf<String?>(null) }
 
-  // Track pending friends tab for deep link navigation
-  var pendingFriendsTab by remember { mutableStateOf<String?>(null) }
-
   // Process deep link with LaunchedEffect
   LaunchedEffect(deepLink) {
-    Log.d("DEEPLINK", "=== LaunchedEffect triggered ===")
-    Log.d("DEEPLINK", "Deep link: $deepLink")
-
     if (deepLink != null) {
       // Small delay to ensure NavHost is initialized (critical for cold start)
       kotlinx.coroutines.delay(500)
 
-      Log.d("DEEPLINK", "Processing URL: $deepLink")
+      // Set event ID if present (for MapScreen to handle)
+      currentDeepLinkEventId = parseDeepLinkEventId(deepLink)
 
-      val route = DeepLinkHandler.parseDeepLink(deepLink)
-      Log.d("DEEPLINK", "Route parsed: $route")
-
-      if (route != null) {
+      // Parse and navigate - Navigation handles query params automatically
+      DeepLinkHandler.parseDeepLink(deepLink)?.let { route ->
         try {
-          // Handle special cases for event deep links
-          val eventId = parseDeepLinkEventId(deepLink)
-          if (eventId != null) {
-            Log.d("DEEPLINK", "-> Event deep link with ID: $eventId")
-            currentDeepLinkEventId = eventId
-          } else if (route.startsWith("friends?tab=")) {
-            // Extract tab from route
-            val tab = route.substringAfter("friends?tab=")
-            Log.d("DEEPLINK", "-> Friends tab: $tab")
-            pendingFriendsTab = tab
-            navController.navigate(Route.Friends.route) { launchSingleTop = true }
-          } else {
-            Log.d("DEEPLINK", "-> Navigating to: $route")
-            navController.navigate(route) { launchSingleTop = true }
-          }
-          Log.d("DEEPLINK", "-> Navigation SUCCESS")
+          navController.navigate(route) { launchSingleTop = true }
         } catch (e: Exception) {
-          Log.e("DEEPLINK", "-> Navigation FAILED", e)
+          Log.e("AppNavHost", "Deep link navigation failed", e)
         }
-      } else {
-        Log.d("DEEPLINK", "-> Unknown deep link type")
       }
     }
   }
@@ -186,27 +164,21 @@ fun AppNavHost(
           })
     }
 
-    composable(Route.Friends.route) {
-      val viewModel: FriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    composable(
+        route = "friends?tab={tab}",
+        arguments =
+            listOf(
+                navArgument("tab") {
+                  type = NavType.StringType
+                  defaultValue = "FRIENDS"
+                })) { backStackEntry ->
+          val tab = backStackEntry.arguments?.getString("tab") ?: "FRIENDS"
+          val viewModel: FriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
-      // Handle deep link tab selection
-      LaunchedEffect(pendingFriendsTab) {
-        Log.d("DEEPLINK", "FriendsScreen LaunchedEffect - pendingTab: $pendingFriendsTab")
-        when (pendingFriendsTab) {
-          "REQUESTS" -> {
-            Log.d("DEEPLINK", "-> Selecting REQUESTS tab")
-            viewModel.selectTab(FriendsTab.REQUESTS)
-          }
-          "FRIENDS" -> {
-            Log.d("DEEPLINK", "-> Selecting FRIENDS tab")
-            viewModel.selectTab(FriendsTab.FRIENDS)
-          }
+          LaunchedEffect(tab) { viewModel.selectTab(FriendsTab.valueOf(tab)) }
+
+          FriendsScreen(onNavigateBack = { safePopBackStack() }, viewModel = viewModel)
         }
-        pendingFriendsTab = null
-      }
-
-      FriendsScreen(onNavigateBack = { safePopBackStack() }, viewModel = viewModel)
-    }
 
     composable(Route.Chat.route) {
       ChatScreen(

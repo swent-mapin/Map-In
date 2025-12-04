@@ -14,29 +14,25 @@ object DeepLinkHandler {
         return null
       }
 
-      val route =
-          when (uri.host) {
-            "friendRequests" -> "friends?tab=REQUESTS"
-            "friendAccepted",
-            "profile" -> "friends?tab=FRIENDS"
-            "events" -> Route.Map.route
-            "messages" -> {
-              val conversationId = uri.pathSegments.firstOrNull()
-              if (conversationId != null) {
-                "conversation/$conversationId/${Uri.encode("")}"
-              } else {
-                Route.Chat.route
-              }
-            }
-            "map" -> Route.Map.route
-            else -> {
-              Log.w("DeepLinkHandler", "Unknown host: ${uri.host}")
-              null
-            }
+      when (uri.host) {
+        "friendRequests" -> "friends?tab=REQUESTS"
+        "friendAccepted",
+        "profile" -> "friends?tab=FRIENDS"
+        "events" -> Route.Map.route
+        "messages" -> {
+          val conversationId = uri.pathSegments.firstOrNull()
+          if (conversationId != null) {
+            "conversation/$conversationId/${Uri.encode("Unknown")}"
+          } else {
+            Route.Chat.route
           }
-
-      Log.d("DeepLinkHandler", "Parsed: $deepLink -> $route")
-      route
+        }
+        "map" -> Route.Map.route
+        else -> {
+          Log.w("DeepLinkHandler", "Unknown host: ${uri.host}")
+          null
+        }
+      }
     } catch (e: Exception) {
       Log.e("DeepLinkHandler", "Parse error: $deepLink", e)
       null

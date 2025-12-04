@@ -59,13 +59,6 @@ class MainActivity : ComponentActivity() {
 
     // Extract deep link from initial intent
     deepLink = getDeepLinkUrlFromIntent(intent)
-    deepLink?.let {
-      Log.d("MainActivity", "Deep link from notification: $it")
-      Log.d("MainActivity", "Intent extras: ${intent?.extras?.keySet()?.joinToString()}")
-      intent?.extras?.keySet()?.forEach { key ->
-        Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
-      }
-    }
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
@@ -94,14 +87,7 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     // Handle deep links when app is already running
-    getDeepLinkUrlFromIntent(intent)?.let {
-      Log.d("MainActivity", "Deep link from new intent: $it")
-      Log.d("MainActivity", "Intent extras: ${intent.extras?.keySet()?.joinToString()}")
-      intent.extras?.keySet()?.forEach { key ->
-        Log.d("MainActivity", "  $key = ${intent.extras?.get(key)}")
-      }
-      deepLink = it
-    }
+    getDeepLinkUrlFromIntent(intent)?.let { deepLink = it }
   }
 }
 
