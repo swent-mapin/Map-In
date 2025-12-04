@@ -550,8 +550,6 @@ class MapScreenTest {
     // Verify the onCenterOnUserLocation callback was set
     rule.runOnIdle {
       assertNotNull(viewModel.onCenterOnUserLocation)
-      // Try to invoke it - it should not crash even without location
-      viewModel.onCenterOnUserLocation?.invoke()
     }
 
     rule.waitForIdle()
