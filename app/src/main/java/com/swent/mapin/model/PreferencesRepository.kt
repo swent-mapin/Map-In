@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -36,6 +37,11 @@ class PreferencesRepository(private val context: Context) {
     val SHOW_ROAD_NUMBERS = booleanPreferencesKey("show_road_numbers")
     val SHOW_STREET_NAMES = booleanPreferencesKey("show_street_names")
     val ENABLE_3D_VIEW = booleanPreferencesKey("enable_3d_view")
+
+    // Camera position preferences
+    val CAMERA_LATITUDE = doublePreferencesKey("camera_latitude")
+    val CAMERA_LONGITUDE = doublePreferencesKey("camera_longitude")
+    val CAMERA_ZOOM = doublePreferencesKey("camera_zoom")
 
     // Biometric authentication preferences
     val BIOMETRIC_UNLOCK_ENABLED = booleanPreferencesKey("biometric_unlock_enabled")
@@ -102,5 +108,26 @@ class PreferencesRepository(private val context: Context) {
   /** Update biometric unlock setting */
   suspend fun setBiometricUnlockEnabled(enabled: Boolean) {
     context.dataStore.edit { preferences -> preferences[BIOMETRIC_UNLOCK_ENABLED] = enabled }
+  }
+
+  /** Flow for camera latitude (null if never set) */
+  val cameraLatitudeFlow: Flow<Double?> =
+      context.dataStore.data.map { preferences -> preferences[CAMERA_LATITUDE] }
+
+  /** Flow for camera longitude (null if never set) */
+  val cameraLongitudeFlow: Flow<Double?> =
+      context.dataStore.data.map { preferences -> preferences[CAMERA_LONGITUDE] }
+
+  /** Flow for camera zoom (null if never set) */
+  val cameraZoomFlow: Flow<Double?> =
+      context.dataStore.data.map { preferences -> preferences[CAMERA_ZOOM] }
+
+  /** Save camera position */
+  suspend fun saveCameraPosition(latitude: Double, longitude: Double, zoom: Double) {
+    context.dataStore.edit { preferences ->
+      preferences[CAMERA_LATITUDE] = latitude
+      preferences[CAMERA_LONGITUDE] = longitude
+      preferences[CAMERA_ZOOM] = zoom
+    }
   }
 }

@@ -705,6 +705,7 @@ internal fun ConfirmationDialog(
       dismissButton = {
         OutlinedButton(
             onClick = onDismiss,
+            modifier = Modifier.testTag("dialogCancelButton"),
             colors =
                 ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary)) {

@@ -13,6 +13,7 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.BottomSheetState
+import com.swent.mapin.ui.map.OrganizerState
 import java.util.Calendar
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,7 +44,7 @@ class EventDetailSheetTest {
       sheetState: BottomSheetState,
       isParticipating: Boolean = false,
       isSaved: Boolean = false,
-      organizerName: String = "Test Organizer",
+      organizerState: OrganizerState = OrganizerState.Loaded("Test Organizer"),
       onJoinEvent: () -> Unit = {},
       onUnregisterEvent: () -> Unit = {},
       onSaveForLater: () -> Unit = {},
@@ -60,7 +61,7 @@ class EventDetailSheetTest {
           sheetState = sheetState,
           isParticipating = isParticipating,
           isSaved = isSaved,
-          organizerName = organizerName,
+          organizerState = organizerState,
           onJoinEvent = onJoinEvent,
           onUnregisterEvent = onUnregisterEvent,
           onSaveForLater = onSaveForLater,
@@ -203,7 +204,8 @@ class EventDetailSheetTest {
   // FULL STATE TESTS
   @Test
   fun fullState_displaysAllInformation() {
-    setEventDetailSheet(sheetState = BottomSheetState.FULL, organizerName = "John Doe")
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL, organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("eventImage").assertIsDisplayed()
     composeTestRule.onNodeWithTag("eventTitleFull").assertIsDisplayed()
@@ -223,7 +225,9 @@ class EventDetailSheetTest {
   @Test
   fun fullState_notParticipating_showsJoinAndSaveButtons() {
     setEventDetailSheet(
-        sheetState = BottomSheetState.FULL, isParticipating = false, organizerName = "John Doe")
+        sheetState = BottomSheetState.FULL,
+        isParticipating = false,
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     // Scroll to make buttons visible on smaller screens (CI)
     composeTestRule.onNodeWithTag("joinEventButtonFull").performScrollTo().assertIsDisplayed()
@@ -234,7 +238,9 @@ class EventDetailSheetTest {
   @Test
   fun fullState_participating_showsUnregisterButton() {
     setEventDetailSheet(
-        sheetState = BottomSheetState.FULL, isParticipating = true, organizerName = "John Doe")
+        sheetState = BottomSheetState.FULL,
+        isParticipating = true,
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     // Scroll to make button visible on smaller screens (CI)
     composeTestRule.onNodeWithTag("unregisterButtonFull").performScrollTo().assertIsDisplayed()
@@ -246,7 +252,7 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         event = testEvent.copy(imageUrl = null),
         sheetState = BottomSheetState.FULL,
-        organizerName = "John Doe")
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("eventImage").assertIsDisplayed()
     composeTestRule.onNodeWithText("No image available").assertIsDisplayed()
@@ -257,7 +263,7 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         event = testEvent.copy(description = ""),
         sheetState = BottomSheetState.FULL,
-        organizerName = "John Doe")
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("eventDescription").assertDoesNotExist()
   }
@@ -267,7 +273,7 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         event = testEvent.copy(date = null),
         sheetState = BottomSheetState.FULL,
-        organizerName = "John Doe")
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("eventDateFull").assertDoesNotExist()
   }
@@ -277,7 +283,7 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         event = testEvent.copy(tags = emptyList()),
         sheetState = BottomSheetState.FULL,
-        organizerName = "John Doe")
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("eventTagsFull").assertDoesNotExist()
   }
@@ -287,7 +293,7 @@ class EventDetailSheetTest {
     setEventDetailSheet(
         event = testEvent.copy(participantIds = emptyList(), capacity = 10),
         sheetState = BottomSheetState.FULL,
-        organizerName = "John Doe")
+        organizerState = OrganizerState.Loaded("John Doe"))
 
     composeTestRule.onNodeWithTag("attendeeCountFull").assertIsDisplayed()
     composeTestRule.onNodeWithTag("attendeeCountFull").assertTextEquals("0 attending")
@@ -301,7 +307,7 @@ class EventDetailSheetTest {
     var shareCalled = false
     setEventDetailSheet(
         sheetState = BottomSheetState.COLLAPSED,
-        organizerName = "John Doe",
+        organizerState = OrganizerState.Loaded("John Doe"),
         onShare = { shareCalled = true })
 
     composeTestRule.onNodeWithTag("shareButton").performClick()
@@ -313,7 +319,7 @@ class EventDetailSheetTest {
     var closeCalled = false
     setEventDetailSheet(
         sheetState = BottomSheetState.MEDIUM,
-        organizerName = "John Doe",
+        organizerState = OrganizerState.Loaded("John Doe"),
         onClose = { closeCalled = true })
 
     composeTestRule.onNodeWithTag("closeButton").performClick()
@@ -383,7 +389,7 @@ class EventDetailSheetTest {
         isParticipating = false,
         isSaved = false,
         onSaveForLater = { saveCalled = true },
-        organizerName = "Org")
+        organizerState = OrganizerState.Loaded("Org"))
 
     // Save button is visible, Unsave is not
     composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
@@ -402,7 +408,7 @@ class EventDetailSheetTest {
         isParticipating = false,
         isSaved = true,
         onUnsaveForLater = { unsaveCalled = true },
-        organizerName = "Org")
+        organizerState = OrganizerState.Loaded("Org"))
 
     // Unsave button is visible, Save is not
     composeTestRule.onNodeWithTag("unsaveButtonFull").performScrollTo().assertIsDisplayed()
@@ -416,7 +422,10 @@ class EventDetailSheetTest {
   @Test
   fun fullState_Save_haveCorrectLabels() {
     // Not saved -> label "Save for later"
-    setEventDetailSheet(sheetState = BottomSheetState.FULL, isSaved = false, organizerName = "Org")
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        isSaved = false,
+        organizerState = OrganizerState.Loaded("Org"))
     composeTestRule.onNodeWithTag("saveButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Save for later").assertIsDisplayed()
   }
@@ -424,7 +433,10 @@ class EventDetailSheetTest {
   @Test
   fun fullState_Unsave_haveCorrectLabels() {
     // Recompose with saved -> label "Unsave"
-    setEventDetailSheet(sheetState = BottomSheetState.FULL, isSaved = true, organizerName = "Org")
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        isSaved = true,
+        organizerState = OrganizerState.Loaded("Org"))
     composeTestRule.onNodeWithTag("unsaveButtonFull").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithText("Unsave").assertIsDisplayed()
   }
@@ -531,5 +543,21 @@ class EventDetailSheetTest {
     val uiC = buildAttendeeInfoUi(c)
     assertTrue(uiC.attendeeText == "1 attending")
     assertTrue(uiC.capacityText == null)
+  }
+
+  @Test
+  fun fullState_organizerLoading_showsLoadingText() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, organizerState = OrganizerState.Loading)
+
+    composeTestRule.onNodeWithTag("organizerName").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Loading...").assertIsDisplayed()
+  }
+
+  @Test
+  fun fullState_organizerError_showsUnknown() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL, organizerState = OrganizerState.Error)
+
+    composeTestRule.onNodeWithTag("organizerName").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Unknown").assertIsDisplayed()
   }
 }
