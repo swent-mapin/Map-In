@@ -93,7 +93,7 @@ class SettingsScreenBiometricTest {
     composeTestRule.setContent {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
-    composeTestRule.onNodeWithTag("logoutButton_action").performClick()
+    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
     composeTestRule.onNodeWithText("Confirm Logout").assertIsDisplayed()
   }
 
@@ -102,8 +102,8 @@ class SettingsScreenBiometricTest {
     composeTestRule.setContent {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
-    composeTestRule.onNodeWithTag("logoutButton_action").performClick()
-    composeTestRule.onNodeWithText("Cancel").performClick()
+    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("dialogCancelButton").performClick()
     composeTestRule.onNodeWithText("Confirm Logout").assertDoesNotExist()
   }
 
