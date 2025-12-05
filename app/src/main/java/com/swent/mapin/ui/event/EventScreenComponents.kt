@@ -203,7 +203,7 @@ fun rememberEventFormState(event: Event? = null): EventFormState {
       time = remember { mutableStateOf(event?.date?.toTimeString() ?: "") },
       endTime = remember { mutableStateOf(event?.endDate?.toTimeString() ?: "") },
       tag = remember { mutableStateOf(event?.tags?.joinToString(separator = " ") ?: "") },
-      price = remember { mutableStateOf(event?.price.toString()) },
+      price = remember { mutableStateOf(event?.price?.toString() ?: "") },
       isPublic = remember { mutableStateOf(event?.public ?: true) },
       titleError = remember { mutableStateOf(false) },
       descriptionError = remember { mutableStateOf(false) },
