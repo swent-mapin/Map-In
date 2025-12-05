@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,55 +35,24 @@ import java.time.format.DateTimeFormatter
  * Memories screen displaying a list of the user's memories.
  *
  * @param onNavigateBack Callback to navigate back to the previous screen.
+ * @param memories List of memories to display.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(
-    onNavigateBack: () -> Unit, /*viewModel: MemoryViewModel TODO make the viewModel*/
+    onNavigateBack: () -> Unit,
+    memories: List<Memory> = com.swent.mapin.ui.memory.memories
+    /*viewModel: MemoryViewModel TODO make the viewModel*/
 ) {
   // val memories by viewModel.memories.collectAsState()
-  val memories =
-      listOf(
-          Memory(
-              uid = "mem1",
-              title = "Amazing Beach Day",
-              description = "Had an incredible time playing volleyball with friends!",
-              eventId = "2",
-              ownerId = "user1",
-              isPublic = true,
-              createdAt = Timestamp.now(),
-              mediaUrls = listOf("https://picsum.photos/id/69/200"),
-              taggedUserIds = listOf("user2", "user3")),
-          Memory(
-              uid = "mem2",
-              title = "Summer Vibes",
-              description =
-                  "The festival was packed with amazing food and music. Best summer ever!",
-              eventId = "1", // Summer Festival 2024
-              ownerId = "user2",
-              isPublic = true,
-              createdAt = Timestamp.now(),
-              mediaUrls =
-                  listOf("https://picsum.photos/id/256/200", "https://picsum.photos/id/139/200"),
-              taggedUserIds = listOf("user1", "user4")),
-          Memory(
-              uid = "mem3",
-              title = "",
-              description = "Just enjoying the sunset alone. Sometimes peace is all you need.",
-              eventId = null,
-              ownerId = "user1",
-              isPublic = false,
-              createdAt = Timestamp.now(),
-              mediaUrls = emptyList(),
-              taggedUserIds = emptyList()))
-
   Scaffold(
       modifier = Modifier.fillMaxSize(),
       topBar = {
         TopAppBar(
             title = {
               Text(
-                  "Memories",
+                  text = "Memories",
+                  modifier = Modifier.testTag("memoriesScreenTitle"),
                   style = MaterialTheme.typography.headlineSmall,
                   fontWeight = FontWeight.Bold)
             },
@@ -111,13 +81,14 @@ fun MemoriesScreen(
                         "Your Memories",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp))
+                        modifier = Modifier.padding(bottom = 16.dp).testTag("yourMemoriesMessage"))
                     if (memories.isEmpty()) {
                       Spacer(modifier = Modifier.height(24.dp))
                       Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = 24.dp)) {
+                            modifier =
+                                Modifier.padding(horizontal = 24.dp).testTag("noMemoriesMessage")) {
                               Text(
                                   text = "No memories yet",
                                   style = MaterialTheme.typography.titleMedium)
@@ -249,3 +220,37 @@ private fun MemoryItem(
         }
       }
 }
+
+val memories =
+    listOf(
+        Memory(
+            uid = "mem1",
+            title = "Amazing Beach Day",
+            description = "Had an incredible time playing volleyball with friends!",
+            eventId = "2",
+            ownerId = "user1",
+            isPublic = true,
+            createdAt = Timestamp.now(),
+            mediaUrls = listOf("https://picsum.photos/id/69/200"),
+            taggedUserIds = listOf("user2", "user3")),
+        Memory(
+            uid = "mem2",
+            title = "Summer Vibes",
+            description = "The festival was packed with amazing food and music. Best summer ever!",
+            eventId = "1", // Summer Festival 2024
+            ownerId = "user2",
+            isPublic = true,
+            createdAt = Timestamp.now(),
+            mediaUrls =
+                listOf("https://picsum.photos/id/256/200", "https://picsum.photos/id/139/200"),
+            taggedUserIds = listOf("user1", "user4")),
+        Memory(
+            uid = "mem3",
+            title = "",
+            description = "Just enjoying the sunset alone. Sometimes peace is all you need.",
+            eventId = null,
+            ownerId = "user1",
+            isPublic = false,
+            createdAt = Timestamp.now(),
+            mediaUrls = emptyList(),
+            taggedUserIds = emptyList()))
