@@ -58,7 +58,7 @@ import kotlinx.coroutines.withContext
 sealed class OrganizerState {
   object Loading : OrganizerState()
 
-  data class Loaded(val name: String) : OrganizerState()
+  data class Loaded(val userId: String, val name: String) : OrganizerState()
 
   object Error : OrganizerState()
 }
@@ -755,7 +755,7 @@ class MapScreenViewModel(
         val ownerProfile = userProfileRepository.getUserProfile(event.ownerId)
         _organizerState =
             if (ownerProfile?.name != null) {
-              OrganizerState.Loaded(ownerProfile.name)
+              OrganizerState.Loaded(userId = event.ownerId, name = ownerProfile.name)
             } else {
               OrganizerState.Error
             }
@@ -845,7 +845,7 @@ class MapScreenViewModel(
 
   fun closeEventDetail() {
     _selectedEvent = null
-    _organizerState = OrganizerState.Loaded("")
+    _organizerState = OrganizerState.Loaded(userId = "", name = "")
 
     // Clear directions when closing event detail
     directionViewModel.clearDirection()
@@ -1021,6 +1021,17 @@ class MapScreenViewModel(
   var eventPendingDeletion by mutableStateOf<Event?>(null)
   var showDeleteDialog by mutableStateOf(false)
 
+  // Profile sheet state
+  private var _profileSheetUserId by mutableStateOf<String?>(null)
+  val profileSheetUserId: String?
+    get() = _profileSheetUserId
+
+  // Navigation: remember event we came from when opening profile
+  private var _eventBeforeProfile: Event? = null
+
+  // Navigation: remember profile we came from when viewing event from profile
+  private var _profileBeforeEvent: String? = null
+
   fun requestDeleteEvent(event: Event) {
     eventPendingDeletion = event
     showDeleteDialog = true
@@ -1029,6 +1040,63 @@ class MapScreenViewModel(
   fun cancelDelete() {
     eventPendingDeletion = null
     showDeleteDialog = false
+  }
+
+  fun showProfileSheet(userId: String) {
+    // Remember which event we came from (if any) - capture BEFORE clearing
+    _eventBeforeProfile = _selectedEvent
+
+    // Clear selected event to switch UI from EventDetailSheet to BottomSheetContent
+    _selectedEvent = null
+
+    // Clear any navigation state from the event so when we return to it,
+    // X button will go back to profile instead of following old navigation path
+    _sheetStateBeforeEvent = null
+    _cameFromSearch = false
+    wasEditingBeforeEvent = false
+
+    _profileSheetUserId = userId
+    _previousSheetState = bottomSheetState
+    _currentBottomSheetScreen = BottomSheetScreen.PROFILE_SHEET
+    setBottomSheetState(BottomSheetState.FULL)
+  }
+
+  fun hideProfileSheet() {
+    _profileSheetUserId = null
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+
+    if (_eventBeforeProfile != null) {
+      // Restore the event we came from
+      _selectedEvent = _eventBeforeProfile
+      _eventBeforeProfile = null
+    } else {
+      restorePreviousSheetState()
+    }
+  }
+
+  fun onProfileSheetEventClick(event: Event) {
+    // Remember which profile we came from
+    _profileBeforeEvent = _profileSheetUserId
+
+    _profileSheetUserId = null
+    _currentBottomSheetScreen = BottomSheetScreen.MAIN_CONTENT
+    _eventBeforeProfile = null
+
+    onEventPinClicked(event, forceZoom = true)
+  }
+
+  /** Called when closing event detail - checks if we should return to profile */
+  fun closeEventDetailWithNavigation() {
+    val profileToReturn = _profileBeforeEvent
+    _profileBeforeEvent = null
+
+    if (profileToReturn != null) {
+      // Go back to the profile we came from
+      _selectedEvent = null
+      showProfileSheet(profileToReturn)
+    } else {
+      closeEventDetail()
+    }
   }
 }
 

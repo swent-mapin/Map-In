@@ -75,13 +75,15 @@ import com.swent.mapin.ui.map.bottomsheet.components.UpcomingEventsSection
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.memory.MemoryFormData
 import com.swent.mapin.ui.memory.MemoryFormScreen
+import com.swent.mapin.ui.profile.ProfileSheet
 import com.swent.mapin.ui.profile.ProfileViewModel
 
 enum class BottomSheetScreen {
   MAIN_CONTENT,
   MEMORY_FORM,
   ADD_EVENT,
-  EDIT_EVENT
+  EDIT_EVENT,
+  PROFILE_SHEET
 }
 
 // Animation constants for consistent transitions
@@ -175,7 +177,11 @@ fun BottomSheetContent(
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
     profileViewModel: ProfileViewModel,
-    eventViewModel: EventViewModel
+    eventViewModel: EventViewModel,
+    // Profile sheet parameters
+    profileSheetUserId: String? = null,
+    onProfileSheetClose: () -> Unit = {},
+    onProfileSheetEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -235,6 +241,14 @@ fun BottomSheetContent(
                   event = eventToEdit,
                   onCancel = onEditEventDone,
                   onDone = onEditEventDone)
+            }
+          }
+          BottomSheetScreen.PROFILE_SHEET -> {
+            if (profileSheetUserId != null) {
+              ProfileSheet(
+                  userId = profileSheetUserId,
+                  onClose = onProfileSheetClose,
+                  onEventClick = onProfileSheetEventClick)
             }
           }
           BottomSheetScreen.MAIN_CONTENT -> {

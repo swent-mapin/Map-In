@@ -4,6 +4,7 @@ import android.R.attr.timeZone
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,7 +86,8 @@ fun EventDetailSheet(
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
     showDirections: Boolean = false,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean = false,
+    onOrganizerClick: (String) -> Unit = {}
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
@@ -115,7 +117,8 @@ fun EventDetailSheet(
             onUnsaveForLater = onUnsaveForLater,
             onGetDirections = onGetDirections,
             showDirections = showDirections,
-            hasLocationPermission = hasLocationPermission)
+            hasLocationPermission = hasLocationPermission,
+            onOrganizerClick = onOrganizerClick)
       }
     }
   }
@@ -346,7 +349,8 @@ private fun FullEventContent(
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
     showDirections: Boolean = false,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean = false,
+    onOrganizerClick: (String) -> Unit = {}
 ) {
   val scrollState = rememberScrollState()
 
@@ -437,7 +441,13 @@ private fun FullEventContent(
                   text = organizerState.name,
                   style = MaterialTheme.typography.bodyMedium,
                   fontWeight = FontWeight.SemiBold,
-                  modifier = Modifier.testTag("organizerName"))
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier =
+                      Modifier.testTag("organizerName").clickable {
+                        if (organizerState.userId.isNotEmpty()) {
+                          onOrganizerClick(organizerState.userId)
+                        }
+                      })
             }
             is OrganizerState.Error -> {
               Text(
