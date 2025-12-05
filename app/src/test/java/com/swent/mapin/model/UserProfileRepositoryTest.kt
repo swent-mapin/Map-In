@@ -5,300 +5,233 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.google.firebase.firestore.Transaction
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mock
+import org.mockito.Mockito.never
+import org.mockito.MockitoAnnotations.openMocks
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class UserProfileRepositoryTest {
 
-  private lateinit var repository: UserProfileRepository
-  private lateinit var mockFirestore: FirebaseFirestore
-  private lateinit var mockCollection: CollectionReference
-  private lateinit var mockDocument: DocumentReference
-  private lateinit var mockSnapshot: DocumentSnapshot
+  @Mock private lateinit var firestore: FirebaseFirestore
+  @Mock private lateinit var collection: CollectionReference
+  @Mock private lateinit var currentUserRef: DocumentReference
+  @Mock private lateinit var targetUserRef: DocumentReference
+  @Mock private lateinit var transaction: Transaction
+  @Mock private lateinit var currentSnapshot: DocumentSnapshot
+  @Mock private lateinit var targetSnapshot: DocumentSnapshot
 
-  private val testUserId = "test-user-123"
-  private val testProfile =
-      UserProfile(
-          userId = testUserId,
-          name = "John Doe",
-          bio = "Test bio",
-          hobbies = listOf("Reading", "Gaming"),
-          location = "New York",
-          avatarUrl = "https://example.com/avatar.jpg",
-          bannerUrl = "https://example.com/banner.jpg",
-          hobbiesVisible = true)
+  private lateinit var repository: UserProfileRepository
 
   @Before
-  fun setup() {
-    mockFirestore = mockk(relaxed = true)
-    mockCollection = mockk(relaxed = true)
-    mockDocument = mockk(relaxed = true)
-    mockSnapshot = mockk(relaxed = true)
+  fun setUp() {
+    openMocks(this)
+    repository = UserProfileRepository(firestore)
 
-    every { mockFirestore.collection("users") } returns mockCollection
-    every { mockCollection.document(any()) } returns mockDocument
+    whenever(firestore.collection(COLLECTION)).thenReturn(collection)
+    whenever(collection.document(eq(CURRENT_ID))).thenReturn(currentUserRef)
+    whenever(collection.document(eq(TARGET_ID))).thenReturn(targetUserRef)
+    whenever(transaction.get(currentUserRef)).thenReturn(currentSnapshot)
+    whenever(transaction.get(targetUserRef)).thenReturn(targetSnapshot)
+    doReturn(transaction)
+        .whenever(transaction)
+        .update(any<DocumentReference>(), any<String>(), any())
 
-    repository = UserProfileRepository(mockFirestore)
+    stubRunTransaction()
   }
 
   @Test
-  fun `getUserProfile returns profile when document exists`() = runTest {
-    // Mock document exists and has data
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.toObject(UserProfile::class.java) } returns testProfile
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+  fun followUser_addsMissingIds() = runTest {
+    givenProfiles(currentFollowing = emptyList(), targetFollowers = emptyList())
 
-    val result = repository.getUserProfile(testUserId)
-
-    assertNotNull(result)
-    assertEquals(testProfile, result)
-    verify { mockCollection.document(testUserId) }
-  }
-
-  @Test
-  fun `getUserProfile returns null when document does not exist`() = runTest {
-    // Mock document doesn't exist
-    every { mockSnapshot.exists() } returns false
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-
-    val result = repository.getUserProfile(testUserId)
-
-    assertNull(result)
-    verify { mockCollection.document(testUserId) }
-  }
-
-  @Test
-  fun `getUserProfile returns null on exception`() = runTest {
-    // Mock exception during fetch
-    every { mockDocument.get() } returns Tasks.forException(Exception("Network error"))
-
-    val result = repository.getUserProfile(testUserId)
-
-    assertNull(result)
-    verify { mockCollection.document(testUserId) }
-  }
-
-  @Test
-  fun `saveUserProfile saves profile successfully`() = runTest {
-    // Mock successful save
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val result = repository.saveUserProfile(testProfile)
+    val result = repository.followUser(CURRENT_ID, TARGET_ID)
 
     assertTrue(result)
-    verify { mockCollection.document(testUserId) }
-    verify { mockDocument.set(testProfile) }
+    verify(transaction).update(currentUserRef, "followingIds", listOf(TARGET_ID))
+    verify(transaction).update(targetUserRef, "followerIds", listOf(CURRENT_ID))
   }
 
   @Test
-  fun `saveUserProfile returns false on exception`() = runTest {
-    // Mock exception during save
-    every { mockDocument.set(any()) } returns Tasks.forException(Exception("Save error"))
+  fun followUser_noDuplicateUpdatesWhenAlreadyFollowing() = runTest {
+    givenProfiles(currentFollowing = listOf(TARGET_ID), targetFollowers = listOf(CURRENT_ID))
 
-    val result = repository.saveUserProfile(testProfile)
-
-    assertFalse(result)
-    verify { mockCollection.document(testUserId) }
-    verify { mockDocument.set(testProfile) }
-  }
-
-  @Test
-  fun `createDefaultProfile creates profile with provided data`() = runTest {
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val result =
-        repository.createDefaultProfile(
-            userId = testUserId,
-            name = "John Doe",
-            profilePictureUrl = "https://example.com/pic.jpg")
-
-    assertNotNull(result)
-    assertEquals(testUserId, result.userId)
-    assertEquals("John Doe", result.name)
-    assertEquals("Tell us about yourself...", result.bio)
-    assertEquals("Unknown", result.location)
-    assertEquals("https://example.com/pic.jpg", result.profilePictureUrl)
-    assertEquals(emptyList<String>(), result.hobbies)
-    verify { mockDocument.set(any()) }
-  }
-
-  @Test
-  fun `createDefaultProfile creates profile with empty name as Anonymous User`() = runTest {
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val result =
-        repository.createDefaultProfile(userId = testUserId, name = "", profilePictureUrl = null)
-
-    assertNotNull(result)
-    assertEquals("Anonymous User", result.name)
-    assertNull(result.profilePictureUrl)
-  }
-
-  @Test
-  fun `createDefaultProfile creates profile without profile picture`() = runTest {
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val result = repository.createDefaultProfile(userId = testUserId, name = "Jane Doe")
-
-    assertNotNull(result)
-    assertEquals("Jane Doe", result.name)
-    assertNull(result.profilePictureUrl)
-  }
-
-  @Test
-  fun `saveUserProfile saves all profile fields correctly`() = runTest {
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val profileWithAllFields =
-        UserProfile(
-            userId = "user-456",
-            name = "Complete User",
-            bio = "Complete bio",
-            hobbies = listOf("Hobby1", "Hobby2", "Hobby3"),
-            location = "Paris",
-            profilePictureUrl = "https://example.com/profile.jpg",
-            avatarUrl = "https://example.com/avatar.jpg",
-            bannerUrl = "https://example.com/banner.jpg",
-            hobbiesVisible = false)
-
-    val result = repository.saveUserProfile(profileWithAllFields)
+    val result = repository.followUser(CURRENT_ID, TARGET_ID)
 
     assertTrue(result)
-    verify { mockDocument.set(profileWithAllFields) }
+    verify(transaction, never()).update(any<DocumentReference>(), any<String>(), any())
   }
 
   @Test
-  fun `getUserProfile handles partial profile data`() = runTest {
-    val partialProfile =
-        UserProfile(
-            userId = testUserId,
-            name = "Partial User",
-            bio = "",
-            hobbies = emptyList(),
-            location = "")
+  fun followUser_handlesNullLists() = runTest {
+    givenProfiles(currentFollowing = null, targetFollowers = null)
 
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.toObject(UserProfile::class.java) } returns partialProfile
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-
-    val result = repository.getUserProfile(testUserId)
-
-    assertNotNull(result)
-    assertEquals("Partial User", result?.name)
-    assertEquals("", result?.bio)
-    assertEquals(emptyList<String>(), result?.hobbies)
-  }
-
-  @Test
-  fun `saveUserProfile handles profile with null optional fields`() = runTest {
-    every { mockDocument.set(any()) } returns Tasks.forResult(null)
-
-    val profileWithNulls =
-        UserProfile(
-            userId = testUserId,
-            name = "User Without Images",
-            bio = "Bio text",
-            hobbies = listOf("Reading"),
-            location = "Tokyo",
-            profilePictureUrl = null,
-            avatarUrl = null,
-            bannerUrl = null,
-            hobbiesVisible = true)
-
-    val result = repository.saveUserProfile(profileWithNulls)
+    val result = repository.followUser(CURRENT_ID, TARGET_ID)
 
     assertTrue(result)
-    verify { mockDocument.set(profileWithNulls) }
+    verify(transaction).update(currentUserRef, "followingIds", listOf(TARGET_ID))
+    verify(transaction).update(targetUserRef, "followerIds", listOf(CURRENT_ID))
   }
 
   @Test
-  fun `followUser returns false when trying to follow yourself`() = runTest {
-    val result = repository.followUser(testUserId, testUserId)
+  fun unfollowUser_removesIds() = runTest {
+    givenProfiles(currentFollowing = listOf(TARGET_ID), targetFollowers = listOf(CURRENT_ID))
+
+    val result = repository.unfollowUser(CURRENT_ID, TARGET_ID)
+
+    assertTrue(result)
+    verify(transaction).update(currentUserRef, "followingIds", emptyList<String>())
+    verify(transaction).update(targetUserRef, "followerIds", emptyList<String>())
+  }
+
+  @Test
+  fun followUser_rejectsSelfFollow() = runTest {
+    val result = repository.followUser(CURRENT_ID, CURRENT_ID)
 
     assertFalse(result)
+    verify(firestore, never()).runTransaction<Any>(any<Transaction.Function<Any?>>())
   }
 
   @Test
-  fun `unfollowUser returns false when trying to unfollow yourself`() = runTest {
-    val result = repository.unfollowUser(testUserId, testUserId)
+  fun followUser_returnsFalseWhenUserMissing() = runTest {
+    givenProfiles(
+        currentFollowing = emptyList(),
+        targetFollowers = emptyList(),
+        currentExists = true,
+        targetExists = false)
+
+    val result = repository.followUser(CURRENT_ID, TARGET_ID)
 
     assertFalse(result)
+    verify(transaction, never()).update(any<DocumentReference>(), any<String>(), any())
   }
 
   @Test
-  fun `isFollowing returns false when user profile does not exist`() = runTest {
-    every { mockSnapshot.exists() } returns false
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+  fun isFollowing_returnsTrueWhenPresent() = runTest {
+    val repoSpy = spy(repository)
+    whenever(repoSpy.getUserProfile(CURRENT_ID))
+        .thenReturn(UserProfile(userId = CURRENT_ID, followingIds = listOf(TARGET_ID)))
 
-    val result = repository.isFollowing(testUserId, "other-user")
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isFollowing returns false when followingIds is empty`() = runTest {
-    val profileWithNoFollowing =
-        UserProfile(userId = testUserId, name = "Test User", followingIds = emptyList())
-
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithNoFollowing
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-
-    val result = repository.isFollowing(testUserId, "other-user")
-
-    assertFalse(result)
-  }
-
-  @Test
-  fun `isFollowing returns true when target is in followingIds`() = runTest {
-    val targetUserId = "target-user-123"
-    val profileWithFollowing =
-        UserProfile(
-            userId = testUserId, name = "Test User", followingIds = listOf(targetUserId, "another"))
-
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithFollowing
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
-
-    val result = repository.isFollowing(testUserId, targetUserId)
+    val result = repoSpy.isFollowing(CURRENT_ID, TARGET_ID)
 
     assertTrue(result)
   }
 
   @Test
-  fun `isFollowing returns false when target is not in followingIds`() = runTest {
-    val profileWithFollowing =
-        UserProfile(
-            userId = testUserId,
-            name = "Test User",
-            followingIds = listOf("some-other-user", "another"))
+  fun isFollowing_returnsFalseOnAbsentOrErrors() = runTest {
+    val repoSpy = spy(repository)
+    whenever(repoSpy.getUserProfile(CURRENT_ID))
+        .thenReturn(UserProfile(userId = CURRENT_ID, followingIds = emptyList()))
 
-    every { mockSnapshot.exists() } returns true
-    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithFollowing
-    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+    assertFalse(repoSpy.isFollowing(CURRENT_ID, TARGET_ID))
 
-    val result = repository.isFollowing(testUserId, "not-followed-user")
+    whenever(repoSpy.getUserProfile(CURRENT_ID)).thenReturn(null)
+    assertFalse(repoSpy.isFollowing(CURRENT_ID, TARGET_ID))
+
+    whenever(repoSpy.getUserProfile(CURRENT_ID)).thenThrow(RuntimeException("boom"))
+    assertFalse(repoSpy.isFollowing(CURRENT_ID, TARGET_ID))
+  }
+
+  @Test
+  fun getUserProfile_returnsProfileWhenExists() = runTest {
+    val expectedProfile = UserProfile(userId = CURRENT_ID, name = "Test")
+    whenever(currentSnapshot.exists()).thenReturn(true)
+    whenever(currentSnapshot.toObject(UserProfile::class.java)).thenReturn(expectedProfile)
+    whenever(currentUserRef.get()).thenReturn(Tasks.forResult(currentSnapshot))
+
+    val result = repository.getUserProfile(CURRENT_ID)
+
+    assertEquals(expectedProfile, result)
+  }
+
+  @Test
+  fun getUserProfile_returnsNullWhenMissing() = runTest {
+    whenever(currentSnapshot.exists()).thenReturn(false)
+    whenever(currentUserRef.get()).thenReturn(Tasks.forResult(currentSnapshot))
+
+    val result = repository.getUserProfile(CURRENT_ID)
+
+    assertEquals(null, result)
+  }
+
+  @Test
+  fun saveUserProfile_returnsTrueOnSuccess() = runTest {
+    val profile = UserProfile(userId = CURRENT_ID, name = "User")
+    whenever(currentUserRef.set(profile)).thenReturn(Tasks.forResult(null))
+
+    val result = repository.saveUserProfile(profile)
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun saveUserProfile_returnsFalseOnFailure() = runTest {
+    val profile = UserProfile(userId = CURRENT_ID, name = "User")
+    whenever(currentUserRef.set(profile))
+        .thenReturn(Tasks.forException(RuntimeException("write failed")))
+
+    val result = repository.saveUserProfile(profile)
 
     assertFalse(result)
   }
 
   @Test
-  fun `isFollowing returns false on exception`() = runTest {
-    every { mockDocument.get() } returns Tasks.forException(Exception("Network error"))
+  fun createDefaultProfile_populatesDefaultsAndSaves() = runTest {
+    val repoSpy = spy(repository)
+    doReturn(true).whenever(repoSpy).saveUserProfile(any())
 
-    val result = repository.isFollowing(testUserId, "other-user")
+    val profile = repoSpy.createDefaultProfile(CURRENT_ID, "", null)
 
-    assertFalse(result)
+    assertEquals("Anonymous User", profile.name)
+    assertEquals("Tell us about yourself...", profile.bio)
+    assertEquals("person", profile.avatarUrl)
+    assertEquals("purple_blue", profile.bannerUrl)
+    assertTrue(profile.hobbiesVisible)
+    assertEquals(null, profile.profilePictureUrl)
+    verify(repoSpy).saveUserProfile(profile)
+  }
+
+  private fun givenProfiles(
+      currentFollowing: List<String>? = emptyList(),
+      targetFollowers: List<String>? = emptyList(),
+      currentExists: Boolean = true,
+      targetExists: Boolean = true
+  ) {
+    whenever(currentSnapshot.exists()).thenReturn(currentExists)
+    whenever(targetSnapshot.exists()).thenReturn(targetExists)
+    whenever(currentSnapshot.get("followingIds")).thenReturn(currentFollowing)
+    whenever(targetSnapshot.get("followerIds")).thenReturn(targetFollowers)
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  private fun stubRunTransaction() {
+    doAnswer { invocation ->
+          val function = invocation.arguments[0] as Transaction.Function<Any?>
+          try {
+            function.apply(transaction)
+            Tasks.forResult<Void?>(null)
+          } catch (e: Exception) {
+            Tasks.forException<Void?>(e)
+          }
+        }
+        .`when`(firestore)
+        .runTransaction(any<Transaction.Function<Any?>>())
+  }
+
+  companion object {
+    private const val COLLECTION = "users"
+    private const val CURRENT_ID = "current"
+    private const val TARGET_ID = "target"
   }
 }

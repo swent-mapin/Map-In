@@ -82,41 +82,7 @@ class UserProfileRepository(
    * target user's followerIds.
    */
   suspend fun followUser(currentUserId: String, targetUserId: String): Boolean {
-    if (currentUserId == targetUserId) return false
-
-    return try {
-      firestore
-          .runTransaction { transaction ->
-            val currentUserRef = firestore.collection(COLLECTION_USERS).document(currentUserId)
-            val targetUserRef = firestore.collection(COLLECTION_USERS).document(targetUserId)
-
-            val currentUserDoc = transaction.get(currentUserRef)
-            val targetUserDoc = transaction.get(targetUserRef)
-
-            if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
-              throw Exception("User not found")
-            }
-
-            val currentFollowing =
-                (currentUserDoc.get("followingIds") as? List<*>)?.filterIsInstance<String>()
-                    ?: emptyList()
-            val targetFollowers =
-                (targetUserDoc.get("followerIds") as? List<*>)?.filterIsInstance<String>()
-                    ?: emptyList()
-
-            if (!currentFollowing.contains(targetUserId)) {
-              transaction.update(currentUserRef, "followingIds", currentFollowing + targetUserId)
-            }
-            if (!targetFollowers.contains(currentUserId)) {
-              transaction.update(targetUserRef, "followerIds", targetFollowers + currentUserId)
-            }
-          }
-          .await()
-      true
-    } catch (e: Exception) {
-      e.printStackTrace()
-      false
-    }
+    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = true)
   }
 
   /**
@@ -124,6 +90,14 @@ class UserProfileRepository(
    * currentUserId from target user's followerIds.
    */
   suspend fun unfollowUser(currentUserId: String, targetUserId: String): Boolean {
+    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = false)
+  }
+
+  private suspend fun updateFollowStatus(
+      currentUserId: String,
+      targetUserId: String,
+      shouldFollow: Boolean
+  ): Boolean {
     if (currentUserId == targetUserId) return false
 
     return try {
@@ -146,8 +120,17 @@ class UserProfileRepository(
                 (targetUserDoc.get("followerIds") as? List<*>)?.filterIsInstance<String>()
                     ?: emptyList()
 
-            transaction.update(currentUserRef, "followingIds", currentFollowing - targetUserId)
-            transaction.update(targetUserRef, "followerIds", targetFollowers - currentUserId)
+            if (shouldFollow) {
+              if (!currentFollowing.contains(targetUserId)) {
+                transaction.update(currentUserRef, "followingIds", currentFollowing + targetUserId)
+              }
+              if (!targetFollowers.contains(currentUserId)) {
+                transaction.update(targetUserRef, "followerIds", targetFollowers + currentUserId)
+              }
+            } else {
+              transaction.update(currentUserRef, "followingIds", currentFollowing - targetUserId)
+              transaction.update(targetUserRef, "followerIds", targetFollowers - currentUserId)
+            }
           }
           .await()
       true
