@@ -70,17 +70,19 @@ class BiometricAuthManager {
    * @param onSuccess Callback invoked when authentication succeeds
    * @param onError Callback invoked when authentication fails with an error message
    * @param onFallback Callback invoked when user cancels or authentication fails multiple times
+   * @return BiometricPrompt instance that can be used to cancel authentication, or null if
+   *   unavailable
    */
   fun authenticate(
       activity: FragmentActivity,
       onSuccess: () -> Unit,
       onError: (String) -> Unit,
       onFallback: () -> Unit
-  ) {
+  ): BiometricPrompt? {
     // Early check: ensure biometric authentication is available
     if (!canUseBiometric(activity)) {
       onError("Biometric authentication not available on this device.")
-      return
+      return null
     }
 
     val executor = ContextCompat.getMainExecutor(activity)
@@ -180,5 +182,6 @@ class BiometricAuthManager {
     val promptInfo = promptInfoBuilder.build()
 
     biometricPrompt.authenticate(promptInfo)
+    return biometricPrompt
   }
 }
