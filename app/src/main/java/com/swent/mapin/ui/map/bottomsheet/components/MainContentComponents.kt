@@ -77,7 +77,7 @@ fun EventsSection(
     onEventClick: (Event) -> Unit = {},
     onAddMemoryClick: ((Event) -> Unit)? = null,
     onEditEvent: ((Event) -> Unit)? = null,
-    onDeletedEvent: ((Event) -> Unit)? = null
+    onDeleteEvent: ((Event) -> Unit)? = null
 ) {
 
   var expanded by remember { mutableStateOf(false) }
@@ -91,7 +91,7 @@ fun EventsSection(
           onRowClick = { onEventClick(event) },
           onAddMemoryClick = onAddMemoryClick,
           onEditEvent = onEditEvent,
-          onDeleteEvent = onEditEvent) // To be changed with deleteEvent backend
+          onDeleteEvent = onDeleteEvent)
       Spacer(modifier = Modifier.height(8.dp))
       HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
       Spacer(modifier = Modifier.height(8.dp))
@@ -281,6 +281,7 @@ fun OwnedEventsSection(
     error: String?,
     onEventClick: (Event) -> Unit,
     onEditEvent: (Event) -> Unit,
+    onDeleteEvent: (Event) -> Unit,
     onRetry: () -> Unit
 ) {
   when {
@@ -326,7 +327,11 @@ fun OwnedEventsSection(
       Column(
           modifier =
               Modifier.semantics { contentDescription = "List of ${events.size} owned events" }) {
-            EventsSection(events = events, onEventClick = onEventClick, onEditEvent = onEditEvent)
+            EventsSection(
+                events = events,
+                onEventClick = onEventClick,
+                onEditEvent = onEditEvent,
+                onDeleteEvent = onDeleteEvent)
           }
     }
   }

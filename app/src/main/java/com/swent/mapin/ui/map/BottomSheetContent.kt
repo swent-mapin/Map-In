@@ -139,8 +139,6 @@ fun BottomSheetContent(
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
-    topCategories: List<String> = emptyList(),
-    onCategoryClick: (String) -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -168,6 +166,7 @@ fun BottomSheetContent(
     onTabChange: (MapScreenViewModel.BottomSheetTab) -> Unit = {},
     onTabEventClick: (Event) -> Unit = {},
     onEditEvent: (Event) -> Unit = {},
+    onDeleteEvent: (Event) -> Unit = {},
     onEditEventDone: () -> Unit = {},
     // Profile/Filters support
     avatarUrl: String? = null,
@@ -322,8 +321,6 @@ fun BottomSheetContent(
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
                                   onShowAllRecents = { showAllRecents = true },
-                                  topCategories = topCategories,
-                                  onCategoryClick = onCategoryClick,
                                   onEventClick = onEventClick)
                             } else {
                               val contentModifier =
@@ -433,6 +430,7 @@ fun BottomSheetContent(
                                         error = ownedError,
                                         onEventClick = onTabEventClick,
                                         onEditEvent = onEditEvent,
+                                        onDeleteEvent = onDeleteEvent,
                                         onRetry = onRetryOwnedEvents)
                                   }
                                 }
