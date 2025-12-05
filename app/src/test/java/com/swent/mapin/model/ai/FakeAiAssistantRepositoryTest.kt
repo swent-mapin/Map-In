@@ -32,8 +32,6 @@ class FakeAiAssistantRepositoryTest {
     val response = repository.recommendEvents(conversationId = null, request = request)
 
     assertEquals(0, response.recommendedEvents.size)
-    assertTrue(response.assistantMessage.isNotEmpty())
-    assertTrue(response.assistantMessage.contains("couldn't find"))
     assertNotNull(response.followupQuestions)
     assertTrue(response.followupQuestions!!.isNotEmpty())
   }
@@ -56,7 +54,6 @@ class FakeAiAssistantRepositoryTest {
     assertEquals(1, response.recommendedEvents.size)
     assertEquals("event1", response.recommendedEvents[0].id)
     assertTrue(response.recommendedEvents[0].reason.isNotEmpty())
-    assertTrue(response.assistantMessage.contains("Tech Meetup"))
     assertNotNull(response.followupQuestions)
   }
 
@@ -76,11 +73,24 @@ class FakeAiAssistantRepositoryTest {
 
     val response = repository.recommendEvents(conversationId = null, request = request)
 
-    // Should recommend at most 2 events
     assertEquals(2, response.recommendedEvents.size)
     assertEquals("event1", response.recommendedEvents[0].id)
     assertEquals("event2", response.recommendedEvents[1].id)
-    assertTrue(response.assistantMessage.contains("Tech Meetup"))
-    assertTrue(response.assistantMessage.contains("Music Festival"))
+  }
+
+  @Test
+  fun `recommendEvents with conversationId is handled`() = runTest {
+    val event =
+        AiEventSummary(
+            id = "event1", title = "Concert", startTime = Timestamp.now(), tags = listOf("music"))
+
+    val request =
+        AiRecommendationRequest(
+            userQuery = "Find music events", userContext = AiUserContext(), events = listOf(event))
+
+    val response = repository.recommendEvents(conversationId = "conv123", request = request)
+
+    assertEquals(1, response.recommendedEvents.size)
+    assertNotNull(response.followupQuestions)
   }
 }

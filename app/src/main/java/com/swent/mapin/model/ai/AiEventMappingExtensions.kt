@@ -21,7 +21,7 @@ fun Event.toAiEventSummary(
   val capacityRemaining =
       capacity?.let { cap ->
         val remaining = cap - participantIds.size
-        if (remaining >= 0) remaining else null
+        maxOf(0, remaining)
       }
 
   return AiEventSummary(

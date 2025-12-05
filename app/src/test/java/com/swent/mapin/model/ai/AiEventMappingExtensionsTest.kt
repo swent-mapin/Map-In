@@ -35,7 +35,7 @@ class AiEventMappingExtensionsTest {
     assertEquals(listOf("tech", "networking"), summary.tags)
     assertEquals("EPFL", summary.locationDescription)
     assertNull(summary.capacityRemaining)
-    assertEquals(0.0, summary.price)
+    assertEquals(0.0, summary.price, 0.01)
     assertNull(summary.distanceKm)
   }
 
@@ -54,7 +54,7 @@ class AiEventMappingExtensionsTest {
     val summary = event.toAiEventSummary()
 
     assertEquals(47, summary.capacityRemaining)
-    assertEquals(25.0, summary.price)
+    assertEquals(25.0, summary.price, 0.01)
   }
 
   @Test
@@ -84,7 +84,7 @@ class AiEventMappingExtensionsTest {
 
     val summary = event.toAiEventSummary(distanceKm = 2.5, locationDescription = "Near city center")
 
-    assertEquals(2.5, summary.distanceKm)
+    assertEquals(2.5, summary.distanceKm!!, 0.01)
     assertEquals("Near city center", summary.locationDescription)
   }
 
@@ -142,8 +142,8 @@ class AiEventMappingExtensionsTest {
 
     val summaries = events.toAiEventSummaries(distanceProvider = distanceProvider)
 
-    assertEquals(1.5, summaries[0].distanceKm)
-    assertEquals(3.2, summaries[1].distanceKm)
+    assertEquals(1.5, summaries[0].distanceKm!!, 0.01)
+    assertEquals(3.2, summaries[1].distanceKm!!, 0.01)
   }
 
   @Test
