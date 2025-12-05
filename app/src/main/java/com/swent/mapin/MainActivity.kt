@@ -5,13 +5,17 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -25,11 +29,25 @@ import com.swent.mapin.ui.auth.BiometricLockScreen
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
 import com.swent.mapin.util.BiometricAuthManager
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
+}
+
+/**
+ * Represents the state of biometric authentication lock screen. Used as an explicit state machine
+ * to avoid UI flicker during transitions.
+ */
+private enum class BiometricLockState {
+  /** User needs to authenticate - lock screen is shown */
+  LOCKED,
+  /** Authentication is in progress */
+  UNLOCKING,
+  /** User has been authenticated or biometric is not required - app content is shown */
+  UNLOCKED
 }
 
 /**
@@ -39,6 +57,14 @@ object HttpClientProvider {
 class MainActivity : FragmentActivity() {
   // Simple deep link state instead of queue
   private var deepLink by mutableStateOf<String?>(null)
+  // Pending deep link to be delivered after biometric unlock
+  private var pendingDeepLink by mutableStateOf<String?>(null)
+
+  // Atomic guard to prevent concurrent biometric authentication attempts
+  private val isAuthenticationInProgress = AtomicBoolean(false)
+
+  // Reference to active BiometricPrompt for lifecycle-aware cancellation
+  private var activeBiometricPrompt: BiometricPrompt? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -69,10 +95,8 @@ class MainActivity : FragmentActivity() {
             ThemeMode.SYSTEM -> isSystemInDarkTheme()
           }
 
-      // Biometric authentication state
-      var biometricAuthRequired by remember { mutableStateOf(false) }
-      var biometricAuthCompleted by remember { mutableStateOf(false) }
-      var isAuthenticating by remember { mutableStateOf(false) }
+      // Biometric authentication state machine
+      var lockState by remember { mutableStateOf(BiometricLockState.LOCKED) }
       var authErrorMessage by remember { mutableStateOf<String?>(null) }
       var failedAttempts by remember { mutableIntStateOf(0) }
 
@@ -83,21 +107,52 @@ class MainActivity : FragmentActivity() {
           remember(preferencesRepository) { preferencesRepository.biometricUnlockFlow }
               .collectAsState(initial = false)
 
-      // Determine if we need to show the biometric lock screen
-      val shouldShowBiometricLock =
-          shouldRequireBiometric(biometricAuthManager, biometricUnlockEnabled) &&
-              !biometricAuthCompleted
+      // Determine if biometric is required (recalculated when biometricUnlockEnabled changes)
+      val requiresBiometric = shouldRequireBiometric(biometricAuthManager, biometricUnlockEnabled)
 
-      // Trigger biometric authentication automatically when lock screen should be shown
-      LaunchedEffect(shouldShowBiometricLock) {
-        if (shouldShowBiometricLock && !isAuthenticating) {
-          handleBiometricRetry(
-              biometricAuthManager = biometricAuthManager,
-              failedAttempts = failedAttempts,
-              onAuthenticating = { isAuthenticating = it },
-              onAuthCompleted = { biometricAuthCompleted = it },
-              onFailedAttempts = { failedAttempts = it },
-              onErrorMessage = { authErrorMessage = it })
+      // Derive whether to show lock screen from state machine
+      val shouldShowBiometricLock by
+          remember(requiresBiometric) {
+            derivedStateOf { requiresBiometric && lockState != BiometricLockState.UNLOCKED }
+          }
+
+      // Use rememberUpdatedState for mutable values captured in effect
+      val currentFailedAttempts by rememberUpdatedState(failedAttempts)
+
+      // Lifecycle-aware biometric authentication with proper cleanup
+      DisposableEffect(shouldShowBiometricLock) {
+        if (shouldShowBiometricLock && lockState == BiometricLockState.LOCKED) {
+          lockState = BiometricLockState.UNLOCKING
+          try {
+            startBiometricAuthentication(
+                biometricAuthManager = biometricAuthManager,
+                failedAttempts = currentFailedAttempts,
+                onAuthenticating = { /* State is managed by lockState */},
+                onAuthCompleted = { success ->
+                  if (success) {
+                    lockState = BiometricLockState.UNLOCKED
+                  }
+                },
+                onFailedAttempts = { failedAttempts = it },
+                onErrorMessage = { error ->
+                  authErrorMessage = error
+                  if (error != null) {
+                    // Authentication failed, go back to LOCKED to allow retry
+                    lockState = BiometricLockState.LOCKED
+                  }
+                })
+          } catch (e: Exception) {
+            Log.e("MainActivity", "Biometric authentication failed unexpectedly", e)
+            authErrorMessage =
+                "Authentication unavailable. Please try again or use another account."
+            lockState = BiometricLockState.LOCKED
+            isAuthenticationInProgress.set(false)
+          }
+        }
+
+        onDispose {
+          // Cancel any ongoing biometric prompt when composable leaves composition
+          cancelBiometricAuthentication()
         }
       }
 
@@ -105,26 +160,57 @@ class MainActivity : FragmentActivity() {
         if (shouldShowBiometricLock) {
           // Show biometric lock screen
           BiometricLockScreen(
-              isAuthenticating = isAuthenticating,
+              isAuthenticating = lockState == BiometricLockState.UNLOCKING,
               errorMessage = authErrorMessage,
               onRetry = {
-                handleBiometricRetry(
-                    biometricAuthManager = biometricAuthManager,
-                    failedAttempts = failedAttempts,
-                    onAuthenticating = { isAuthenticating = it },
-                    onAuthCompleted = { biometricAuthCompleted = it },
-                    onFailedAttempts = { failedAttempts = it },
-                    onErrorMessage = { authErrorMessage = it })
+                lockState = BiometricLockState.UNLOCKING
+                authErrorMessage = null
+                try {
+                  startBiometricAuthentication(
+                      biometricAuthManager = biometricAuthManager,
+                      failedAttempts = failedAttempts,
+                      onAuthenticating = { /* State is managed by lockState */},
+                      onAuthCompleted = { success ->
+                        if (success) {
+                          lockState = BiometricLockState.UNLOCKED
+                        }
+                      },
+                      onFailedAttempts = { failedAttempts = it },
+                      onErrorMessage = { error ->
+                        authErrorMessage = error
+                        if (error != null) {
+                          lockState = BiometricLockState.LOCKED
+                        }
+                      })
+                } catch (e: Exception) {
+                  Log.e("MainActivity", "Biometric retry failed unexpectedly", e)
+                  authErrorMessage =
+                      "Authentication unavailable. Please try again or use another account."
+                  lockState = BiometricLockState.LOCKED
+                  isAuthenticationInProgress.set(false)
+                }
               },
               onUseAnotherAccount = {
                 handleUseAnotherAccount(
-                    onAuthRequired = { biometricAuthRequired = it },
-                    onAuthCompleted = { biometricAuthCompleted = it })
+                    onAuthCompleted = {
+                      // Signing out means biometric is no longer required
+                      lockState = BiometricLockState.UNLOCKED
+                    })
               })
         } else {
+          // Deliver any pending deep link after successful authentication
+          val effectiveDeepLink = pendingDeepLink ?: deepLink
+
+          // Clear pending deep link after it's been consumed
+          LaunchedEffect(Unit) {
+            if (pendingDeepLink != null) {
+              pendingDeepLink = null
+            }
+          }
+
           // Check if user is already authenticated with Firebase
           val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-          AppNavHost(isLoggedIn = isLoggedIn, deepLink = deepLink)
+          AppNavHost(isLoggedIn = isLoggedIn, deepLink = effectiveDeepLink)
         }
       }
     }
@@ -134,7 +220,11 @@ class MainActivity : FragmentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     // Handle deep links when app is already running
-    getDeepLinkUrlFromIntent(intent)?.let { deepLink = it }
+    // Store as pending - will be delivered after biometric unlock if needed
+    getDeepLinkUrlFromIntent(intent)?.let {
+      pendingDeepLink = it
+      deepLink = it
+    }
   }
 
   /** Initialize FCM for already logged-in users (when app restarts with active session). */
@@ -158,8 +248,13 @@ class MainActivity : FragmentActivity() {
     return isLoggedIn && biometricUnlockEnabled && biometricAuthManager.canUseBiometric(this)
   }
 
-  /** Handle biometric authentication retry logic. */
-  private fun handleBiometricRetry(
+  /**
+   * Start biometric authentication with idempotent guard. Uses an atomic guard to prevent
+   * concurrent/duplicate authentication attempts. If authentication is already in progress,
+   * subsequent calls are ignored. Stores the BiometricPrompt reference for lifecycle-aware
+   * cancellation.
+   */
+  private fun startBiometricAuthentication(
       biometricAuthManager: BiometricAuthManager,
       failedAttempts: Int,
       onAuthenticating: (Boolean) -> Unit,
@@ -167,39 +262,68 @@ class MainActivity : FragmentActivity() {
       onFailedAttempts: (Int) -> Unit,
       onErrorMessage: (String?) -> Unit
   ) {
+    // Atomic guard: only proceed if no authentication is in progress
+    if (!isAuthenticationInProgress.compareAndSet(false, true)) {
+      return // Already authenticating, ignore this call
+    }
+
     onAuthenticating(true)
     onErrorMessage(null)
-    biometricAuthManager.authenticate(
-        activity = this,
-        onSuccess = {
-          onAuthenticating(false)
-          onAuthCompleted(true)
-          onFailedAttempts(0)
-        },
-        onError = { error ->
-          onAuthenticating(false)
-          val newFailedAttempts = failedAttempts + 1
-          onFailedAttempts(newFailedAttempts)
-          onErrorMessage(
-              if (newFailedAttempts >= 3) {
-                "Too many failed attempts. Please use another account or try again later."
-              } else {
-                error
+
+    try {
+      // Store the prompt reference for potential cancellation
+      activeBiometricPrompt =
+          biometricAuthManager.authenticate(
+              activity = this,
+              onSuccess = {
+                activeBiometricPrompt = null
+                isAuthenticationInProgress.set(false)
+                onAuthenticating(false)
+                onAuthCompleted(true)
+                onFailedAttempts(0)
+              },
+              onError = { error ->
+                activeBiometricPrompt = null
+                isAuthenticationInProgress.set(false)
+                onAuthenticating(false)
+                val newFailedAttempts = failedAttempts + 1
+                onFailedAttempts(newFailedAttempts)
+                onErrorMessage(
+                    if (newFailedAttempts >= 3) {
+                      "Too many failed attempts. Please use another account or try again later."
+                    } else {
+                      error
+                    })
+              },
+              onFallback = {
+                activeBiometricPrompt = null
+                isAuthenticationInProgress.set(false)
+                onAuthenticating(false)
+                onErrorMessage("Authentication cancelled. Please try again.")
               })
-        },
-        onFallback = {
-          onAuthenticating(false)
-          onErrorMessage("Authentication cancelled. Please try again.")
-        })
+    } catch (e: Exception) {
+      // Handle unexpected biometric API failures
+      Log.e("MainActivity", "BiometricAuthManager.authenticate() threw exception", e)
+      activeBiometricPrompt = null
+      isAuthenticationInProgress.set(false)
+      onAuthenticating(false)
+      onErrorMessage("Biometric authentication is temporarily unavailable. Please try again.")
+    }
+  }
+
+  /**
+   * Cancel any ongoing biometric authentication. Called when composable leaves composition or
+   * activity lifecycle changes.
+   */
+  private fun cancelBiometricAuthentication() {
+    activeBiometricPrompt?.cancelAuthentication()
+    activeBiometricPrompt = null
+    isAuthenticationInProgress.set(false)
   }
 
   /** Handle switching to another account by signing out. */
-  private fun handleUseAnotherAccount(
-      onAuthRequired: (Boolean) -> Unit,
-      onAuthCompleted: (Boolean) -> Unit
-  ) {
+  private fun handleUseAnotherAccount(onAuthCompleted: (Boolean) -> Unit) {
     FirebaseAuth.getInstance().signOut()
-    onAuthRequired(false)
     onAuthCompleted(true)
   }
 }
