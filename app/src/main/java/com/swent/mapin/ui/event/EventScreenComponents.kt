@@ -7,13 +7,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -23,10 +29,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -243,6 +252,88 @@ fun rememberEventFormState(event: Event): EventFormState {
       showValidation = remember { mutableStateOf(false) })
 }
 
+/** Shared scaffolding for Add and Edit Event screens to avoid code duplication. */
+@Composable
+fun BaseEventScreen(
+    modifier: Modifier = Modifier,
+    formState: EventFormState,
+    locationViewModel: LocationViewModel,
+    title: String,
+    testTags: EventScreenTestTag,
+    onCancel: () -> Unit,
+    // Callback triggered when validation passes. Provides parsed start/end timestamps.
+    onCommit: (Timestamp, Timestamp) -> Unit,
+    // Content to display below the main form (Price/Switch for Add, Warning for Edit)
+    extraContent: @Composable () -> Unit
+) {
+  val locations by locationViewModel.locations.collectAsState()
+  val scrollState = rememberScrollState()
+
+  val errorFields =
+      formState.getErrorFields(
+          titleFieldName = stringResource(R.string.title_field),
+          dateFieldName = stringResource(R.string.date_field),
+          timeFieldName = stringResource(R.string.time),
+          locationFieldName = stringResource(R.string.location_field),
+          descriptionFieldName = stringResource(R.string.description_field),
+          tagFieldName = stringResource(R.string.tag_field),
+          priceFieldName = stringResource(R.string.price_field))
+
+  Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
+    Column(modifier = modifier.padding(padding).fillMaxWidth().navigationBarsPadding()) {
+      EventTopBar(
+          title = title,
+          testTags = testTags,
+          isEventValid = formState.isValid(),
+          onCancel = onCancel,
+          onSave = {
+            formState.validateAllFields()
+            if (!formState.isValid()) return@EventTopBar
+
+            val timestamps = formState.parseTimestamps() ?: return@EventTopBar
+            val (startTs, endTs) = timestamps
+
+            onCommit(startTs, endTs)
+          })
+
+      if (formState.showValidation.value && !formState.isValid()) {
+        ValidationBanner(errorFields, testTags)
+      }
+
+      Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState).imePadding()) {
+        Spacer(modifier = Modifier.padding(5.dp))
+
+        EventFormBody(
+            title = formState.title,
+            titleError = formState.titleError,
+            date = formState.date,
+            dateError = formState.dateError,
+            time = formState.time,
+            timeError = formState.timeError,
+            endDate = formState.endDate,
+            endDateError = formState.endDateError,
+            endTime = formState.endTime,
+            endTimeError = formState.endTimeError,
+            location = formState.location,
+            locationError = formState.locationError,
+            locations = locations,
+            gotLocation = formState.gotLocation,
+            locationExpanded = formState.locationExpanded,
+            locationViewModel = locationViewModel,
+            description = formState.description,
+            descriptionError = formState.descriptionError,
+            tag = formState.tag,
+            tagError = formState.tagError,
+            testTags = testTags)
+
+        Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
+        extraContent()
+      }
+    }
+  }
+}
+
 /** Interface class for event screen's test tags */
 @Suppress("PropertyName")
 interface EventScreenTestTag {
@@ -428,7 +519,7 @@ fun PublicSwitch(
 }
 
 /**
- * Validation banner which displays error fields when a user attemps to save
+ * Validation banner which displays error fields when a user attempts to save
  *
  * @param errorFields List of error fields as strings
  */
