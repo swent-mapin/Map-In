@@ -58,7 +58,7 @@ class SettingsScreenBiometricTest {
     composeTestRule.setContent {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
-    composeTestRule.onNodeWithTag("logoutButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().assertIsDisplayed()
   }
 
   @Test
