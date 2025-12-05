@@ -9,7 +9,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,7 +20,6 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.notifications.FCMTokenManager
-import com.swent.mapin.ui.auth.BiometricLockScreen
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
 import com.swent.mapin.util.BiometricAuthManager
@@ -33,12 +31,12 @@ object HttpClientProvider {
 }
 
 /**
- * Main activity of the app.* Role: - Android entry point that hosts the Jetpack Compose UI. -
+ * Main activity of the app. Role: - Android entry point that hosts the Jetpack Compose UI. -
  * Applies the Material 3 theme and shows the map screen.
  */
 class MainActivity : FragmentActivity() {
-  // Use a queue to handle multiple deep links instead of overwriting
-  private val deepLinkQueue = mutableStateListOf<String>()
+  // Simple deep link state instead of queue
+  private var deepLink by mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -51,8 +49,8 @@ class MainActivity : FragmentActivity() {
 
     initializeFcmIfLoggedIn()
 
-    // Extract deep link from initial intent and add to queue
-    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
+    // Extract deep link from initial intent
+    deepLink = getDeepLinkUrlFromIntent(intent)
 
     setContent {
       val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(this) }
@@ -90,36 +88,18 @@ class MainActivity : FragmentActivity() {
       }
 
       MapInTheme(darkTheme = darkTheme) {
-        if (biometricAuthRequired && !biometricAuthCompleted) {
-          BiometricLockScreen(
-              isAuthenticating = isAuthenticating,
-              errorMessage = authErrorMessage,
-              onRetry = {
-                handleBiometricRetry(
-                    biometricAuthManager = biometricAuthManager,
-                    failedAttempts = failedAttempts,
-                    onAuthenticating = { isAuthenticating = it },
-                    onAuthCompleted = { biometricAuthCompleted = it },
-                    onFailedAttempts = { failedAttempts = it },
-                    onErrorMessage = { authErrorMessage = it })
-              },
-              onUseAnotherAccount = {
-                handleUseAnotherAccount(
-                    onAuthRequired = { biometricAuthRequired = it },
-                    onAuthCompleted = { biometricAuthCompleted = it })
-              })
-        } else {
-          val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-          AppNavHost(isLoggedIn = isLoggedIn, deepLinkQueue = deepLinkQueue)
-        }
+        // Check if user is already authenticated with Firebase
+        val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+        AppNavHost(isLoggedIn = isLoggedIn, deepLink = deepLink)
       }
     }
   }
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    // Handle deep links when app is already running - add to queue
-    getDeepLinkUrlFromIntent(intent)?.let { deepLinkQueue.add(it) }
+    setIntent(intent)
+    // Handle deep links when app is already running
+    getDeepLinkUrlFromIntent(intent)?.let { deepLink = it }
   }
 
   /** Initialize FCM for already logged-in users (when app restarts with active session). */
@@ -189,6 +169,8 @@ class MainActivity : FragmentActivity() {
   }
 }
 
+/** Extracts deep link URL from intent, checking both Firebase and PendingIntent keys. */
 internal fun getDeepLinkUrlFromIntent(intent: Intent?): String? {
-  return intent?.getStringExtra("action_url")
+  // Check both "actionUrl" (from Firebase) and "action_url" (from PendingIntent)
+  return intent?.getStringExtra("actionUrl") ?: intent?.getStringExtra("action_url")
 }
