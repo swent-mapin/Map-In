@@ -19,6 +19,7 @@ import com.swent.mapin.ui.chat.ConversationScreen
 import com.swent.mapin.ui.chat.NewConversationScreen
 import com.swent.mapin.ui.friends.FriendsScreen
 import com.swent.mapin.ui.map.MapScreen
+import com.swent.mapin.ui.memory.MemoriesScreen
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
@@ -106,6 +107,7 @@ fun AppNavHost(
           onNavigateToProfile = { navController.navigate(Route.Profile.route) },
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
+          onNavigateToMemories = { navController.navigate(Route.Memories.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           renderMap = renderMap,
           deepLinkEventId = currentDeepLinkEventId,
@@ -160,6 +162,7 @@ fun AppNavHost(
             safePopBackStack()
           })
     }
+    composable(Route.Memories.route) { MemoriesScreen(onNavigateBack = { safePopBackStack() }) }
 
     composable(Route.Friends.route) { FriendsScreen(onNavigateBack = { safePopBackStack() }) }
 
