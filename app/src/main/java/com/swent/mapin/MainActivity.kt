@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,6 +21,7 @@ import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.notifications.FCMTokenManager
+import com.swent.mapin.ui.auth.BiometricLockScreen
 import com.swent.mapin.ui.settings.ThemeMode
 import com.swent.mapin.ui.theme.MapInTheme
 import com.swent.mapin.util.BiometricAuthManager
@@ -82,15 +84,48 @@ class MainActivity : FragmentActivity() {
               .collectAsState(initial = false)
 
       // Determine if we need to show the biometric lock screen
-      if (shouldRequireBiometric(biometricAuthManager, biometricUnlockEnabled) &&
-          !biometricAuthCompleted) {
-        biometricAuthRequired = true
+      val shouldShowBiometricLock =
+          shouldRequireBiometric(biometricAuthManager, biometricUnlockEnabled) &&
+              !biometricAuthCompleted
+
+      // Trigger biometric authentication automatically when lock screen should be shown
+      LaunchedEffect(shouldShowBiometricLock) {
+        if (shouldShowBiometricLock && !isAuthenticating) {
+          handleBiometricRetry(
+              biometricAuthManager = biometricAuthManager,
+              failedAttempts = failedAttempts,
+              onAuthenticating = { isAuthenticating = it },
+              onAuthCompleted = { biometricAuthCompleted = it },
+              onFailedAttempts = { failedAttempts = it },
+              onErrorMessage = { authErrorMessage = it })
+        }
       }
 
       MapInTheme(darkTheme = darkTheme) {
-        // Check if user is already authenticated with Firebase
-        val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-        AppNavHost(isLoggedIn = isLoggedIn, deepLink = deepLink)
+        if (shouldShowBiometricLock) {
+          // Show biometric lock screen
+          BiometricLockScreen(
+              isAuthenticating = isAuthenticating,
+              errorMessage = authErrorMessage,
+              onRetry = {
+                handleBiometricRetry(
+                    biometricAuthManager = biometricAuthManager,
+                    failedAttempts = failedAttempts,
+                    onAuthenticating = { isAuthenticating = it },
+                    onAuthCompleted = { biometricAuthCompleted = it },
+                    onFailedAttempts = { failedAttempts = it },
+                    onErrorMessage = { authErrorMessage = it })
+              },
+              onUseAnotherAccount = {
+                handleUseAnotherAccount(
+                    onAuthRequired = { biometricAuthRequired = it },
+                    onAuthCompleted = { biometricAuthCompleted = it })
+              })
+        } else {
+          // Check if user is already authenticated with Firebase
+          val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+          AppNavHost(isLoggedIn = isLoggedIn, deepLink = deepLink)
+        }
       }
     }
   }
