@@ -191,49 +191,20 @@ data class EventFormState(
   }
 }
 
-/** Creates an empty EventFormState for a new event */
-@Composable
-fun rememberEventFormState(): EventFormState {
-  return EventFormState(
-      title = remember { mutableStateOf("") },
-      description = remember { mutableStateOf("") },
-      location = remember { mutableStateOf("") },
-      date = remember { mutableStateOf("") },
-      endDate = remember { mutableStateOf("") },
-      time = remember { mutableStateOf("") },
-      endTime = remember { mutableStateOf("") },
-      tag = remember { mutableStateOf("") },
-      price = remember { mutableStateOf("") },
-      isPublic = remember { mutableStateOf(true) },
-      titleError = remember { mutableStateOf(false) },
-      descriptionError = remember { mutableStateOf(false) },
-      locationError = remember { mutableStateOf(false) },
-      dateError = remember { mutableStateOf(false) },
-      endDateError = remember { mutableStateOf(false) },
-      timeError = remember { mutableStateOf(false) },
-      endTimeError = remember { mutableStateOf(false) },
-      tagError = remember { mutableStateOf(false) },
-      priceError = remember { mutableStateOf(false) },
-      locationExpanded = remember { mutableStateOf(false) },
-      gotLocation = remember { mutableStateOf(Location("", LATITUDE_DEFAULT, LONGITUDE_DEFAULT)) },
-      isLoggedIn = remember { mutableStateOf(Firebase.auth.currentUser != null) },
-      showValidation = remember { mutableStateOf(false) })
-}
-
 /** Creates a pre-filled EventFormState to edit an existing event */
 @Composable
-fun rememberEventFormState(event: Event): EventFormState {
+fun rememberEventFormState(event: Event? = null): EventFormState {
   return EventFormState(
-      title = remember { mutableStateOf(event.title) },
-      description = remember { mutableStateOf(event.description) },
-      location = remember { mutableStateOf(event.location.name) },
-      date = remember { mutableStateOf(event.date?.toDateString() ?: "") },
-      endDate = remember { mutableStateOf(event.endDate?.toDateString() ?: "") },
-      time = remember { mutableStateOf(event.date?.toTimeString() ?: "") },
-      endTime = remember { mutableStateOf(event.endDate?.toTimeString() ?: "") },
-      tag = remember { mutableStateOf(event.tags.joinToString(separator = " ")) },
-      price = remember { mutableStateOf(event.price.toString()) },
-      isPublic = remember { mutableStateOf(event.public) },
+      title = remember { mutableStateOf(event?.title ?: "") },
+      description = remember { mutableStateOf(event?.description ?: "") },
+      location = remember { mutableStateOf(event?.location?.name ?: "") },
+      date = remember { mutableStateOf(event?.date?.toDateString() ?: "") },
+      endDate = remember { mutableStateOf(event?.endDate?.toDateString() ?: "") },
+      time = remember { mutableStateOf(event?.date?.toTimeString() ?: "") },
+      endTime = remember { mutableStateOf(event?.endDate?.toTimeString() ?: "") },
+      tag = remember { mutableStateOf(event?.tags?.joinToString(separator = " ") ?: "") },
+      price = remember { mutableStateOf(event?.price.toString()) },
+      isPublic = remember { mutableStateOf(event?.public ?: true) },
       titleError = remember { mutableStateOf(false) },
       descriptionError = remember { mutableStateOf(false) },
       locationError = remember { mutableStateOf(false) },
@@ -246,7 +217,8 @@ fun rememberEventFormState(event: Event): EventFormState {
       locationExpanded = remember { mutableStateOf(false) },
       gotLocation =
           remember {
-            mutableStateOf(Location(event.location.name, LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
+            mutableStateOf(
+                Location(event?.location?.name ?: "", LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
           },
       isLoggedIn = remember { mutableStateOf(Firebase.auth.currentUser != null) },
       showValidation = remember { mutableStateOf(false) })
