@@ -265,7 +265,7 @@ fun MapScreen(
     viewModel.checkLocationPermission()
     if (viewModel.hasLocationPermission) {
       viewModel.startLocationUpdates()
-      viewModel.getLastKnownLocation(centerCamera = true)
+      viewModel.getLastKnownLocation(centerCamera = false)
     }
 
     viewModel.onRequestLocationPermission = {
@@ -275,13 +275,31 @@ fun MapScreen(
     }
   }
 
-  // Start the camera centered on the default campus view
+  // Get saved camera position from preferences
+  val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
+  val savedLatitude by preferencesRepository.cameraLatitudeFlow.collectAsState(initial = null)
+  val savedLongitude by preferencesRepository.cameraLongitudeFlow.collectAsState(initial = null)
+  val savedZoom by preferencesRepository.cameraZoomFlow.collectAsState(initial = null)
+
+  // Start the camera centered on the default campus view or saved position
   val mapViewportState = rememberMapViewportState {
     setCameraOptions {
       zoom(MapConstants.DEFAULT_ZOOM.toDouble())
       center(Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE))
       pitch(0.0)
       bearing(0.0)
+    }
+  }
+
+  // Restore saved camera position if available
+  LaunchedEffect(savedLatitude, savedLongitude, savedZoom) {
+    if (savedLatitude != null && savedLongitude != null && savedZoom != null) {
+      mapViewportState.easeTo(
+          cameraOptions {
+            center(Point.fromLngLat(savedLongitude!!, savedLatitude!!))
+            zoom(savedZoom!!)
+          },
+          MapAnimationOptions.Builder().duration(0L).build())
     }
   }
 
@@ -382,8 +400,7 @@ fun MapScreen(
       rememberSheetInteractionMetrics(
           screenHeightDp = screenHeightDp, currentSheetHeight = viewModel.currentSheetHeight)
 
-  // Get map preferences and theme from PreferencesRepository
-  val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
+  // Get map preferences and theme from PreferencesRepository (already declared above)
   val themeModeString by preferencesRepository.themeModeFlow.collectAsState(initial = "system")
   val showPOIs by preferencesRepository.showPOIsFlow.collectAsState(initial = true)
   val showRoadNumbers by preferencesRepository.showRoadNumbersFlow.collectAsState(initial = true)
@@ -404,6 +421,19 @@ fun MapScreen(
         .filterNotNull()
         .debounce(300) // Debounce to avoid excessive recalculations
         .collect { cameraState -> viewportCenter = cameraState.center }
+  }
+
+  // Save camera position when it changes (debounced to avoid excessive writes)
+  LaunchedEffect(mapViewportState) {
+    snapshotFlow { mapViewportState.cameraState }
+        .filterNotNull()
+        .debounce(1000) // Wait 1 second after camera stops moving
+        .collect { cameraState ->
+          val center = cameraState.center
+          val zoom = cameraState.zoom
+          preferencesRepository.saveCameraPosition(
+              latitude = center.latitude(), longitude = center.longitude(), zoom = zoom)
+        }
   }
 
   // Calculate if viewport center is within cached event radius
