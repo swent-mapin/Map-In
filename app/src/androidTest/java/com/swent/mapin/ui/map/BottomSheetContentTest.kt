@@ -141,11 +141,9 @@ class BottomSheetContentTest {
                   onSubmit = onSubmit),
           isSearchMode = true,
           recentItems = recentItems,
-          topCategories = topCategories,
           searchResults = searchResults,
           onRecentSearchClick = onRecentSearchClick,
           onRecentEventClick = onRecentEventClick,
-          onCategoryClick = onCategoryClick,
           onEventClick = onEventClick,
           filterViewModel = filterViewModel,
           locationViewModel = locationViewModel,
@@ -667,42 +665,6 @@ class BottomSheetContentTest {
   }
 
   @Test
-  fun topCategoriesSection_displaysCategories() {
-    val topCategories = listOf("Sports", "Music", "Art")
-
-    rule.setContent { SearchModeContent(topCategories = topCategories) }
-
-    rule.waitForIdle()
-
-    // Verify "Top Categories" section title is displayed
-    rule.onNodeWithText("Top Categories").performScrollTo().assertIsDisplayed()
-
-    // Verify categories are displayed
-    rule.onNodeWithText("Sports").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Music").performScrollTo().assertIsDisplayed()
-    rule.onNodeWithText("Art").performScrollTo().assertIsDisplayed()
-  }
-
-  @Test
-  fun topCategoriesSection_clickCategory_triggersCallback() {
-    var clickedCategory = ""
-    val topCategories = listOf("Sports")
-
-    rule.setContent {
-      SearchModeContent(topCategories = topCategories, onCategoryClick = { clickedCategory = it })
-    }
-
-    rule.waitForIdle()
-
-    // Click on the category
-    rule.onNodeWithText("Sports").performScrollTo().performClick()
-    rule.waitForIdle()
-
-    // Verify callback was triggered
-    assertEquals("Sports", clickedCategory)
-  }
-
-  @Test
   fun searchMode_withBlankQuery_showsRecentAndCategories() {
     val recentSearches = listOf(RecentItem.Search("coffee"))
     val topCategories = listOf("Sports")
@@ -715,7 +677,6 @@ class BottomSheetContentTest {
 
     // Both sections should be visible
     rule.onNodeWithText("Recents").assertIsDisplayed()
-    rule.onNodeWithText("Top Categories").performScrollTo().assertIsDisplayed()
   }
 
   @Test

@@ -396,15 +396,15 @@ class FriendRequestRepository(
       requestId: String
   ) {
     try {
-      Log.d(TAG, "=== NOTIFICATION DEBUG: Starting ===")
-      Log.d(TAG, "Sending notification - From: $fromUserId, To: $toUserId, Request: $requestId")
+      Log.i(TAG, "=== NOTIFICATION DEBUG: Starting ===")
+      Log.i(TAG, "Sending notification - From: $fromUserId, To: $toUserId, Request: $requestId")
 
       // Get sender profile to include name in notification
       val senderProfile = userProfileRepository.getUserProfile(fromUserId)
       val senderName = senderProfile?.name ?: "Someone"
-      Log.d(TAG, "Sender profile retrieved: name=$senderName")
+      Log.i(TAG, "Sender profile retrieved: name=$senderName")
 
-      Log.d(TAG, "Calling NotificationService.sendFriendRequestNotification()...")
+      Log.i(TAG, "Calling NotificationService.sendFriendRequestNotification()...")
       val result =
           notificationService.sendFriendRequestNotification(
               recipientId = toUserId,
@@ -414,8 +414,8 @@ class FriendRequestRepository(
 
       when (result) {
         is NotificationResult.Success -> {
-          Log.d(TAG, "✅ Notification created successfully: ${result.notification.notificationId}")
-          Log.d(
+          Log.i(TAG, "✅ Notification created successfully: ${result.notification.notificationId}")
+          Log.i(
               TAG,
               "Notification details - Title: ${result.notification.title}, Recipient: ${result.notification.recipientId}")
         }
@@ -424,7 +424,7 @@ class FriendRequestRepository(
         }
       }
 
-      Log.d(TAG, "Friend request notification process completed for $toUserId")
+      Log.i(TAG, "Friend request notification process completed for $toUserId")
     } catch (e: Exception) {
       // Don't fail the request if notification fails
       Log.e(TAG, "Failed to send friend request notification", e)
@@ -443,34 +443,36 @@ class FriendRequestRepository(
       originalSenderId: String
   ) {
     try {
-      Log.d(TAG, "=== ACCEPTANCE NOTIFICATION DEBUG: Starting ===")
-      Log.d(TAG, "Accepter: $accepterId, Original Sender: $originalSenderId")
+      Log.i(TAG, "=== ACCEPTANCE NOTIFICATION DEBUG: Starting ===")
+      Log.i(TAG, "Accepter: $accepterId, Original Sender: $originalSenderId")
 
       // Get accepter profile to include name in notification
       val accepterProfile = userProfileRepository.getUserProfile(accepterId)
       val accepterName = accepterProfile?.name ?: "Someone"
-      Log.d(TAG, "Accepter profile retrieved: name=$accepterName")
+      Log.i(TAG, "Accepter profile retrieved: name=$accepterName")
 
       // Send an info notification about the accepted request
       Log.d(TAG, "Calling NotificationService.sendInfoNotification()...")
+      val actionUrl = "mapin://friendAccepted"
+      Log.d(TAG, "🔗 ACTION URL BEING SENT: $actionUrl")
       val result =
           notificationService.sendInfoNotification(
               recipientId = originalSenderId,
               title = "Friend Request Accepted",
               message = "$accepterName accepted your friend request",
               metadata = mapOf("userId" to accepterId, "accepterName" to accepterName),
-              actionUrl = "mapin://profile/$accepterId")
+              actionUrl = actionUrl)
 
       when (result) {
         is NotificationResult.Success -> {
-          Log.d(TAG, "✅ Acceptance notification created: ${result.notification.notificationId}")
+          Log.i(TAG, "✅ Acceptance notification created: ${result.notification.notificationId}")
         }
         is NotificationResult.Error -> {
           Log.e(TAG, "❌ Acceptance notification failed: ${result.message}", result.exception)
         }
       }
 
-      Log.d(TAG, "Friend request accepted notification process completed for $originalSenderId")
+      Log.i(TAG, "Friend request accepted notification process completed for $originalSenderId")
     } catch (e: Exception) {
       // Don't fail the acceptance if notification fails
       Log.e(TAG, "Failed to send friend request accepted notification", e)

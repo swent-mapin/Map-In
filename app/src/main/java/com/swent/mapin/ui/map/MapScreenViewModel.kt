@@ -130,7 +130,7 @@ class MapScreenViewModel(
 
   private val eventBasedOfflineRegionManager: EventBasedOfflineRegionManager? by lazy {
     if (!enableEventBasedDownloads) {
-      Log.d("MapScreenViewModel", "Event-based downloads disabled")
+      Log.w("MapScreenViewModel", "Event-based downloads disabled")
       return@lazy null
     }
     try {
@@ -370,18 +370,14 @@ class MapScreenViewModel(
   }
 
   init {
-    // Observe filters and connectivity changes
-    eventStateController.observeFilters()
-    eventStateController.observeConnectivity()
     // Load map style preference
     loadMapStylePreference()
 
-    // Load events
+    // Observe filters and connectivity changes
+    eventStateController.observeFilters()
+    eventStateController.observeConnectivity()
+    // Load events and start listeners
     eventStateController.refreshEventsList()
-    eventStateController.loadSavedEvents()
-    eventStateController.loadJoinedEvents()
-
-    // Start listeners for real-time updates
     eventStateController.startListeners()
 
     // Load user profile
@@ -422,7 +418,7 @@ class MapScreenViewModel(
             onSavedEventsFlow = eventStateController.savedEventsFlow,
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
-        Log.d(
+        Log.w(
             "MapScreenViewModel",
             "Event-based offline downloads and deletions started for user: $userId")
       } catch (e: Exception) {
@@ -816,7 +812,7 @@ class MapScreenViewModel(
     deepLinkFetchAttempted = true
     return withContext(ioDispatcher) {
       runCatching { eventRepository.getEvent(eventId) }
-          .onFailure { Log.w("MapScreenViewModel", "Deep link event not found: $eventId", it) }
+          .onFailure { Log.i("MapScreenViewModel", "Deep link event not found: $eventId", it) }
           .getOrNull()
     }
   }

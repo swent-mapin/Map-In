@@ -1,6 +1,7 @@
 package com.swent.mapin.navigation
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -8,16 +9,19 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.chat.ChatScreen
 import com.swent.mapin.ui.chat.ConversationScreen
 import com.swent.mapin.ui.chat.NewConversationScreen
 import com.swent.mapin.ui.friends.FriendsScreen
+import com.swent.mapin.ui.friends.FriendsTab
+import com.swent.mapin.ui.friends.FriendsViewModel
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
@@ -26,8 +30,7 @@ import com.swent.mapin.ui.settings.SettingsScreen
 /**
  * Extracts an event ID from a deep link URL using proper URI parsing.
  *
- * Supports the format: mapin://events/{eventId} Extensible for future deep link types (e.g.,
- * mapin://profile/{userId})
+ * Supports the format: mapin://events/{eventId}
  *
  * @return event ID when URL matches mapin://events/{id}, otherwise null.
  */
@@ -36,17 +39,13 @@ internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
 
   return try {
     val uri = Uri.parse(deepLinkUrl)
-    // Check scheme and host
     if (uri.scheme == "mapin" && uri.host == "events") {
-      // Extract event ID from path segments (works in instrumented tests)
       val eventId = uri.pathSegments?.firstOrNull()
-      // Fallback for unit tests where pathSegments might be empty
       eventId ?: uri.path?.removePrefix("/")?.takeIf { it.isNotEmpty() }
     } else {
       null
     }
   } catch (e: Exception) {
-    // Fallback to string parsing if Uri.parse fails or isn't available
     if (deepLinkUrl.startsWith("mapin://events/")) {
       deepLinkUrl.substringAfter("mapin://events/").takeIf { it.isNotEmpty() }
     } else {
@@ -59,22 +58,32 @@ internal fun parseDeepLinkEventId(deepLinkUrl: String?): String? {
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     isLoggedIn: Boolean,
-    renderMap: Boolean = true, // Set to false in instrumented tests to skip Mapbox rendering
-    deepLinkQueue: SnapshotStateList<String> = remember {
-      androidx.compose.runtime.mutableStateListOf()
-    }, // Queue of deep links to process
-    autoRequestPermissions: Boolean = true // Set to false in tests to skip permission dialogs
+    renderMap: Boolean = true,
+    deepLink: String? = null,
+    autoRequestPermissions: Boolean = true
 ) {
   val startDest = if (isLoggedIn) Route.Map.route else Route.Auth.route
 
   // Track current deep link being processed
   var currentDeepLinkEventId by remember { mutableStateOf<String?>(null) }
 
-  // Process deep links from queue with LaunchedEffect
-  LaunchedEffect(deepLinkQueue.size) {
-    if (deepLinkQueue.isNotEmpty()) {
-      val deepLinkUrl = deepLinkQueue.removeAt(0)
-      currentDeepLinkEventId = parseDeepLinkEventId(deepLinkUrl)
+  // Process deep link with LaunchedEffect
+  LaunchedEffect(deepLink) {
+    if (deepLink != null) {
+      // Small delay to ensure NavHost is initialized (critical for cold start)
+      kotlinx.coroutines.delay(500)
+
+      // Set event ID if present (for MapScreen to handle)
+      currentDeepLinkEventId = parseDeepLinkEventId(deepLink)
+
+      // Parse and navigate - Navigation handles query params automatically
+      DeepLinkHandler.parseDeepLink(deepLink)?.let { route ->
+        try {
+          navController.navigate(route) { launchSingleTop = true }
+        } catch (e: Exception) {
+          Log.e("AppNavHost", "Deep link navigation failed", e)
+        }
+      }
     }
   }
 
@@ -119,7 +128,6 @@ fun AppNavHost(
           onNavigateToSettings = { navController.navigate(Route.Settings.route) },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              // Clear the whole back stack by popping up to the nav graph's start destination
               popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
@@ -128,7 +136,6 @@ fun AppNavHost(
     }
 
     composable(Route.Settings.route) {
-      // Check if returning from password change with success result
       val passwordChangeResult =
           navController.currentBackStackEntry?.savedStateHandle?.get<Boolean>("password_changed")
 
@@ -136,7 +143,6 @@ fun AppNavHost(
           onNavigateBack = { safePopBackStack() },
           onNavigateToSignIn = {
             navController.navigate(Route.Auth.route) {
-              // Clear the whole back stack by popping up to the nav graph's start destination
               popUpTo(navController.graph.startDestinationId) { inclusive = true }
               launchSingleTop = true
             }
@@ -144,7 +150,6 @@ fun AppNavHost(
           onNavigateToChangePassword = { navController.navigate(Route.ChangePassword.route) },
           passwordChangeSuccess = passwordChangeResult)
 
-      // Clear the result after reading it
       if (passwordChangeResult != null) {
         navController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("password_changed")
       }
@@ -154,14 +159,26 @@ fun AppNavHost(
       ChangePasswordScreen(
           onNavigateBack = { safePopBackStack() },
           onPasswordChanged = {
-            // Set result to communicate success back to settings
             navController.previousBackStackEntry?.savedStateHandle?.set("password_changed", true)
-            // Navigate back to settings
             safePopBackStack()
           })
     }
 
-    composable(Route.Friends.route) { FriendsScreen(onNavigateBack = { safePopBackStack() }) }
+    composable(
+        route = "friends?tab={tab}",
+        arguments =
+            listOf(
+                navArgument("tab") {
+                  type = NavType.StringType
+                  defaultValue = "FRIENDS"
+                })) { backStackEntry ->
+          val tab = backStackEntry.arguments?.getString("tab") ?: "FRIENDS"
+          val viewModel: FriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+          LaunchedEffect(tab) { viewModel.selectTab(FriendsTab.valueOf(tab)) }
+
+          FriendsScreen(onNavigateBack = { safePopBackStack() }, viewModel = viewModel)
+        }
 
     composable(Route.Chat.route) {
       ChatScreen(
@@ -184,6 +201,7 @@ fun AppNavHost(
             }
           })
     }
+
     composable("conversation/{conversationId}/{name}") { backStackEntry ->
       val conversationId =
           backStackEntry.arguments?.getString("conversationId") ?: return@composable

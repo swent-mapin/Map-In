@@ -630,7 +630,6 @@ fun MapScreen(
                       event = selectedEvent,
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
-                      // Use viewModel.savedEvents (Compose-observed state) so recomposition occurs
                       isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
                       organizerName = viewModel.organizerName,
                       onJoinEvent = { viewModel.joinEvent() },
@@ -673,10 +672,6 @@ fun MapScreen(
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
-                      // I will fully remove topCategories in the next PR but started
-                      // with just MapScreenVm as i worked a lot on it
-                      topCategories = emptyList(),
-                      onCategoryClick = viewModel::applyRecentSearch,
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
                       initialMemoryEvent = viewModel.memoryFormInitialEvent,

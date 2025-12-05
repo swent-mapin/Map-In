@@ -60,7 +60,7 @@ class MemoryActionController(
                 mediaUrls = mediaUrls,
                 taggedUserIds = formData.taggedUserIds)
         memoryRepository.addMemory(memory)
-        Log.d(TAG, "Memory saved successfully")
+        Log.i(TAG, "Memory saved successfully")
         onHideMemoryForm()
         onRestoreSheetState()
       } catch (e: Exception) {
@@ -86,7 +86,7 @@ class MemoryActionController(
         fileRef.putFile(uri).await()
         val downloadUrl = fileRef.downloadUrl.await().toString()
         downloadUrls.add(downloadUrl)
-        Log.d(TAG, "Uploaded media file successfully")
+        Log.i(TAG, "Uploaded media file successfully")
       } catch (e: Exception) {
         Log.e(TAG, "Failed to upload media file", e)
       }
