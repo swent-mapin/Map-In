@@ -18,28 +18,12 @@ class HaversineDistanceCalculator : DistanceCalculator {
    *
    * @param from The starting location
    * @param to The destination location
-   * @return The distance in kilometers, or null if either location has invalid coordinates (0.0,
-   *   0.0)
+   * @return The distance in kilometers, or null if coordinates are invalid
    */
   override fun distanceKm(from: Location, to: Location): Double? {
-    // Skip calculation if either location has default/invalid coordinates
-    if (isInvalidLocation(from) || isInvalidLocation(to)) {
-      return null
-    }
-
     val fromGeoPoint = GeoPoint(from.latitude, from.longitude)
     val toGeoPoint = GeoPoint(to.latitude, to.longitude)
 
     return EventUtils.calculateHaversineDistance(fromGeoPoint, toGeoPoint)
-  }
-
-  /**
-   * Checks if a location has invalid coordinates.
-   *
-   * A location is considered invalid if both latitude and longitude are 0.0, which is often used as
-   * a placeholder.
-   */
-  private fun isInvalidLocation(location: Location): Boolean {
-    return location.latitude == 0.0 && location.longitude == 0.0
   }
 }

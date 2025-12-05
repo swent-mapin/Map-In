@@ -91,7 +91,8 @@ class AiEventCandidateSelector(
     return candidates.map { event ->
       event.toAiEventSummary(
           distanceKm = eventDistances[event],
-          locationDescription = event.location.name.takeIf { it.isNotBlank() })
+          locationDescription =
+              event.location.name.takeIf { it.isNotBlank() } ?: "Location not specified")
     }
   }
 

@@ -5,7 +5,6 @@ package com.swent.mapin.model.ai
 import com.swent.mapin.model.Location
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import kotlin.math.abs
 import org.junit.Test
@@ -27,33 +26,36 @@ class HaversineDistanceCalculatorTest {
   }
 
   @Test
-  fun `distanceKm returns null for invalid from location`() {
-    val invalidLocation = Location("Invalid", 0.0, 0.0)
+  fun `distanceKm calculates distance for zero coordinates from location`() {
+    val zeroLocation = Location("Zero", 0.0, 0.0)
     val validLocation = Location("Valid", 46.5197, 6.5657)
 
-    val distance = calculator.distanceKm(invalidLocation, validLocation)
+    val distance = calculator.distanceKm(zeroLocation, validLocation)
 
-    assertNull(distance)
+    assertNotNull(distance)
+    assertTrue(distance!! > 0.0)
   }
 
   @Test
-  fun `distanceKm returns null for invalid to location`() {
+  fun `distanceKm calculates distance for zero coordinates to location`() {
     val validLocation = Location("Valid", 46.5197, 6.5657)
-    val invalidLocation = Location("Invalid", 0.0, 0.0)
+    val zeroLocation = Location("Zero", 0.0, 0.0)
 
-    val distance = calculator.distanceKm(validLocation, invalidLocation)
+    val distance = calculator.distanceKm(validLocation, zeroLocation)
 
-    assertNull(distance)
+    assertNotNull(distance)
+    assertTrue(distance!! > 0.0)
   }
 
   @Test
-  fun `distanceKm returns null when both locations are invalid`() {
-    val invalidLocation1 = Location("Invalid1", 0.0, 0.0)
-    val invalidLocation2 = Location("Invalid2", 0.0, 0.0)
+  fun `distanceKm calculates zero distance when both locations are at zero coordinates`() {
+    val zeroLocation1 = Location("Zero1", 0.0, 0.0)
+    val zeroLocation2 = Location("Zero2", 0.0, 0.0)
 
-    val distance = calculator.distanceKm(invalidLocation1, invalidLocation2)
+    val distance = calculator.distanceKm(zeroLocation1, zeroLocation2)
 
-    assertNull(distance)
+    assertNotNull(distance)
+    assertEquals(0.0, distance!!, 0.001)
   }
 
   @Test
