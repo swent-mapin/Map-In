@@ -631,7 +631,7 @@ fun MapScreen(
                       sheetState = viewModel.bottomSheetState,
                       isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
                       isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
-                      organizerName = viewModel.organizerName,
+                      organizerState = viewModel.organizerState,
                       onJoinEvent = { viewModel.joinEvent() },
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },

@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.Location
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -41,6 +42,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.mock
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
@@ -655,11 +657,19 @@ class MapScreenViewModelTest {
     var cameraCentered = false
     viewModel.setCenterCameraCallback { _, _ -> cameraCentered = true }
 
+    val mockProfile = mock<UserProfile>()
+    whenever(mockProfile.name).thenReturn("Alice")
+    whenever(mockUserProfileRepository.getUserProfile(testEvent.ownerId)).thenReturn(mockProfile)
+
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
     assertEquals(testEvent, viewModel.selectedEvent)
-    assertEquals("User ${testEvent.ownerId.take(6)}", viewModel.organizerName)
+
+    val state = viewModel.organizerState
+    assertTrue("State should be Loaded", state is OrganizerState.Loaded)
+    assertEquals("Alice", (state as OrganizerState.Loaded).name)
+
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
     assertTrue(cameraCentered)
   }
@@ -672,7 +682,11 @@ class MapScreenViewModelTest {
     viewModel.closeEventDetail()
 
     assertNull(viewModel.selectedEvent)
-    assertEquals("", viewModel.organizerName)
+
+    val state = viewModel.organizerState
+    assertTrue(state is OrganizerState.Loaded)
+    assertEquals("", (state as OrganizerState.Loaded).name)
+
     assertEquals(BottomSheetState.COLLAPSED, viewModel.bottomSheetState)
   }
 
