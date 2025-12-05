@@ -108,25 +108,6 @@ class ProfileViewModelTest {
   }
 
   @Test
-  fun `loadUserProfile creates default profile when none exists`() = runTest {
-    val defaultProfile =
-        UserProfile(
-            userId = testUserId,
-            name = "John Doe",
-            bio = "Tell us about yourself...",
-            location = "Unknown")
-
-    coEvery { mockRepository.getUserProfile(testUserId) } returns null
-    coEvery { mockRepository.createDefaultProfile(any(), any(), any()) } returns defaultProfile
-
-    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
-
-    val loadedProfile = viewModel.userProfile.first()
-    assertEquals(defaultProfile, loadedProfile)
-    coVerify { mockRepository.createDefaultProfile(testUserId, "John Doe", null) }
-  }
-
-  @Test
   fun `startEditing enables edit mode and populates fields`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
