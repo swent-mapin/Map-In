@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.FirebaseApp
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -50,7 +51,7 @@ class SettingsScreenBiometricTest {
           onNavigateToChangePassword = {})
     }
     composeTestRule.onNodeWithTag("backButton").performClick()
-    assert(clicked)
+    assertTrue(clicked)
   }
 
   @Test
