@@ -757,7 +757,7 @@ class MapScreenViewModel(
             if (ownerProfile?.name != null) {
               OrganizerState.Loaded(ownerProfile.name)
             } else {
-              OrganizerState.Loaded("Unknown")
+              OrganizerState.Error
             }
       } catch (e: Exception) {
         Log.e("MapScreenViewModel", "Error loading organizer profile", e)

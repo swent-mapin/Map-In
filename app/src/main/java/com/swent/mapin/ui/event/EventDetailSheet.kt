@@ -58,7 +58,7 @@ import java.util.TimeZone
  * @param sheetState Current bottom sheet state
  * @param isParticipating Whether the current user is already participating in this event
  * @param isSaved Whether the event is currently saved
- * @param organizerState Name of the event organizer
+ * @param organizerState State wrapper with organizer loading/name/error information
  * @param onJoinEvent Callback when user clicks "Join event"
  * @param onUnregisterEvent Callback when user clicks "Unregister"
  * @param onSaveForLater Callback when user clicks "Save for later"
