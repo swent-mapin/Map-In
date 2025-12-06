@@ -34,7 +34,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.String
@@ -130,7 +130,7 @@ fun AddEventTextField(
 fun AddEventScreen(
     modifier: Modifier = Modifier,
     eventViewModel: EventViewModel,
-    locationViewModel: LocationViewModel = viewModel(),
+    locationViewModel: LocationViewModel,
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {

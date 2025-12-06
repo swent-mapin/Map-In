@@ -1,5 +1,6 @@
 package com.swent.mapin.model.location
 
+import com.swent.mapin.model.Location
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

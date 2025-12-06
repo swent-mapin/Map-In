@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.filters
 
 import android.app.DatePickerDialog
+import android.util.Log
 import android.view.Gravity
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -28,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.model.UserProfile
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -463,7 +464,6 @@ class FiltersSection {
           singleLine = true,
           label = { Text("Location") },
           placeholder = { Text("Enter an address") })
-
       if (expanded && results.isNotEmpty()) {
         Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
           Column {

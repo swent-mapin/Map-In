@@ -54,7 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags

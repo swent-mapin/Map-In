@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import com.swent.mapin.model.location.LocationRepository
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.DatePickerButton
@@ -27,6 +29,8 @@ class M2AddEventScreenTest {
 
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
   val eventViewModel = mockk<EventViewModel>(relaxed = true)
+  val locationRepo = mockk<LocationRepository>(relaxed = true)
+  val locationViewModel = LocationViewModel(locationRepo)
 
   // -------------------------------------------------------------------------
   // Date & Time picker buttons
@@ -165,7 +169,7 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_click_save_with_missing_fields_shows_validation_banner() {
-    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
+    compose.setContent { AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel) }
 
     // Tap Save immediately: everything is blank -> shouldShowMissingFields banner appears
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
@@ -175,7 +179,7 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_partial_inputs_still_triggers_missing_fields() {
-    compose.setContent { AddEventScreen(eventViewModel = eventViewModel) }
+    compose.setContent { AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel) }
 
     // Fill some required text fields to clear their individual error flags
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("Title")
