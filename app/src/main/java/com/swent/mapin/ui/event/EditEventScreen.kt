@@ -61,12 +61,12 @@ object EditEventScreenTestTags : EventScreenTestTag {
  */
 @Composable
 fun EditEventScreen(
-  modifier: Modifier = Modifier,
-  eventViewModel: EventViewModel = viewModel(),
-  locationViewModel: LocationViewModel,
-  event: Event = Event(),
-  onCancel: () -> Unit = {},
-  onDone: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    eventViewModel: EventViewModel = viewModel(),
+    locationViewModel: LocationViewModel,
+    event: Event = Event(),
+    onCancel: () -> Unit = {},
+    onDone: () -> Unit = {},
 ) {
 
   val title = remember { mutableStateOf(event.title) }

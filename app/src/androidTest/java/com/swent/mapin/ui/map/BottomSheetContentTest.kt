@@ -16,10 +16,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.model.location.LocationRepository
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags

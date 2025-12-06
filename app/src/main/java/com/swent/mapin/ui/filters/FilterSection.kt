@@ -1,7 +1,6 @@
 package com.swent.mapin.ui.filters
 
 import android.app.DatePickerDialog
-import android.util.Log
 import android.view.Gravity
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -29,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.*

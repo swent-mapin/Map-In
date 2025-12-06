@@ -169,7 +169,9 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_click_save_with_missing_fields_shows_validation_banner() {
-    compose.setContent { AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel) }
+    compose.setContent {
+      AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel)
+    }
 
     // Tap Save immediately: everything is blank -> shouldShowMissingFields banner appears
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
@@ -179,7 +181,9 @@ class M2AddEventScreenTest {
 
   @Test
   fun addEventScreen_partial_inputs_still_triggers_missing_fields() {
-    compose.setContent { AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel) }
+    compose.setContent {
+      AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel)
+    }
 
     // Fill some required text fields to clear their individual error flags
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_TITLE).performTextInput("Title")
