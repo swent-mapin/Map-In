@@ -197,11 +197,11 @@ fun ProfileScreen(
 /** Displays the user's profile picture or a placeholder. */
 @Composable
 internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarClick: () -> Unit) {
-  // Simplified minimal avatar: plain circle, smaller size, no heavy effects
-  Box(modifier = Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+  // Simplified minimal avatar: plain circle, no heavy effects
+  Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
     Box(
         modifier =
-            Modifier.size(88.dp)
+            Modifier.size(120.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .testTag("profilePicture")
@@ -219,7 +219,7 @@ internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarCli
             Icon(
                 imageVector = getAvatarIcon(avatarUrl),
                 contentDescription = "Profile Picture",
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(60.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         }

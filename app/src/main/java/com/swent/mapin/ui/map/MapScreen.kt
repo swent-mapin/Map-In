@@ -648,12 +648,13 @@ fun MapScreen(
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },
                       onUnsaveForLater = { viewModel.unsaveEventForLater() },
-                      onClose = { viewModel.closeEventDetail() },
+                      onClose = { viewModel.closeEventDetailWithNavigation() },
                       onShare = { viewModel.showShareDialog() },
                       onGetDirections = { viewModel.toggleDirections(selectedEvent) },
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed,
-                      hasLocationPermission = viewModel.hasLocationPermission)
+                      hasLocationPermission = viewModel.hasLocationPermission,
+                      onOrganizerClick = { userId -> viewModel.showProfileSheet(userId) })
                 } else {
                   BottomSheetContent(
                       onModalShown = { shown ->
@@ -724,7 +725,10 @@ fun MapScreen(
                       onSettingsClick = onNavigateToSettings,
                       locationViewModel = locationViewModel,
                       profileViewModel = remember { ProfileViewModel() },
-                      eventViewModel = eventViewModel)
+                      eventViewModel = eventViewModel,
+                      profileSheetUserId = viewModel.profileSheetUserId,
+                      onProfileSheetClose = viewModel::hideProfileSheet,
+                      onProfileSheetEventClick = viewModel::onProfileSheetEventClick)
                 }
               }
         }
