@@ -76,4 +76,77 @@ class UserProfileRepository(
     saveUserProfile(defaultProfile)
     return defaultProfile
   }
+
+  /**
+   * Follow a user. Adds targetUserId to current user's followingIds, and adds currentUserId to
+   * target user's followerIds.
+   */
+  suspend fun followUser(currentUserId: String, targetUserId: String): Boolean {
+    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = true)
+  }
+
+  /**
+   * Unfollow a user. Removes targetUserId from current user's followingIds, and removes
+   * currentUserId from target user's followerIds.
+   */
+  suspend fun unfollowUser(currentUserId: String, targetUserId: String): Boolean {
+    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = false)
+  }
+
+  private suspend fun updateFollowStatus(
+      currentUserId: String,
+      targetUserId: String,
+      shouldFollow: Boolean
+  ): Boolean {
+    if (currentUserId == targetUserId) return false
+
+    return try {
+      firestore
+          .runTransaction { transaction ->
+            val currentUserRef = firestore.collection(COLLECTION_USERS).document(currentUserId)
+            val targetUserRef = firestore.collection(COLLECTION_USERS).document(targetUserId)
+
+            val currentUserDoc = transaction[currentUserRef]
+            val targetUserDoc = transaction[targetUserRef]
+
+            if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
+              throw Exception("User not found")
+            }
+
+            val currentFollowing =
+                (currentUserDoc["followingIds"] as? List<*>)?.filterIsInstance<String>()
+                    ?: emptyList()
+            val targetFollowers =
+                (targetUserDoc["followerIds"] as? List<*>)?.filterIsInstance<String>()
+                    ?: emptyList()
+
+            if (shouldFollow) {
+              if (!currentFollowing.contains(targetUserId)) {
+                transaction.update(currentUserRef, "followingIds", currentFollowing + targetUserId)
+              }
+              if (!targetFollowers.contains(currentUserId)) {
+                transaction.update(targetUserRef, "followerIds", targetFollowers + currentUserId)
+              }
+            } else {
+              transaction.update(currentUserRef, "followingIds", currentFollowing - targetUserId)
+              transaction.update(targetUserRef, "followerIds", targetFollowers - currentUserId)
+            }
+          }
+          .await()
+      true
+    } catch (e: Exception) {
+      e.printStackTrace()
+      false
+    }
+  }
+
+  /** Check if currentUser is following targetUser. */
+  suspend fun isFollowing(currentUserId: String, targetUserId: String): Boolean {
+    return try {
+      val profile = getUserProfile(currentUserId)
+      profile?.followingIds?.contains(targetUserId) ?: false
+    } catch (e: Exception) {
+      false
+    }
+  }
 }
