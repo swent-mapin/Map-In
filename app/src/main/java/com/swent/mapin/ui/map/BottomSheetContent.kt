@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
@@ -138,6 +140,8 @@ fun BottomSheetContent(
     recentItems: List<RecentItem> = emptyList(),
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
+    topCategories: List<String> = emptyList(),
+    onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
@@ -323,10 +327,18 @@ fun BottomSheetContent(
                                   onShowAllRecents = { showAllRecents = true },
                                   onEventClick = onEventClick)
                             } else {
+                              val density = LocalDensity.current
+                              val imeBottom = WindowInsets.ime.getBottom(density)
+                              val imePaddingModifier =
+                                  if (imeBottom > 0) {
+                                    Modifier.padding(bottom = with(density) { imeBottom.toDp() })
+                                  } else {
+                                    Modifier
+                                  }
                               val contentModifier =
                                   if (isFull)
                                       Modifier.fillMaxWidth()
-                                          .imePadding()
+                                          .then(imePaddingModifier)
                                           .verticalScroll(scrollState)
                                   else Modifier.fillMaxWidth()
 
