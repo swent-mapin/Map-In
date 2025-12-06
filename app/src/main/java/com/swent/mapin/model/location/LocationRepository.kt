@@ -1,5 +1,7 @@
 package com.swent.mapin.model.location
 
+import com.swent.mapin.model.Location
+
 /**
  * Interface defining the contract for geocoding operations. It abstracts the underlying API
  * (Mapbox, Nominatim, etc.).

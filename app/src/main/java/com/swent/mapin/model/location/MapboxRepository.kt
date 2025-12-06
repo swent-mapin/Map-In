@@ -1,6 +1,7 @@
 package com.swent.mapin.model.location
 
 import android.util.Log
+import com.swent.mapin.model.Location
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -49,7 +50,7 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
         }
 
         // 2. Prepare Request
-        val url = "$BASE_URL/${query}.json?access_token=$token&limit=5&autocomplete=true&country=ch"
+        val url = "$BASE_URL/${query}.json?access_token=$token&limit=5&autocomplete=true"
         val request = Request.Builder().url(url).build()
 
         try {
