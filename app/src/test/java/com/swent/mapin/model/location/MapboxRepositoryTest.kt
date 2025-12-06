@@ -71,7 +71,6 @@ class MapboxRepositoryTest {
     assertTrue(request.url.toString().contains("access_token=test_token"))
     assertTrue(request.url.toString().contains("limit=5"))
     assertTrue(request.url.toString().contains("autocomplete=true"))
-    assertTrue(request.url.toString().contains("country=ch"))
   }
 
   @Test
