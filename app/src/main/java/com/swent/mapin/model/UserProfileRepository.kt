@@ -80,6 +80,10 @@ class UserProfileRepository(
   /**
    * Follow a user. Adds targetUserId to current user's followingIds, and adds currentUserId to
    * target user's followerIds.
+   *
+   * @param currentUserId The ID of the user who wants to follow
+   * @param targetUserId The ID of the user to be followed
+   * @return true if the follow operation succeeded, false if users are the same or operation failed
    */
   suspend fun followUser(currentUserId: String, targetUserId: String): Boolean {
     return updateFollowStatus(currentUserId, targetUserId, shouldFollow = true)
@@ -88,6 +92,11 @@ class UserProfileRepository(
   /**
    * Unfollow a user. Removes targetUserId from current user's followingIds, and removes
    * currentUserId from target user's followerIds.
+   *
+   * @param currentUserId The ID of the user who wants to unfollow
+   * @param targetUserId The ID of the user to be unfollowed
+   * @return true if the unfollow operation succeeded, false if users are the same or operation
+   *   failed
    */
   suspend fun unfollowUser(currentUserId: String, targetUserId: String): Boolean {
     return updateFollowStatus(currentUserId, targetUserId, shouldFollow = false)
@@ -140,7 +149,13 @@ class UserProfileRepository(
     }
   }
 
-  /** Check if currentUser is following targetUser. */
+  /**
+   * Check if currentUser is following targetUser.
+   *
+   * @param currentUserId The ID of the user to check
+   * @param targetUserId The ID of the user who might be followed
+   * @return true if currentUser is following targetUser, false otherwise
+   */
   suspend fun isFollowing(currentUserId: String, targetUserId: String): Boolean {
     return try {
       val profile = getUserProfile(currentUserId)
