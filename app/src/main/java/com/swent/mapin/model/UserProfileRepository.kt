@@ -106,18 +106,18 @@ class UserProfileRepository(
             val currentUserRef = firestore.collection(COLLECTION_USERS).document(currentUserId)
             val targetUserRef = firestore.collection(COLLECTION_USERS).document(targetUserId)
 
-            val currentUserDoc = transaction.get(currentUserRef)
-            val targetUserDoc = transaction.get(targetUserRef)
+            val currentUserDoc = transaction[currentUserRef]
+            val targetUserDoc = transaction[targetUserRef]
 
             if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
               throw Exception("User not found")
             }
 
             val currentFollowing =
-                (currentUserDoc.get("followingIds") as? List<*>)?.filterIsInstance<String>()
+                (currentUserDoc["followingIds"] as? List<*>)?.filterIsInstance<String>()
                     ?: emptyList()
             val targetFollowers =
-                (targetUserDoc.get("followerIds") as? List<*>)?.filterIsInstance<String>()
+                (targetUserDoc["followerIds"] as? List<*>)?.filterIsInstance<String>()
                     ?: emptyList()
 
             if (shouldFollow) {
