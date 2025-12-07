@@ -593,7 +593,8 @@ class MapScreenViewModel(
   }
 
   /** Called when a user is clicked in search results. Opens their profile sheet. */
-  fun onSearchUserClick(userId: String) {
+  fun onSearchUserClick(userId: String, userName: String) {
+    searchStateController.saveRecentProfile(userId, userName)
     showProfileSheet(userId)
   }
 
@@ -804,6 +805,11 @@ class MapScreenViewModel(
       searchStateController.markSearchCommitted()
       onEventPinClicked(event, forceZoom = true)
     }
+  }
+
+  /** Handles profile click from recent items by opening the profile sheet. */
+  fun onRecentProfileClicked(userId: String) {
+    showProfileSheet(userId)
   }
 
   /**

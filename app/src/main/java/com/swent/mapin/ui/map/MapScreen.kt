@@ -685,6 +685,7 @@ fun MapScreen(
                       recentItems = viewModel.recentItems,
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
+                      onRecentProfileClick = viewModel::onRecentProfileClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
                       userSearchResults = viewModel.userSearchResults,
                       onUserSearchClick = viewModel::onSearchUserClick,

@@ -149,12 +149,13 @@ fun BottomSheetContent(
     recentItems: List<RecentItem> = emptyList(),
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
+    onRecentProfileClick: (String) -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     // User search results
     userSearchResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
-    onUserSearchClick: (String) -> Unit = {},
+    onUserSearchClick: (String, String) -> Unit = { _, _ -> },
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -300,6 +301,10 @@ fun BottomSheetContent(
                           showAllRecents = false
                           onRecentEventClick(eventId)
                         },
+                        onRecentProfileClick = { userId ->
+                          showAllRecents = false
+                          onRecentProfileClick(userId)
+                        },
                         onClearAll = {
                           onClearRecentSearches()
                           showAllRecents = false
@@ -349,6 +354,7 @@ fun BottomSheetContent(
                                   recentItems = recentItems,
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
+                                  onRecentProfileClick = onRecentProfileClick,
                                   onShowAllRecents = { showAllRecents = true },
                                   onEventClick = onEventClick,
                                   sheetState = state,

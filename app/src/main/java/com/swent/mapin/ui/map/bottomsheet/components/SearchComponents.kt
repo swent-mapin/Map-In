@@ -76,13 +76,14 @@ fun SearchResultsSection(
     recentItems: List<RecentItem> = emptyList(),
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
+    onRecentProfileClick: (String) -> Unit = {},
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
     onEventClick: (Event) -> Unit = {},
     sheetState: BottomSheetState = BottomSheetState.FULL,
     userResults: List<UserProfile> = emptyList(),
-    onUserClick: (String) -> Unit = {}
+    onUserClick: (String, String) -> Unit = { _, _ -> }
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -97,6 +98,7 @@ fun SearchResultsSection(
                 recentItems = recentItems,
                 onRecentSearchClick = onRecentSearchClick,
                 onRecentEventClick = onRecentEventClick,
+                onRecentProfileClick = onRecentProfileClick,
                 onShowAll = onShowAllRecents)
             HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
           }
@@ -169,13 +171,13 @@ fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () ->
  * Section displaying people/user search results.
  *
  * @param users List of user profiles to display (max 3 recommended)
- * @param onUserClick Callback when a user is clicked, passes userId
+ * @param onUserClick Callback when a user is clicked, passes userId and userName
  * @param modifier Modifier for the section
  */
 @Composable
 fun PeopleResultsSection(
     users: List<UserProfile>,
-    onUserClick: (String) -> Unit,
+    onUserClick: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
   if (users.isEmpty()) return
@@ -199,7 +201,9 @@ fun PeopleResultsSection(
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       users.forEach { user ->
         UserSearchCard(
-            user = user, onClick = { onUserClick(user.userId) }, modifier = Modifier.weight(1f))
+            user = user,
+            onClick = { onUserClick(user.userId, user.name) },
+            modifier = Modifier.weight(1f))
       }
       // Fill remaining space if less than 3 users
       repeat(3 - users.size) { Spacer(modifier = Modifier.weight(1f)) }
