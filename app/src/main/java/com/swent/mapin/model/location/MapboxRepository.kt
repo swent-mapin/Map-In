@@ -1,7 +1,6 @@
 package com.swent.mapin.model.location
 
 import android.util.Log
-import com.swent.mapin.model.Location
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -86,7 +85,7 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
                 if (center != null && center.length() >= 2) {
                   val lon = center.getDouble(0)
                   val lat = center.getDouble(1)
-                  results.add(Location(placeName, lat, lon))
+                  results.add(Location.from(placeName, lat, lon))
                 }
               }
 
@@ -105,7 +104,7 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
       }
 
   /** Performs reverse geocoding (coordinates to address/name). */
-  override suspend fun reverseGeocode(lat: Double, lon: Double): Location? =
+  override suspend fun reverseGeocode(lat: Double, lon: Double): Location =
       withContext(Dispatchers.IO) {
         val url = "$BASE_URL/$lon,$lat.json?access_token=$token&limit=1"
         val request = Request.Builder().url(url).build()
@@ -125,16 +124,16 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
 
             if (features != null && features.length() > 0) {
               val feature = features.getJSONObject(0)
-              val placeName = feature.optString("place_name", "Unknown Location")
+              val placeName = feature.optString("place_name", Location.NO_NAME)
               val center = feature.optJSONArray("center")
 
               if (center != null && center.length() >= 2) {
                 val finalLon = center.getDouble(0)
                 val finalLat = center.getDouble(1)
-                return@withContext Location(placeName, finalLat, finalLon)
+                return@withContext Location.from(placeName, finalLat, finalLon)
               }
             }
-            return@withContext null
+            return@withContext Location.UNDEFINED
           }
         } catch (e: Exception) {
           Log.e("MapboxRepo", "Network error during reverse geocoding", e)

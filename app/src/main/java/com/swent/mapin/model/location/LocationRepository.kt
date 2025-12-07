@@ -1,7 +1,5 @@
 package com.swent.mapin.model.location
 
-import com.swent.mapin.model.Location
-
 /**
  * Interface defining the contract for geocoding operations. It abstracts the underlying API
  * (Mapbox, Nominatim, etc.).
@@ -20,7 +18,7 @@ interface LocationRepository {
    *
    * @param lat The latitude.
    * @param lon The longitude.
-   * @return The matching [Location], or null if no result is found.
+   * @return The matching [Location], or Location.UNDEFINED if no result is found.
    */
-  suspend fun reverseGeocode(lat: Double, lon: Double): Location?
+  suspend fun reverseGeocode(lat: Double, lon: Double): Location
 }
