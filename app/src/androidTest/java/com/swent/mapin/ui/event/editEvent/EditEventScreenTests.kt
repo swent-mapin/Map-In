@@ -4,8 +4,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.EditEventScreen
 import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel

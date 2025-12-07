@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
