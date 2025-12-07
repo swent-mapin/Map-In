@@ -116,7 +116,7 @@ fun ProfileSheet(
 }
 
 @Composable
-private fun ProfileSheetContent(
+internal fun ProfileSheetContent(
     profile: UserProfile,
     upcomingEvents: List<Event>,
     pastEvents: List<Event>,
