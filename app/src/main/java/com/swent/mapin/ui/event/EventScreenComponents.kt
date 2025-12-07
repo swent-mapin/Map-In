@@ -7,13 +7,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -23,10 +29,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,13 +47,264 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.event.Event
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+
+/** State of the event form, used by AddEventScreen and EditEventScreen */
+data class EventFormState(
+    val title: MutableState<String>,
+    val description: MutableState<String>,
+    val location: MutableState<String>,
+    val date: MutableState<String>,
+    val endDate: MutableState<String>,
+    val time: MutableState<String>,
+    val endTime: MutableState<String>,
+    val tag: MutableState<String>,
+    val price: MutableState<String>,
+    val isPublic: MutableState<Boolean>,
+
+    // Error states
+    val titleError: MutableState<Boolean>,
+    val descriptionError: MutableState<Boolean>,
+    val locationError: MutableState<Boolean>,
+    val dateError: MutableState<Boolean>,
+    val endDateError: MutableState<Boolean>,
+    val timeError: MutableState<Boolean>,
+    val endTimeError: MutableState<Boolean>,
+    val tagError: MutableState<Boolean>,
+    val priceError: MutableState<Boolean>,
+
+    // Location state
+    val locationExpanded: MutableState<Boolean>,
+    val gotLocation: MutableState<Location>,
+
+    // Other state
+    val isLoggedIn: MutableState<Boolean>,
+    val showValidation: MutableState<Boolean>
+) {
+  /** Check if the form contains errors */
+  fun hasErrors(): Boolean {
+    return titleError.value ||
+        title.value.isBlank() ||
+        descriptionError.value ||
+        description.value.isBlank() ||
+        locationError.value ||
+        location.value.isBlank() ||
+        timeError.value ||
+        time.value.isBlank() ||
+        dateError.value ||
+        date.value.isBlank() ||
+        tagError.value ||
+        endDateError.value ||
+        endDate.value.isBlank() ||
+        endTimeError.value ||
+        endTime.value.isBlank() ||
+        priceError.value
+  }
+
+  /** Returns the list of fields in error for display */
+  fun getErrorFields(
+      titleFieldName: String,
+      dateFieldName: String,
+      timeFieldName: String,
+      locationFieldName: String,
+      descriptionFieldName: String,
+      tagFieldName: String,
+      priceFieldName: String
+  ): List<String> {
+    return listOfNotNull(
+        if (titleError.value || title.value.isBlank()) titleFieldName else null,
+        if (dateError.value || date.value.isBlank()) dateFieldName else null,
+        if (timeError.value || time.value.isBlank()) timeFieldName else null,
+        if (endDateError.value || endDate.value.isBlank()) "End date" else null,
+        if (endTimeError.value || endTime.value.isBlank()) "End time" else null,
+        if (locationError.value || location.value.isBlank()) locationFieldName else null,
+        if (descriptionError.value || description.value.isBlank()) descriptionFieldName else null,
+        if (tagError.value) tagFieldName else null,
+        if (priceError.value) priceFieldName else null)
+  }
+
+  /** Validates all fields in the form */
+  fun validateAllFields() {
+    showValidation.value = true
+
+    titleError.value = title.value.isBlank()
+    descriptionError.value = description.value.isBlank()
+    locationError.value = location.value.isBlank()
+    dateError.value = date.value.isBlank()
+    timeError.value = time.value.isBlank()
+    endDateError.value = endDate.value.isBlank()
+    endTimeError.value = endTime.value.isBlank()
+    tagError.value = !isValidTagInput(tag.value)
+    priceError.value = !isValidPriceInput(price.value)
+
+    // Run relational validation for start/end
+    validateStartEndLogic(
+        date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+  }
+
+  /** Check if the form is valid (no errors and user logged in) */
+  fun isValid(): Boolean {
+    return !hasErrors() && isLoggedIn.value
+  }
+
+  /** Parse dates and times into timestamps Returns null if parsing fails */
+  fun parseTimestamps(): Pair<Timestamp, Timestamp>? {
+    val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+    sdf.timeZone = java.util.TimeZone.getDefault()
+
+    val rawTime = if (time.value.contains("h")) time.value.replace("h", "") else time.value
+    val rawEndTime =
+        if (endTime.value.contains("h")) endTime.value.replace("h", "") else endTime.value
+
+    val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
+    val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
+
+    if (parsedStart == null) {
+      dateError.value = true
+      return null
+    }
+    if (parsedEnd == null) {
+      endDateError.value = true
+      return null
+    }
+
+    val startTs = Timestamp(parsedStart)
+    val endTs = Timestamp(parsedEnd)
+
+    if (!endTs.toDate().after(startTs.toDate())) {
+      // end must be strictly after start
+      endDateError.value = true
+      endTimeError.value = false
+      return null
+    }
+
+    return Pair(startTs, endTs)
+  }
+}
+
+/** Creates a pre-filled EventFormState to edit an existing event */
+@Composable
+fun rememberEventFormState(event: Event? = null): EventFormState {
+  return EventFormState(
+      title = remember { mutableStateOf(event?.title ?: "") },
+      description = remember { mutableStateOf(event?.description ?: "") },
+      location = remember { mutableStateOf(event?.location?.name ?: "") },
+      date = remember { mutableStateOf(event?.date?.toDateString() ?: "") },
+      endDate = remember { mutableStateOf(event?.endDate?.toDateString() ?: "") },
+      time = remember { mutableStateOf(event?.date?.toTimeString() ?: "") },
+      endTime = remember { mutableStateOf(event?.endDate?.toTimeString() ?: "") },
+      tag = remember { mutableStateOf(event?.tags?.joinToString(separator = " ") ?: "") },
+      price = remember { mutableStateOf(event?.price?.toString() ?: "") },
+      isPublic = remember { mutableStateOf(event?.public ?: true) },
+      titleError = remember { mutableStateOf(false) },
+      descriptionError = remember { mutableStateOf(false) },
+      locationError = remember { mutableStateOf(false) },
+      dateError = remember { mutableStateOf(false) },
+      endDateError = remember { mutableStateOf(false) },
+      timeError = remember { mutableStateOf(false) },
+      endTimeError = remember { mutableStateOf(false) },
+      tagError = remember { mutableStateOf(false) },
+      priceError = remember { mutableStateOf(false) },
+      locationExpanded = remember { mutableStateOf(false) },
+      gotLocation =
+          remember {
+            mutableStateOf(
+                Location(event?.location?.name ?: "", LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
+          },
+      isLoggedIn = remember { mutableStateOf(Firebase.auth.currentUser != null) },
+      showValidation = remember { mutableStateOf(false) })
+}
+
+/** Shared scaffolding for Add and Edit Event screens to avoid code duplication. */
+@Composable
+fun BaseEventScreen(
+    modifier: Modifier = Modifier,
+    formState: EventFormState,
+    locationViewModel: LocationViewModel,
+    title: String,
+    testTags: EventScreenTestTag,
+    onCancel: () -> Unit,
+    // Callback triggered when validation passes. Provides parsed start/end timestamps.
+    onCommit: (Timestamp, Timestamp) -> Unit,
+    // Content to display below the main form (Price/Switch for Add, Warning for Edit)
+    extraContent: @Composable () -> Unit
+) {
+  val locations by locationViewModel.locations.collectAsState()
+  val scrollState = rememberScrollState()
+
+  val errorFields =
+      formState.getErrorFields(
+          titleFieldName = stringResource(R.string.title_field),
+          dateFieldName = stringResource(R.string.date_field),
+          timeFieldName = stringResource(R.string.time),
+          locationFieldName = stringResource(R.string.location_field),
+          descriptionFieldName = stringResource(R.string.description_field),
+          tagFieldName = stringResource(R.string.tag_field),
+          priceFieldName = stringResource(R.string.price_field))
+
+  Scaffold(contentWindowInsets = WindowInsets.ime) { padding ->
+    Column(modifier = modifier.padding(padding).fillMaxWidth().navigationBarsPadding()) {
+      EventTopBar(
+          title = title,
+          testTags = testTags,
+          isEventValid = formState.isValid(),
+          onCancel = onCancel,
+          onSave = {
+            formState.validateAllFields()
+            if (!formState.isValid()) return@EventTopBar
+
+            val timestamps = formState.parseTimestamps() ?: return@EventTopBar
+            val (startTs, endTs) = timestamps
+
+            onCommit(startTs, endTs)
+          })
+
+      if (formState.showValidation.value && !formState.isValid()) {
+        ValidationBanner(errorFields, testTags)
+      }
+
+      Column(modifier = Modifier.fillMaxWidth().verticalScroll(scrollState).imePadding()) {
+        Spacer(modifier = Modifier.padding(5.dp))
+
+        EventFormBody(
+            title = formState.title,
+            titleError = formState.titleError,
+            date = formState.date,
+            dateError = formState.dateError,
+            time = formState.time,
+            timeError = formState.timeError,
+            endDate = formState.endDate,
+            endDateError = formState.endDateError,
+            endTime = formState.endTime,
+            endTimeError = formState.endTimeError,
+            location = formState.location,
+            locationError = formState.locationError,
+            locations = locations,
+            gotLocation = formState.gotLocation,
+            locationExpanded = formState.locationExpanded,
+            locationViewModel = locationViewModel,
+            description = formState.description,
+            descriptionError = formState.descriptionError,
+            tag = formState.tag,
+            tagError = formState.tagError,
+            testTags = testTags)
+
+        Spacer(modifier = Modifier.padding(bottom = 5.dp))
+
+        extraContent()
+      }
+    }
+  }
+}
 
 /** Interface class for event screen's test tags */
 @Suppress("PropertyName")
@@ -229,7 +491,7 @@ fun PublicSwitch(
 }
 
 /**
- * Validation banner which displays error fields when a user attemps to save
+ * Validation banner which displays error fields when a user attempts to save
  *
  * @param errorFields List of error fields as strings
  */
