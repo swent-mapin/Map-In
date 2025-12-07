@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -62,7 +63,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.search.RecentItem
 
 @Composable
@@ -76,7 +79,10 @@ fun SearchResultsSection(
     onShowAllRecents: () -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
-    onEventClick: (Event) -> Unit = {}
+    onEventClick: (Event) -> Unit = {},
+    sheetState: BottomSheetState = BottomSheetState.FULL,
+    userResults: List<UserProfile> = emptyList(),
+    onUserClick: (String) -> Unit = {}
 ) {
   // When query is empty, show recent items and top categories instead of results
   if (query.isBlank()) {
@@ -105,14 +111,22 @@ fun SearchResultsSection(
     return
   }
 
-  // When there's a query but no results
-  if (results.isEmpty()) {
+  // When there's a query but no results (events and users)
+  if (results.isEmpty() && userResults.isEmpty()) {
     NoResultsMessage(query = query, modifier = modifier)
     return
   }
 
   // Show search results
   LazyColumn(modifier = modifier.fillMaxWidth()) {
+    // Show people section in FULL state only (while typing)
+    if (sheetState == BottomSheetState.FULL && userResults.isNotEmpty()) {
+      item {
+        PeopleResultsSection(users = userResults, onUserClick = onUserClick)
+        Spacer(modifier = Modifier.height(16.dp))
+      }
+    }
+
     items(results) { event -> SearchResultItem(event = event, onClick = { onEventClick(event) }) }
 
     item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -147,6 +161,99 @@ fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () ->
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
               }
+            }
+      }
+}
+
+/**
+ * Section displaying people/user search results.
+ *
+ * @param users List of user profiles to display (max 3 recommended)
+ * @param onUserClick Callback when a user is clicked, passes userId
+ * @param modifier Modifier for the section
+ */
+@Composable
+fun PeopleResultsSection(
+    users: List<UserProfile>,
+    onUserClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+  if (users.isEmpty()) return
+
+  Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 12.dp)) {
+          Icon(
+              imageVector = Icons.Default.Person,
+              contentDescription = null,
+              modifier = Modifier.size(20.dp),
+              tint = MaterialTheme.colorScheme.onSurfaceVariant)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+              text = "People (${users.size})",
+              style = MaterialTheme.typography.titleSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      users.forEach { user ->
+        UserSearchCard(
+            user = user, onClick = { onUserClick(user.userId) }, modifier = Modifier.weight(1f))
+      }
+      // Fill remaining space if less than 3 users
+      repeat(3 - users.size) { Spacer(modifier = Modifier.weight(1f)) }
+    }
+  }
+}
+
+/** Compact user card for search results. */
+@Composable
+private fun UserSearchCard(user: UserProfile, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Surface(
+      modifier = modifier.clickable { onClick() }.testTag("userSearchCard_${user.userId}"),
+      shape = RoundedCornerShape(12.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(12.dp)) {
+              // Avatar
+              Box(
+                  modifier = Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)),
+                  contentAlignment = Alignment.Center) {
+                    if (user.avatarUrl != null &&
+                        (user.avatarUrl.startsWith("http") ||
+                            user.avatarUrl.startsWith("content"))) {
+                      AsyncImage(
+                          model = user.avatarUrl,
+                          contentDescription = "Profile picture of ${user.name}",
+                          contentScale = ContentScale.Crop,
+                          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)))
+                    } else {
+                      Surface(
+                          color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                          shape = RoundedCornerShape(24.dp),
+                          modifier = Modifier.fillMaxSize()) {
+                            Box(contentAlignment = Alignment.Center) {
+                              Icon(
+                                  imageVector = getAvatarIcon(user.avatarUrl),
+                                  contentDescription = "Avatar",
+                                  modifier = Modifier.size(28.dp),
+                                  tint = MaterialTheme.colorScheme.primary)
+                            }
+                          }
+                    }
+                  }
+
+              Spacer(modifier = Modifier.height(8.dp))
+
+              // Name
+              Text(
+                  text = user.name.ifBlank { "User" },
+                  style = MaterialTheme.typography.bodyMedium,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                  textAlign = TextAlign.Center)
             }
       }
 }
@@ -197,7 +304,7 @@ fun SearchBar(
           textFieldValueState = newValue
           onValueChange(newValue.text)
         },
-        placeholder = { Text("Search activities", style = MaterialTheme.typography.bodyLarge) },
+        placeholder = { Text("Search events, people", style = MaterialTheme.typography.bodyLarge) },
         modifier =
             Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
                 focusState ->

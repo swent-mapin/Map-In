@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -88,6 +89,11 @@ class MapEventStateController(
   private var _searchResults by mutableStateOf<List<Event>>(emptyList())
   val searchResults: List<Event>
     get() = _searchResults
+
+  // User search results for profile search
+  private var _userSearchResults by mutableStateOf<List<UserProfile>>(emptyList())
+  val userSearchResults: List<UserProfile>
+    get() = _userSearchResults
 
   private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
   val availableEvents: List<Event>
@@ -464,7 +470,8 @@ class MapEventStateController(
   }
 
   /**
-   * Performs a local search on [allEvents] for events containing the [query] in their title.
+   * Performs a local search on [allEvents] for events containing the [query] in their title. Also
+   * searches for users by name.
    *
    * @param query The search query string.
    */
@@ -480,6 +487,18 @@ class MapEventStateController(
             } || event.tags.any { tag -> tag.lowercase().contains(lowerQuery) }
           }
         }
+
+    // Also search users
+    scope.launch {
+      userProfileRepository.searchUsers(query).collect { users ->
+        _userSearchResults = users.take(3)
+      }
+    }
+  }
+
+  /** Clears user search results. */
+  fun clearUserSearchResults() {
+    _userSearchResults = emptyList()
   }
 
   /**

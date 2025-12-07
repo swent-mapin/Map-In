@@ -152,6 +152,9 @@ fun BottomSheetContent(
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    // User search results
+    userSearchResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+    onUserSearchClick: (String) -> Unit = {},
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -347,7 +350,10 @@ fun BottomSheetContent(
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
                                   onShowAllRecents = { showAllRecents = true },
-                                  onEventClick = onEventClick)
+                                  onEventClick = onEventClick,
+                                  sheetState = state,
+                                  userResults = userSearchResults,
+                                  onUserClick = onUserSearchClick)
                             } else {
                               val density = LocalDensity.current
                               val imeBottom = WindowInsets.ime.getBottom(density)

@@ -1,6 +1,8 @@
 package com.swent.mapin.model
 
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -162,6 +164,32 @@ class UserProfileRepository(
       profile?.followingIds?.contains(targetUserId) ?: false
     } catch (e: Exception) {
       false
+    }
+  }
+
+  /**
+   * Search users by name (case-insensitive, partial match).
+   *
+   * @param query The search query string
+   * @return Flow emitting a list of matching user profiles (max 5 results)
+   */
+  fun searchUsers(query: String): Flow<List<UserProfile>> = flow {
+    if (query.isBlank()) {
+      emit(emptyList())
+      return@flow
+    }
+    try {
+      val lowerQuery = query.trim().lowercase()
+      val snapshot = firestore.collection(COLLECTION_USERS).get().await()
+      val users =
+          snapshot.documents
+              .mapNotNull { it.toObject(UserProfile::class.java) }
+              .filter { user -> user.name.lowercase().contains(lowerQuery) }
+              .take(5)
+      emit(users)
+    } catch (e: Exception) {
+      e.printStackTrace()
+      emit(emptyList())
     }
   }
 }
