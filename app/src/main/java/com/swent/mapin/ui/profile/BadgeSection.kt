@@ -117,7 +117,6 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
                 items(badges) { badge -> BadgeItem(badge) { selected = badge } }
               }
 
-          Spacer(modifier = Modifier.height(12.dp))
           BadgeRarityLegend()
         }
       }
