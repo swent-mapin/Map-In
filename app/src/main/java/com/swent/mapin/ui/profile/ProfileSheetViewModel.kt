@@ -86,14 +86,23 @@ class ProfileSheetViewModel(
         val ownedEvents = eventRepository.getOwnedEvents(userId)
         val now = System.currentTimeMillis()
 
+        // An event is upcoming/ongoing if its end date hasn't passed yet
+        // If no end date, fall back to start date
         val upcomingEvents =
             ownedEvents
-                .filter { event -> event.date?.toDate()?.time?.let { it >= now } ?: false }
+                .filter { event ->
+                  val endTime = event.endDate?.toDate()?.time ?: event.date?.toDate()?.time
+                  endTime?.let { it >= now } ?: false
+                }
                 .sortedBy { it.date?.toDate()?.time }
 
+        // An event is past if its end date has passed
         val pastEvents =
             ownedEvents
-                .filter { event -> event.date?.toDate()?.time?.let { it < now } ?: false }
+                .filter { event ->
+                  val endTime = event.endDate?.toDate()?.time ?: event.date?.toDate()?.time
+                  endTime?.let { it < now } ?: false
+                }
                 .sortedByDescending { it.date?.toDate()?.time }
 
         state =
