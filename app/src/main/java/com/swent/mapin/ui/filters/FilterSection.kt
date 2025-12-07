@@ -451,8 +451,7 @@ class FiltersSection {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val results by locationViewModel.locations.collectAsStateWithLifecycle()
 
-    val displayResults =
-        remember(results) { results.filter { it.isDefined() && !it.name.isNullOrBlank() } }
+    val displayResults = results.filter { it.isDefined() && !it.name.isNullOrBlank() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
       OutlinedTextField(
