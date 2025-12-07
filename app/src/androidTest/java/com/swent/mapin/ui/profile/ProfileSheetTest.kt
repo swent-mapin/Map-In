@@ -292,7 +292,8 @@ class ProfileSheetTest {
     }
 
     composeTestRule.onNodeWithTag("eventCard_click1").performScrollTo().performClick()
-    composeTestRule.runOnIdle { assert(clicked) }
+    composeTestRule.waitForIdle()
+    assert(clicked)
   }
 
   private fun mockViewModelWithState(state: ProfileSheetState): ProfileSheetViewModel {

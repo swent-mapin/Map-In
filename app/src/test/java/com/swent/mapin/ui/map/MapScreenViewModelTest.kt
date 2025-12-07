@@ -1729,7 +1729,7 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun `onProfileSheetEventClick sets selected event and stores profile`() {
+  fun `onProfileSheetEventClick sets selected event`() {
     viewModel.showProfileSheet("user-123")
     viewModel.onProfileSheetEventClick(testEvent)
 
@@ -1737,7 +1737,7 @@ class MapScreenViewModelTest {
   }
 
   @Test
-  fun `closeEventDetailWithNavigation returns to profile if came from profile`() = runTest {
+  fun `closeEventDetailWithNavigation closes event without navigation`() = runTest {
     viewModel.showProfileSheet("user-123")
     viewModel.onProfileSheetEventClick(testEvent)
     advanceUntilIdle()
@@ -1745,7 +1745,7 @@ class MapScreenViewModelTest {
     viewModel.closeEventDetailWithNavigation()
     advanceUntilIdle()
 
-    assertEquals("user-123", viewModel.profileSheetUserId)
+    assertNull(viewModel.profileSheetUserId)
     assertNull(viewModel.selectedEvent)
   }
 }
