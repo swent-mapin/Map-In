@@ -291,7 +291,10 @@ class ProfileSheetTest {
       }
     }
 
-    composeTestRule.onNodeWithTag("eventCard_click1").performScrollTo().performClick()
+    // First scroll to the events row (vertical scroll)
+    composeTestRule.onNodeWithTag("eventsRow_Upcoming Owned Events").performScrollTo()
+    // Then click the card (it's the first item, so it's already visible in the LazyRow)
+    composeTestRule.onNodeWithTag("eventCard_click1").performClick()
     composeTestRule.waitForIdle()
     assert(clicked)
   }
