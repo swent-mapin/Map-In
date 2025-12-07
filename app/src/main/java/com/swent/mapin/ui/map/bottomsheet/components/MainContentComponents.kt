@@ -245,6 +245,7 @@ fun EventRow(
                             onEditEvent(event)
                             expanded = false
                           })
+                      HorizontalDivider()
                       DropdownMenuItem(
                           text = { Text("Delete") },
                           onClick = {
@@ -374,8 +375,8 @@ fun MenuListItem(icon: ImageVector, label: String, onClick: () -> Unit) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = "Go",
-            tint = Color.Gray.copy(alpha = 0.6f),
-            modifier = Modifier.size(22.dp))
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(22.dp).testTag("menuItemArrow"))
       }
 }
 
@@ -383,5 +384,5 @@ fun MenuListItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 fun MenuDivider() {
   HorizontalDivider(
       modifier = Modifier.fillMaxWidth().padding(start = 40.dp), // aligns with text
-      color = Color.LightGray.copy(alpha = 0.4f))
+      color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }
