@@ -45,7 +45,7 @@ private val memoryDateFormatter =
 @Composable
 fun MemoriesScreen(
     onNavigateBack: () -> Unit,
-    memories: List<Memory>,
+    memories: List<Memory> = emptyList(),
     /*viewModel: MemoryViewModel TODO make the viewModel*/
 ) {
   // val memories by viewModel.memories.collectAsState()
