@@ -3,9 +3,10 @@ package com.swent.mapin.ui.memory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Image
@@ -31,6 +32,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/** Formats a [Timestamp] to a human-readable date string. */
+private val memoryDateFormatter =
+    DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
 /**
  * Memories screen displaying a list of the user's memories.
  *
@@ -41,7 +45,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun MemoriesScreen(
     onNavigateBack: () -> Unit,
-    memories: List<Memory> = com.swent.mapin.ui.memory.memories
+    memories: List<Memory>,
     /*viewModel: MemoryViewModel TODO make the viewModel*/
 ) {
   // val memories by viewModel.memories.collectAsState()
@@ -74,43 +78,50 @@ fun MemoriesScreen(
                         } else {
                           MaterialTheme.colorScheme.background
                         })) {
-              Column(
-                  modifier =
-                      Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-                    Text(
-                        "Your Memories",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp).testTag("yourMemoriesMessage"))
+              LazyColumn(
+                  modifier = Modifier.fillMaxSize().padding(16.dp),
+                  contentPadding = PaddingValues(bottom = 16.dp)) {
+                    item {
+                      Text(
+                          "Your Memories",
+                          style = MaterialTheme.typography.titleMedium,
+                          fontWeight = FontWeight.Bold,
+                          modifier =
+                              Modifier.padding(bottom = 16.dp).testTag("yourMemoriesMessage"))
+                    }
+
                     if (memories.isEmpty()) {
-                      Spacer(modifier = Modifier.height(24.dp))
-                      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier =
-                                Modifier.padding(horizontal = 24.dp).testTag("noMemoriesMessage")) {
-                              Text(
-                                  text = "No memories yet",
-                                  style = MaterialTheme.typography.titleMedium)
-                              Spacer(modifier = Modifier.height(8.dp))
-                              Text(
-                                  text =
-                                      "Create memories for attended events and they'll appear here",
-                                  style = MaterialTheme.typography.bodyMedium,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                  textAlign = TextAlign.Center,
-                                  maxLines = 2,
-                                  overflow = TextOverflow.Ellipsis)
+                      item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center) {
+                              Column(
+                                  horizontalAlignment = Alignment.CenterHorizontally,
+                                  modifier =
+                                      Modifier.padding(horizontal = 24.dp)
+                                          .testTag("noMemoriesMessage")) {
+                                    Text(
+                                        text = "No memories yet",
+                                        style = MaterialTheme.typography.titleMedium)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text =
+                                            "Create memories for attended events and they'll appear here",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis)
+                                  }
                             }
                       }
                     } else {
-                      memories.forEach { memory ->
+                      items(memories, key = { it.uid }) { memory ->
                         MemoryItem(
                             memory = memory,
                             onClick = { /*onMemoryClick(memory)*/},
-                            isPublic = memory.isPublic,
                             firstMediaUrl = memory.mediaUrls.firstOrNull())
-
                         Spacer(modifier = Modifier.height(12.dp))
                       }
                     }
@@ -120,16 +131,10 @@ fun MemoriesScreen(
 }
 
 @Composable
-private fun MemoryItem(
-    memory: Memory,
-    onClick: () -> Unit,
-    isPublic: Boolean,
-    firstMediaUrl: String?
-) {
-  val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
+private fun MemoryItem(memory: Memory, onClick: () -> Unit, firstMediaUrl: String?) {
   val dateText =
       memory.createdAt?.toDate()?.time?.let { millis ->
-        formatter.format(Instant.ofEpochMilli(millis))
+        memoryDateFormatter.format(Instant.ofEpochMilli(millis))
       } ?: ""
 
   Card(
@@ -171,10 +176,12 @@ private fun MemoryItem(
                   fontWeight = FontWeight.SemiBold,
                   modifier = Modifier.weight(1f))
 
-              Icon(
-                  imageVector = Icons.Default.MoreVert,
-                  contentDescription = "Menu",
-                  tint = MaterialTheme.colorScheme.primary)
+              IconButton(onClick = { /* TODO: Show menu */}) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.primary)
+              }
             }
 
             // Tagged users
@@ -201,12 +208,13 @@ private fun MemoryItem(
                 modifier = Modifier.padding(top = 12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                   Icon(
-                      imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
-                      contentDescription = if (isPublic) "Public" else "Private",
+                      imageVector =
+                          if (memory.isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
+                      contentDescription = if (memory.isPublic) "Public" else "Private",
                       tint = MaterialTheme.colorScheme.primary,
                   )
                   Text(
-                      text = if (isPublic) "Public" else "Private",
+                      text = if (memory.isPublic) "Public" else "Private",
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
                       modifier = Modifier.padding(start = 4.dp))
@@ -220,37 +228,3 @@ private fun MemoryItem(
         }
       }
 }
-
-val memories =
-    listOf(
-        Memory(
-            uid = "mem1",
-            title = "Amazing Beach Day",
-            description = "Had an incredible time playing volleyball with friends!",
-            eventId = "2",
-            ownerId = "user1",
-            isPublic = true,
-            createdAt = Timestamp.now(),
-            mediaUrls = listOf("https://picsum.photos/id/69/200"),
-            taggedUserIds = listOf("user2", "user3")),
-        Memory(
-            uid = "mem2",
-            title = "Summer Vibes",
-            description = "The festival was packed with amazing food and music. Best summer ever!",
-            eventId = "1", // Summer Festival 2024
-            ownerId = "user2",
-            isPublic = true,
-            createdAt = Timestamp.now(),
-            mediaUrls =
-                listOf("https://picsum.photos/id/256/200", "https://picsum.photos/id/139/200"),
-            taggedUserIds = listOf("user1", "user4")),
-        Memory(
-            uid = "mem3",
-            title = "",
-            description = "Just enjoying the sunset alone. Sometimes peace is all you need.",
-            eventId = null,
-            ownerId = "user1",
-            isPublic = false,
-            createdAt = Timestamp.now(),
-            mediaUrls = emptyList(),
-            taggedUserIds = emptyList()))
