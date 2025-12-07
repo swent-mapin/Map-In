@@ -109,7 +109,9 @@ fun ProfileSheet(
             pastEvents = state.pastEvents,
             isFollowing = state.isFollowing,
             isOwnProfile = state.isOwnProfile,
+            friendStatus = state.friendStatus,
             onFollowToggle = { viewModel.toggleFollow() },
+            onAddFriend = { viewModel.sendFriendRequest() },
             onEventClick = onEventClick)
       }
     }
@@ -123,7 +125,9 @@ internal fun ProfileSheetContent(
     pastEvents: List<Event>,
     isFollowing: Boolean,
     isOwnProfile: Boolean,
+    friendStatus: FriendStatus,
     onFollowToggle: () -> Unit,
+    onAddFriend: () -> Unit,
     onEventClick: (Event) -> Unit
 ) {
   val scrollState = rememberScrollState()
@@ -147,6 +151,8 @@ internal fun ProfileSheetContent(
         // Follow button (only show if not own profile)
         if (!isOwnProfile) {
           FollowButton(isFollowing = isFollowing, onFollowToggle = onFollowToggle)
+          Spacer(modifier = Modifier.height(8.dp))
+          FriendActionRow(friendStatus = friendStatus, onAddFriend = onAddFriend)
           Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -285,6 +291,46 @@ private fun FollowButton(isFollowing: Boolean, onFollowToggle: () -> Unit) {
       Spacer(modifier = Modifier.width(8.dp))
       Text("Follow")
     }
+  }
+}
+
+@Composable
+private fun FriendActionRow(friendStatus: FriendStatus, onAddFriend: () -> Unit) {
+  when (friendStatus) {
+    FriendStatus.NOT_FRIEND ->
+        OutlinedButton(
+            onClick = onAddFriend, modifier = Modifier.fillMaxWidth().testTag("addFriendButton")) {
+              Icon(
+                  imageVector = Icons.Default.PersonAdd,
+                  contentDescription = null,
+                  modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Add Friend")
+            }
+    FriendStatus.PENDING ->
+        OutlinedButton(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.fillMaxWidth().testTag("pendingFriendButton")) {
+              Icon(
+                  imageVector = Icons.Default.Person,
+                  contentDescription = null,
+                  modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Pending")
+            }
+    FriendStatus.FRIENDS ->
+        OutlinedButton(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.fillMaxWidth().testTag("friendsIndicator")) {
+              Icon(
+                  imageVector = Icons.Default.Person,
+                  contentDescription = null,
+                  modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Friends")
+            }
   }
 }
 

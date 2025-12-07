@@ -6,6 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.FriendshipStatus
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
@@ -22,16 +25,25 @@ sealed class ProfileSheetState {
       val upcomingEvents: List<Event>,
       val pastEvents: List<Event>,
       val isFollowing: Boolean,
-      val isOwnProfile: Boolean
+      val isOwnProfile: Boolean,
+      val friendStatus: FriendStatus
   ) : ProfileSheetState()
 
   data class Error(val message: String) : ProfileSheetState()
+}
+
+enum class FriendStatus {
+  NOT_FRIEND,
+  PENDING,
+  FRIENDS
 }
 
 /** ViewModel for the ProfileSheet component */
 class ProfileSheetViewModel(
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),
+    private val friendRequestRepository: FriendRequestRepository? =
+        FriendRequestRepository(notificationService = NotificationService()),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
 
@@ -60,6 +72,16 @@ class ProfileSheetViewModel(
             } else {
               false
             }
+        val friendStatus =
+            if (currentUserId != null && !isOwnProfile) {
+              when (friendRequestRepository?.getFriendshipStatus(currentUserId, userId)) {
+                FriendshipStatus.ACCEPTED -> FriendStatus.FRIENDS
+                FriendshipStatus.PENDING -> FriendStatus.PENDING
+                else -> FriendStatus.NOT_FRIEND
+              }
+            } else {
+              FriendStatus.NOT_FRIEND
+            }
 
         val ownedEvents = eventRepository.getOwnedEvents(userId)
         val now = System.currentTimeMillis()
@@ -80,7 +102,8 @@ class ProfileSheetViewModel(
                 upcomingEvents = upcomingEvents,
                 pastEvents = pastEvents,
                 isFollowing = isFollowing,
-                isOwnProfile = isOwnProfile)
+                isOwnProfile = isOwnProfile,
+                friendStatus = friendStatus)
       } catch (e: Exception) {
         state = ProfileSheetState.Error(e.message ?: "Failed to load profile")
       }
@@ -104,6 +127,19 @@ class ProfileSheetViewModel(
 
       if (success) {
         // Reload to get updated follower counts
+        loadProfile(targetUserId)
+      }
+    }
+  }
+
+  fun sendFriendRequest() {
+    val currentState = state as? ProfileSheetState.Loaded ?: return
+    val currentUserId = auth.currentUser?.uid ?: return
+    val targetUserId = currentState.profile.userId
+
+    viewModelScope.launch {
+      val success = friendRequestRepository?.sendFriendRequest(currentUserId, targetUserId) == true
+      if (success) {
         loadProfile(targetUserId)
       }
     }
