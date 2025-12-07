@@ -26,8 +26,8 @@ import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.swent.mapin.R
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -71,7 +71,7 @@ fun EditEventScreen(
 
   val title = remember { mutableStateOf(event.title) }
   val description = remember { mutableStateOf(event.description) }
-  val location = remember { mutableStateOf(event.location.name) }
+  val location = remember { mutableStateOf(event.location.name ?: Location.NO_NAME) }
 
   val dateString = event.date?.toDateString() ?: ""
   val date = remember { mutableStateOf(dateString) }
@@ -102,9 +102,7 @@ fun EditEventScreen(
   val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
   val locationExpanded = remember { mutableStateOf(false) }
-  val gotLocation = remember {
-    mutableStateOf(Location(location.value, LATITUDE_DEFAULT, LONGITUDE_DEFAULT))
-  }
+  val gotLocation = remember { mutableStateOf(Location.UNDEFINED) }
   val locations by locationViewModel.locations.collectAsState()
 
   val scrollState = rememberScrollState()

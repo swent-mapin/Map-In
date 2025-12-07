@@ -1,7 +1,7 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 
 /**
  * @property uid event id
@@ -24,7 +24,7 @@ data class Event(
     val description: String = "",
     val date: Timestamp? = null,
     val endDate: Timestamp? = null,
-    val location: Location = Location("", 0.0, 0.0),
+    val location: Location = Location.UNDEFINED,
     val tags: List<String> = emptyList(),
     val public: Boolean = true,
     val ownerId: String = "",
@@ -38,7 +38,8 @@ data class Event(
         title.isBlank() ||
         description.isBlank() ||
         date == null ||
-        location.name.isBlank()) {
+        location.name.isNullOrBlank() ||
+        !location.isDefined()) {
       return false
     }
     // if endDate is provided it must be the same or after start date

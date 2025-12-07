@@ -2,7 +2,7 @@ package com.swent.mapin.model.ai
 
 // Assisted by AI
 
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 
 /**
  * Interface for calculating the distance between two geographical locations.

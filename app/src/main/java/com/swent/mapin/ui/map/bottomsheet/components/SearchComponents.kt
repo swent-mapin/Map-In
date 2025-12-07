@@ -139,7 +139,7 @@ fun SearchResultItem(event: Event, modifier: Modifier = Modifier, onClick: () ->
                     overflow = TextOverflow.Ellipsis)
               }
 
-              if (event.location.name.isNotBlank()) {
+              if (!event.location.name.isNullOrBlank()) {
                 Text(
                     text = event.location.name,
                     style = MaterialTheme.typography.bodyMedium,

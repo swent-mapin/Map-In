@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -195,14 +196,12 @@ fun EventRow(
           Spacer(modifier = Modifier.height(4.dp))
           Text(text = dateText, style = MaterialTheme.typography.bodySmall)
           Spacer(modifier = Modifier.height(2.dp))
-          if (event.location.name.isNotBlank()) {
-            Text(
-                text = event.location.name,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-          }
+          Text(
+              text = event.location.name ?: Location.NO_NAME,
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis)
         }
 
         Spacer(modifier = Modifier.width(8.dp))

@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.firestore.GeoPoint
 import com.mapbox.geojson.Point
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapboxDelicateApi
@@ -333,13 +334,15 @@ fun MapScreen(
 
       val offsetPixels = (screenHeightDpValue * 0.25) / 2
 
-      mapViewportState.easeTo(
-          cameraOptions {
-            center(Point.fromLngLat(event.location.longitude, event.location.latitude))
-            zoom(targetZoom)
-            padding(EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
-          },
-          animationOptions = animationOptions)
+      if (event.location.isDefined()) {
+        mapViewportState.easeTo(
+            cameraOptions {
+              center(Point.fromLngLat(event.location.longitude!!, event.location.latitude!!))
+              zoom(targetZoom)
+              padding(EdgeInsets(0.0, 0.0, offsetPixels * 2, 0.0))
+            },
+            animationOptions = animationOptions)
+      }
     }
 
     // Setup location centering callback
@@ -379,9 +382,11 @@ fun MapScreen(
 
       coroutineScope.launch {
         val points =
-            events.map { event ->
-              Point.fromLngLat(event.location.longitude, event.location.latitude)
-            }
+            events
+                .filter { it.location.isDefined() }
+                .map { event ->
+                  Point.fromLngLat(event.location.longitude!!, event.location.latitude!!)
+                }
 
         val padding =
             EdgeInsets(
@@ -456,14 +461,15 @@ fun MapScreen(
         false
       } else {
         val cachedEvents = (viewModel.savedEvents + viewModel.joinedEvents).distinctBy { it.uid }
-        cachedEvents.any { event ->
-          val distance =
-              EventUtils.calculateHaversineDistance(
-                  com.google.firebase.firestore.GeoPoint(center.latitude(), center.longitude()),
-                  com.google.firebase.firestore.GeoPoint(
-                      event.location.latitude, event.location.longitude))
-          distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
-        }
+        cachedEvents
+            .filter { it.location.isDefined() }
+            .any { event ->
+              val distance =
+                  EventUtils.calculateHaversineDistance(
+                      GeoPoint(center.latitude(), center.longitude()),
+                      GeoPoint(event.location.latitude!!, event.location.longitude!!))
+              distance <= EventBasedOfflineRegionManager.DEFAULT_RADIUS_KM
+            }
       }
     }
   }

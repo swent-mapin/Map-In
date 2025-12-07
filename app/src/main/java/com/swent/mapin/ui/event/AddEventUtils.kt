@@ -2,8 +2,8 @@ package com.swent.mapin.ui.event
 
 import androidx.compose.runtime.MutableState
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
