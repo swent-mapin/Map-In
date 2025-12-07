@@ -134,6 +134,57 @@ class ProfileSheetTest {
   }
 
   @Test
+  fun profileSheet_showsAddFriendWhenNotFriend() {
+    val vm =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                friendStatus = FriendStatus.NOT_FRIEND,
+                isOwnProfile = false))
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
+      }
+    }
+    composeTestRule.onNodeWithTag("addFriendButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileSheet_showsPendingFriendState() {
+    val vm =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                friendStatus = FriendStatus.PENDING,
+                isOwnProfile = false))
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
+      }
+    }
+    composeTestRule.onNodeWithTag("pendingFriendButton").assertIsDisplayed()
+  }
+
+  @Test
+  fun profileSheet_showsFriendsIndicator() {
+    val vm =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                friendStatus = FriendStatus.FRIENDS,
+                isOwnProfile = false))
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
+      }
+    }
+    composeTestRule.onNodeWithTag("friendsIndicator").assertIsDisplayed()
+  }
+
+  @Test
   fun profileSheet_showsFollowWhenNotFollowing() {
     val mockViewModel =
         mockViewModelWithState(
@@ -256,6 +307,7 @@ class ProfileSheetTest {
       bio: String = "",
       isFollowing: Boolean = false,
       isOwnProfile: Boolean = false,
+      friendStatus: FriendStatus = FriendStatus.NOT_FRIEND,
       upcoming: List<com.swent.mapin.model.event.Event> = emptyList(),
       past: List<com.swent.mapin.model.event.Event> = emptyList()
   ): ProfileSheetState.Loaded {
@@ -273,7 +325,8 @@ class ProfileSheetTest {
         upcomingEvents = upcoming,
         pastEvents = past,
         isFollowing = isFollowing,
-        isOwnProfile = isOwnProfile)
+        isOwnProfile = isOwnProfile,
+        friendStatus = friendStatus)
   }
 
   private fun testBadge(isUnlocked: Boolean = true) =

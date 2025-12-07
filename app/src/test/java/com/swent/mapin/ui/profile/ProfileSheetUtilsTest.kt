@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import com.swent.mapin.model.FriendshipStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -27,5 +28,13 @@ class ProfileSheetUtilsTest {
   @Test
   fun `getSheetAvatarIcon defaults to person for unknown values`() {
     assertEquals(Icons.Default.Person, getSheetAvatarIcon("unknown"))
+  }
+
+  @Test
+  fun `friendship status maps to friend status`() {
+    assertEquals(FriendStatus.FRIENDS, friendStatusFrom(FriendshipStatus.ACCEPTED))
+    assertEquals(FriendStatus.PENDING, friendStatusFrom(FriendshipStatus.PENDING))
+    assertEquals(FriendStatus.NOT_FRIEND, friendStatusFrom(FriendshipStatus.REJECTED))
+    assertEquals(FriendStatus.NOT_FRIEND, friendStatusFrom(null))
   }
 }

@@ -2,6 +2,8 @@ package com.swent.mapin.ui.profile
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.FriendshipStatus
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.EventRepository
@@ -28,6 +30,7 @@ class ProfileSheetViewModelTest {
   private lateinit var viewModel: ProfileSheetViewModel
   private lateinit var mockUserRepo: UserProfileRepository
   private lateinit var mockEventRepo: EventRepository
+  private lateinit var mockFriendRepo: FriendRequestRepository
   private lateinit var mockAuth: FirebaseAuth
   private lateinit var mockUser: FirebaseUser
   private val testDispatcher = UnconfinedTestDispatcher()
@@ -42,6 +45,7 @@ class ProfileSheetViewModelTest {
     Dispatchers.setMain(testDispatcher)
     mockUserRepo = mockk(relaxed = true)
     mockEventRepo = mockk(relaxed = true)
+    mockFriendRepo = mockk(relaxed = true)
     mockAuth = mockk(relaxed = true)
     mockUser = mockk(relaxed = true)
 
@@ -55,7 +59,8 @@ class ProfileSheetViewModelTest {
     Dispatchers.resetMain()
   }
 
-  private fun createViewModel() = ProfileSheetViewModel(mockUserRepo, mockEventRepo, mockAuth)
+  private fun createViewModel() =
+      ProfileSheetViewModel(mockUserRepo, mockEventRepo, mockFriendRepo, mockAuth)
 
   @Test
   fun `loadProfile sets Error state when profile not found`() = runTest {
@@ -72,6 +77,7 @@ class ProfileSheetViewModelTest {
   fun `loadProfile sets Loaded state with correct data`() = runTest {
     coEvery { mockUserRepo.getUserProfile(targetUserId) } returns testProfile
     coEvery { mockUserRepo.isFollowing(currentUserId, targetUserId) } returns false
+    coEvery { mockFriendRepo.getFriendshipStatus(currentUserId, targetUserId) } returns null
     viewModel = createViewModel()
 
     viewModel.loadProfile(targetUserId)
@@ -80,12 +86,14 @@ class ProfileSheetViewModelTest {
     assertEquals(testProfile, state.profile)
     assertFalse(state.isFollowing)
     assertFalse(state.isOwnProfile)
+    assertEquals(FriendStatus.NOT_FRIEND, state.friendStatus)
   }
 
   @Test
   fun `loadProfile marks isOwnProfile true when viewing own profile`() = runTest {
     val ownProfile = UserProfile(userId = currentUserId, name = "Me")
     coEvery { mockUserRepo.getUserProfile(currentUserId) } returns ownProfile
+    coEvery { mockFriendRepo.getFriendshipStatus(any(), any()) } returns null
     viewModel = createViewModel()
 
     viewModel.loadProfile(currentUserId)
@@ -111,12 +119,41 @@ class ProfileSheetViewModelTest {
     coEvery { mockUserRepo.getUserProfile(targetUserId) } returns testProfile
     coEvery { mockUserRepo.isFollowing(currentUserId, targetUserId) } returns false
     coEvery { mockUserRepo.followUser(currentUserId, targetUserId) } returns true
+    coEvery { mockFriendRepo.getFriendshipStatus(currentUserId, targetUserId) } returns null
     viewModel = createViewModel()
     viewModel.loadProfile(targetUserId)
 
     viewModel.toggleFollow()
 
     coVerify { mockUserRepo.followUser(currentUserId, targetUserId) }
+  }
+
+  @Test
+  fun `friend status maps to pending`() = runTest {
+    coEvery { mockUserRepo.getUserProfile(targetUserId) } returns testProfile
+    coEvery { mockUserRepo.isFollowing(currentUserId, targetUserId) } returns false
+    coEvery { mockFriendRepo.getFriendshipStatus(currentUserId, targetUserId) } returns
+        FriendshipStatus.PENDING
+    viewModel = createViewModel()
+
+    viewModel.loadProfile(targetUserId)
+
+    val state = viewModel.state as ProfileSheetState.Loaded
+    assertEquals(FriendStatus.PENDING, state.friendStatus)
+  }
+
+  @Test
+  fun `sendFriendRequest triggers repository`() = runTest {
+    coEvery { mockUserRepo.getUserProfile(targetUserId) } returns testProfile
+    coEvery { mockUserRepo.isFollowing(currentUserId, targetUserId) } returns false
+    coEvery { mockFriendRepo.getFriendshipStatus(currentUserId, targetUserId) } returns null
+    coEvery { mockFriendRepo.sendFriendRequest(currentUserId, targetUserId) } returns true
+    viewModel = createViewModel()
+
+    viewModel.loadProfile(targetUserId)
+    viewModel.sendFriendRequest()
+
+    coVerify { mockFriendRepo.sendFriendRequest(currentUserId, targetUserId) }
   }
 
   @Test
