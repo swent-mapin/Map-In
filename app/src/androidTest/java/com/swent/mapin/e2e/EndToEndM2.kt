@@ -366,29 +366,27 @@ class EndToEndM2 {
     composeTestRule.waitForIdle()
 
     // Edit profile
-    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput(updatedName)
 
-    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editBioField", useUnmergedTree = true)
         .performTextInput(updatedBio)
 
     // Save changes
-    composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
     // Verify changes persist
     composeTestRule.waitUntil(timeoutMillis = 10000) {
-      composeTestRule
-          .onAllNodesWithText(updatedName, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
+      val nodes =
+          composeTestRule
+              .onAllNodesWithText(updatedName, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+      nodes.isNotEmpty()
     }
     composeTestRule.onNodeWithText(updatedName, useUnmergedTree = true).assertExists()
     composeTestRule.onNodeWithText(updatedBio, useUnmergedTree = true).assertExists()
@@ -404,7 +402,7 @@ class EndToEndM2 {
           .isNotEmpty()
     }
 
-    // Logout
+    // Logout - scroll to button as Settings screen is scrollable
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
@@ -463,14 +461,12 @@ class EndToEndM2 {
     composeTestRule.waitForIdle()
 
     // Edit fields
-    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput("Temporary Name")
 
     // Cancel
-    composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 

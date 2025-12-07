@@ -102,10 +102,6 @@ class ProfileViewModel(
   private var _avatarUpdateCounter by mutableStateOf(0)
   private var _bannerUpdateCounter by mutableStateOf(0)
 
-  // Visibility toggles
-  var hobbiesVisible by mutableStateOf(true)
-    private set
-
   // Validation error messages
   var nameError by mutableStateOf<String?>(null)
     private set
@@ -225,7 +221,6 @@ class ProfileViewModel(
     editHobbies = profile.hobbies.joinToString(", ")
     selectedAvatar = profile.avatarUrl ?: ""
     selectedBanner = profile.bannerUrl ?: ""
-    hobbiesVisible = profile.hobbiesVisible
     clearErrors()
   }
 
@@ -262,8 +257,7 @@ class ProfileViewModel(
               location = editLocation,
               hobbies = hobbiesList,
               avatarUrl = selectedAvatar.ifEmpty { null },
-              bannerUrl = selectedBanner.ifEmpty { null },
-              hobbiesVisible = hobbiesVisible)
+              bannerUrl = selectedBanner.ifEmpty { null })
 
       // Log pour debug
       println("ProfileViewModel - Saving profile: $updatedProfile")
@@ -396,11 +390,6 @@ class ProfileViewModel(
   /** Toggle banner selector dialog */
   fun toggleBannerSelector() {
     showBannerSelector = !showBannerSelector
-  }
-
-  /** Toggle hobbies visibility */
-  fun toggleHobbiesVisibility() {
-    hobbiesVisible = !hobbiesVisible
   }
 
   /**
