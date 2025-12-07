@@ -1,15 +1,14 @@
 package com.swent.mapin.ui.memory
 
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.firebase.Timestamp
+import com.swent.mapin.model.memory.Memory
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,11 +17,23 @@ import org.junit.runner.RunWith
 class MemoriesScreenTest {
   @get:Rule val composeTestRule = createComposeRule()
 
+  val memories =
+      listOf(
+          Memory(
+              uid = "mem1",
+              title = "Amazing Beach Day",
+              description = "Had an incredible time playing volleyball with friends!",
+              eventId = "2",
+              ownerId = "user1",
+              isPublic = true,
+              createdAt = Timestamp.now(),
+              mediaUrls = listOf("https://picsum.photos/id/69/200"),
+              taggedUserIds = listOf("user2", "user3")))
   val memory = memories.first()
 
   @Test
   fun memoriesScreen_showsTopBarAndMemories() {
-    composeTestRule.setContent { MemoriesScreen(onNavigateBack = {}) }
+    composeTestRule.setContent { MemoriesScreen(onNavigateBack = {}, memories = memories) }
     // Top app bar title
     composeTestRule.onNodeWithTag("memoriesScreenTitle").assertIsDisplayed()
     // Section title
@@ -36,8 +47,8 @@ class MemoriesScreenTest {
     composeTestRule
         .onNodeWithText(memory.taggedUserIds.last(), substring = true)
         .assertIsDisplayed()
-    composeTestRule.onAllNodesWithText("Public").assertCountEquals(2)
-    composeTestRule.onAllNodesWithContentDescription("Memory photo").assertCountEquals(2)
+    composeTestRule.onNodeWithText("Public").assertIsDisplayed()
+    composeTestRule.onNodeWithContentDescription("Memory photo").assertIsDisplayed()
   }
 
   @Test
