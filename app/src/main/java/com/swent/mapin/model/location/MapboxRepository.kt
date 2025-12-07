@@ -2,7 +2,10 @@ package com.swent.mapin.model.location
 
 import android.util.Log
 import com.swent.mapin.model.Location
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -34,6 +37,8 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
         }
       }
 
+  private val requestMutexes = ConcurrentHashMap<String, Mutex>()
+
   /**
    * Performs forward geocoding (text to coordinates) using Mapbox. Checks the local cache before
    * making a network request.
@@ -42,53 +47,60 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
       withContext(Dispatchers.IO) {
         val normalizedQuery = query.trim().lowercase()
 
-        // 1. Check Cache
-        synchronized(cache) {
-          cache[normalizedQuery]?.let {
-            return@withContext it
-          }
-        }
+        // Get or create a mutex for this query
+        val mutex = requestMutexes.getOrPut(normalizedQuery) { Mutex() }
 
-        // 2. Prepare Request
-        val url = "$BASE_URL/${query}.json?access_token=$token&limit=5&autocomplete=true"
-        val request = Request.Builder().url(url).build()
-
-        try {
-          client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-              Log.e("MapboxRepo", "Forward geocode failed: ${response.code}")
-              throw LocationSearchException("Mapbox API Error: ${response.code}")
+        mutex.withLock {
+          // Double-check cache inside the lock
+          synchronized(cache) {
+            cache[normalizedQuery]?.let {
+              return@withContext it
             }
+          }
 
-            val responseBody =
-                response.body?.string()
-                    ?: throw LocationSearchException("Mapbox API Error: Empty response")
+          // Prepare Request
+          val url = "$BASE_URL/${query}.json?access_token=$token&limit=5&autocomplete=true"
+          val request = Request.Builder().url(url).build()
 
-            // 3. Parse JSON (Native Android)
-            val json = JSONObject(responseBody)
-            val features = json.optJSONArray("features") ?: return@withContext emptyList()
-            val results = mutableListOf<Location>()
-
-            for (i in 0 until features.length()) {
-              val feature = features.getJSONObject(i)
-              val placeName = feature.optString("place_name", "Unknown")
-              val center = feature.optJSONArray("center")
-
-              if (center != null && center.length() >= 2) {
-                val lon = center.getDouble(0)
-                val lat = center.getDouble(1)
-                results.add(Location(placeName, lat, lon))
+          try {
+            client.newCall(request).execute().use { response ->
+              if (!response.isSuccessful) {
+                Log.e("MapboxRepo", "Forward geocode failed: ${response.code}")
+                throw LocationSearchException("Mapbox API Error: ${response.code}")
               }
+
+              val responseBody =
+                  response.body?.string()
+                      ?: throw LocationSearchException("Mapbox API Error: Empty response")
+
+              // Parse JSON (Native Android)
+              val json = JSONObject(responseBody)
+              val features = json.optJSONArray("features") ?: return@withContext emptyList()
+              val results = mutableListOf<Location>()
+
+              for (i in 0 until features.length()) {
+                val feature = features.getJSONObject(i)
+                val placeName = feature.optString("place_name", "Unknown")
+                val center = feature.optJSONArray("center")
+
+                if (center != null && center.length() >= 2) {
+                  val lon = center.getDouble(0)
+                  val lat = center.getDouble(1)
+                  results.add(Location(placeName, lat, lon))
+                }
+              }
+
+              // Update Cache
+              synchronized(cache) { cache[normalizedQuery] = results }
+
+              return@withContext results
             }
-
-            // 4. Update Cache
-            synchronized(cache) { cache[normalizedQuery] = results }
-
-            return@withContext results
+          } catch (e: Exception) {
+            Log.e("MapboxRepo", "Network error during forward geocoding", e)
+            throw LocationSearchException("Network error", e)
+          } finally {
+            requestMutexes.remove(normalizedQuery)
           }
-        } catch (e: Exception) {
-          Log.e("MapboxRepo", "Network error during forward geocoding", e)
-          throw LocationSearchException("Network error", e)
         }
       }
 
@@ -102,10 +114,12 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
           client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
               Log.e("MapboxRepo", "Reverse geocode failed: ${response.code}")
-              return@withContext null
+              throw LocationSearchException("Mapbox API Error: ${response.code}")
             }
 
-            val responseBody = response.body?.string() ?: return@withContext null
+            val responseBody =
+                response.body?.string()
+                    ?: throw LocationSearchException("Mapbox API Error: Empty response")
             val json = JSONObject(responseBody)
             val features = json.optJSONArray("features")
 

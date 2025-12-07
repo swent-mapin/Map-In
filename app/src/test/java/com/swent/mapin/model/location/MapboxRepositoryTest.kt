@@ -322,8 +322,8 @@ class MapboxRepositoryTest {
     assertNull(result)
   }
 
-  @Test
-  fun `reverseGeocode returns null when response is not successful`() = runTest {
+  @Test(expected = LocationSearchException::class)
+  fun `reverseGeocode throws when response is not successful`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -335,9 +335,7 @@ class MapboxRepositoryTest {
     every { mockResponse.close() } returns Unit
 
     val repo = MapboxRepository(mockClient, "test_token")
-    val result = repo.reverseGeocode(48.8584, 2.2945)
-
-    assertNull(result)
+    repo.reverseGeocode(48.8584, 2.2945)
   }
 
   @Test(expected = LocationSearchException::class)

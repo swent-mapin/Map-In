@@ -109,7 +109,7 @@ class LocationViewModelTest {
       return results
     }
 
-    override suspend fun reverseGeocode(lat: Double, lon: Double): Location {
+    override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
       throw UnsupportedOperationException()
     }
   }
