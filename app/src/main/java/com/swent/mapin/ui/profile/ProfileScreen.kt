@@ -23,10 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -35,7 +33,6 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -52,8 +49,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -131,34 +126,32 @@ fun ProfileScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
       }) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
-          Column(
-              modifier =
-                  Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
-                // Avatar removed from flow — now positioned as an overlay below (see outer Box)
+          Column(modifier = Modifier.fillMaxSize().imePadding()) {
+            // Avatar removed from flow — now positioned as an overlay below (see outer Box)
 
-                Column(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 74.dp)
-                            .animateContentSize(
-                                animationSpec =
-                                    spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow)),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                      if (viewModel.isEditMode) {
-                        EditProfileContent(viewModel = viewModel)
-                      } else {
-                        ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+            Column(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 74.dp)
+                        .animateContentSize(
+                            animationSpec =
+                                spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow)),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                  if (viewModel.isEditMode) {
+                    EditProfileContent(viewModel = viewModel)
+                  } else {
+                    ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
 
-                        Spacer(modifier = Modifier.height(24.dp))
-                      }
+                    Spacer(modifier = Modifier.height(24.dp))
+                  }
 
-                      Spacer(modifier = Modifier.height(16.dp))
-                    }
-              }
+                  Spacer(modifier = Modifier.height(16.dp))
+                }
+          }
 
           Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Box(modifier = Modifier.padding(top = 96.dp), contentAlignment = Alignment.Center) {
@@ -531,39 +524,6 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
 
           Spacer(modifier = Modifier.height(12.dp))
 
-          // Hobbies visibility toggle - compact version
-          Row(
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.SpaceBetween) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(
-                      imageVector =
-                          if (viewModel.hobbiesVisible) Icons.Default.FavoriteBorder
-                          else Icons.Default.Lock,
-                      contentDescription = null,
-                      tint =
-                          if (viewModel.hobbiesVisible) Color(0xFFf5576c)
-                          else MaterialTheme.colorScheme.onSurfaceVariant,
-                      modifier = Modifier.size(14.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text(
-                      text = if (viewModel.hobbiesVisible) "Public" else "Private",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(
-                    checked = viewModel.hobbiesVisible,
-                    onCheckedChange = { viewModel.toggleHobbiesVisibility() },
-                    colors =
-                        SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFf5576c),
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.testTag("hobbiesVisibilitySwitch"))
-              }
-
           Spacer(modifier = Modifier.height(32.dp))
 
           // Action buttons with gradient backgrounds
@@ -727,33 +687,13 @@ private fun AvatarSelectionGrid(
     selectedAvatar: String,
     onAvatarSelected: (String) -> Unit
 ) {
-  // If the currently selected avatar is an uploaded image (http/content/file), show it first in the
-  // grid
-  val gridAvatars =
-      if (selectedAvatar.isNotEmpty() &&
-          (selectedAvatar.startsWith("http") ||
-              selectedAvatar.startsWith("content") ||
-              selectedAvatar.startsWith("file"))) {
-        listOf(AvatarOption(selectedAvatar, Icons.Default.Person)) + availableAvatars
-      } else {
-        availableAvatars
-      }
-
   LazyVerticalGrid(
       columns = GridCells.Fixed(4),
       horizontalArrangement = Arrangement.spacedBy(12.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
       modifier = Modifier.fillMaxWidth().height(300.dp)) {
-        items(gridAvatars) { avatar ->
+        items(availableAvatars) { avatar ->
           val isSelected = selectedAvatar == avatar.id
-
-          // detect if avatar.id is a uri (http/content/file/etc.)
-          val isImage =
-              try {
-                Uri.parse(avatar.id).scheme != null
-              } catch (_: Exception) {
-                false
-              }
 
           Box(
               modifier =
@@ -765,22 +705,12 @@ private fun AvatarSelectionGrid(
                       .clickable { onAvatarSelected(avatar.id) }
                       .testTag("avatar_${avatar.id}"),
               contentAlignment = Alignment.Center) {
-                if (isImage) {
-                  // Fill the entire circular button with the image
-                  AsyncImage(
-                      model = avatar.id,
-                      contentDescription = avatar.id,
-                      contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                      modifier = Modifier.fillMaxSize().clip(CircleShape))
-                } else {
-                  Icon(
-                      imageVector = avatar.icon,
-                      contentDescription = avatar.id,
-                      modifier = Modifier.size(40.dp),
-                      tint =
-                          if (isSelected) Color.White
-                          else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Icon(
+                    imageVector = avatar.icon,
+                    contentDescription = avatar.id,
+                    modifier = Modifier.size(40.dp),
+                    tint =
+                        if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
               }
         }
       }
