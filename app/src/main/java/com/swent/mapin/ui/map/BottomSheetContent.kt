@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,8 +26,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoAlbum
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +76,8 @@ import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.CreateEventSection
+import com.swent.mapin.ui.map.bottomsheet.components.MenuDivider
+import com.swent.mapin.ui.map.bottomsheet.components.MenuListItem
 import com.swent.mapin.ui.map.bottomsheet.components.OwnedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SavedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SearchBar
@@ -164,6 +173,7 @@ fun BottomSheetContent(
     onCreateMemoryClick: (Event) -> Unit = {},
     onCreateEventClick: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
+    onNavigateToMemories: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onCreateEventDone: () -> Unit = {},
@@ -447,7 +457,7 @@ fun BottomSheetContent(
                                   }
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 // Filters section visible unless collapsed
                                 if (state != BottomSheetState.COLLAPSED) {
@@ -470,73 +480,85 @@ fun BottomSheetContent(
 
             // Modal bottom sheet for profile menu (larger & scrollable)
             if (showProfileMenu) {
-              ModalBottomSheet(onDismissRequest = { showProfileMenu = false }) {
-                val sheetScroll = rememberScrollState()
-                Column(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .fillMaxHeight(0.75f)
-                            .verticalScroll(sheetScroll)
-                            .padding(16.dp)) {
-                      // En-tête : photo de profil + message de bienvenue
-                      Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = userProfile.avatarUrl ?: avatarUrl,
-                            contentDescription = "Profile picture",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(56.dp).clip(CircleShape))
+              ModalBottomSheet(
+                  onDismissRequest = { showProfileMenu = false },
+                  containerColor = MaterialTheme.colorScheme.surface,
+                  dragHandle = {
+                    Box(
+                        modifier =
+                            Modifier.padding(vertical = 8.dp)
+                                .width(40.dp)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)))
+                  }) {
+                    val sheetScroll = rememberScrollState()
+                    Column(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .fillMaxHeight(0.75f)
+                                .verticalScroll(sheetScroll)
+                                .padding(16.dp)) {
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                          // En-tête : photo de profil + message de bienvenue
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = userProfile.avatarUrl ?: avatarUrl,
+                                contentDescription = "Profile picture",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(56.dp).clip(CircleShape))
 
-                        Text("Hello ${userProfile.name}!")
-                      }
+                            Spacer(modifier = Modifier.width(12.dp))
 
-                      Spacer(modifier = Modifier.height(8.dp))
-
-                      Button(
-                          onClick = {
-                            // Navigate immediately, then dismiss the sheet to avoid waiting for the
-                            // sheet close animation which causes perceived latency.
-                            onProfileClick()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Profile")
+                            Text(
+                                text = "Hello ${userProfile.name}!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold)
                           }
 
-                      Spacer(modifier = Modifier.height(8.dp))
+                          Spacer(modifier = Modifier.height(24.dp))
 
-                      Button(
-                          onClick = {
-                            // Navigate first so the target screen starts loading immediately.
-                            onNavigateToFriends()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Friends")
-                          }
+                          // ------- Profile -------
+                          MenuListItem(
+                              icon = Icons.Default.Person,
+                              label = "Profile",
+                              onClick = {
+                                onProfileClick()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Spacer(modifier = Modifier.height(8.dp))
+                          // ------- Friends -------
+                          MenuListItem(
+                              icon = Icons.Default.Group,
+                              label = "Friends",
+                              onClick = {
+                                onNavigateToFriends()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Button(
-                          onClick = { showProfileMenu = false },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Memories")
-                          }
+                          // ------- Memories -------
+                          MenuListItem(
+                              icon = Icons.Default.PhotoAlbum,
+                              label = "Memories",
+                              onClick = {
+                                onNavigateToMemories()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Spacer(modifier = Modifier.height(8.dp))
-
-                      Button(
-                          onClick = {
-                            // Same for settings: start navigation immediately, then close sheet.
-                            onSettingsClick()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Settings")
-                          }
-                    }
-              }
+                          // ------- Settings -------
+                          MenuListItem(
+                              icon = Icons.Default.Settings,
+                              label = "Settings",
+                              onClick = {
+                                onSettingsClick()
+                                showProfileMenu = false
+                              })
+                        }
+                  }
             }
           }
         }

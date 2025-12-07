@@ -135,6 +135,7 @@ fun MapScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
+    onNavigateToMemories: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     deepLinkEventId: String? = null,
     onDeepLinkConsumed: () -> Unit = {}
@@ -705,6 +706,7 @@ fun MapScreen(
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
+                      onNavigateToMemories = onNavigateToMemories,
                       onProfileClick = onNavigateToProfile,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
