@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeRarity
@@ -244,7 +245,7 @@ class ProfileSheetTest {
       }
     }
 
-    composeTestRule.onNodeWithTag("noEventsCard").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("noEventsCard").performScrollTo().assertIsDisplayed()
     composeTestRule.onAllNodesWithTag("eventsRow_Upcoming Owned Events").assertCountEquals(0)
     composeTestRule.onAllNodesWithTag("eventsRow_Past Owned Events").assertCountEquals(0)
   }
@@ -290,7 +291,7 @@ class ProfileSheetTest {
       }
     }
 
-    composeTestRule.onNodeWithTag("eventCard_click1").performClick()
+    composeTestRule.onNodeWithTag("eventCard_click1").performScrollTo().performClick()
     composeTestRule.runOnIdle { assert(clicked) }
   }
 
