@@ -1,7 +1,8 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
+import kotlin.test.assertTrue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -24,7 +25,7 @@ class SavedEventEntityMapperTest {
         url = "",
         description = entity.description,
         date = ts,
-        location = Location(entity.locationName, entity.locationLat, entity.locationLng),
+        location = Location.from(entity.locationName, entity.locationLat, entity.locationLng),
         tags = tags,
         public = entity.isPublic,
         ownerId = entity.ownerId,
@@ -59,9 +60,10 @@ class SavedEventEntityMapperTest {
     val ev = map(ent)
     assertEquals("E1", ev.uid)
     assertEquals("Title", ev.title)
+    assertTrue(ev.location.isDefined())
     assertEquals("Desc", ev.description)
-    assertEquals(1.5, ev.location.latitude, 0.001)
-    assertEquals(2.5, ev.location.longitude, 0.001)
+    assertEquals(1.5, ev.location.latitude!!, 0.001)
+    assertEquals(2.5, ev.location.longitude!!, 0.001)
     assertEquals(listOf("a", "b"), ev.tags)
     assertEquals(listOf("p1", "p2"), ev.participantIds)
   }

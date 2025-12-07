@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.location.Location
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
@@ -45,7 +46,7 @@ class EventLocalCacheTest {
             description = "Desc",
             date = Timestamp(1000, 0),
             endDate = Timestamp(1000, 0),
-            location = com.swent.mapin.model.Location("L", 1.0, 2.0),
+            location = Location.from("L", 1.0, 2.0),
             tags = listOf("t1", "t2"),
             public = true,
             ownerId = "owner",

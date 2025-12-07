@@ -3,11 +3,11 @@ package com.swent.mapin.ui.map.eventstate
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.ListenerRegistration
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityState
 import com.swent.mapin.model.network.NetworkType
@@ -68,7 +68,7 @@ class MapEventStateControllerTest {
           uid = "event1",
           title = "Test Event",
           description = "Fun event",
-          location = Location("Test Location", 46.5, 6.5),
+          location = Location.from("Test Location", 46.5, 6.5),
           tags = listOf("party"),
           participantIds = emptyList(),
           ownerId = "owner123",

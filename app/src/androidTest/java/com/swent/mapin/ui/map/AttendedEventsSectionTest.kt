@@ -12,8 +12,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.memory.MemoryFormScreen
@@ -48,7 +48,7 @@ class AttendedEventsSectionTest {
         description = "",
         date = Timestamp(date),
         endDate = endDate?.let { Timestamp(it) },
-        location = Location("L", 0.0, 0.0),
+        location = Location.from("L", 0.0, 0.0),
         tags = emptyList(),
         public = true,
         ownerId = ownerId,
@@ -90,7 +90,7 @@ class AttendedEventsSectionTest {
             description = "desc",
             date = startTs,
             endDate = endTs,
-            location = Location("Test Location", 0.0, 0.0),
+            location = Location.from("Test Location", 0.0, 0.0),
             tags = emptyList(),
             public = true,
             ownerId = "owner",
@@ -126,7 +126,7 @@ class AttendedEventsSectionTest {
             description = "desc",
             date = startTs,
             endDate = endTs,
-            location = Location("Test Location", 0.0, 0.0),
+            location = Location.from("Test Location", 0.0, 0.0),
             tags = emptyList(),
             public = true,
             ownerId = "owner",
@@ -216,7 +216,7 @@ class AttendedEventsSectionTest {
             description = "",
             date = Timestamp(future),
             endDate = Timestamp(future),
-            location = Location("Lf", 0.0, 0.0),
+            location = Location.from("Lf", 0.0, 0.0),
             tags = emptyList(),
             public = true,
             ownerId = "o",

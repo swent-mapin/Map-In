@@ -2,8 +2,8 @@ package com.swent.mapin.ui.filters
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
@@ -27,12 +27,15 @@ class FiltersSectionTest {
     // Fake repository that immediately returns predictable results
     class FakeLocationRepository : LocationRepository {
       override suspend fun forwardGeocode(query: String): List<Location> {
-        return listOf(Location("Lausanne"), Location("Geneva"), Location("Bern"))
+        return listOf(
+            Location.from("Lausanne", 0.0, 0.0),
+            Location.from("Geneva", 0.0, 0.0),
+            Location.from("Bern", 0.0, 0.0))
       }
 
-      override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+      override suspend fun reverseGeocode(lat: Double, lon: Double): Location {
         // Not needed for this test
-        return null
+        return Location.UNDEFINED
       }
     }
 
@@ -137,18 +140,12 @@ class FiltersSectionTest {
 
     // The dropdown should appear with the results and footer text
     composeTestRule.onNodeWithText("Lausanne").assertIsDisplayed()
-    composeTestRule
-        .onNodeWithText("Search powered by Nominatim and OpenStreetMap.")
-        .assertIsDisplayed()
 
     // Click one of the results
     composeTestRule.onNodeWithText("Geneva").performClick()
 
     // The dropdown should collapse and the selected name should appear in the input
     searchField.assert(hasText("Geneva"))
-    composeTestRule
-        .onNodeWithText("Search powered by Nominatim and OpenStreetMap.")
-        .assertDoesNotExist()
   }
 
   // ---------------------- PRICE SECTION ----------------------

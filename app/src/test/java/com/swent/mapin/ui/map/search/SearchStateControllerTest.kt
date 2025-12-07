@@ -3,9 +3,9 @@ package com.swent.mapin.ui.map.search
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
@@ -41,7 +41,7 @@ class SearchStateControllerTest {
               title = "Test Event 1",
               description = "Description 1",
               date = Timestamp.now(),
-              location = Location("Location1", 0.0, 0.0),
+              location = Location.from("Location1", 0.0, 0.0),
               tags = listOf("tag1"),
               ownerId = "owner1"),
           Event(
@@ -49,7 +49,7 @@ class SearchStateControllerTest {
               title = "Test Event 2",
               description = "Description 2",
               date = Timestamp.now(),
-              location = Location("Location2", 0.0, 0.0),
+              location = Location.from("Location2", 0.0, 0.0),
               tags = listOf("tag2"),
               ownerId = "owner2"))
 

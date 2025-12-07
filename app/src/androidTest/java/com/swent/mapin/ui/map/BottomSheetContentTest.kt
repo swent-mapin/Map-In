@@ -15,9 +15,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.LocalEventList
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.EditEventScreenTestTags
@@ -260,7 +260,7 @@ class BottomSheetContentTest {
     testEvents.forEach { event ->
       rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
       rule
-          .onNodeWithText(event.location.name, substring = true)
+          .onNodeWithText(event.location.name ?: Location.NO_NAME, substring = true)
           .performScrollTo()
           .assertIsDisplayed()
     }
@@ -422,7 +422,7 @@ class BottomSheetContentTest {
       rule.onNodeWithText(event.title).performScrollTo().assertIsDisplayed()
       // Location line is shown in SearchResultItem; use substring for safety
       rule
-          .onNodeWithText(event.location.name, substring = true)
+          .onNodeWithText(event.location.name ?: Location.NO_NAME, substring = true)
           .performScrollTo()
           .assertIsDisplayed()
     }

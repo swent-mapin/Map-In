@@ -3,9 +3,9 @@ package com.swent.mapin.ui.event
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import io.mockk.every
 import io.mockk.mockk
@@ -139,7 +139,7 @@ class EventViewModelTests {
     val event = Event(uid = "1", ownerId = "user123")
     val editedTitle = "Updated Title"
     val editedDesc = "Updated Description"
-    val location = Location("Test", 0.0, 0.0)
+    val location = Location.from("Test", 0.0, 0.0)
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"
@@ -165,7 +165,7 @@ class EventViewModelTests {
     val event = Event(uid = "1", ownerId = "owner123")
     val editedTitle = "Updated Title"
     val editedDesc = "Updated Description"
-    val location = Location("Test", 0.0, 0.0)
+    val location = Location.from("Test", 0.0, 0.0)
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"

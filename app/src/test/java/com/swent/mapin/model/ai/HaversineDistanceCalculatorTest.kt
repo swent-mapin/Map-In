@@ -2,7 +2,7 @@ package com.swent.mapin.model.ai
 
 // Assisted by AI
 
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
@@ -15,8 +15,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm calculates correct distance between two valid locations`() {
-    val epfl = Location("EPFL", 46.5197, 6.5657)
-    val lausanneStation = Location("Lausanne Station", 46.5167, 6.6291)
+    val epfl = Location.from("EPFL", 46.5197, 6.5657)
+    val lausanneStation = Location.from("Lausanne Station", 46.5167, 6.6291)
 
     val distance = calculator.distanceKm(epfl, lausanneStation)
 
@@ -27,8 +27,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm calculates distance for zero coordinates from location`() {
-    val zeroLocation = Location("Zero", 0.0, 0.0)
-    val validLocation = Location("Valid", 46.5197, 6.5657)
+    val zeroLocation = Location.from("Zero", 0.0, 0.0)
+    val validLocation = Location.from("Valid", 46.5197, 6.5657)
 
     val distance = calculator.distanceKm(zeroLocation, validLocation)
 
@@ -38,8 +38,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm calculates distance for zero coordinates to location`() {
-    val validLocation = Location("Valid", 46.5197, 6.5657)
-    val zeroLocation = Location("Zero", 0.0, 0.0)
+    val validLocation = Location.from("Valid", 46.5197, 6.5657)
+    val zeroLocation = Location.from("Zero", 0.0, 0.0)
 
     val distance = calculator.distanceKm(validLocation, zeroLocation)
 
@@ -49,8 +49,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm calculates zero distance when both locations are at zero coordinates`() {
-    val zeroLocation1 = Location("Zero1", 0.0, 0.0)
-    val zeroLocation2 = Location("Zero2", 0.0, 0.0)
+    val zeroLocation1 = Location.from("Zero1", 0.0, 0.0)
+    val zeroLocation2 = Location.from("Zero2", 0.0, 0.0)
 
     val distance = calculator.distanceKm(zeroLocation1, zeroLocation2)
 
@@ -60,7 +60,7 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm returns zero for same location`() {
-    val location = Location("EPFL", 46.5197, 6.5657)
+    val location = Location.from("EPFL", 46.5197, 6.5657)
 
     val distance = calculator.distanceKm(location, location)
 
@@ -70,8 +70,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm calculates distance for locations far apart`() {
-    val zurich = Location("Zurich", 47.3769, 8.5417)
-    val geneva = Location("Geneva", 46.2044, 6.1432)
+    val zurich = Location.from("Zurich", 47.3769, 8.5417)
+    val geneva = Location.from("Geneva", 46.2044, 6.1432)
 
     val distance = calculator.distanceKm(zurich, geneva)
 
@@ -82,8 +82,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm handles locations with negative coordinates`() {
-    val location1 = Location("South", -33.8688, 151.2093) // Sydney
-    val location2 = Location("North", 51.5074, -0.1278) // London
+    val location1 = Location.from("South", -33.8688, 151.2093) // Sydney
+    val location2 = Location.from("North", 51.5074, -0.1278) // London
 
     val distance = calculator.distanceKm(location1, location2)
 
@@ -94,8 +94,8 @@ class HaversineDistanceCalculatorTest {
 
   @Test
   fun `distanceKm is symmetric`() {
-    val location1 = Location("Location1", 46.5197, 6.5657)
-    val location2 = Location("Location2", 47.0, 7.0)
+    val location1 = Location.from("Location1", 46.5197, 6.5657)
+    val location2 = Location.from("Location2", 47.0, 7.0)
 
     val distance1 = calculator.distanceKm(location1, location2)
     val distance2 = calculator.distanceKm(location2, location1)
