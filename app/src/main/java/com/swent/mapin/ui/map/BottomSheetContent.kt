@@ -29,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
@@ -46,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -357,13 +355,13 @@ fun BottomSheetContent(
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                // HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(19.dp))
 
                                 CreateEventSection(onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(19.dp))
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                // HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(

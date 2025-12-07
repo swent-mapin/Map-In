@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.profile
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -158,13 +159,14 @@ internal fun ProfileSheetContent(
         // Upcoming events section
         if (upcomingEvents.isNotEmpty()) {
           EventsSection(
-              title = "Upcoming Events", events = upcomingEvents, onEventClick = onEventClick)
+              title = "Upcoming Owned Events", events = upcomingEvents, onEventClick = onEventClick)
           Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Past events section
         if (pastEvents.isNotEmpty()) {
-          EventsSection(title = "Past Events", events = pastEvents, onEventClick = onEventClick)
+          EventsSection(
+              title = "Past Owned Events", events = pastEvents, onEventClick = onEventClick)
         }
 
         // Empty state
@@ -207,12 +209,13 @@ private fun ProfileHeader(profile: UserProfile) {
                     model = profile.avatarUrl,
                     contentDescription = "Profile Picture",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape))
+                    modifier =
+                        Modifier.fillMaxSize().clip(CircleShape).testTag("profileAvatarImage"))
               } else {
                 Icon(
-                    imageVector = getAvatarIcon(profile.avatarUrl),
+                    imageVector = getSheetAvatarIcon(profile.avatarUrl),
                     contentDescription = "Profile Picture",
-                    modifier = Modifier.size(60.dp),
+                    modifier = Modifier.size(60.dp).testTag("profileAvatarIcon"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
               }
             }
@@ -338,7 +341,8 @@ private fun EventCard(event: Event, onClick: () -> Unit) {
       }
 }
 
-private fun getAvatarIcon(avatarUrl: String?): ImageVector {
+@VisibleForTesting
+internal fun getSheetAvatarIcon(avatarUrl: String?): ImageVector {
   if (avatarUrl.isNullOrEmpty()) return Icons.Default.Person
 
   return when (avatarUrl) {
