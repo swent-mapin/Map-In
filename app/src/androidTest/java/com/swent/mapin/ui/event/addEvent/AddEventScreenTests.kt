@@ -13,6 +13,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import com.swent.mapin.model.location.LocationRepository
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
@@ -27,6 +29,8 @@ class AddEventScreenTests {
 
   @get:Rule val composeTestRule = createComposeRule()
   val eventViewModel = mockk<EventViewModel>(relaxed = true)
+  val locationRepository = mockk<LocationRepository>(relaxed = true)
+  val locationViewModel = LocationViewModel(locationRepository)
 
   @Before
   fun setUp() {
@@ -34,6 +38,7 @@ class AddEventScreenTests {
       AddEventScreen(
           onDone = { saveClicked = true },
           eventViewModel = eventViewModel,
+          locationViewModel = locationViewModel,
           onCancel = { cancelClicked = true })
     }
   }

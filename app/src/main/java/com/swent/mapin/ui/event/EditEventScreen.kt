@@ -27,8 +27,8 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -63,7 +63,7 @@ object EditEventScreenTestTags : EventScreenTestTag {
 fun EditEventScreen(
     modifier: Modifier = Modifier,
     eventViewModel: EventViewModel = viewModel(),
-    locationViewModel: LocationViewModel = viewModel(),
+    locationViewModel: LocationViewModel,
     event: Event = Event(),
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},

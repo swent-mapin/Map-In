@@ -1,5 +1,8 @@
 package com.swent.mapin.model
 
+import com.swent.mapin.model.location.LocationRepository
+import com.swent.mapin.model.location.LocationSearchException
+import com.swent.mapin.model.location.LocationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -17,13 +20,13 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationViewModelTest {
   private val testDispatcher = StandardTestDispatcher()
-  private lateinit var fakeRepository: FakeNominatimRepository
+  private lateinit var fakeRepository: FakeMapboxRepository
   private lateinit var viewModel: LocationViewModel
 
   @Before
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    fakeRepository = FakeNominatimRepository()
+    fakeRepository = FakeMapboxRepository()
     fakeRepository.results = listOf(Location("X", 0.0, 0.0))
     viewModel = LocationViewModel(fakeRepository)
   }
@@ -57,7 +60,7 @@ class LocationViewModelTest {
             return listOf(Location("Test", 0.0, 0.0))
           }
 
-          override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+          override suspend fun reverseGeocode(lat: Double, lon: Double): Location {
             throw UnsupportedOperationException("Reverse not used in this test")
           }
         }
@@ -97,7 +100,7 @@ class LocationViewModelTest {
   }
 
   // Fake repository
-  class FakeNominatimRepository : LocationRepository {
+  class FakeMapboxRepository : LocationRepository {
     var shouldThrow = false
     var results = listOf(Location("MockCity", 0.0, 0.0))
 
