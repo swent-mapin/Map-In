@@ -1,15 +1,19 @@
 package com.swent.mapin.ui.profile
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.event.Event
-import org.junit.Assert.assertTrue
+import com.swent.mapin.model.badge.Badge
+import com.swent.mapin.model.badge.BadgeRarity
+import io.mockk.every
+import io.mockk.justRun
+import io.mockk.mockk
 import org.junit.Rule
 import org.junit.Test
 
@@ -17,75 +21,271 @@ class ProfileSheetTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
-  private val testProfile =
-      UserProfile(
-          userId = "user-123",
-          name = "John Doe",
-          bio = "Test bio here",
-          followerIds = listOf("f1", "f2", "f3"))
+  @Test
+  fun profileSheet_showsLoadingState() {
+    val mockViewModel = mockViewModelWithState(ProfileSheetState.Loading)
 
-  private val testEvent =
-      Event(
-          uid = "event-1",
-          title = "Test Event",
-          ownerId = "user-123",
-          location = Location(name = "Paris", latitude = 48.8, longitude = 2.3),
-          date = Timestamp.now())
-
-  private fun setProfileSheetContent(
-      profile: UserProfile = testProfile,
-      upcomingEvents: List<Event> = emptyList(),
-      pastEvents: List<Event> = emptyList(),
-      isFollowing: Boolean = false,
-      isOwnProfile: Boolean = false,
-      onFollowToggle: () -> Unit = {},
-      onEventClick: (Event) -> Unit = {}
-  ) {
     composeTestRule.setContent {
-      ProfileSheetContent(
-          profile = profile,
-          upcomingEvents = upcomingEvents,
-          pastEvents = pastEvents,
-          isFollowing = isFollowing,
-          isOwnProfile = isOwnProfile,
-          onFollowToggle = onFollowToggle,
-          onEventClick = onEventClick)
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
     }
+
+    composeTestRule.onNodeWithTag("profileSheetLoading").assertIsDisplayed()
   }
 
   @Test
-  fun profileHeader_displaysNameAndBio() {
-    setProfileSheetContent()
+  fun profileSheet_displaysBadgesForLoadedProfile() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "http://example.com/avatar.png", badges = listOf(testBadge())))
 
-    composeTestRule.onNodeWithTag("profileHeader").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("profileName").assertTextEquals("John Doe")
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("badgesSection").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("badgeCount").assertTextEquals("1/1")
+  }
+
+  @Test
+  fun profileSheet_usesAsyncImageForHttpAvatar() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "http://example.com/avatar.png", badges = listOf(testBadge())))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("profileAvatarImage").assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag("profileAvatarIcon").assertCountEquals(0)
+  }
+
+  @Test
+  fun profileSheet_usesIconWhenAvatarIsKeyword() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(avatarUrl = "face", badges = listOf(testBadge(isUnlocked = false))))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("profileAvatarIcon").assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag("profileAvatarImage").assertCountEquals(0)
+  }
+
+  @Test
+  fun profileSheet_showsErrorState() {
+    val mockViewModel = mockViewModelWithState(ProfileSheetState.Error("Not found"))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("profileSheetError").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("profileSheetError").assertTextEquals("Not found")
+  }
+
+  @Test
+  fun profileSheet_showsBioWhenPresent() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person", badges = listOf(testBadge()), bio = "Compose enthusiast"))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
     composeTestRule.onNodeWithTag("profileBio").assertIsDisplayed()
   }
 
   @Test
-  fun followButton_displayedWhenNotOwnProfile() {
-    setProfileSheetContent(isOwnProfile = false, isFollowing = false)
-    composeTestRule.onNodeWithTag("followButton").assertIsDisplayed()
-  }
+  fun profileSheet_showsUnfollowWhenAlreadyFollowing() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                isFollowing = true,
+                isOwnProfile = false))
 
-  @Test
-  fun unfollowButton_displayedWhenFollowing() {
-    setProfileSheetContent(isOwnProfile = false, isFollowing = true)
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
     composeTestRule.onNodeWithTag("unfollowButton").assertIsDisplayed()
   }
 
   @Test
-  fun followButton_triggersCallback() {
-    var clicked = false
-    setProfileSheetContent(isOwnProfile = false, onFollowToggle = { clicked = true })
-    composeTestRule.onNodeWithTag("followButton").performClick()
-    assertTrue(clicked)
+  fun profileSheet_showsFollowWhenNotFollowing() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                isFollowing = false,
+                isOwnProfile = false))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("followButton").assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag("unfollowButton").assertCountEquals(0)
   }
 
   @Test
-  fun eventsSection_displayedWhenHasUpcomingEvents() {
-    setProfileSheetContent(upcomingEvents = listOf(testEvent))
-    composeTestRule.onNodeWithTag("eventsRow_Upcoming Events").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("eventCard_event-1").assertIsDisplayed()
+  fun profileSheet_displaysUpcomingAndPastEvents() {
+    val upcoming = testEvent(uid = "up1", title = "Upcoming Owned Event")
+    val past = testEvent(uid = "past1", title = "Past Owned Event")
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                upcoming = listOf(upcoming),
+                past = listOf(past)))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("eventsRow_Upcoming Owned Events").assertExists()
+    composeTestRule.onNodeWithTag("eventsRow_Past Owned Events").assertExists()
+    composeTestRule.onNodeWithTag("eventCard_up1").assertExists()
+    composeTestRule.onNodeWithTag("eventCard_past1").assertExists()
   }
+
+  @Test
+  fun profileSheet_showsEmptyEventsState() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                upcoming = emptyList(),
+                past = emptyList()))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("noEventsCard").assertIsDisplayed()
+    composeTestRule.onAllNodesWithTag("eventsRow_Upcoming Owned Events").assertCountEquals(0)
+    composeTestRule.onAllNodesWithTag("eventsRow_Past Owned Events").assertCountEquals(0)
+  }
+
+  @Test
+  fun profileSheet_hidesBadgesWhenEmpty() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = emptyList(),
+                upcoming = emptyList(),
+                past = emptyList()))
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onAllNodesWithTag("badgesSection").assertCountEquals(0)
+  }
+
+  @Test
+  fun profileSheet_triggersEventClickCallback() {
+    val upcoming = testEvent(uid = "click1", title = "Tap me")
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                upcoming = listOf(upcoming),
+                past = emptyList()))
+    var clicked = false
+
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(
+            userId = "user123",
+            onClose = {},
+            onEventClick = { clicked = true },
+            viewModel = mockViewModel)
+      }
+    }
+
+    composeTestRule.onNodeWithTag("eventCard_click1").performClick()
+    composeTestRule.runOnIdle { assert(clicked) }
+  }
+
+  private fun mockViewModelWithState(state: ProfileSheetState): ProfileSheetViewModel {
+    val mockViewModel = mockk<ProfileSheetViewModel>(relaxed = true)
+    every { mockViewModel.state } returns state
+    justRun { mockViewModel.loadProfile(any()) }
+    return mockViewModel
+  }
+
+  private fun buildLoadedState(
+      avatarUrl: String,
+      badges: List<Badge>,
+      bio: String = "",
+      isFollowing: Boolean = false,
+      isOwnProfile: Boolean = false,
+      upcoming: List<com.swent.mapin.model.event.Event> = emptyList(),
+      past: List<com.swent.mapin.model.event.Event> = emptyList()
+  ): ProfileSheetState.Loaded {
+    val profile =
+        UserProfile(
+            userId = "user123",
+            name = "Test User",
+            avatarUrl = avatarUrl,
+            badges = badges,
+            bio = bio,
+            followerIds = listOf("follower1"))
+
+    return ProfileSheetState.Loaded(
+        profile = profile,
+        upcomingEvents = upcoming,
+        pastEvents = past,
+        isFollowing = isFollowing,
+        isOwnProfile = isOwnProfile)
+  }
+
+  private fun testBadge(isUnlocked: Boolean = true) =
+      Badge(
+          id = "badge1",
+          title = "Test Badge",
+          description = "desc",
+          iconName = "star",
+          rarity = BadgeRarity.RARE,
+          isUnlocked = isUnlocked,
+          progress = if (isUnlocked) 1f else 0.5f)
+
+  private fun testEvent(uid: String, title: String) =
+      com.swent.mapin.model.event.Event(uid = uid, title = title, tags = listOf("tag"))
 }
