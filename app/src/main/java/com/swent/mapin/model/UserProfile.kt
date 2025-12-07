@@ -34,5 +34,7 @@ data class UserProfile(
     val savedEventIds: List<String> = emptyList(),
     val ownedEventIds: List<String> = emptyList(),
     val fcmToken: String? = null,
-    val badges: List<Badge> = emptyList()
+    val badges: List<Badge> = emptyList(),
+    val followingIds: List<String> = emptyList(),
+    val followerIds: List<String> = emptyList()
 )

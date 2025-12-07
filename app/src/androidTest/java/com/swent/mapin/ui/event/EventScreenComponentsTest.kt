@@ -8,8 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.Location
-import com.swent.mapin.model.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.theme.MapInTheme
+import io.mockk.mockk
 import org.junit.Rule
 import org.junit.Test
 
@@ -85,7 +86,7 @@ class EventScreenComponentsTest {
     val tagState = mutableStateOf("")
     val tagError = mutableStateOf(false)
     val locations = listOf(Location("Test Location"))
-    val dummyLocationViewModel = LocationViewModel()
+    val dummyLocationViewModel = mockk<LocationViewModel>()
 
     composeTestRule.setContent {
       MapInTheme {

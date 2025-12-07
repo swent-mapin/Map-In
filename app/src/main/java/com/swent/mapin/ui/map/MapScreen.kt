@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mapbox.geojson.Point
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapboxDelicateApi
@@ -82,11 +83,13 @@ import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
+import com.swent.mapin.HttpClientProvider
 import com.swent.mapin.R
-import com.swent.mapin.model.LocationViewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.model.location.LocationViewModelFactory
 import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
@@ -148,6 +151,15 @@ fun MapScreen(
   val viewModel = rememberMapScreenViewModel(sheetConfig)
   val eventViewModel = remember {
     EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
+  }
+
+  val locationViewModel = run {
+    val applicationContext = LocalContext.current.applicationContext
+    val factory =
+        remember(applicationContext) {
+          LocationViewModelFactory(context = applicationContext, client = HttpClientProvider.client)
+        }
+    viewModel<LocationViewModel>(factory = factory)
   }
 
   val snackbarHostState = remember { SnackbarHostState() }
@@ -712,7 +724,7 @@ fun MapScreen(
                       avatarUrl = viewModel.avatarUrl,
                       filterViewModel = viewModel.filterViewModel,
                       onSettingsClick = onNavigateToSettings,
-                      locationViewModel = remember { LocationViewModel() },
+                      locationViewModel = locationViewModel,
                       profileViewModel = remember { ProfileViewModel() },
                       eventViewModel = eventViewModel)
                 }
