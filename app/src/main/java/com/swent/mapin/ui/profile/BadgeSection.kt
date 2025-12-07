@@ -109,6 +109,10 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
 
           Spacer(modifier = Modifier.height(12.dp))
 
+          BadgeRarityLegend()
+
+          Spacer(modifier = Modifier.height(12.dp))
+
           LazyVerticalGrid(
               columns = GridCells.Adaptive(minSize = 80.dp),
               horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -116,8 +120,6 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
               modifier = Modifier.fillMaxWidth().height(250.dp)) {
                 items(badges) { badge -> BadgeItem(badge) { selected = badge } }
               }
-
-          BadgeRarityLegend()
         }
       }
 
