@@ -361,7 +361,6 @@ fun BottomSheetContent(
                                 CreateEventSection(onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(19.dp))
-                                // HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
