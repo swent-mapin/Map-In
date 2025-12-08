@@ -501,7 +501,8 @@ fun BottomSheetContent(
                                 .width(40.dp)
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Color.LightGray.copy(alpha = 0.8f)))
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)))
                   }) {
                     val sheetScroll = rememberScrollState()
                     Column(

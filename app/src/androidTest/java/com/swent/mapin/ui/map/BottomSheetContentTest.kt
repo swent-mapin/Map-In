@@ -435,8 +435,8 @@ class BottomSheetContentTest {
 
     rule.onNodeWithTag(FiltersSectionTestTags.TITLE).performScrollTo().assertIsDisplayed()
 
-    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performScrollTo().assertIsDisplayed()
-    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_DATE).performScrollTo().assertIsDisplayed()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performScrollTo().assertIsDisplayed()
     rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performScrollTo().assertIsDisplayed()
   }
@@ -1323,7 +1323,7 @@ class BottomSheetContentTest {
     rule.setContent { TestContentWithFilters() }
     rule.waitForIdle()
 
-    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performScrollTo().performClick()
+    rule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performScrollTo().performClick()
     rule.waitForIdle()
 
     rule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performScrollTo().performClick()
