@@ -921,3 +921,14 @@ class MapEventStateControllerTest {
     assertTrue(controller.userSearchResults.isEmpty())
   }
 }
+
+/** Provides a chosen time in milliseconds for tests */
+class FakeTimeProvider : () -> Long {
+  var currentTime = 0L
+
+  override fun invoke() = currentTime
+
+  fun advance(millis: Long) {
+    currentTime += millis
+  }
+}

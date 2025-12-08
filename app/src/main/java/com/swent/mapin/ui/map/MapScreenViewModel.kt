@@ -592,9 +592,13 @@ class MapScreenViewModel(
     setBottomSheetState(BottomSheetState.MEDIUM)
   }
 
-  /** Called when a user is clicked in search results. Opens their profile sheet. */
-  fun onSearchUserClick(userId: String, userName: String) {
+  /** Saves a user to recent search history. */
+  fun saveRecentUser(userId: String, userName: String) {
     searchStateController.saveRecentProfile(userId, userName)
+  }
+
+  /** Opens the profile sheet for a specific user. */
+  fun openUserProfileSheet(userId: String) {
     showProfileSheet(userId)
   }
 

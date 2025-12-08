@@ -39,25 +39,7 @@ sealed class OfflineAction {
 /** Anti spam debounce */
 const val ANTI_SPAM_DEBOUNCE: Long = 500
 
-interface TimeProvider {
-  fun currentTimeMillis(): Long
-}
-
-/** Provides the current time in milliseconds. */
-class SystemTimeProvider : TimeProvider {
-  override fun currentTimeMillis() = System.currentTimeMillis()
-}
-
-/** Provides a chosen time in milliseconds for tests */
-class FakeTimeProvider : TimeProvider {
-  var currentTime = 0L
-
-  override fun currentTimeMillis() = currentTime
-
-  fun advance(millis: Long) {
-    currentTime += millis
-  }
-}
+typealias TimeProvider = () -> Long
 
 /**
  * Encapsulates all event-related state (filtered, search results, joined, saved) and repository
@@ -79,7 +61,7 @@ class MapEventStateController(
     // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
     // auto-refresh loops) which would otherwise block or hang the test runner.
     private val autoRefreshEnabled: Boolean = true,
-    private val timeProvider: TimeProvider = SystemTimeProvider()
+    private val timeProvider: TimeProvider = { System.currentTimeMillis() }
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -190,7 +172,7 @@ class MapEventStateController(
 
   /** Check whether the user is spamming the same action. */
   private fun isSpamming(eventId: String): Boolean {
-    val now = timeProvider.currentTimeMillis()
+    val now = timeProvider()
     if (lastActionEventId == eventId && (now - lastActionTimestamp) < ANTI_SPAM_DEBOUNCE) {
       return true
     }
