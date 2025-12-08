@@ -1,7 +1,10 @@
 name: CI - Test Runner
 
-# Run the workflow when a PR is modified
+# Run the workflow when a PR is modified or when code is pushed to main
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types:
       - opened

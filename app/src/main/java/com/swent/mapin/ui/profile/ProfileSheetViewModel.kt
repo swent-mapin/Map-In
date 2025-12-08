@@ -74,11 +74,7 @@ class ProfileSheetViewModel(
             }
         val friendStatus =
             if (currentUserId != null && !isOwnProfile) {
-              when (friendRequestRepository?.getFriendshipStatus(currentUserId, userId)) {
-                FriendshipStatus.ACCEPTED -> FriendStatus.FRIENDS
-                FriendshipStatus.PENDING -> FriendStatus.PENDING
-                else -> FriendStatus.NOT_FRIEND
-              }
+              friendStatusFrom(friendRequestRepository?.getFriendshipStatus(currentUserId, userId))
             } else {
               FriendStatus.NOT_FRIEND
             }
@@ -152,5 +148,13 @@ class ProfileSheetViewModel(
         loadProfile(targetUserId)
       }
     }
+  }
+}
+
+internal fun friendStatusFrom(status: FriendshipStatus?): FriendStatus {
+  return when (status) {
+    FriendshipStatus.ACCEPTED -> FriendStatus.FRIENDS
+    FriendshipStatus.PENDING -> FriendStatus.PENDING
+    else -> FriendStatus.NOT_FRIEND
   }
 }
