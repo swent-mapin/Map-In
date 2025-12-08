@@ -234,4 +234,75 @@ class UserProfileRepositoryTest {
     private const val CURRENT_ID = "current"
     private const val TARGET_ID = "target"
   }
+
+  @Test
+  fun `followUser returns false when trying to follow yourself`() = runTest {
+    val result = repository.followUser(testUserId, testUserId)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `unfollowUser returns false when trying to unfollow yourself`() = runTest {
+    val result = repository.unfollowUser(testUserId, testUserId)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isFollowing returns false when user profile does not exist`() = runTest {
+    every { mockSnapshot.exists() } returns false
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
+    val result = repository.isFollowing(testUserId, "other-user")
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isFollowing returns false when followingIds is empty`() = runTest {
+    val profileWithNoFollowing =
+        UserProfile(userId = testUserId, name = "Test User", followingIds = emptyList())
+
+    every { mockSnapshot.exists() } returns true
+    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithNoFollowing
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
+    val result = repository.isFollowing(testUserId, "other-user")
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isFollowing returns true when target is in followingIds`() = runTest {
+    val targetUserId = "target-user-123"
+    val profileWithFollowing =
+        UserProfile(
+            userId = testUserId, name = "Test User", followingIds = listOf(targetUserId, "another"))
+
+    every { mockSnapshot.exists() } returns true
+    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithFollowing
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
+    val result = repository.isFollowing(testUserId, targetUserId)
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isFollowing returns false when target is not in followingIds`() = runTest {
+    val profileWithFollowing =
+        UserProfile(
+            userId = testUserId,
+            name = "Test User",
+            followingIds = listOf("some-other-user", "another"))
+
+    every { mockSnapshot.exists() } returns true
+    every { mockSnapshot.toObject(UserProfile::class.java) } returns profileWithFollowing
+    every { mockDocument.get() } returns Tasks.forResult(mockSnapshot)
+
+    val result = repository.isFollowing(testUserId, "not-followed-user")
+
+    assertFalse(result)
+  }
 }
