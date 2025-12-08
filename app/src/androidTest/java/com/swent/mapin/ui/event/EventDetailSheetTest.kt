@@ -561,4 +561,19 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("organizerName").assertIsDisplayed()
     composeTestRule.onNodeWithText("Unknown").assertIsDisplayed()
   }
+
+  @Test
+  fun fullState_priceNull_hidesPrice() {
+    setEventDetailSheet(sheetState = BottomSheetState.FULL)
+
+    composeTestRule.onNodeWithTag("priceSection").assertDoesNotExist()
+  }
+
+  @Test
+  fun fullState_showsPrice() {
+    setEventDetailSheet(event = testEvent.copy(price = 10.0), sheetState = BottomSheetState.FULL)
+
+    composeTestRule.onNodeWithTag("priceSection").assertIsDisplayed()
+    composeTestRule.onNodeWithText("10.00 CHF").assertIsDisplayed()
+  }
 }
