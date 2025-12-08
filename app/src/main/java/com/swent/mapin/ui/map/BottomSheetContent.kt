@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -303,189 +304,203 @@ fun BottomSheetContent(
                         },
                         onBack = { showAllRecents = false })
                   } else {
-                    Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-                      SearchBar(
-                          value = searchBarState.query,
-                          onValueChange = searchBarState.onQueryChange,
-                          isSearchMode = isSearchMode,
-                          onTap = searchBarState.onTap,
-                          focusRequester = focusRequester,
-                          onSearchAction = {
-                            searchBarState.onSubmit()
-                            focusManager.clearFocus()
-                          },
-                          onClear = searchBarState.onClear,
-                          avatarUrl = avatarUrl ?: userProfile.avatarUrl,
-                          onProfileClick = { showProfileMenu = true })
+                    val density = LocalDensity.current
+                    val imeVisible = WindowInsets.isImeVisible
+                    val imeBottom = if (imeVisible) WindowInsets.ime.getBottom(density) else 0
+                    val imeHeightDp = with(density) { imeBottom.toDp() }
 
-                      Spacer(modifier = Modifier.height(24.dp))
+                    Column(
+                        modifier =
+                            Modifier.fillMaxWidth().fillMaxHeight().padding(bottom = imeHeightDp)) {
+                          SearchBar(
+                              value = searchBarState.query,
+                              onValueChange = searchBarState.onQueryChange,
+                              isSearchMode = isSearchMode,
+                              onTap = searchBarState.onTap,
+                              focusRequester = focusRequester,
+                              onSearchAction = {
+                                searchBarState.onSubmit()
+                                focusManager.clearFocus()
+                              },
+                              onClear = searchBarState.onClear,
+                              avatarUrl = avatarUrl ?: userProfile.avatarUrl,
+                              onProfileClick = { showProfileMenu = true })
 
-                      AnimatedContent(
-                          targetState = isSearchMode,
-                          transitionSpec = {
-                            (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
-                                    slideInVertically(
-                                        animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
-                                        initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
-                                .togetherWith(
-                                    fadeOut(
-                                        animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
-                                        slideOutVertically(
-                                            animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
-                                            targetOffsetY = {
+                          Spacer(modifier = Modifier.height(24.dp))
+
+                          AnimatedContent(
+                              targetState = isSearchMode,
+                              transitionSpec = {
+                                (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
+                                        slideInVertically(
+                                            animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
+                                            initialOffsetY = {
                                               it / TRANSITION_SLIDE_OFFSET_DIVISOR
                                             }))
-                          },
-                          modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
-                          label = "searchModeTransition") { searchActive ->
-                            if (searchActive) {
-                              SearchResultsSection(
-                                  modifier = Modifier.fillMaxSize(),
-                                  results = searchResults,
-                                  query = searchBarState.query,
-                                  recentItems = recentItems,
-                                  onRecentSearchClick = onRecentSearchClick,
-                                  onRecentEventClick = onRecentEventClick,
-                                  onShowAllRecents = { showAllRecents = true },
-                                  onEventClick = onEventClick)
-                            } else {
-                              val density = LocalDensity.current
-                              val imeBottom = WindowInsets.ime.getBottom(density)
-                              val imePaddingModifier =
-                                  if (imeBottom > 0) {
-                                    Modifier.padding(bottom = with(density) { imeBottom.toDp() })
-                                  } else {
-                                    Modifier
-                                  }
-                              val contentModifier =
-                                  if (isFull)
-                                      Modifier.fillMaxWidth()
-                                          .then(imePaddingModifier)
-                                          .verticalScroll(scrollState)
-                                  else Modifier.fillMaxWidth()
+                                    .togetherWith(
+                                        fadeOut(
+                                            animationSpec =
+                                                tween(TRANSITION_FADE_OUT_DURATION_MS)) +
+                                            slideOutVertically(
+                                                animationSpec =
+                                                    tween(TRANSITION_FADE_OUT_DURATION_MS),
+                                                targetOffsetY = {
+                                                  it / TRANSITION_SLIDE_OFFSET_DIVISOR
+                                                }))
+                              },
+                              modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+                              label = "searchModeTransition") { searchActive ->
+                                if (searchActive) {
+                                  SearchResultsSection(
+                                      modifier = Modifier.fillMaxSize(),
+                                      results = searchResults,
+                                      query = searchBarState.query,
+                                      recentItems = recentItems,
+                                      onRecentSearchClick = onRecentSearchClick,
+                                      onRecentEventClick = onRecentEventClick,
+                                      onShowAllRecents = { showAllRecents = true },
+                                      onEventClick = onEventClick)
+                                } else {
+                                  val density = LocalDensity.current
+                                  val imeBottom = WindowInsets.ime.getBottom(density)
+                                  val imePaddingModifier =
+                                      if (imeBottom > 0) {
+                                        Modifier.padding(
+                                            bottom = with(density) { imeBottom.toDp() })
+                                      } else {
+                                        Modifier
+                                      }
+                                  val contentModifier =
+                                      if (isFull)
+                                          Modifier.fillMaxWidth()
+                                              .then(imePaddingModifier)
+                                              .verticalScroll(scrollState)
+                                      else Modifier.fillMaxWidth()
 
-                              Column(modifier = contentModifier) {
-                                // HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
-                                Spacer(modifier = Modifier.height(19.dp))
+                                  Column(modifier = contentModifier) {
+                                    Spacer(modifier = Modifier.height(19.dp))
 
-                                CreateEventSection(onCreateEventClick = onCreateEventClick)
+                                    CreateEventSection(onCreateEventClick = onCreateEventClick)
 
-                                Spacer(modifier = Modifier.height(19.dp))
-                                Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(19.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
 
-                                Text(
-                                    text = "My Events",
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 12.dp))
-                                // Tabs
-                                TabRow(
-                                    selectedTabIndex = selectedTab.ordinal,
-                                    modifier = Modifier.fillMaxWidth()) {
-                                      Tab(
-                                          selected =
-                                              selectedTab ==
-                                                  MapScreenViewModel.BottomSheetTab.SAVED,
-                                          onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.SAVED)
-                                          },
-                                          text = {
-                                            Text(
-                                                text = "Saved",
-                                                maxLines = 1,
-                                                softWrap = false,
-                                                overflow = TextOverflow.Ellipsis)
-                                          })
-                                      Tab(
-                                          selected =
-                                              selectedTab ==
-                                                  MapScreenViewModel.BottomSheetTab.UPCOMING,
-                                          onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.UPCOMING)
-                                          },
-                                          text = {
-                                            Text(
-                                                text = "Upcoming",
-                                                maxLines = 1,
-                                                softWrap = false,
-                                                overflow = TextOverflow.Ellipsis)
-                                          })
-                                      Tab(
-                                          selected =
-                                              selectedTab == MapScreenViewModel.BottomSheetTab.PAST,
-                                          onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.PAST)
-                                          },
-                                          text = {
-                                            Text(
-                                                text = "Past",
-                                                maxLines = 1,
-                                                softWrap = false,
-                                                overflow = TextOverflow.Ellipsis)
-                                          })
-                                      Tab(
-                                          selected =
-                                              selectedTab ==
-                                                  MapScreenViewModel.BottomSheetTab.OWNED,
-                                          onClick = {
-                                            onTabChange(MapScreenViewModel.BottomSheetTab.OWNED)
-                                          },
-                                          text = {
-                                            Text(
-                                                text = "Owned",
-                                                maxLines = 1,
-                                                softWrap = false,
-                                                overflow = TextOverflow.Ellipsis)
-                                          })
+                                    Text(
+                                        text = "My Events",
+                                        textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 12.dp))
+                                    // Tabs
+                                    TabRow(
+                                        selectedTabIndex = selectedTab.ordinal,
+                                        modifier = Modifier.fillMaxWidth()) {
+                                          Tab(
+                                              selected =
+                                                  selectedTab ==
+                                                      MapScreenViewModel.BottomSheetTab.SAVED,
+                                              onClick = {
+                                                onTabChange(MapScreenViewModel.BottomSheetTab.SAVED)
+                                              },
+                                              text = {
+                                                Text(
+                                                    text = "Saved",
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis)
+                                              })
+                                          Tab(
+                                              selected =
+                                                  selectedTab ==
+                                                      MapScreenViewModel.BottomSheetTab.UPCOMING,
+                                              onClick = {
+                                                onTabChange(
+                                                    MapScreenViewModel.BottomSheetTab.UPCOMING)
+                                              },
+                                              text = {
+                                                Text(
+                                                    text = "Upcoming",
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis)
+                                              })
+                                          Tab(
+                                              selected =
+                                                  selectedTab ==
+                                                      MapScreenViewModel.BottomSheetTab.PAST,
+                                              onClick = {
+                                                onTabChange(MapScreenViewModel.BottomSheetTab.PAST)
+                                              },
+                                              text = {
+                                                Text(
+                                                    text = "Past",
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis)
+                                              })
+                                          Tab(
+                                              selected =
+                                                  selectedTab ==
+                                                      MapScreenViewModel.BottomSheetTab.OWNED,
+                                              onClick = {
+                                                onTabChange(MapScreenViewModel.BottomSheetTab.OWNED)
+                                              },
+                                              text = {
+                                                Text(
+                                                    text = "Owned",
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis)
+                                              })
+                                        }
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    when (selectedTab) {
+                                      MapScreenViewModel.BottomSheetTab.SAVED -> {
+                                        SavedEventsSection(
+                                            savedEvents = savedEvents,
+                                            onEventClick = onTabEventClick)
+                                      }
+                                      MapScreenViewModel.BottomSheetTab.UPCOMING -> {
+                                        UpcomingEventsSection(
+                                            upcomingEvents = joinedEvents,
+                                            onEventClick = onTabEventClick)
+                                      }
+                                      MapScreenViewModel.BottomSheetTab.PAST -> {
+                                        AttendedEventsSection(
+                                            attendedEvents = attendedEvents,
+                                            onEventClick = onEventClick,
+                                            onCreateMemoryClick = onCreateMemoryClick)
+                                      }
+                                      MapScreenViewModel.BottomSheetTab.OWNED -> {
+                                        OwnedEventsSection(
+                                            events = ownedEvents,
+                                            loading = ownedLoading,
+                                            error = ownedError,
+                                            onEventClick = onTabEventClick,
+                                            onEditEvent = onEditEvent,
+                                            onDeleteEvent = onDeleteEvent,
+                                            onRetry = onRetryOwnedEvents)
+                                      }
                                     }
-                                Spacer(modifier = Modifier.height(16.dp))
 
-                                when (selectedTab) {
-                                  MapScreenViewModel.BottomSheetTab.SAVED -> {
-                                    SavedEventsSection(
-                                        savedEvents = savedEvents, onEventClick = onTabEventClick)
-                                  }
-                                  MapScreenViewModel.BottomSheetTab.UPCOMING -> {
-                                    UpcomingEventsSection(
-                                        upcomingEvents = joinedEvents,
-                                        onEventClick = onTabEventClick)
-                                  }
-                                  MapScreenViewModel.BottomSheetTab.PAST -> {
-                                    AttendedEventsSection(
-                                        attendedEvents = attendedEvents,
-                                        onEventClick = onEventClick,
-                                        onCreateMemoryClick = onCreateMemoryClick)
-                                  }
-                                  MapScreenViewModel.BottomSheetTab.OWNED -> {
-                                    OwnedEventsSection(
-                                        events = ownedEvents,
-                                        loading = ownedLoading,
-                                        error = ownedError,
-                                        onEventClick = onTabEventClick,
-                                        onEditEvent = onEditEvent,
-                                        onDeleteEvent = onDeleteEvent,
-                                        onRetry = onRetryOwnedEvents)
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    // Filters section visible unless collapsed
+                                    if (state != BottomSheetState.COLLAPSED) {
+                                      filterSection.Render(
+                                          Modifier.fillMaxWidth(),
+                                          filterViewModel,
+                                          locationViewModel,
+                                          userProfile)
+
+                                      Spacer(modifier = Modifier.height(16.dp))
+                                    }
+
+                                    Spacer(modifier = Modifier.height(24.dp))
                                   }
                                 }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Filters section visible unless collapsed
-                                if (state != BottomSheetState.COLLAPSED) {
-                                  filterSection.Render(
-                                      Modifier.fillMaxWidth(),
-                                      filterViewModel,
-                                      locationViewModel,
-                                      userProfile)
-
-                                  Spacer(modifier = Modifier.height(16.dp))
-                                }
-
-                                Spacer(modifier = Modifier.height(24.dp))
                               }
-                            }
-                          }
-                    }
+                        }
                   }
                 }
 
