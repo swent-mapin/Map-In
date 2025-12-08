@@ -217,6 +217,11 @@ class FriendRequestRepository(
     }
   }
 
+  /** Returns the friendship status between two users if a request exists, null otherwise. */
+  suspend fun getFriendshipStatus(user1: String, user2: String): FriendshipStatus? {
+    return getExistingRequest(user1, user2)?.status
+  }
+
   /**
    * Updates the status of a friend request.
    *

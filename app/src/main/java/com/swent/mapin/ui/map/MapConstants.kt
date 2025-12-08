@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
  */
 object MapConstants {
   /** Height of the bottom sheet when collapsed (showing only search bar) */
-  val COLLAPSED_HEIGHT = 120.dp
+  val COLLAPSED_HEIGHT = 110.dp
 
   /** Height of the bottom sheet at medium state (showing menu and buttons) */
   val MEDIUM_HEIGHT = 400.dp

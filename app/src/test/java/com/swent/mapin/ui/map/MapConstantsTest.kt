@@ -8,7 +8,7 @@ class MapConstantsTest {
 
   @Test
   fun collapsedHeight_hasCorrectValue() {
-    assertEquals(120.dp, MapConstants.COLLAPSED_HEIGHT)
+    assertEquals(110.dp, MapConstants.COLLAPSED_HEIGHT)
   }
 
   @Test
