@@ -685,7 +685,13 @@ fun MapScreen(
                       recentItems = viewModel.recentItems,
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
+                      onRecentProfileClick = viewModel::onRecentProfileClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
+                      userSearchResults = viewModel.userSearchResults,
+                      onUserSearchClick = { userId, userName ->
+                        viewModel.saveRecentUser(userId, userName)
+                        viewModel.openUserProfileSheet(userId)
+                      },
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
                       initialMemoryEvent = viewModel.memoryFormInitialEvent,

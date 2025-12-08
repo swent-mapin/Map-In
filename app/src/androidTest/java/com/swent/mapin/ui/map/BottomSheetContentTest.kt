@@ -158,7 +158,7 @@ class BottomSheetContentTest {
   fun collapsedState_showsSearchBarOnly() {
     rule.setContent { TestContent(state = BottomSheetState.COLLAPSED) }
 
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
 
   @Test
@@ -179,7 +179,7 @@ class BottomSheetContentTest {
   fun fullState_showsAllContent() {
     rule.setContent { TestContent(state = BottomSheetState.FULL) }
     rule.waitForIdle()
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Search events, people").assertIsDisplayed()
     rule.onNodeWithText("Saved").assertIsDisplayed()
     rule.onNodeWithText("Upcoming").assertIsDisplayed()
     rule.onNodeWithText("Past").assertIsDisplayed()
@@ -198,10 +198,10 @@ class BottomSheetContentTest {
           onTap = { tapTriggered = true })
     }
 
-    rule.onNodeWithText("Search activities").performClick()
+    rule.onNodeWithText("Search events, people").performClick()
     assertTrue(tapTriggered)
 
-    rule.onNodeWithText("Search activities").performTextInput("Test")
+    rule.onNodeWithText("Search events, people").performTextInput("Test")
     assertEquals("Test", capturedQuery)
   }
 
@@ -209,7 +209,7 @@ class BottomSheetContentTest {
   fun searchBar_focusOnlyInFullState() {
     rule.setContent { TestContent(state = BottomSheetState.FULL, initialFocus = true) }
 
-    rule.onNodeWithText("Search activities").assertIsFocused()
+    rule.onNodeWithText("Search events, people").assertIsFocused()
   }
 
   @Test
@@ -362,7 +362,7 @@ class BottomSheetContentTest {
 
     // The old "No events available yet" message is no longer shown for blank queries
     // Instead, verify that search bar is still visible (main UI element in this state)
-    rule.onNodeWithText("Search activities").assertIsDisplayed()
+    rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
 
   @Test
@@ -1426,5 +1426,139 @@ class BottomSheetContentTest {
 
     // Verify options icon does NOT exist for saved events
     rule.onNodeWithTag("eventOptionsIcon_${testEvents[0].uid}").assertDoesNotExist()
+  }
+
+  // Tests for PeopleResultsSection and UserSearchCard
+
+  @Composable
+  private fun SearchModeWithUsersContent(
+      query: String = "test",
+      userResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+      searchResults: List<Event> = emptyList(),
+      onUserClick: (String, String) -> Unit = { _, _ -> }
+  ) {
+    MaterialTheme {
+      BottomSheetContent(
+          state = BottomSheetState.FULL,
+          fullEntryKey = 0,
+          searchBarState =
+              SearchBarState(
+                  query = query,
+                  shouldRequestFocus = false,
+                  onQueryChange = {},
+                  onTap = {},
+                  onFocusHandled = {},
+                  onClear = {}),
+          isSearchMode = true,
+          searchResults = searchResults,
+          userSearchResults = userResults,
+          onUserSearchClick = onUserClick,
+          filterViewModel = filterViewModel,
+          locationViewModel = locationViewModel,
+          profileViewModel = profileViewModel,
+          eventViewModel = eventViewModel)
+    }
+  }
+
+  @Test
+  fun peopleResultsSection_displaysUsersInFullState() {
+    val testUsers =
+        listOf(
+            com.swent.mapin.model.UserProfile(userId = "user1", name = "Alice Smith"),
+            com.swent.mapin.model.UserProfile(userId = "user2", name = "Bob Jones"))
+
+    rule.setContent { SearchModeWithUsersContent(query = "test", userResults = testUsers) }
+    rule.waitForIdle()
+
+    // People section header should be displayed
+    rule.onNodeWithText("People (2)").assertIsDisplayed()
+
+    // User names should be displayed
+    rule.onNodeWithText("Alice Smith").assertIsDisplayed()
+    rule.onNodeWithText("Bob Jones").assertIsDisplayed()
+  }
+
+  @Test
+  fun userSearchCard_triggersClickCallback() {
+    var clickedUserId = ""
+    var clickedUserName = ""
+    val testUsers =
+        listOf(com.swent.mapin.model.UserProfile(userId = "user123", name = "Test User"))
+
+    rule.setContent {
+      SearchModeWithUsersContent(
+          query = "test",
+          userResults = testUsers,
+          onUserClick = { userId, userName ->
+            clickedUserId = userId
+            clickedUserName = userName
+          })
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("userSearchCard_user123").performClick()
+    rule.waitForIdle()
+
+    assertEquals("user123", clickedUserId)
+    assertEquals("Test User", clickedUserName)
+  }
+
+  @Test
+  fun peopleResultsSection_notDisplayedWhenNoUsers() {
+    rule.setContent { SearchModeWithUsersContent(query = "test", userResults = emptyList()) }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("People", substring = true).assertDoesNotExist()
+  }
+
+  // Tests for RecentProfileItem
+
+  @Test
+  fun recentProfileItem_displaysInAllRecentsPage() {
+    val recentItems =
+        listOf(
+            RecentItem.ClickedProfile(userId = "user456", userName = "Recent User"),
+            RecentItem.Search(query = "test search"))
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = recentItems,
+            onRecentSearchClick = {},
+            onRecentEventClick = {},
+            onRecentProfileClick = {},
+            onClearAll = {},
+            onBack = {})
+      }
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithText("Recent User").assertIsDisplayed()
+    rule.onNodeWithText("test search").assertIsDisplayed()
+  }
+
+  @Test
+  fun recentProfileItem_triggersClickCallback() {
+    var clickedUserId = ""
+    val recentItems =
+        listOf(RecentItem.ClickedProfile(userId = "user789", userName = "Clickable User"))
+
+    rule.setContent {
+      MaterialTheme {
+        AllRecentItemsPage(
+            recentItems = recentItems,
+            onRecentSearchClick = {},
+            onRecentEventClick = {},
+            onRecentProfileClick = { userId -> clickedUserId = userId },
+            onClearAll = {},
+            onBack = {})
+      }
+    }
+    rule.waitForIdle()
+
+    rule.onNodeWithTag("recentProfileItem_Clickable User").performClick()
+    rule.waitForIdle()
+
+    assertEquals("user789", clickedUserId)
   }
 }

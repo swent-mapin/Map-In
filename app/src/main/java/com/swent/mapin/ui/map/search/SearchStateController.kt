@@ -13,6 +13,8 @@ sealed class RecentItem {
   data class Search(val query: String) : RecentItem()
 
   data class ClickedEvent(val eventId: String, val eventTitle: String) : RecentItem()
+
+  data class ClickedProfile(val userId: String, val userName: String) : RecentItem()
 }
 
 /** Handles search query text, focus state, and persistence of recent searches. */
@@ -104,12 +106,31 @@ class SearchStateController(
         when (item) {
           is RecentItem.Search -> updatedList.add(item)
           is RecentItem.ClickedEvent -> if (item.eventId != eventId) updatedList.add(item)
+          is RecentItem.ClickedProfile -> updatedList.add(item)
         }
       }
       _recentItems = updatedList
       saveRecentItemsToPrefs(updatedList)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to save recent event", e)
+    }
+  }
+
+  fun saveRecentProfile(userId: String, userName: String) {
+    try {
+      val newItem = RecentItem.ClickedProfile(userId, userName)
+      val updatedList = mutableListOf<RecentItem>(newItem)
+      _recentItems.forEach { item ->
+        when (item) {
+          is RecentItem.Search -> updatedList.add(item)
+          is RecentItem.ClickedEvent -> updatedList.add(item)
+          is RecentItem.ClickedProfile -> if (item.userId != userId) updatedList.add(item)
+        }
+      }
+      _recentItems = updatedList
+      saveRecentItemsToPrefs(updatedList)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to save recent profile", e)
     }
   }
 
@@ -137,6 +158,7 @@ class SearchStateController(
             when (data.type) {
               "search" -> RecentItem.Search(data.value)
               "event" -> data.eventTitle?.let { RecentItem.ClickedEvent(data.value, it) }
+              "profile" -> data.eventTitle?.let { RecentItem.ClickedProfile(data.value, it) }
               else -> null
             }
           }
@@ -167,6 +189,7 @@ class SearchStateController(
         when (item) {
           is RecentItem.Search -> if (item.query != trimmed) updatedList.add(item)
           is RecentItem.ClickedEvent -> updatedList.add(item)
+          is RecentItem.ClickedProfile -> updatedList.add(item)
         }
       }
       _recentItems = updatedList
@@ -184,6 +207,7 @@ class SearchStateController(
             when (item) {
               is RecentItem.Search -> RecentItemData("search", item.query)
               is RecentItem.ClickedEvent -> RecentItemData("event", item.eventId, item.eventTitle)
+              is RecentItem.ClickedProfile -> RecentItemData("profile", item.userId, item.userName)
             }
           }
       val itemsJson = Gson().toJson(itemsData)
