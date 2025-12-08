@@ -907,4 +907,17 @@ class MapEventStateControllerTest {
     testDispatcher.scheduler.advanceUntilIdle()
     verify(mockEventRepository).editEventAsUser(event2.uid, testUserId, true)
   }
+
+  // ========== User Search Tests ==========
+  @Test
+  fun `userSearchResults is initially empty`() {
+    assertTrue(controller.userSearchResults.isEmpty())
+  }
+
+  @Test
+  fun `clearUserSearchResults clears user search results`() {
+    // Verify clearUserSearchResults doesn't crash and results stay empty
+    controller.clearUserSearchResults()
+    assertTrue(controller.userSearchResults.isEmpty())
+  }
 }
