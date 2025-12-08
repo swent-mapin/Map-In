@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
@@ -52,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -86,13 +84,15 @@ import com.swent.mapin.ui.map.bottomsheet.components.UpcomingEventsSection
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.memory.MemoryFormData
 import com.swent.mapin.ui.memory.MemoryFormScreen
+import com.swent.mapin.ui.profile.ProfileSheet
 import com.swent.mapin.ui.profile.ProfileViewModel
 
 enum class BottomSheetScreen {
   MAIN_CONTENT,
   MEMORY_FORM,
   ADD_EVENT,
-  EDIT_EVENT
+  EDIT_EVENT,
+  PROFILE_SHEET
 }
 
 // Animation constants for consistent transitions
@@ -189,7 +189,11 @@ fun BottomSheetContent(
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
     profileViewModel: ProfileViewModel,
-    eventViewModel: EventViewModel
+    eventViewModel: EventViewModel,
+    // Profile sheet parameters
+    profileSheetUserId: String? = null,
+    onProfileSheetClose: () -> Unit = {},
+    onProfileSheetEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -249,6 +253,14 @@ fun BottomSheetContent(
                   event = eventToEdit,
                   onCancel = onEditEventDone,
                   onDone = onEditEventDone)
+            }
+          }
+          BottomSheetScreen.PROFILE_SHEET -> {
+            if (profileSheetUserId != null) {
+              ProfileSheet(
+                  userId = profileSheetUserId,
+                  onClose = onProfileSheetClose,
+                  onEventClick = onProfileSheetEventClick)
             }
           }
           BottomSheetScreen.MAIN_CONTENT -> {
@@ -353,13 +365,12 @@ fun BottomSheetContent(
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
+                                // HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(19.dp))
 
                                 CreateEventSection(onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(19.dp))
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
