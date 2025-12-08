@@ -198,6 +198,9 @@ class MapScreenViewModel(
   val searchResults: List<Event>
     get() = eventStateController.searchResults
 
+  val userSearchResults: List<com.swent.mapin.model.UserProfile>
+    get() = eventStateController.userSearchResults
+
   fun setCenterCameraCallback(callback: (Event, Boolean) -> Unit) {
     cameraController.centerCameraCallback = callback
   }
@@ -585,7 +588,18 @@ class MapScreenViewModel(
   fun onClearSearch() {
     searchStateController.resetSearchState()
     eventStateController.clearSearchResults()
+    eventStateController.clearUserSearchResults()
     setBottomSheetState(BottomSheetState.MEDIUM)
+  }
+
+  /** Saves a user to recent search history. */
+  fun saveRecentUser(userId: String, userName: String) {
+    searchStateController.saveRecentProfile(userId, userName)
+  }
+
+  /** Opens the profile sheet for a specific user. */
+  fun openUserProfileSheet(userId: String) {
+    showProfileSheet(userId)
   }
 
   fun updateFocusClearer(onClearFocus: () -> Unit) {
@@ -795,6 +809,11 @@ class MapScreenViewModel(
       searchStateController.markSearchCommitted()
       onEventPinClicked(event, forceZoom = true)
     }
+  }
+
+  /** Handles profile click from recent items by opening the profile sheet. */
+  fun onRecentProfileClicked(userId: String) {
+    showProfileSheet(userId)
   }
 
   /**

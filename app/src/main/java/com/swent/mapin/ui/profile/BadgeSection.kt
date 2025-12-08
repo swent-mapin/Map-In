@@ -113,11 +113,19 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
 
           Spacer(modifier = Modifier.height(12.dp))
 
+          // Calculate dynamic height based on number of badges
+          // Assuming ~3 badges per row (80dp min + 12dp spacing) and ~100dp per badge item height
+          val columns = 3
+          val rows = (badges.size + columns - 1) / columns // Ceiling division
+          val itemHeight = 100.dp
+          val spacing = 12.dp
+          val gridHeight = (itemHeight * rows) + (spacing * (rows - 1).coerceAtLeast(0))
+
           LazyVerticalGrid(
               columns = GridCells.Adaptive(minSize = 80.dp),
               horizontalArrangement = Arrangement.spacedBy(12.dp),
               verticalArrangement = Arrangement.spacedBy(12.dp),
-              modifier = Modifier.fillMaxWidth().height(250.dp)) {
+              modifier = Modifier.fillMaxWidth().height(gridHeight)) {
                 items(badges) { badge -> BadgeItem(badge) { selected = badge } }
               }
         }

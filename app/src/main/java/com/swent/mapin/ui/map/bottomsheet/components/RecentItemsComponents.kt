@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +40,7 @@ fun AllRecentItemsPage(
     recentItems: List<RecentItem>,
     onRecentSearchClick: (String) -> Unit,
     onRecentEventClick: (String) -> Unit,
+    onRecentProfileClick: (String) -> Unit = {},
     onClearAll: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -87,6 +89,10 @@ fun AllRecentItemsPage(
             RecentEventItem(
                 eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
           }
+          is RecentItem.ClickedProfile -> {
+            RecentProfileItem(
+                userName = item.userName, onClick = { onRecentProfileClick(item.userId) })
+          }
         }
       }
 
@@ -101,6 +107,7 @@ fun RecentItemsSection(
     recentItems: List<RecentItem>,
     onRecentSearchClick: (String) -> Unit,
     onRecentEventClick: (String) -> Unit,
+    onRecentProfileClick: (String) -> Unit = {},
     onShowAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -132,6 +139,10 @@ fun RecentItemsSection(
         is RecentItem.ClickedEvent -> {
           RecentEventItem(
               eventTitle = item.eventTitle, onClick = { onRecentEventClick(item.eventId) })
+        }
+        is RecentItem.ClickedProfile -> {
+          RecentProfileItem(
+              userName = item.userName, onClick = { onRecentProfileClick(item.userId) })
         }
       }
     }
@@ -184,6 +195,33 @@ fun RecentEventItem(eventTitle: String, onClick: () -> Unit, modifier: Modifier 
 
         Text(
             text = eventTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f))
+      }
+}
+
+/** Individual recent profile item with person icon and clickable text. */
+@Composable
+fun RecentProfileItem(userName: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable { onClick() }
+              .padding(horizontal = 16.dp, vertical = 12.dp)
+              .testTag("recentProfileItem_$userName"),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(
+            imageVector = Icons.Filled.Person,
+            contentDescription = "Recent profile",
+            tint = MaterialTheme.colorScheme.secondary)
+
+        Text(
+            text = userName,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,

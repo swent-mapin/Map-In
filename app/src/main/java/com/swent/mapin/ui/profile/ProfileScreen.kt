@@ -229,24 +229,16 @@ internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarCli
 /** View mode: displays profile information in cards. */
 @Composable
 internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
-  // Name simple card
-  Card(
-      modifier = Modifier.fillMaxWidth().testTag("profileCard_Name"),
-      shape = RoundedCornerShape(12.dp),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            contentAlignment = Alignment.CenterStart) {
-              Text(
-                  text = userProfile.name,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.onSurface)
-            }
-      }
+  // Name
+  Spacer(modifier = Modifier.height(42.dp))
 
-  Spacer(modifier = Modifier.height(8.dp))
+  Text(
+      text = userProfile.name,
+      style = MaterialTheme.typography.headlineSmall,
+      fontWeight = FontWeight.Bold,
+      modifier = Modifier.testTag("profileCard_Name"))
+
+  Spacer(modifier = Modifier.height(16.dp))
 
   // Bio
   ProfileInfoCard(
