@@ -80,33 +80,8 @@ class UserProfileRepository(
   /**
    * Follow a user. Adds targetUserId to current user's followingIds, and adds currentUserId to
    * target user's followerIds.
-   *
-   * @param currentUserId The ID of the user who wants to follow
-   * @param targetUserId The ID of the user to be followed
-   * @return true if the follow operation succeeded, false if users are the same or operation failed
    */
   suspend fun followUser(currentUserId: String, targetUserId: String): Boolean {
-    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = true)
-  }
-
-  /**
-   * Unfollow a user. Removes targetUserId from current user's followingIds, and removes
-   * currentUserId from target user's followerIds.
-   *
-   * @param currentUserId The ID of the user who wants to unfollow
-   * @param targetUserId The ID of the user to be unfollowed
-   * @return true if the unfollow operation succeeded, false if users are the same or operation
-   *   failed
-   */
-  suspend fun unfollowUser(currentUserId: String, targetUserId: String): Boolean {
-    return updateFollowStatus(currentUserId, targetUserId, shouldFollow = false)
-  }
-
-  private suspend fun updateFollowStatus(
-      currentUserId: String,
-      targetUserId: String,
-      shouldFollow: Boolean
-  ): Boolean {
     if (currentUserId == targetUserId) return false
 
     return try {
@@ -115,30 +90,25 @@ class UserProfileRepository(
             val currentUserRef = firestore.collection(COLLECTION_USERS).document(currentUserId)
             val targetUserRef = firestore.collection(COLLECTION_USERS).document(targetUserId)
 
-            val currentUserDoc = transaction[currentUserRef]
-            val targetUserDoc = transaction[targetUserRef]
+            val currentUserDoc = transaction.get(currentUserRef)
+            val targetUserDoc = transaction.get(targetUserRef)
 
             if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
               throw Exception("User not found")
             }
 
             val currentFollowing =
-                (currentUserDoc["followingIds"] as? List<*>)?.filterIsInstance<String>()
+                (currentUserDoc.get("followingIds") as? List<*>)?.filterIsInstance<String>()
                     ?: emptyList()
             val targetFollowers =
-                (targetUserDoc["followerIds"] as? List<*>)?.filterIsInstance<String>()
+                (targetUserDoc.get("followerIds") as? List<*>)?.filterIsInstance<String>()
                     ?: emptyList()
 
-            if (shouldFollow) {
-              if (!currentFollowing.contains(targetUserId)) {
-                transaction.update(currentUserRef, "followingIds", currentFollowing + targetUserId)
-              }
-              if (!targetFollowers.contains(currentUserId)) {
-                transaction.update(targetUserRef, "followerIds", targetFollowers + currentUserId)
-              }
-            } else {
-              transaction.update(currentUserRef, "followingIds", currentFollowing - targetUserId)
-              transaction.update(targetUserRef, "followerIds", targetFollowers - currentUserId)
+            if (!currentFollowing.contains(targetUserId)) {
+              transaction.update(currentUserRef, "followingIds", currentFollowing + targetUserId)
+            }
+            if (!targetFollowers.contains(currentUserId)) {
+              transaction.update(targetUserRef, "followerIds", targetFollowers + currentUserId)
             }
           }
           .await()
@@ -150,12 +120,44 @@ class UserProfileRepository(
   }
 
   /**
-   * Check if currentUser is following targetUser.
-   *
-   * @param currentUserId The ID of the user to check
-   * @param targetUserId The ID of the user who might be followed
-   * @return true if currentUser is following targetUser, false otherwise
+   * Unfollow a user. Removes targetUserId from current user's followingIds, and removes
+   * currentUserId from target user's followerIds.
    */
+  suspend fun unfollowUser(currentUserId: String, targetUserId: String): Boolean {
+    if (currentUserId == targetUserId) return false
+
+    return try {
+      firestore
+          .runTransaction { transaction ->
+            val currentUserRef = firestore.collection(COLLECTION_USERS).document(currentUserId)
+            val targetUserRef = firestore.collection(COLLECTION_USERS).document(targetUserId)
+
+            val currentUserDoc = transaction.get(currentUserRef)
+            val targetUserDoc = transaction.get(targetUserRef)
+
+            if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
+              throw Exception("User not found")
+            }
+
+            val currentFollowing =
+                (currentUserDoc.get("followingIds") as? List<*>)?.filterIsInstance<String>()
+                    ?: emptyList()
+            val targetFollowers =
+                (targetUserDoc.get("followerIds") as? List<*>)?.filterIsInstance<String>()
+                    ?: emptyList()
+
+            transaction.update(currentUserRef, "followingIds", currentFollowing - targetUserId)
+            transaction.update(targetUserRef, "followerIds", targetFollowers - currentUserId)
+          }
+          .await()
+      true
+    } catch (e: Exception) {
+      e.printStackTrace()
+      false
+    }
+  }
+
+  /** Check if currentUser is following targetUser. */
   suspend fun isFollowing(currentUserId: String, targetUserId: String): Boolean {
     return try {
       val profile = getUserProfile(currentUserId)

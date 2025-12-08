@@ -1,6 +1,5 @@
 package com.swent.mapin.ui.profile
 
-import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -109,9 +108,7 @@ fun ProfileSheet(
             pastEvents = state.pastEvents,
             isFollowing = state.isFollowing,
             isOwnProfile = state.isOwnProfile,
-            friendStatus = state.friendStatus,
             onFollowToggle = { viewModel.toggleFollow() },
-            onAddFriend = { viewModel.sendFriendRequest() },
             onEventClick = onEventClick)
       }
     }
@@ -119,15 +116,13 @@ fun ProfileSheet(
 }
 
 @Composable
-internal fun ProfileSheetContent(
+private fun ProfileSheetContent(
     profile: UserProfile,
     upcomingEvents: List<Event>,
     pastEvents: List<Event>,
     isFollowing: Boolean,
     isOwnProfile: Boolean,
-    friendStatus: FriendStatus,
     onFollowToggle: () -> Unit,
-    onAddFriend: () -> Unit,
     onEventClick: (Event) -> Unit
 ) {
   val scrollState = rememberScrollState()
@@ -151,8 +146,6 @@ internal fun ProfileSheetContent(
         // Follow button (only show if not own profile)
         if (!isOwnProfile) {
           FollowButton(isFollowing = isFollowing, onFollowToggle = onFollowToggle)
-          Spacer(modifier = Modifier.height(8.dp))
-          FriendActionRow(friendStatus = friendStatus, onAddFriend = onAddFriend)
           Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -165,14 +158,13 @@ internal fun ProfileSheetContent(
         // Upcoming events section
         if (upcomingEvents.isNotEmpty()) {
           EventsSection(
-              title = "Upcoming Owned Events", events = upcomingEvents, onEventClick = onEventClick)
+              title = "Upcoming Events", events = upcomingEvents, onEventClick = onEventClick)
           Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Past events section
         if (pastEvents.isNotEmpty()) {
-          EventsSection(
-              title = "Past Owned Events", events = pastEvents, onEventClick = onEventClick)
+          EventsSection(title = "Past Events", events = pastEvents, onEventClick = onEventClick)
         }
 
         // Empty state
@@ -203,7 +195,7 @@ private fun ProfileHeader(profile: UserProfile) {
         // Avatar
         Box(
             modifier =
-                Modifier.size(120.dp)
+                Modifier.size(80.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .testTag("profileAvatar"),
@@ -215,13 +207,12 @@ private fun ProfileHeader(profile: UserProfile) {
                     model = profile.avatarUrl,
                     contentDescription = "Profile Picture",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier =
-                        Modifier.fillMaxSize().clip(CircleShape).testTag("profileAvatarImage"))
+                    modifier = Modifier.fillMaxSize().clip(CircleShape))
               } else {
                 Icon(
-                    imageVector = getSheetAvatarIcon(profile.avatarUrl),
+                    imageVector = getAvatarIcon(profile.avatarUrl),
                     contentDescription = "Profile Picture",
-                    modifier = Modifier.size(60.dp).testTag("profileAvatarIcon"),
+                    modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
               }
             }
@@ -252,6 +243,8 @@ private fun StatsRow(profile: UserProfile) {
   Row(
       modifier = Modifier.fillMaxWidth().testTag("profileStats"),
       horizontalArrangement = Arrangement.Center) {
+        StatItem(count = profile.followingIds.size, label = "Following")
+        Spacer(modifier = Modifier.width(32.dp))
         StatItem(count = profile.followerIds.size, label = "Followers")
       }
 }
@@ -291,46 +284,6 @@ private fun FollowButton(isFollowing: Boolean, onFollowToggle: () -> Unit) {
       Spacer(modifier = Modifier.width(8.dp))
       Text("Follow")
     }
-  }
-}
-
-@Composable
-private fun FriendActionRow(friendStatus: FriendStatus, onAddFriend: () -> Unit) {
-  when (friendStatus) {
-    FriendStatus.NOT_FRIEND ->
-        OutlinedButton(
-            onClick = onAddFriend, modifier = Modifier.fillMaxWidth().testTag("addFriendButton")) {
-              Icon(
-                  imageVector = Icons.Default.PersonAdd,
-                  contentDescription = null,
-                  modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Add Friend")
-            }
-    FriendStatus.PENDING ->
-        OutlinedButton(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth().testTag("pendingFriendButton")) {
-              Icon(
-                  imageVector = Icons.Default.Person,
-                  contentDescription = null,
-                  modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Pending")
-            }
-    FriendStatus.FRIENDS ->
-        OutlinedButton(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth().testTag("friendsIndicator")) {
-              Icon(
-                  imageVector = Icons.Default.Person,
-                  contentDescription = null,
-                  modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Friends")
-            }
   }
 }
 
@@ -387,8 +340,7 @@ private fun EventCard(event: Event, onClick: () -> Unit) {
       }
 }
 
-@VisibleForTesting
-internal fun getSheetAvatarIcon(avatarUrl: String?): ImageVector {
+private fun getAvatarIcon(avatarUrl: String?): ImageVector {
   if (avatarUrl.isNullOrEmpty()) return Icons.Default.Person
 
   return when (avatarUrl) {
