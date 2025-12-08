@@ -5,7 +5,9 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -13,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.MockitoAnnotations.openMocks
 import org.mockito.kotlin.any
@@ -32,6 +35,7 @@ class UserProfileRepositoryTest {
   @Mock private lateinit var transaction: Transaction
   @Mock private lateinit var currentSnapshot: DocumentSnapshot
   @Mock private lateinit var targetSnapshot: DocumentSnapshot
+  @Mock private lateinit var querySnapshot: QuerySnapshot
 
   private lateinit var repository: UserProfileRepository
 
@@ -227,6 +231,78 @@ class UserProfileRepositoryTest {
         }
         .`when`(firestore)
         .runTransaction(any<Transaction.Function<Any?>>())
+  }
+
+  // searchUsers tests
+  @Test
+  fun searchUsers_returnsMatchingUsersByName() = runTest {
+    val user1 = UserProfile(userId = "user1", name = "Alice Smith")
+    val user2 = UserProfile(userId = "user2", name = "Bob Jones")
+    val user3 = UserProfile(userId = "user3", name = "Alice Cooper")
+
+    val doc1 = mock(DocumentSnapshot::class.java)
+    val doc2 = mock(DocumentSnapshot::class.java)
+    val doc3 = mock(DocumentSnapshot::class.java)
+    whenever(doc1.toObject(UserProfile::class.java)).thenReturn(user1)
+    whenever(doc2.toObject(UserProfile::class.java)).thenReturn(user2)
+    whenever(doc3.toObject(UserProfile::class.java)).thenReturn(user3)
+    whenever(querySnapshot.documents).thenReturn(listOf(doc1, doc2, doc3))
+    whenever(collection.get()).thenReturn(Tasks.forResult(querySnapshot))
+
+    val results = repository.searchUsers("alice").first()
+
+    assertEquals(2, results.size)
+    assertTrue(results.any { it.userId == "user1" })
+    assertTrue(results.any { it.userId == "user3" })
+  }
+
+  @Test
+  fun searchUsers_returnsEmptyListForBlankQuery() = runTest {
+    val results = repository.searchUsers("").first()
+    assertEquals(0, results.size)
+
+    val resultsBlank = repository.searchUsers("   ").first()
+    assertEquals(0, resultsBlank.size)
+  }
+
+  @Test
+  fun searchUsers_isCaseInsensitive() = runTest {
+    val user = UserProfile(userId = "user1", name = "John Doe")
+    val doc = mock(DocumentSnapshot::class.java)
+    whenever(doc.toObject(UserProfile::class.java)).thenReturn(user)
+    whenever(querySnapshot.documents).thenReturn(listOf(doc))
+    whenever(collection.get()).thenReturn(Tasks.forResult(querySnapshot))
+
+    val results = repository.searchUsers("JOHN").first()
+
+    assertEquals(1, results.size)
+    assertEquals("user1", results[0].userId)
+  }
+
+  @Test
+  fun searchUsers_limitsResultsToFive() = runTest {
+    val users = (1..10).map { UserProfile(userId = "user$it", name = "Test User $it") }
+    val docs =
+        users.map { user ->
+          mock(DocumentSnapshot::class.java).also {
+            whenever(it.toObject(UserProfile::class.java)).thenReturn(user)
+          }
+        }
+    whenever(querySnapshot.documents).thenReturn(docs)
+    whenever(collection.get()).thenReturn(Tasks.forResult(querySnapshot))
+
+    val results = repository.searchUsers("Test").first()
+
+    assertEquals(5, results.size)
+  }
+
+  @Test
+  fun searchUsers_returnsEmptyListOnError() = runTest {
+    whenever(collection.get()).thenReturn(Tasks.forException(RuntimeException("Network error")))
+
+    val results = repository.searchUsers("test").first()
+
+    assertEquals(0, results.size)
   }
 
   companion object {
