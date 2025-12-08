@@ -3,16 +3,23 @@ package com.swent.mapin.ui.filters
 import android.app.DatePickerDialog
 import android.view.Gravity
 import android.widget.TextView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
@@ -20,9 +27,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +41,7 @@ import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.*
 
 // Assisted by AI tools
@@ -56,17 +66,12 @@ object FiltersSectionTestTags {
   const val TITLE = "filters_section_title"
 
   // ToggleSection
-  const val TOGGLE_TIME = "toggle_time"
-  const val TOGGLE_PLACE = "toggle_place"
+  const val TOGGLE_DATE = "toggle_date"
+  const val TOGGLE_LOCATION = "toggle_location"
   const val TOGGLE_PRICE = "toggle_price"
   const val TOGGLE_TAGS = "toggle_tags"
   const val TOGGLE_FRIENDS = "toggle_friends_only"
   const val TOGGLE_POPULAR = "toggle_popular_only"
-
-  const val EXPAND_TIME = "expand_time"
-  const val EXPAND_PLACE = "expand_place"
-  const val EXPAND_PRICE = "expand_price"
-  const val EXPAND_TAGS = "expand_tags"
 
   // DateRangePicker
   const val DATE_PICKER_BUTTON = "date_picker_button"
@@ -75,7 +80,6 @@ object FiltersSectionTestTags {
 
   // AroundSpotPicker
   const val AROUND_SEARCH = "around_search"
-  const val AROUND_MAP = "around_map"
   const val AROUND_USER = "around_user"
   const val RADIUS_INPUT = "radius_input"
 
@@ -89,16 +93,16 @@ object FiltersSectionTestTags {
   fun tag(tagName: String) = "tag_${tagName.lowercase()}"
 }
 
-/**
- * Main entry point for the filter panel UI. Renders a collapsible, interactive filter interface
- * with 6 sections.
- *
- * @param modifier Layout modifier
- * @param filterViewModel Manages all filter states (default: new instance via viewModel())
- * @param locationViewModel Provides location search results
- * @param userProfile Required for "My location" option
- */
 class FiltersSection {
+  /**
+   * Main entry point for the filter panel UI. Renders a collapsible, interactive filter interface
+   * with 6 sections.
+   *
+   * @param modifier Layout modifier
+   * @param filterViewModel Manages all filter states (default: new instance via viewModel())
+   * @param locationViewModel Provides location search results
+   * @param userProfile Required for "My location" option
+   */
   @Composable
   fun Render(
       modifier: Modifier = Modifier,
@@ -119,18 +123,19 @@ class FiltersSection {
         Text(
             text = "Filter Events by:",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 12.dp).testTag(FiltersSectionTestTags.TITLE))
+            modifier = Modifier.padding(bottom = 8.dp).testTag(FiltersSectionTestTags.TITLE))
 
         TextButton(
             onClick = { filterViewModel.reset() },
-            modifier = Modifier.testTag(FiltersSectionTestTags.RESET_BUTTON)) {
+            modifier =
+                Modifier.padding(bottom = 8.dp).testTag(FiltersSectionTestTags.RESET_BUTTON)) {
               Text("Reset")
             }
       }
 
-      // Time Filter
+      // Date Filter
       ToggleSection(
-          title = "Time",
+          title = "Date",
           isChecked = isWhenChecked,
           hasContent = true,
           onCheckedChange = { checked ->
@@ -140,7 +145,7 @@ class FiltersSection {
 
       // Place Filter
       ToggleSection(
-          title = "Place",
+          title = "Location",
           isChecked = isWhereChecked,
           hasContent = true,
           onCheckedChange = { checked ->
@@ -203,64 +208,55 @@ class FiltersSection {
       onCheckedChange: (Boolean) -> Unit,
       content: @Composable () -> Unit
   ) {
-    var expanded by remember { mutableStateOf(false) }
+
+    // Pick an icon based on the section title
+    val sectionIcon =
+        when (title) {
+          "Date" -> Icons.Outlined.CalendarMonth
+          "Location" -> Icons.Default.Place
+          "Price" -> Icons.Default.AttachMoney
+          "Tags" -> Icons.Default.Tag
+          "Friends only" -> Icons.Default.Group
+          "Popular only" -> Icons.Default.Star
+          else -> Icons.Default.Settings
+        }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-      Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Checkbox(
-                checked = isChecked,
-                onCheckedChange = {
-                  onCheckedChange(it)
-                  expanded = it
-                },
-                modifier =
-                    Modifier.testTag(
-                        when (title) {
-                          "Time" -> FiltersSectionTestTags.TOGGLE_TIME
-                          "Place" -> FiltersSectionTestTags.TOGGLE_PLACE
-                          "Price" -> FiltersSectionTestTags.TOGGLE_PRICE
-                          "Tags" -> FiltersSectionTestTags.TOGGLE_TAGS
-                          "Friends only" -> FiltersSectionTestTags.TOGGLE_FRIENDS
-                          "Popular only" -> FiltersSectionTestTags.TOGGLE_POPULAR
-                          else -> "toggle_${title.lowercase()}"
-                        }))
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = { onCheckedChange(it) },
+            colors =
+                CheckboxDefaults.colors(
+                    uncheckedColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+            modifier =
+                Modifier.testTag(
+                    when (title) {
+                      "Date" -> FiltersSectionTestTags.TOGGLE_DATE
+                      "Location" -> FiltersSectionTestTags.TOGGLE_LOCATION
+                      "Price" -> FiltersSectionTestTags.TOGGLE_PRICE
+                      "Tags" -> FiltersSectionTestTags.TOGGLE_TAGS
+                      "Friends only" -> FiltersSectionTestTags.TOGGLE_FRIENDS
+                      "Popular only" -> FiltersSectionTestTags.TOGGLE_POPULAR
+                      else -> "toggle_${title.lowercase()}"
+                    }))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f))
-            if (hasContent) {
-              Icon(
-                  imageVector =
-                      if (expanded) Icons.Default.KeyboardArrowDown
-                      else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                  contentDescription = null,
-                  tint =
-                      if (isChecked) MaterialTheme.colorScheme.onSurface
-                      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                  modifier =
-                      Modifier.size(24.dp)
-                          .testTag(
-                              when (title) {
-                                "Time" -> FiltersSectionTestTags.EXPAND_TIME
-                                "Place" -> FiltersSectionTestTags.EXPAND_PLACE
-                                "Price" -> FiltersSectionTestTags.EXPAND_PRICE
-                                "Tags" -> FiltersSectionTestTags.EXPAND_TAGS
-                                else -> "expand_${title.lowercase()}"
-                              })
-                          .let { base ->
-                            if (isChecked) base.clickable { expanded = !expanded } else base
-                          })
-            }
-          }
+        // Section icon
+        Icon(
+            imageVector = sectionIcon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = if (isChecked) 1f else 0.4f),
+            modifier = Modifier.padding(end = 8.dp).size(20.dp))
 
-      if (isChecked && expanded) {
+        // Title
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f))
+      }
+      if (isChecked) {
         content()
       }
-
-      HorizontalDivider()
     }
   }
 
@@ -293,9 +289,9 @@ class FiltersSection {
                 val picked = dateFormat.format(Calendar.getInstance().apply { set(y, m, d) }.time)
                 onPicked(picked)
               },
-              calendar[Calendar.YEAR],
-              calendar[Calendar.MONTH],
-              calendar[Calendar.DAY_OF_MONTH])
+              calendar.get(Calendar.YEAR),
+              calendar.get(Calendar.MONTH),
+              calendar.get(Calendar.DAY_OF_MONTH))
 
       val tv =
           TextView(context).apply {
@@ -304,54 +300,61 @@ class FiltersSection {
             gravity = Gravity.CENTER
             setPadding(0, 20, 0, 20)
           }
+
       picker.setCustomTitle(tv)
       picker.datePicker.minDate = minDate
       picker.show()
     }
 
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(start = 30.dp, bottom = 8.dp)) {
-          // Calendar button opens two-step picker (start, then end)
-          IconButton(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+          // --- FROM DATE BUTTON ---
+          Button(
               onClick = {
-                // Step 1: pick start date
                 showDatePicker("Select Start Date", calendar.timeInMillis) { start ->
                   filterViewModel.setStartDate(start)
-
-                  // compute millis for chosen start date
-                  val startMillis =
-                      try {
-                        dateFormat.parse(start)?.time ?: calendar.timeInMillis
-                      } catch (e: Exception) {
-                        calendar.timeInMillis
-                      }
-
-                  // Step 2: pick end date (min = start)
-                  showDatePicker("Select End Date", startMillis) { end ->
-                    filterViewModel.setEndDate(end)
-                  }
                 }
               },
+              colors =
+                  ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)),
+              shape = RoundedCornerShape(12.dp),
               modifier =
-                  Modifier.size(36.dp)
-                      .background(Color.LightGray, CircleShape)
+                  Modifier.weight(1f)
+                      .height(56.dp)
                       .testTag(FiltersSectionTestTags.DATE_PICKER_BUTTON)) {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = "Calendar")
+                Text(
+                    text = "From: ${startDate ?: "---"}",
+                    modifier = Modifier.testTag(FiltersSectionTestTags.FROM_DATE_TEXT))
               }
 
-          // Display currently selected range (formatted)
-          val formatter = remember { java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+          // Compute startDateMillis safely
+          val startDateMillis =
+              remember(startDate) {
+                try {
+                  startDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+                      ?: calendar.timeInMillis
+                } catch (_: Exception) {
+                  calendar.timeInMillis
+                }
+              }
 
-          Column {
-            Text(
-                "From: ${startDate?.format(formatter) ?: "---"}",
-                modifier = Modifier.testTag(FiltersSectionTestTags.FROM_DATE_TEXT))
-            Text(
-                "To: ${endDate?.format(formatter) ?: "---"}",
-                modifier = Modifier.testTag(FiltersSectionTestTags.TO_DATE_TEXT))
-          }
+          // --- TO DATE BUTTON ---
+          Button(
+              onClick = {
+                showDatePicker("Select End Date", startDateMillis) { end ->
+                  filterViewModel.setEndDate(end)
+                }
+              },
+              colors =
+                  ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)),
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.weight(1f).height(56.dp)) {
+                Text(
+                    text = "To: ${endDate ?: "---"}",
+                    modifier = Modifier.testTag(FiltersSectionTestTags.TO_DATE_TEXT))
+              }
         }
   }
 
@@ -364,76 +367,114 @@ class FiltersSection {
       userProfile: UserProfile
   ) {
     var selectedOption by rememberSaveable { mutableStateOf(AroundOption.SEARCH) }
+    var radiusInput by
+        rememberSaveable(filters.radiusKm) { mutableStateOf(filters.radiusKm.toString()) }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(start = 30.dp, bottom = 8.dp)) {
-      Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-        AroundOption.entries.forEach { option ->
-          Text(
-              text =
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+
+      // --- TOP SELECTOR (Segmented Control) ---
+      Row(
+          modifier =
+              Modifier.fillMaxWidth()
+                  .background(
+                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                      shape = MaterialTheme.shapes.medium)
+                  .padding(4.dp),
+          horizontalArrangement = Arrangement.SpaceEvenly) {
+            AroundOption.entries.forEach { option ->
+              val isSelected = selectedOption == option
+              val label =
                   when (option) {
                     AroundOption.SEARCH -> "Search"
                     AroundOption.USER -> "My location"
-                  },
-              modifier =
-                  Modifier.clickable { selectedOption = option }
-                      .background(
-                          color =
-                              if (selectedOption == option)
-                                  MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                              else Color.Transparent,
-                          shape = MaterialTheme.shapes.small)
-                      .padding(8.dp)
-                      .testTag(
-                          when (option) {
-                            AroundOption.SEARCH -> FiltersSectionTestTags.AROUND_SEARCH
-                            AroundOption.USER -> FiltersSectionTestTags.AROUND_USER
-                          }))
-        }
-      }
+                  }
 
-      Spacer(modifier = Modifier.height(12.dp))
+              Box(
+                  modifier =
+                      Modifier.clip(MaterialTheme.shapes.medium)
+                          .background(
+                              if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                              else Color.Transparent)
+                          .clickable { selectedOption = option }
+                          .padding(horizontal = 16.dp, vertical = 10.dp)
+                          .testTag(
+                              when (option) {
+                                AroundOption.SEARCH -> FiltersSectionTestTags.AROUND_SEARCH
+                                AroundOption.USER -> FiltersSectionTestTags.AROUND_USER
+                              }),
+              ) {
+                Text(
+                    text = label,
+                    color =
+                        if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.titleSmall)
+              }
+            }
+          }
 
-      when (selectedOption) {
-        AroundOption.SEARCH -> SearchPlacePicker(locationViewModel, filterViewModel)
-        AroundOption.USER -> UserLocationPicker(filterViewModel, userProfile)
-      }
+      Spacer(modifier = Modifier.height(16.dp))
 
-      Spacer(modifier = Modifier.height(12.dp))
-
-      Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Radius:")
-            var radiusInput by
-                rememberSaveable(filters.radiusKm) { mutableStateOf(filters.radiusKm.toString()) }
-            Box(
-                modifier =
-                    Modifier.width(40.dp)
-                        .height(30.dp)
-                        .border(
-                            1.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center) {
-                  BasicTextField(
-                      value = radiusInput,
-                      onValueChange = { input ->
-                        val filtered = input.filter { it.isDigit() }.take(3)
-                        radiusInput = filtered
-                        if (filtered.isNotBlank()) {
-                          filterViewModel.setRadius(filtered.toInt())
-                        } else {
-                          filterViewModel.setRadius(null)
-                        }
-                      },
-                      singleLine = true,
-                      textStyle =
-                          LocalTextStyle.current.copy(
-                              fontSize = 14.sp,
-                              textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                              color = MaterialTheme.colorScheme.onSurface),
-                      modifier =
-                          Modifier.fillMaxWidth().testTag(FiltersSectionTestTags.RADIUS_INPUT))
+      // --- CONTENT CARD ---
+      Surface(
+          modifier = Modifier.fillMaxWidth(),
+          shape = MaterialTheme.shapes.medium,
+          tonalElevation = 2.dp) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+              when (selectedOption) {
+                AroundOption.SEARCH -> {
+                  SearchPlacePicker(locationViewModel, filterViewModel)
+                  Spacer(modifier = Modifier.height(20.dp))
                 }
-            Text("km", modifier = Modifier.padding(start = 4.dp))
+                AroundOption.USER -> UserLocationPicker(filterViewModel, userProfile)
+              }
+
+              // --- RADIUS PICKER ---
+              Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Radius",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface)
+
+                    Box(
+                        modifier =
+                            Modifier.width(60.dp)
+                                .height(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = MaterialTheme.shapes.small)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outline,
+                                    MaterialTheme.shapes.small)
+                                .padding(horizontal = 6.dp),
+                        contentAlignment = Alignment.Center) {
+                          BasicTextField(
+                              value = radiusInput,
+                              onValueChange = { input ->
+                                val filtered = input.filter { it.isDigit() }.take(3)
+                                radiusInput = filtered
+                                filterViewModel.setRadius(filtered.toIntOrNull())
+                              },
+                              singleLine = true,
+                              textStyle =
+                                  LocalTextStyle.current.copy(
+                                      fontSize = 14.sp,
+                                      textAlign = TextAlign.Center,
+                                      color = MaterialTheme.colorScheme.onSurface),
+                              modifier =
+                                  Modifier.fillMaxWidth()
+                                      .testTag(FiltersSectionTestTags.RADIUS_INPUT))
+                        }
+
+                    Text(
+                        "km",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface)
+                  }
+            }
           }
     }
   }
@@ -451,7 +492,7 @@ class FiltersSection {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val results by locationViewModel.locations.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
       OutlinedTextField(
           value = query,
           onValueChange = {
@@ -462,29 +503,41 @@ class FiltersSection {
           modifier = Modifier.fillMaxWidth().testTag(FiltersSectionTestTags.SEARCH_PLACE_INPUT),
           singleLine = true,
           label = { Text("Location") },
-          placeholder = { Text("Enter an address") })
-      if (expanded && results.isNotEmpty()) {
-        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
-          Column {
-            results.take(5).forEach { loc ->
-              Text(
-                  text = loc.name,
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .clickable {
-                            filterViewModel.setLocation(loc)
-                            query = loc.name
-                            expanded = false
-                          }
-                          .padding(8.dp))
-              HorizontalDivider()
+          placeholder = { Text("Enter an address…") },
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary)
+          },
+          shape = RoundedCornerShape(12.dp))
+      AnimatedVisibility(visible = expanded && results.isNotEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+              Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                results.take(5).forEachIndexed { index, loc ->
+                  Column {
+                    Text(
+                        text = loc.name,
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                  filterViewModel.setLocation(loc)
+                                  query = loc.name
+                                  expanded = false
+                                }
+                                .padding(12.dp),
+                        style = MaterialTheme.typography.bodyMedium)
+                    if (index < results.take(5).lastIndex) {
+                      HorizontalDivider()
+                    }
+                  }
+                }
+              }
             }
-            Text(
-                "Search powered by Nominatim and OpenStreetMap.",
-                fontSize = 12.sp,
-                modifier = Modifier.padding(8.dp))
-          }
-        }
       }
     }
   }
@@ -507,43 +560,41 @@ class FiltersSection {
     }
   }
 
-  /** Max price input (CHF). Accepts only digits, max 999. */
+  /** Max price input (CHF). Accepts only digits, max 100. */
   @Composable
   fun PricePicker(filterViewModel: FiltersSectionViewModel, maxPrice: Int?) {
-    var priceInput by remember(maxPrice) { mutableStateOf(maxPrice?.toString() ?: "") }
+    var sliderValue by remember(maxPrice) { mutableFloatStateOf((maxPrice ?: 0).toFloat()) }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(start = 30.dp, bottom = 8.dp)) {
-          Box(
-              modifier =
-                  Modifier.width(50.dp)
-                      .height(30.dp)
-                      .border(
-                          1.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small),
-              contentAlignment = Alignment.Center) {
-                BasicTextField(
-                    value = priceInput,
-                    onValueChange = { input ->
-                      val filtered = input.filter { it.isDigit() }.take(3)
-                      priceInput = filtered
-                      if (filtered.isNotBlank()) {
-                        filterViewModel.setMaxPriceCHF(filtered.toInt())
-                      } else {
-                        filterViewModel.setMaxPriceCHF(null)
-                      }
-                    },
-                    singleLine = true,
-                    textStyle =
-                        LocalTextStyle.current.copy(
-                            fontSize = 14.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth().testTag(FiltersSectionTestTags.PRICE_INPUT))
-              }
-          Text("CHF", modifier = Modifier.padding(start = 4.dp))
-        }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+      Text(
+          text = "Max Price",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+
+      Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween,
+          modifier = Modifier.fillMaxWidth()) {
+            // SLIDER
+            Slider(
+                value = sliderValue,
+                onValueChange = { newValue ->
+                  sliderValue = newValue
+                  filterViewModel.setMaxPriceCHF(newValue.toInt())
+                },
+                valueRange = 0f..100f,
+                steps = 0, // makes the slider move in single-CHF increments
+                modifier = Modifier.weight(1f).testTag(FiltersSectionTestTags.PRICE_INPUT))
+
+            // VALUE LABEL
+            Text(
+                text = "${sliderValue.toInt()} CHF",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp))
+          }
+    }
   }
 
   /**
@@ -556,29 +607,36 @@ class FiltersSection {
     val allTags = Tags.allTags
 
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth().padding(start = 30.dp, bottom = 12.dp),
-        maxLines = 3,
-        overflow = FlowRowOverflow.Clip) {
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
           allTags.forEach { tag ->
-            val selected = tag in selectedTags
+            val isSelected = tag in selectedTags
+            val backgroundColor by
+                animateColorAsState(
+                    targetValue =
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            val textColor by
+                animateColorAsState(
+                    targetValue =
+                        if (isSelected) MaterialTheme.colorScheme.background
+                        else MaterialTheme.colorScheme.primary)
 
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = if (selected) Color(0xFFBDBDBD) else Color(0xFFF2F2F2),
-                modifier =
-                    Modifier.clickable { filterViewModel.toggleTag(tag) }
-                        .testTag(FiltersSectionTestTags.tag(tag))
-                        .border(
-                            width = if (selected) 0.dp else 1.dp,
-                            color = Color.Gray,
-                            shape = MaterialTheme.shapes.small)) {
-                  Text(
-                      text = tag,
-                      fontSize = 13.sp,
-                      modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
-                }
+            FilterChip(
+                selected = isSelected,
+                onClick = { filterViewModel.toggleTag(tag) },
+                enabled = true,
+                label = { Text(tag) },
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = backgroundColor,
+                        selectedLabelColor = textColor,
+                        containerColor = backgroundColor,
+                        labelColor = textColor),
+                border = null,
+                shape = RoundedCornerShape(16.dp), // rounded/circular look
+                modifier = Modifier.testTag(FiltersSectionTestTags.tag(tag)))
           }
         }
   }
