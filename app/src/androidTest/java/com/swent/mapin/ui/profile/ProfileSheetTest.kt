@@ -26,11 +26,7 @@ class ProfileSheetTest {
   fun profileSheet_showsLoadingState() {
     val mockViewModel = mockViewModelWithState(ProfileSheetState.Loading)
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("profileSheetLoading").assertIsDisplayed()
   }
@@ -42,11 +38,7 @@ class ProfileSheetTest {
             buildLoadedState(
                 avatarUrl = "http://example.com/avatar.png", badges = listOf(testBadge())))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("badgesSection").assertIsDisplayed()
     composeTestRule.onNodeWithTag("badgeCount").assertTextEquals("1/1")
@@ -59,11 +51,7 @@ class ProfileSheetTest {
             buildLoadedState(
                 avatarUrl = "http://example.com/avatar.png", badges = listOf(testBadge())))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("profileAvatarImage").assertIsDisplayed()
     composeTestRule.onAllNodesWithTag("profileAvatarIcon").assertCountEquals(0)
@@ -75,11 +63,7 @@ class ProfileSheetTest {
         mockViewModelWithState(
             buildLoadedState(avatarUrl = "face", badges = listOf(testBadge(isUnlocked = false))))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("profileAvatarIcon").assertIsDisplayed()
     composeTestRule.onAllNodesWithTag("profileAvatarImage").assertCountEquals(0)
@@ -89,11 +73,7 @@ class ProfileSheetTest {
   fun profileSheet_showsErrorState() {
     val mockViewModel = mockViewModelWithState(ProfileSheetState.Error("Not found"))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("profileSheetError").assertIsDisplayed()
     composeTestRule.onNodeWithTag("profileSheetError").assertTextEquals("Not found")
@@ -106,11 +86,7 @@ class ProfileSheetTest {
             buildLoadedState(
                 avatarUrl = "person", badges = listOf(testBadge()), bio = "Compose enthusiast"))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("profileBio").assertIsDisplayed()
   }
@@ -125,11 +101,7 @@ class ProfileSheetTest {
                 isFollowing = true,
                 isOwnProfile = false))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("unfollowButton").assertIsDisplayed()
   }
@@ -143,11 +115,7 @@ class ProfileSheetTest {
                 badges = listOf(testBadge()),
                 friendStatus = FriendStatus.NOT_FRIEND,
                 isOwnProfile = false))
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
-      }
-    }
+    setProfileContent(vm)
     composeTestRule.onNodeWithTag("addFriendButton").assertIsDisplayed()
   }
 
@@ -160,11 +128,7 @@ class ProfileSheetTest {
                 badges = listOf(testBadge()),
                 friendStatus = FriendStatus.PENDING,
                 isOwnProfile = false))
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
-      }
-    }
+    setProfileContent(vm)
     composeTestRule.onNodeWithTag("pendingFriendButton").assertIsDisplayed()
   }
 
@@ -177,11 +141,7 @@ class ProfileSheetTest {
                 badges = listOf(testBadge()),
                 friendStatus = FriendStatus.FRIENDS,
                 isOwnProfile = false))
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = vm)
-      }
-    }
+    setProfileContent(vm)
     composeTestRule.onNodeWithTag("friendsIndicator").assertIsDisplayed()
   }
 
@@ -195,11 +155,7 @@ class ProfileSheetTest {
                 isFollowing = false,
                 isOwnProfile = false))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("followButton").assertIsDisplayed()
     composeTestRule.onAllNodesWithTag("unfollowButton").assertCountEquals(0)
@@ -217,11 +173,7 @@ class ProfileSheetTest {
                 upcoming = listOf(upcoming),
                 past = listOf(past)))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("eventsRow_Upcoming Owned Events").assertExists()
     composeTestRule.onNodeWithTag("eventsRow_Past Owned Events").assertExists()
@@ -239,11 +191,7 @@ class ProfileSheetTest {
                 upcoming = emptyList(),
                 past = emptyList()))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onNodeWithTag("noEventsCard").performScrollTo().assertIsDisplayed()
     composeTestRule.onAllNodesWithTag("eventsRow_Upcoming Owned Events").assertCountEquals(0)
@@ -260,11 +208,7 @@ class ProfileSheetTest {
                 upcoming = emptyList(),
                 past = emptyList()))
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(userId = "user123", onClose = {}, onEventClick = {}, viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel)
 
     composeTestRule.onAllNodesWithTag("badgesSection").assertCountEquals(0)
   }
@@ -281,15 +225,7 @@ class ProfileSheetTest {
                 past = emptyList()))
     var clicked = false
 
-    composeTestRule.setContent {
-      MaterialTheme {
-        ProfileSheet(
-            userId = "user123",
-            onClose = {},
-            onEventClick = { clicked = true },
-            viewModel = mockViewModel)
-      }
-    }
+    setProfileContent(mockViewModel) { clicked = true }
 
     // First scroll to the events row (vertical scroll)
     composeTestRule.onNodeWithTag("eventsRow_Upcoming Owned Events").performScrollTo()
@@ -346,4 +282,16 @@ class ProfileSheetTest {
 
   private fun testEvent(uid: String, title: String) =
       com.swent.mapin.model.event.Event(uid = uid, title = title, tags = listOf("tag"))
+
+  private fun setProfileContent(
+      viewModel: ProfileSheetViewModel,
+      onEventClick: (com.swent.mapin.model.event.Event) -> Unit = {}
+  ) {
+    composeTestRule.setContent {
+      MaterialTheme {
+        ProfileSheet(
+            userId = "user123", onClose = {}, onEventClick = onEventClick, viewModel = viewModel)
+      }
+    }
+  }
 }
