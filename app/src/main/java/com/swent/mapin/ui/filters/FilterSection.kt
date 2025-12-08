@@ -47,9 +47,8 @@ import java.util.*
 // Assisted by AI tools
 
 /**
- * Enum defining the three location selection modes in the "Place" filter.
+ * Enum defining the two location selection modes in the "Place" filter.
  * - SEARCH: Text-based location search
- * - MAP: Manual selection on map (to be implemented)
  * - USER: Use current user geolocation
  */
 enum class AroundOption {
@@ -137,7 +136,6 @@ class FiltersSection {
       ToggleSection(
           title = "Date",
           isChecked = isWhenChecked,
-          hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetWhen() else filterViewModel.setWhenChecked(true)
           },
@@ -147,7 +145,6 @@ class FiltersSection {
       ToggleSection(
           title = "Location",
           isChecked = isWhereChecked,
-          hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetWhere() else filterViewModel.setWhereChecked(true)
           },
@@ -157,7 +154,6 @@ class FiltersSection {
       ToggleSection(
           title = "Price",
           isChecked = isPriceChecked,
-          hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetPrice() else filterViewModel.setPriceChecked(true)
           },
@@ -167,7 +163,6 @@ class FiltersSection {
       ToggleSection(
           title = "Tags",
           isChecked = isTagsChecked,
-          hasContent = true,
           onCheckedChange = { checked ->
             if (!checked) filterViewModel.resetTags() else filterViewModel.setIsTagsChecked(true)
           },
@@ -177,7 +172,6 @@ class FiltersSection {
       ToggleSection(
           title = "Friends only",
           isChecked = filters.friendsOnly,
-          hasContent = false,
           onCheckedChange = { checked -> filterViewModel.setFriendsOnly(checked) },
           content = {})
 
@@ -185,7 +179,6 @@ class FiltersSection {
       ToggleSection(
           title = "Popular only",
           isChecked = filters.popularOnly,
-          hasContent = false,
           onCheckedChange = { checked -> filterViewModel.setPopularOnly(checked) },
           content = {})
     }
@@ -196,7 +189,6 @@ class FiltersSection {
    *
    * @param title Section title
    * @param isChecked Current checked state
-   * @param hasContent Whether expandable content exists
    * @param onCheckedChange Callback when checkbox is toggled
    * @param content Composable content shown when expanded
    */
@@ -204,7 +196,6 @@ class FiltersSection {
   fun ToggleSection(
       title: String,
       isChecked: Boolean,
-      hasContent: Boolean,
       onCheckedChange: (Boolean) -> Unit,
       content: @Composable () -> Unit
   ) {
@@ -358,7 +349,7 @@ class FiltersSection {
         }
   }
 
-  /** Location picker with 3 modes: Search, Map, User. Includes radius input (0–999 km). */
+  /** Location picker with 2 modes: Search, User. Includes radius input (0–999 km). */
   @Composable
   fun AroundSpotPicker(
       filterViewModel: FiltersSectionViewModel,
@@ -584,7 +575,7 @@ class FiltersSection {
                   filterViewModel.setMaxPriceCHF(newValue.toInt())
                 },
                 valueRange = 0f..100f,
-                steps = 0, // makes the slider move in single-CHF increments
+                steps = 0, // makes the slider move in continuous-CHF increments
                 modifier = Modifier.weight(1f).testTag(FiltersSectionTestTags.PRICE_INPUT))
 
             // VALUE LABEL
