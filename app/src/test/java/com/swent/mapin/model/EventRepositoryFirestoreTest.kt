@@ -156,6 +156,16 @@ class EventRepositoryFirestoreTest {
 
   private fun voidTask(): Task<Void> = Tasks.forResult(null)
 
+  private fun createRepoWithNotifications(
+      notificationService: NotificationService = mock(),
+      userProfileRepo: UserProfileRepository = mock()
+  ) =
+      EventRepositoryFirestore(
+          db,
+          friendRequestRepository = friendRepo,
+          notificationService = notificationService,
+          userProfileRepository = userProfileRepo)
+
   // ========== BASIC CRUD TESTS ==========
 
   @Test
@@ -1267,11 +1277,7 @@ class EventRepositoryFirestoreTest {
     val mockUserProfileRepo = mock<UserProfileRepository>()
 
     val repoWithNotifications =
-        EventRepositoryFirestore(
-            db,
-            friendRequestRepository = friendRepo,
-            notificationService = mockNotificationService,
-            userProfileRepository = mockUserProfileRepo)
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     val ownerProfile =
         UserProfile(
@@ -1329,11 +1335,7 @@ class EventRepositoryFirestoreTest {
     val mockUserProfileRepo = mock<UserProfileRepository>()
 
     val repoWithNotifications =
-        EventRepositoryFirestore(
-            db,
-            friendRequestRepository = friendRepo,
-            notificationService = mockNotificationService,
-            userProfileRepository = mockUserProfileRepo)
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     val ownerProfile =
         UserProfile(userId = "owner123", name = "Event Creator", followerIds = emptyList())
@@ -1365,11 +1367,7 @@ class EventRepositoryFirestoreTest {
     val mockUserProfileRepo = mock<UserProfileRepository>()
 
     val repoWithNotifications =
-        EventRepositoryFirestore(
-            db,
-            friendRequestRepository = friendRepo,
-            notificationService = mockNotificationService,
-            userProfileRepository = mockUserProfileRepo)
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(null)
 
@@ -1399,11 +1397,7 @@ class EventRepositoryFirestoreTest {
     val mockUserProfileRepo = mock<UserProfileRepository>()
 
     val repoWithNotifications =
-        EventRepositoryFirestore(
-            db,
-            friendRequestRepository = friendRepo,
-            notificationService = mockNotificationService,
-            userProfileRepository = mockUserProfileRepo)
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     // Owner profile with blank name
     val ownerProfile =

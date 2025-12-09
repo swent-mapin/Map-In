@@ -62,10 +62,9 @@ enum class UserEventSource(val fieldName: String) {
  */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val friendRequestRepository: FriendRequestRepository =
-        FriendRequestRepository(notificationService = NotificationService()),
-    private val notificationService: NotificationService = NotificationService(),
-    private val userProfileRepository: UserProfileRepository = UserProfileRepository()
+    private val friendRequestRepository: FriendRequestRepository,
+    private val notificationService: NotificationService,
+    private val userProfileRepository: UserProfileRepository
 ) : EventRepository {
 
   /**
@@ -123,13 +122,13 @@ class EventRepositoryFirestore(
 
       val followerIds = ownerProfile.followerIds
       if (followerIds.isEmpty()) {
-        Log.d("EventRepositoryFirestore", "No followers to notify for new event")
+        Log.w("EventRepositoryFirestore", "No followers to notify for new event")
         return
       }
 
       val organizerName = ownerProfile.name.ifBlank { "Someone you follow" }
 
-      Log.d(
+      Log.w(
           "EventRepositoryFirestore",
           "Notifying ${followerIds.size} followers about new event: ${event.title}")
 
