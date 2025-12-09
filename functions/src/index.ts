@@ -7,6 +7,12 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import axios from "axios";
+import {
+  AiRecommendationRequest,
+  AiRecommendationResponse,
+  AiEventSummary,
+} from "./aiTypes";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -227,3 +233,179 @@ export const cleanupOldNotifications = functions.pubsub
     return null;
   });
 
+/**
+ * AI Event Recommendation Function
+ *
+ * This function receives a user query and a list of events, then uses OpenRouter
+ * (Amazon Nova 2 Lite) to recommend 2-3 relevant events based on the query.
+ */
+export const recommendEvents = functions.https.onCall(
+  async (data: AiRecommendationRequest, context): Promise<AiRecommendationResponse> => {
+    console.log("AI recommendation request received");
+    console.log("User query:", data.userQuery);
+    console.log("Number of events:", data.events.length);
+
+    try {
+      // OpenRouter API configuration
+      const OPENROUTER_API_KEY = functions.config().openrouter.api_key;
+      const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+      const MODEL = "amazon/nova-2-lite-v1:free";
+
+      // Get current date for filtering future events
+      const now = new Date();
+      const currentDateStr = now.toISOString().split("T")[0];
+      const currentTimeStr = now.toTimeString().split(" ")[0];
+
+      // Format events for the AI
+      const eventsFormatted = data.events.map((event: AiEventSummary) => {
+        const startDate = event.startTime
+          ? new Date(event.startTime._seconds * 1000).toLocaleString("fr-FR")
+          : "Date non spécifiée";
+
+        return {
+          id: event.id,
+          title: event.title,
+          description: event.description || "Pas de description",
+          date: startDate,
+          tags: event.tags.join(", "),
+          location: event.locationDescription || "Lieu non spécifié",
+          distance: event.distanceKm ? `${event.distanceKm.toFixed(1)} km` : "Distance inconnue",
+          price: event.price === 0 ? "Gratuit" : `${event.price} CHF`,
+          places: event.capacityRemaining !== undefined && event.capacityRemaining !== null
+            ? `${event.capacityRemaining} places restantes`
+            : "Places illimitées"
+        };
+      });
+
+      // System prompt for the AI
+      const systemPrompt = `Tu es un assistant vocal qui recommande des événements à des utilisateurs.
+
+Date et heure actuelles: ${currentDateStr} à ${currentTimeStr}
+
+IMPORTANT:
+- Recommande UNIQUEMENT 2 à 3 événements qui correspondent le mieux à la demande de l'utilisateur
+- Ne recommande QUE des événements qui ont lieu APRÈS la date/heure actuelle
+- Analyse les tags, la description, la date et l'heure de chaque événement
+- Donne une raison claire et courte pour chaque recommandation
+- Ton message sera lu à haute voix, donc sois naturel et conversationnel
+- Réponds en français
+
+Format de réponse OBLIGATOIRE (JSON strict):
+{
+  "assistantMessage": "Un message conversationnel pour l'utilisateur (2-3 phrases maximum)",
+  "recommendedEvents": [
+    {
+      "id": "event_id_1",
+      "reason": "Raison courte et claire (max 15 mots)"
+    }
+  ],
+  "followupQuestions": ["Question 1?", "Question 2?"]
+}
+
+NE RÉPONDS QU'EN JSON, RIEN D'AUTRE.`;
+
+      const userPrompt = `Requête de l'utilisateur: "${data.userQuery}"
+
+Événements disponibles:
+${JSON.stringify(eventsFormatted, null, 2)}
+
+Recommande 2-3 événements qui correspondent le mieux à cette demande.`;
+
+      console.log("Calling OpenRouter API...");
+
+      // Call OpenRouter API
+      const response = await axios.post(
+        OPENROUTER_API_URL,
+        {
+          model: MODEL,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: userPrompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://mapin.app", // Optional but recommended
+            "X-Title": "Map-In Event Recommender" // Optional but recommended
+          }
+        }
+      );
+
+      console.log("OpenRouter API response received");
+
+      // Parse AI response
+      const aiResponseText = response.data.choices[0].message.content;
+      console.log("AI response text:", aiResponseText);
+
+      // Try to extract JSON from the response (AI might wrap it in markdown)
+      let jsonResponse: AiRecommendationResponse;
+      try {
+        // Remove markdown code blocks if present
+        const cleanedResponse = aiResponseText
+          .replace(/```json\n?/g, "")
+          .replace(/```\n?/g, "")
+          .trim();
+
+        const parsed = JSON.parse(cleanedResponse);
+
+        // Validate response structure
+        if (!parsed.assistantMessage || typeof parsed.assistantMessage !== "string") {
+          throw new Error("Missing or invalid assistantMessage field");
+        }
+        if (!Array.isArray(parsed.recommendedEvents)) {
+          throw new Error("Missing or invalid recommendedEvents field");
+        }
+
+        // Validate each recommended event
+        for (const event of parsed.recommendedEvents) {
+          if (!event.id || !event.reason) {
+            throw new Error("Recommended event missing id or reason");
+          }
+        }
+
+        jsonResponse = parsed as AiRecommendationResponse;
+        console.log("Successfully parsed and validated AI response");
+      } catch (parseError) {
+        console.error("Failed to parse AI response as JSON:", parseError);
+        console.error("Raw response:", aiResponseText);
+
+        // Fallback response
+        jsonResponse = {
+          assistantMessage: "Désolé, je n'ai pas pu analyser correctement les événements disponibles. Peux-tu reformuler ta demande?",
+          recommendedEvents: [],
+          followupQuestions: [
+            "Veux-tu voir tous les événements disponibles?",
+            "Peux-tu préciser tes préférences?"
+          ]
+        };
+      }
+
+      console.log("Returning recommendations:", jsonResponse.recommendedEvents.length, "events");
+      return jsonResponse;
+
+    } catch (error: any) {
+      console.error("Error in AI recommendation:", error);
+      console.error("Error details:", error.response?.data || error.message);
+
+      // Return user-friendly error response
+      return {
+        assistantMessage: "Désolé, j'ai rencontré un problème technique. Peux-tu réessayer dans quelques instants?",
+        recommendedEvents: [],
+        followupQuestions: [
+          "Veux-tu que je réessaie?",
+          "Peux-tu reformuler ta demande?"
+        ]
+      };
+    }
+  }
+);
