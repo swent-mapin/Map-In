@@ -537,11 +537,12 @@ class MapScreenTest {
   fun mapScreen_locationCenteringCallback_isSet() {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
-    lateinit var viewModel: MapScreenViewModel
+    var viewModel: MapScreenViewModel? = null
 
     rule.setContent {
       MaterialTheme {
-        viewModel = rememberMapScreenViewModel(config)
+          val vm = rememberMapScreenViewModel(config)
+          viewModel = vm
         MapScreen(renderMap = false, autoRequestPermissions = false)
       }
     }
@@ -549,9 +550,9 @@ class MapScreenTest {
     rule.waitForIdle()
 
     // Verify the onCenterOnUserLocation callback was set
-    rule.runOnIdle { assertNotNull(viewModel.onCenterOnUserLocation) }
-
-    rule.waitForIdle()
+      val vm = viewModel
+      assertNotNull(vm)
+      assertNotNull(vm!!.onCenterOnUserLocation)
   }
 
   @Test
