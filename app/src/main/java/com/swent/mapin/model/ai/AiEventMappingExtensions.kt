@@ -27,6 +27,7 @@ fun Event.toAiEventSummary(
   return AiEventSummary(
       id = uid,
       title = title,
+      description = description,
       startTime = date,
       endTime = endDate,
       tags = tags,

@@ -50,6 +50,14 @@ class AiEventCandidateSelector(
   ): List<AiEventSummary> {
     var candidates = allEvents
 
+    // Step 0: Always filter out past events
+    val now = Timestamp.now()
+    candidates =
+        candidates.filter { event ->
+          val eventTime = event.date ?: return@filter false
+          eventTime.seconds >= now.seconds
+        }
+
     // Step 1: Filter by time window if provided
     if (userQueryTimeWindow != null) {
       candidates = candidates.filter { event -> event.matchesTimeWindow(userQueryTimeWindow) }

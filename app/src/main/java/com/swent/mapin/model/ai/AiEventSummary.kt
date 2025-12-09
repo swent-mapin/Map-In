@@ -12,6 +12,7 @@ import com.google.firebase.Timestamp
  *
  * @property id Unique identifier of the event
  * @property title Event title
+ * @property description Optional event description
  * @property startTime Optional start time of the event
  * @property endTime Optional end time of the event
  * @property tags List of tags associated with the event
@@ -23,6 +24,7 @@ import com.google.firebase.Timestamp
 data class AiEventSummary(
     val id: String,
     val title: String,
+    val description: String? = null,
     val startTime: Timestamp? = null,
     val endTime: Timestamp? = null,
     val tags: List<String> = emptyList(),
