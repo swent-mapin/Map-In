@@ -403,8 +403,8 @@ class EndToEndM2 {
     }
 
     // Logout - scroll to button as Settings screen is scrollable
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntil(timeoutMillis = 10000) {
