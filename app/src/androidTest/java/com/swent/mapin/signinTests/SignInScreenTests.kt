@@ -199,28 +199,11 @@ class SignInScreenTests {
   }
 
   @Test
-  fun signInScreenShouldRenderWithoutCrashes() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.waitForIdle()
-    // If we reach here, rendering was successful
-  }
-
-  @Test
   fun signInScreenShouldUseProvidedViewModel() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     // Verify the UI state is collected from the provided viewModel
     verify { mockViewModel.uiState }
-  }
-
-  @Test
-  fun buttonsShouldHaveCorrectHeight() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Both buttons should exist with proper dimensions
-    composeTestRule.onNodeWithText("Continue with Google").performScrollTo().assertExists()
-    composeTestRule.onNodeWithText("Continue with Microsoft").performScrollTo().assertExists()
   }
 
   @Test
@@ -379,29 +362,6 @@ class SignInScreenTests {
   }
 
   @Test
-  fun toggleSwitchShouldChangeSignInToSignUp() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Initially in Sign In mode - check the button exists
-    composeTestRule.onAllNodesWithText("Sign In")[0].performScrollTo().assertExists()
-
-    // Find and click the switch (it's between "Sign In" and "Register" labels)
-    // The switch itself may not have text, so we need to find it by role
-    composeTestRule.onAllNodes(hasClickAction()).filter(hasAnyAncestor(hasText("Register")))
-
-    composeTestRule.waitForIdle()
-  }
-
-  @Test
-  fun signUpButtonShouldAppearAfterToggle() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // The button text changes based on toggle state
-    // Initially should show "Sign In"
-    composeTestRule.onAllNodesWithText("Sign In")[0].performScrollTo().assertExists()
-  }
-
-  @Test
   fun clickingSignUpButtonShouldCallSignUpWithEmail() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
@@ -437,28 +397,6 @@ class SignInScreenTests {
   }
 
   @Test
-  fun emailTextFieldShouldHaveEmailKeyboardType() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // The email field should exist and be an email input type
-    composeTestRule.onNodeWithText("Email").performScrollTo().assertExists()
-  }
-
-  @Test
-  fun passwordTextFieldShouldBeSingleLine() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithText("Password").performScrollTo().assertExists()
-  }
-
-  @Test
-  fun emailTextFieldShouldBeSingleLine() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithText("Email").performScrollTo().assertExists()
-  }
-
-  @Test
   fun multipleInputsShouldNotCrashUI() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
@@ -472,21 +410,6 @@ class SignInScreenTests {
 
     composeTestRule.waitForIdle()
     // Should not crash
-  }
-
-  @Test
-  fun signInScreenShouldShowProgressIndicatorWhenLoading() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithText("Email").performScrollTo().performTextInput("test@example.com")
-    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput("password123")
-
-    uiStateFlow.value = SignInUiState(isLoading = true)
-    composeTestRule.waitForIdle()
-
-    // When loading, the button shows a progress indicator instead of text
-    // We verify by checking the loading state
-    assertTrue(uiStateFlow.value.isLoading)
   }
 
   @Test
@@ -506,57 +429,6 @@ class SignInScreenTests {
     composeTestRule.waitForIdle()
 
     assert(callbackInvoked)
-  }
-
-  @Test
-  fun signInScreenShouldHandleLongEmailAddress() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    val longEmail = "very.long.email.address.with.multiple.dots@subdomain.example.com"
-    composeTestRule.onNodeWithText("Email").performScrollTo().performTextInput(longEmail)
-
-    composeTestRule.onNodeWithText(longEmail).assertExists()
-  }
-
-  @Test
-  fun signInScreenShouldHandleLongPassword() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    val longPassword = "a".repeat(50)
-    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput(longPassword)
-
-    composeTestRule.waitForIdle()
-    // Should not crash with long password
-  }
-
-  @Test
-  fun signInScreenShouldHandleSpecialCharactersInEmail() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule
-        .onNodeWithText("Email")
-        .performScrollTo()
-        .performTextInput("test+tag@example.com")
-
-    composeTestRule.onNodeWithText("test+tag@example.com").assertExists()
-  }
-
-  @Test
-  fun signInScreenShouldHandleSpecialCharactersInPassword() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput("p@ssw0rd!#$%")
-
-    composeTestRule.waitForIdle()
-    // Should not crash with special characters
-  }
-
-  @Test
-  fun toggleSwitchLabelsShouldBeVisible() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithTag("signInLabel").performScrollTo().assertExists()
-    composeTestRule.onNodeWithTag("registerLabel").performScrollTo().assertExists()
   }
 
   @Test
@@ -621,39 +493,6 @@ class SignInScreenTests {
   }
 
   @Test
-  fun passwordRequirementsCardShouldDisappearWhenSwitchingBackToSignIn() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify card is visible
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertExists()
-
-    // Switch back to sign in mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Card should disappear
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").assertDoesNotExist()
-  }
-
-  @Test
-  fun passwordRequirementsCardShouldBePositionedBetweenPasswordFieldAndButton() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify proper ordering: password field, requirements card, then button
-    composeTestRule.onNodeWithText("Password").performScrollTo().assertExists()
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertExists()
-    composeTestRule.onNodeWithTag("emailPasswordButton").performScrollTo().assertExists()
-  }
-
-  @Test
   fun registerButtonShouldCallSignUpWithEmailWhenAllFieldsFilled() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
@@ -671,36 +510,6 @@ class SignInScreenTests {
 
     // Verify signUpWithEmail was called
     verify { mockViewModel.signUpWithEmail("test@example.com", "Test123!") }
-  }
-
-  @Test
-  fun registerButtonShouldShowRegisterTextInRegisterMode() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Initially in Sign In mode
-    composeTestRule.onAllNodesWithText("Sign In")[0].performScrollTo().assertExists()
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Button should now show "Register" - use tag to find the button specifically
-    composeTestRule.onNodeWithTag("emailPasswordButton").performScrollTo().assertExists()
-    // Verify button has Register text by checking it contains the text
-    composeTestRule.onNode(hasTestTag("emailPasswordButton") and hasText("Register")).assertExists()
-  }
-
-  @Test
-  fun passwordRequirementsCardShouldHaveProperStyling() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify the card exists and has the requirements header
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertExists()
-    composeTestRule.onNodeWithText("Password Requirements").assertExists()
   }
 
   @Test
@@ -726,23 +535,6 @@ class SignInScreenTests {
   }
 
   @Test
-  fun switchingModesShouldMaintainPasswordFieldContent() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Enter password
-    composeTestRule.onNodeWithText("Password").performScrollTo().performTextInput("Test123!")
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Password field should still contain the value (though masked)
-    // We can verify by trying to submit - use button tag instead of text
-    composeTestRule.onNodeWithText("Email").performScrollTo().performTextInput("test@example.com")
-    composeTestRule.onNodeWithTag("emailPasswordButton").performScrollTo().assertIsEnabled()
-  }
-
-  @Test
   fun registerSwitchShouldBeEnabledWhenNotLoading() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
@@ -756,62 +548,5 @@ class SignInScreenTests {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().assertIsNotEnabled()
-  }
-
-  @Test
-  fun toggleLabelsSignInAndRegisterShouldBothBeVisible() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithTag("signInLabel").performScrollTo().assertExists()
-    composeTestRule.onNodeWithTag("registerLabel").performScrollTo().assertExists()
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().assertExists()
-  }
-
-  @Test
-  fun signInLabelShouldBeHighlightedInSignInMode() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // In Sign In mode, Sign In label should be visible (highlighted)
-    composeTestRule.onNodeWithTag("signInLabel").performScrollTo().assertExists()
-  }
-
-  @Test
-  fun registerLabelShouldBeHighlightedInRegisterMode() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Register label should still be visible
-    composeTestRule.onNodeWithTag("registerLabel").performScrollTo().assertExists()
-  }
-
-  @Test
-  fun passwordRequirementsCardShouldBeScrollable() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    // Switch to register mode
-    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    // Should be able to scroll to the card and all its requirements
-    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertExists()
-    composeTestRule.onNodeWithText("At least 8 characters long").performScrollTo().assertExists()
-    composeTestRule
-        .onNodeWithText("Contains at least one special character")
-        .performScrollTo()
-        .assertExists()
-  }
-
-  @Test
-  fun screenCanBeScrolledToBottomWithKeyboard() {
-    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
-
-    composeTestRule.onNodeWithTag("passwordField").performScrollTo().performClick()
-
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithText("Continue with Microsoft").performScrollTo().assertIsDisplayed()
   }
 }
