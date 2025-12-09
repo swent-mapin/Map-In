@@ -12,6 +12,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.ui.auth.AuthError
 import com.swent.mapin.ui.auth.SignInUiState
 import com.swent.mapin.ui.auth.SignInViewModel
 import io.mockk.coEvery
@@ -53,31 +54,14 @@ class SignInViewModelTest {
   private lateinit var viewModel: SignInViewModel
   private val testDispatcher = StandardTestDispatcher()
 
-  // Error message constants to avoid string brittleness
+  // Test constants
   companion object {
-    const val ERROR_EMPTY_CREDENTIALS = "Email and password cannot be empty"
-    const val ERROR_TOO_SHORT = "at least 8 characters"
-    const val ERROR_MISSING_UPPERCASE = "at least one uppercase"
-    const val ERROR_MISSING_LOWERCASE = "at least one lowercase"
-    const val ERROR_MISSING_DIGIT = "at least one number"
-    const val ERROR_MISSING_SPECIAL = "at least one special character"
-
     // Test password helpers
     const val VALID_PASSWORD = "ValidPass123!"
     const val VALID_EMAIL = "test@example.com"
   }
 
   // Helper function to create password variants with specific missing requirements
-  private fun passwordMissingUppercase() = "validpass123!"
-
-  private fun passwordMissingLowercase() = "VALIDPASS123!"
-
-  private fun passwordMissingDigit() = "ValidPassword!"
-
-  private fun passwordMissingSpecial() = "ValidPass123"
-
-  private fun passwordTooShort() = "Val1!"
-
   private fun passwordWithUnicode() = "Пароль123!" // Cyrillic
 
   private fun passwordWithEmoji() = "Password123😀"
@@ -89,15 +73,7 @@ class SignInViewModelTest {
       expectedCondition: (SignInUiState) -> Boolean
   ): SignInUiState {
     advanceUntilIdle()
-    return viewModel.uiState.first { expectedCondition(it) || it.errorMessage != null }
-  }
-
-  // Helper to assert error message contains expected substring
-  private fun assertErrorContains(actual: String?, expected: String) {
-    assertNotNull("Expected error message but got null", actual)
-    assertTrue(
-        "Expected error to contain '$expected' but was '$actual'",
-        actual!!.contains(expected, ignoreCase = true))
+    return viewModel.uiState.first { expectedCondition(it) || it.error != null }
   }
 
   @Before
@@ -128,7 +104,7 @@ class SignInViewModelTest {
     val initialState = viewModel.uiState.first()
 
     assertFalse(initialState.isLoading)
-    assertNull(initialState.errorMessage)
+    assertNull(initialState.error)
     assertFalse(initialState.isSignInSuccessful)
   }
 
@@ -146,7 +122,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -166,7 +142,7 @@ class SignInViewModelTest {
     val state = SignInUiState()
 
     assertFalse(state.isLoading)
-    assertNull(state.errorMessage)
+    assertNull(state.error)
     assertFalse(state.isSignInSuccessful)
     assertNull(state.currentUser)
   }
@@ -175,24 +151,24 @@ class SignInViewModelTest {
   fun `SignInUiState copy should work correctly`() {
     val originalState =
         SignInUiState(
-            isLoading = false, errorMessage = null, isSignInSuccessful = false, currentUser = null)
+            isLoading = false, error = null, isSignInSuccessful = false, currentUser = null)
 
     val copiedState = originalState.copy(isLoading = true)
 
     assertEquals(true, copiedState.isLoading)
-    assertNull(copiedState.errorMessage)
+    assertNull(copiedState.error)
     assertFalse(copiedState.isSignInSuccessful)
     assertNull(copiedState.currentUser)
   }
 
   @Test
-  fun `SignInUiState copy with error message should work correctly`() {
+  fun `SignInUiState copy with error should work correctly`() {
     val originalState = SignInUiState()
-    val errorMessage = "Test error"
+    val testError = AuthError.SignInFailed
 
-    val copiedState = originalState.copy(errorMessage = errorMessage)
+    val copiedState = originalState.copy(error = testError)
 
-    assertEquals(errorMessage, copiedState.errorMessage)
+    assertEquals(testError, copiedState.error)
     assertFalse(copiedState.isLoading)
   }
 
@@ -231,7 +207,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -285,27 +261,25 @@ class SignInViewModelTest {
   }
 
   @Test
-  fun `clearError should set errorMessage to null in state`() = runTest {
+  fun `clearError should set error to null in state`() = runTest {
     viewModel.clearError()
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
     assertFalse(state.isLoading)
   }
 
   @Test
   fun `SignInUiState with all parameters should create correctly`() {
     val mockUser = mockk<FirebaseUser>()
+    val testError = AuthError.SignInFailed
     val state =
         SignInUiState(
-            isLoading = true,
-            errorMessage = "Error",
-            isSignInSuccessful = true,
-            currentUser = mockUser)
+            isLoading = true, error = testError, isSignInSuccessful = true, currentUser = mockUser)
 
     assertTrue(state.isLoading)
-    assertEquals("Error", state.errorMessage)
+    assertEquals(testError, state.error)
     assertTrue(state.isSignInSuccessful)
     assertEquals(mockUser, state.currentUser)
   }
@@ -319,7 +293,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -330,7 +304,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -341,7 +315,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -351,7 +325,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -361,7 +335,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -398,7 +372,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -409,7 +383,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -419,7 +393,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -429,7 +403,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -439,7 +413,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Password must be at least 8 characters", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -450,7 +424,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Should fail because less than 8 characters
-    assertEquals("Password must be at least 8 characters", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -460,12 +434,9 @@ class SignInViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.first()
-        // Should not fail with any validation errors
-        assertNotEquals("Password must be at least 8 characters", state.errorMessage)
-        assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
-        assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
-        assertNotEquals("Password must contain at least one number", state.errorMessage)
-        assertNotEquals("Password must contain at least one special character", state.errorMessage)
+        // Should not fail with any password validation errors
+        assertFalse(state.error is AuthError.PasswordValidation)
+        assertFalse(state.error is AuthError.EmailPasswordEmpty)
       }
 
   @Test
@@ -474,7 +445,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertEquals("Password must contain at least one uppercase letter", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -483,7 +454,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertEquals("Password must contain at least one lowercase letter", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -492,7 +463,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertEquals("Password must contain at least one number", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -501,7 +472,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertEquals("Password must contain at least one special character", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -510,12 +481,9 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    // Should not fail with any validation errors
-    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
-    assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
-    assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
-    assertNotEquals("Password must contain at least one number", state.errorMessage)
-    assertNotEquals("Password must contain at least one special character", state.errorMessage)
+    // Should not fail with any password validation errors
+    assertFalse(state.error is AuthError.PasswordValidation)
+    assertFalse(state.error is AuthError.EmailPasswordEmpty)
   }
 
   @Test
@@ -525,7 +493,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -560,19 +528,19 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Should not have empty/blank error
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
   fun `signUpWithEmail should handle valid email and password format`() = runTest {
     // This tests that validation passes for valid inputs
-    viewModel.signUpWithEmail("valid.email@example.com", "validPassword123")
+    viewModel.signUpWithEmail("valid.email@example.com", "ValidPassword123!")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     // Should not have validation errors
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+    assertFalse(state.error is AuthError.EmailPasswordEmpty)
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -584,7 +552,7 @@ class SignInViewModelTest {
     val state = viewModel.uiState.first()
     // With current implementation, this should work since trim is not applied
     // and isBlank checks for non-whitespace content
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -593,13 +561,13 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     var state = viewModel.uiState.first()
-    assertNotNull(state.errorMessage)
+    assertNotNull(state.error)
 
     viewModel.clearError()
     advanceUntilIdle()
 
     state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -608,13 +576,13 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     var state = viewModel.uiState.first()
-    assertNotNull(state.errorMessage)
+    assertNotNull(state.error)
 
     viewModel.clearError()
     advanceUntilIdle()
 
     state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -623,17 +591,17 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
   fun `signUpWithEmail with special characters in password should be accepted`() = runTest {
-    viewModel.signUpWithEmail("test@example.com", "p@ssw0rd!#$%")
+    viewModel.signUpWithEmail("test@example.com", "P@ssw0rd!#$%")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+    assertFalse(state.error is AuthError.EmailPasswordEmpty)
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -643,7 +611,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -653,12 +621,8 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
-    assertNotEquals("Password must contain at least one uppercase letter", state.errorMessage)
-    assertNotEquals("Password must contain at least one lowercase letter", state.errorMessage)
-    assertNotEquals("Password must contain at least one number", state.errorMessage)
-    assertNotEquals("Password must contain at least one special character", state.errorMessage)
+    assertFalse(state.error is AuthError.EmailPasswordEmpty)
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -684,7 +648,7 @@ class SignInViewModelTest {
     viewModel.signInWithEmail("", "")
     advanceUntilIdle()
     var state = viewModel.uiState.first()
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
 
     viewModel.clearError()
     advanceUntilIdle()
@@ -692,7 +656,7 @@ class SignInViewModelTest {
     viewModel.signInWithEmail("", "password")
     advanceUntilIdle()
     state = viewModel.uiState.first()
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -700,7 +664,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail("", "123")
     advanceUntilIdle()
     var state = viewModel.uiState.first()
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
 
     viewModel.clearError()
     advanceUntilIdle()
@@ -708,7 +672,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail("test@example.com", "123")
     advanceUntilIdle()
     state = viewModel.uiState.first()
-    assertEquals("Password must be at least 8 characters", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   // ========== Firebase Authentication Success/Failure Tests ==========
@@ -735,7 +699,7 @@ class SignInViewModelTest {
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     assertFalse(state.isSignInSuccessful)
-    assertEquals("No account found with this email", state.errorMessage)
+    assertEquals(AuthError.NoAccountFound, state.error)
   }
 
   @Test
@@ -759,7 +723,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Incorrect email or password", state.errorMessage)
+    assertEquals(AuthError.IncorrectCredentials, state.error)
   }
 
   @Test
@@ -783,7 +747,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Please enter a valid email address", state.errorMessage)
+    assertEquals(AuthError.InvalidEmailFormat, state.error)
   }
 
   @Test
@@ -807,7 +771,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("An account with this email already exists", state.errorMessage)
+    assertEquals(AuthError.EmailAlreadyInUse, state.error)
   }
 
   @Test
@@ -831,7 +795,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Please enter a valid email address", state.errorMessage)
+    assertEquals(AuthError.InvalidEmailFormat, state.error)
   }
 
   @Test
@@ -855,7 +819,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Registration failed. Please try again", state.errorMessage)
+    assertTrue(state.error is AuthError.SignUpFailed)
   }
 
   @Test
@@ -924,7 +888,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-in was cancelled", state.errorMessage)
+    assertEquals(AuthError.SignInCancelled, state.error)
   }
 
   @Test
@@ -947,7 +911,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("No Google accounts found on device", state.errorMessage)
+    assertEquals(AuthError.NoGoogleAccounts, state.error)
   }
 
   @Test
@@ -970,7 +934,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-in failed: Network error occurred", state.errorMessage)
+    assertEquals(AuthError.SignInFailedWithMessage("Network error occurred"), state.error)
   }
 
   @Test
@@ -993,7 +957,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-in failed", state.errorMessage)
+    assertEquals(AuthError.SignInFailed, state.error)
   }
 
   @Test
@@ -1034,7 +998,7 @@ class SignInViewModelTest {
     assertFalse(state.isLoading)
     assertTrue(state.isSignInSuccessful)
     assertEquals(mockUser, state.currentUser)
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -1067,7 +1031,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Microsoft sign-in failed: Microsoft auth failed", state.errorMessage)
+    assertEquals(AuthError.MicrosoftSignInFailed("Microsoft auth failed"), state.error)
   }
 
   @Test
@@ -1101,7 +1065,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Microsoft sign-in failed: No user returned", state.errorMessage)
+    assertEquals(AuthError.NoUserReturned, state.error)
   }
 
   // ========== Additional Email/Password Tests for Higher Coverage ==========
@@ -1132,7 +1096,7 @@ class SignInViewModelTest {
     assertFalse(state.isLoading)
     assertTrue(state.isSignInSuccessful)
     assertEquals(mockUser, state.currentUser)
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -1161,7 +1125,7 @@ class SignInViewModelTest {
     assertFalse(state.isLoading)
     assertTrue(state.isSignInSuccessful)
     assertEquals(mockUser, state.currentUser)
-    assertNull(state.errorMessage)
+    assertNull(state.error)
   }
 
   @Test
@@ -1187,7 +1151,7 @@ class SignInViewModelTest {
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     assertFalse(state.isSignInSuccessful)
-    assertEquals("Sign-in failed: No user returned", state.errorMessage)
+    assertEquals(AuthError.NoUserReturned, state.error)
   }
 
   @Test
@@ -1213,7 +1177,7 @@ class SignInViewModelTest {
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     assertFalse(state.isSignInSuccessful)
-    assertEquals("Sign-up failed: No user returned", state.errorMessage)
+    assertEquals(AuthError.NoUserReturned, state.error)
   }
 
   @Test
@@ -1240,7 +1204,7 @@ class SignInViewModelTest {
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
     // Our local validation catches it before Firebase
-    assertEquals("Password must be at least 8 characters", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1264,7 +1228,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-in failed. Please try again", state.errorMessage)
+    assertEquals(AuthError.SignInFailed, state.error)
   }
 
   @Test
@@ -1311,7 +1275,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -1321,7 +1285,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Email and password cannot be empty", state.errorMessage)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
@@ -1331,7 +1295,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Password must be at least 8 characters", state.errorMessage)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1342,20 +1306,46 @@ class SignInViewModelTest {
 
         val state = viewModel.uiState.first()
         // Should not have password length error
-        assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+        assertFalse(state.error is AuthError.PasswordValidation)
       }
 
   @Test
   fun `signInWithEmail error messages are properly mapped`() = runTest {
     val testCases =
         listOf(
-            "There is no user record corresponding to this identifier" to
-                "No account found with this email",
-            "The password is invalid or the user does not have a password" to
-                "Incorrect email or password",
-            "The email address is badly formatted" to "Please enter a valid email address")
+            // No account found cases
+            "There is no user record corresponding to this identifier" to AuthError.NoAccountFound,
+            "user not found" to AuthError.NoAccountFound,
 
-    for ((firebaseError, expectedMessage) in testCases) {
+            // Incorrect credentials cases (password invalid, credential errors)
+            "The password is invalid or the user does not have a password" to
+                AuthError.IncorrectCredentials,
+            "wrong password" to AuthError.IncorrectCredentials,
+            "The supplied auth credential is incorrect" to AuthError.IncorrectCredentials,
+            "The credential is malformed or has expired" to AuthError.IncorrectCredentials,
+            "Invalid credential provided" to AuthError.IncorrectCredentials,
+            "The auth credential is invalid" to AuthError.IncorrectCredentials,
+
+            // Invalid email format cases
+            "The email address is badly formatted" to AuthError.InvalidEmailFormat,
+            "Invalid email address" to AuthError.InvalidEmailFormat,
+
+            // Network error cases
+            "A network error has occurred" to AuthError.NetworkError,
+            "NETWORK_ERROR: Connection failed" to AuthError.NetworkError,
+            "Unable to resolve host firebase.google.com" to AuthError.NetworkError,
+            "Failed to connect to server" to AuthError.NetworkError,
+
+            // Rate limiting cases
+            "Too many requests from this device" to AuthError.TooManyRequests,
+            "We have blocked all requests from this device" to AuthError.TooManyRequests,
+            "Unusual activity detected" to AuthError.TooManyRequests,
+
+            // Account disabled cases
+            "The user has been disabled" to AuthError.AccountDisabled,
+            "This account has been disabled by an administrator" to AuthError.AccountDisabled)
+
+    for ((firebaseError, expectedError) in testCases) {
       val mockAuth = mockk<FirebaseAuth>(relaxed = true)
       val mockTask = mockk<Task<AuthResult>>(relaxed = true)
       val exception = Exception(firebaseError)
@@ -1374,7 +1364,53 @@ class SignInViewModelTest {
       advanceUntilIdle()
 
       val state = testViewModel.uiState.first()
-      assertEquals(expectedMessage, state.errorMessage)
+      assertEquals("Failed for: $firebaseError", expectedError, state.error)
+
+      unmockkAll()
+    }
+  }
+
+  @Test
+  fun `signInWithEmail error mapping should be case insensitive`() = runTest {
+    val caseInsensitiveTests =
+        listOf(
+            // Test uppercase variants
+            "THE PASSWORD IS INVALID" to AuthError.IncorrectCredentials,
+            "NETWORK ERROR" to AuthError.NetworkError,
+            "USER HAS BEEN DISABLED" to AuthError.AccountDisabled,
+            "TOO MANY REQUESTS" to AuthError.TooManyRequests,
+            "BADLY FORMATTED" to AuthError.InvalidEmailFormat,
+
+            // Test mixed case variants
+            "The Password Is Invalid" to AuthError.IncorrectCredentials,
+            "Network Error Occurred" to AuthError.NetworkError,
+            "Credential Is Incorrect" to AuthError.IncorrectCredentials,
+
+            // Test lowercase variants
+            "the password is invalid" to AuthError.IncorrectCredentials,
+            "network error" to AuthError.NetworkError,
+            "user has been disabled" to AuthError.AccountDisabled)
+
+    for ((firebaseError, expectedError) in caseInsensitiveTests) {
+      val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+      val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+      val exception = Exception(firebaseError)
+
+      mockkStatic(FirebaseAuth::class)
+      mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+      every { FirebaseAuth.getInstance() } returns mockAuth
+      every { mockAuth.currentUser } returns null
+      every { mockAuth.signInWithEmailAndPassword(any<String>(), any<String>()) } returns mockTask
+
+      coEvery { mockTask.await<AuthResult>() } throws exception
+
+      val testViewModel = SignInViewModel(context)
+      testViewModel.signInWithEmail("test@example.com", "password123")
+      advanceUntilIdle()
+
+      val state = testViewModel.uiState.first()
+      assertEquals("Case insensitivity failed for: $firebaseError", expectedError, state.error)
 
       unmockkAll()
     }
@@ -1384,12 +1420,30 @@ class SignInViewModelTest {
   fun `signUpWithEmail error messages are properly mapped`() = runTest {
     val testCases =
         listOf(
-            "The email address is already in use by another account" to
-                "An account with this email already exists",
-            "The email address is badly formatted" to "Please enter a valid email address",
-            "The password is too weak" to "Password is too weak")
+            // Email already in use cases
+            "The email address is already in use by another account" to AuthError.EmailAlreadyInUse,
+            "email already in use" to AuthError.EmailAlreadyInUse,
+            "An account already exists with this email" to AuthError.EmailAlreadyInUse,
 
-    for ((firebaseError, expectedMessage) in testCases) {
+            // Invalid email format cases
+            "The email address is badly formatted" to AuthError.InvalidEmailFormat,
+            "Invalid email address" to AuthError.InvalidEmailFormat,
+
+            // Weak password cases
+            "The password is too weak" to AuthError.WeakPassword,
+            "Password should be at least 6 characters" to AuthError.WeakPassword,
+
+            // Network error cases
+            "A network error has occurred" to AuthError.NetworkError,
+            "NETWORK_ERROR" to AuthError.NetworkError,
+            "Unable to resolve host" to AuthError.NetworkError,
+            "Failed to connect" to AuthError.NetworkError,
+
+            // Rate limiting cases
+            "Too many requests from this device" to AuthError.TooManyRequests,
+            "We have blocked all requests" to AuthError.TooManyRequests)
+
+    for ((firebaseError, expectedError) in testCases) {
       val mockAuth = mockk<FirebaseAuth>(relaxed = true)
       val mockTask = mockk<Task<AuthResult>>(relaxed = true)
       val exception = Exception(firebaseError)
@@ -1409,7 +1463,51 @@ class SignInViewModelTest {
       advanceUntilIdle()
 
       val state = testViewModel.uiState.first()
-      assertEquals(expectedMessage, state.errorMessage)
+      assertEquals("Failed for: $firebaseError", expectedError, state.error)
+
+      unmockkAll()
+    }
+  }
+
+  @Test
+  fun `signUpWithEmail error mapping should be case insensitive`() = runTest {
+    val caseInsensitiveTests =
+        listOf(
+            // Test uppercase variants
+            "EMAIL ADDRESS IS ALREADY IN USE" to AuthError.EmailAlreadyInUse,
+            "THE PASSWORD IS TOO WEAK" to AuthError.WeakPassword,
+            "NETWORK ERROR" to AuthError.NetworkError,
+            "TOO MANY REQUESTS" to AuthError.TooManyRequests,
+
+            // Test mixed case variants
+            "Email Already In Use" to AuthError.EmailAlreadyInUse,
+            "The Password Is Too Weak" to AuthError.WeakPassword,
+
+            // Test lowercase variants
+            "email address is already in use" to AuthError.EmailAlreadyInUse,
+            "the password is too weak" to AuthError.WeakPassword)
+
+    for ((firebaseError, expectedError) in caseInsensitiveTests) {
+      val mockAuth = mockk<FirebaseAuth>(relaxed = true)
+      val mockTask = mockk<Task<AuthResult>>(relaxed = true)
+      val exception = Exception(firebaseError)
+
+      mockkStatic(FirebaseAuth::class)
+      mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+
+      every { FirebaseAuth.getInstance() } returns mockAuth
+      every { mockAuth.currentUser } returns null
+      every { mockAuth.createUserWithEmailAndPassword(any<String>(), any<String>()) } returns
+          mockTask
+
+      coEvery { mockTask.await<AuthResult>() } throws exception
+
+      val testViewModel = SignInViewModel(context)
+      testViewModel.signUpWithEmail("test@example.com", "Password123!")
+      advanceUntilIdle()
+
+      val state = testViewModel.uiState.first()
+      assertEquals("Case insensitivity failed for: $firebaseError", expectedError, state.error)
 
       unmockkAll()
     }
@@ -1422,7 +1520,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     var state = viewModel.uiState.first()
-    assertNotNull(state.errorMessage)
+    assertNotNull(state.error)
     val wasLoading = state.isLoading
     val wasSuccessful = state.isSignInSuccessful
 
@@ -1431,7 +1529,7 @@ class SignInViewModelTest {
     advanceUntilIdle()
 
     state = viewModel.uiState.first()
-    assertNull(state.errorMessage)
+    assertNull(state.error)
     assertEquals(wasLoading, state.isLoading)
     assertEquals(wasSuccessful, state.isSignInSuccessful)
   }
@@ -1443,18 +1541,18 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Should not fail with empty validation
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
+    assertNotEquals(AuthError.EmailPasswordEmpty, state.error)
   }
 
   @Test
   fun `email sign-up with unicode characters in password should be accepted`() = runTest {
-    viewModel.signUpWithEmail("test@example.com", "пароль123")
+    viewModel.signUpWithEmail("test@example.com", "Пароль123!")
     advanceUntilIdle()
 
     val state = viewModel.uiState.first()
     // Should not fail with validation errors
-    assertNotEquals("Email and password cannot be empty", state.errorMessage)
-    assertNotEquals("Password must be at least 8 characters", state.errorMessage)
+    assertFalse(state.error is AuthError.EmailPasswordEmpty)
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1493,11 +1591,7 @@ class SignInViewModelTest {
 
         val state = viewModel.uiState.first()
         // Cyrillic characters should count as special characters
-        state.errorMessage?.let { error ->
-          assertFalse(
-              "Cyrillic password should be valid but got: $error",
-              error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-        }
+        assertFalse(state.error is AuthError.PasswordValidation)
       }
 
   @Test
@@ -1507,11 +1601,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Emoji should count as special character
-    state.errorMessage?.let { error ->
-      assertFalse(
-          "Emoji password should have special char but got: $error",
-          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-    }
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1522,11 +1612,7 @@ class SignInViewModelTest {
 
         val state = viewModel.uiState.first()
         // Chinese characters should count as special characters
-        state.errorMessage?.let { error ->
-          assertFalse(
-              "Chinese password should have special char but got: $error",
-              error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-        }
+        assertFalse(state.error is AuthError.PasswordValidation)
       }
 
   @Test
@@ -1548,11 +1634,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Mathematical symbols should count as special characters
-    state.errorMessage?.let { error ->
-      assertFalse(
-          "Math symbols should count as special char",
-          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-    }
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1563,11 +1645,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Spaces count as special characters
-    state.errorMessage?.let { error ->
-      assertFalse(
-          "Spaces should count as special char",
-          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-    }
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   // ========== Edge Cases and Boundary Tests ==========
@@ -1577,7 +1655,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail("", VALID_PASSWORD)
     val state = awaitStateUpdate { !it.isLoading }
 
-    assertErrorContains(state.errorMessage, ERROR_EMPTY_CREDENTIALS)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -1586,7 +1664,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail(VALID_EMAIL, "")
     val state = awaitStateUpdate { !it.isLoading }
 
-    assertErrorContains(state.errorMessage, ERROR_EMPTY_CREDENTIALS)
+    assertEquals(AuthError.EmailPasswordEmpty, state.error)
     assertFalse(state.isSignInSuccessful)
   }
 
@@ -1596,7 +1674,7 @@ class SignInViewModelTest {
     val state = awaitStateUpdate { !it.isLoading }
 
     // Whitespace-only password should fail validation
-    assertNotNull("Should have error for whitespace-only password", state.errorMessage)
+    assertNotNull("Should have error for whitespace-only password", state.error)
   }
 
   @Test
@@ -1618,11 +1696,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Tabs and newlines should count as special characters
-    state.errorMessage?.let { error ->
-      assertFalse(
-          "Whitespace chars should count as special",
-          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-    }
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1630,7 +1704,7 @@ class SignInViewModelTest {
     viewModel.signUpWithEmail(VALID_EMAIL, "Pass1!a") // 7 characters
     val state = awaitStateUpdate { !it.isLoading }
 
-    assertErrorContains(state.errorMessage, ERROR_TOO_SHORT)
+    assertTrue(state.error is AuthError.PasswordValidation)
   }
 
   @Test
@@ -1641,11 +1715,7 @@ class SignInViewModelTest {
 
     val state = viewModel.uiState.first()
     // Should be valid
-    state.errorMessage?.let { error ->
-      assertFalse(
-          "All punctuation types should be valid",
-          error.contains(ERROR_MISSING_SPECIAL, ignoreCase = true))
-    }
+    assertFalse(state.error is AuthError.PasswordValidation)
   }
 
   @Test

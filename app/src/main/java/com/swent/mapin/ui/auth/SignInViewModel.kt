@@ -26,13 +26,13 @@ import kotlinx.coroutines.tasks.await
  * UI state for the sign-in screen.
  *
  * @property isLoading Indicates whether an authentication operation is in progress.
- * @property errorMessage Error message to display to the user, or null if no error.
+ * @property error Authentication error to display to the user, or null if no error.
  * @property isSignInSuccessful Indicates whether the sign-in was successful.
  * @property currentUser The currently authenticated [FirebaseUser], or null if not authenticated.
  */
 data class SignInUiState(
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val error: AuthError? = null,
     val isSignInSuccessful: Boolean = false,
     val currentUser: FirebaseUser? = null
 )
@@ -67,7 +67,7 @@ class SignInViewModel(context: Context) : ViewModel() {
       return
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+    _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
     viewModelScope.launch {
       try {
@@ -96,10 +96,7 @@ class SignInViewModel(context: Context) : ViewModel() {
           Log.i(TAG, "Sign-in successful for user: ${user.displayName}")
           _uiState.value =
               _uiState.value.copy(
-                  isLoading = false,
-                  isSignInSuccessful = true,
-                  currentUser = user,
-                  errorMessage = null)
+                  isLoading = false, isSignInSuccessful = true, currentUser = user, error = null)
 
           // Initialize FCM for push notifications
           initializeFCM()
@@ -109,36 +106,35 @@ class SignInViewModel(context: Context) : ViewModel() {
             ?: run {
               Log.e(TAG, "No user returned from Firebase")
               _uiState.value =
-                  _uiState.value.copy(
-                      isLoading = false, errorMessage = "Sign-in failed: No user returned")
+                  _uiState.value.copy(isLoading = false, error = AuthError.NoUserReturned)
             }
       } catch (e: Exception) {
         Log.e(TAG, "Sign-in failed: ${e.javaClass.simpleName}", e)
 
         // Enhanced error logging for debugging
-        val errorDetails =
+        val authError =
             when (e) {
               is androidx.credentials.exceptions.GetCredentialCancellationException -> {
-                "Sign-in was cancelled"
+                AuthError.SignInCancelled
               }
               is androidx.credentials.exceptions.NoCredentialException -> {
-                "No Google accounts found on device"
+                AuthError.NoGoogleAccounts
               }
               is androidx.credentials.exceptions.GetCredentialException -> {
                 Log.e(TAG, "GetCredentialException - Type: ${e.type}")
                 Log.e(TAG, "GetCredentialException - Message: ${e.message}")
-                "Credential error: ${e.type}\n${e.message}"
+                AuthError.CredentialError(e.type, e.message)
               }
               else -> {
                 if (e.message == null) {
-                  "Sign-in failed"
+                  AuthError.SignInFailed
                 } else {
-                  "Sign-in failed: ${e.message}"
+                  AuthError.SignInFailedWithMessage(e.message!!)
                 }
               }
             }
 
-        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorDetails)
+        _uiState.value = _uiState.value.copy(isLoading = false, error = authError)
       }
     }
   }
@@ -156,7 +152,7 @@ class SignInViewModel(context: Context) : ViewModel() {
       return
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+    _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
     viewModelScope.launch {
       try {
@@ -175,29 +171,27 @@ class SignInViewModel(context: Context) : ViewModel() {
                         isLoading = false,
                         isSignInSuccessful = true,
                         currentUser = user,
-                        errorMessage = null)
+                        error = null)
 
                 // Initialize FCM for push notifications
                 viewModelScope.launch { initializeFCM() }
               }
                   ?: run {
                     _uiState.value =
-                        _uiState.value.copy(
-                            isLoading = false,
-                            errorMessage = "Microsoft sign-in failed: No user returned")
+                        _uiState.value.copy(isLoading = false, error = AuthError.NoUserReturned)
                   }
             }
             .addOnFailureListener { e ->
               Log.e(TAG, "Microsoft sign-in failed", e)
               _uiState.value =
                   _uiState.value.copy(
-                      isLoading = false, errorMessage = "Microsoft sign-in failed: ${e.message}")
+                      isLoading = false, error = AuthError.MicrosoftSignInFailed(e.message))
             }
       } catch (e: Exception) {
         Log.e(TAG, "Microsoft sign-in exception", e)
         _uiState.value =
             _uiState.value.copy(
-                isLoading = false, errorMessage = "Microsoft sign-in failed: ${e.message}")
+                isLoading = false, error = AuthError.MicrosoftSignInFailed(e.message))
       }
     }
   }
@@ -212,11 +206,11 @@ class SignInViewModel(context: Context) : ViewModel() {
     if (_uiState.value.isLoading) return
 
     if (email.isBlank() || password.isBlank()) {
-      _uiState.value = _uiState.value.copy(errorMessage = "Email and password cannot be empty")
+      _uiState.value = _uiState.value.copy(error = AuthError.EmailPasswordEmpty)
       return
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+    _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
     viewModelScope.launch {
       try {
@@ -225,40 +219,19 @@ class SignInViewModel(context: Context) : ViewModel() {
           Log.i(TAG, "Email sign-in successful for: ${user.email}")
           _uiState.value =
               _uiState.value.copy(
-                  isLoading = false,
-                  isSignInSuccessful = true,
-                  currentUser = user,
-                  errorMessage = null)
+                  isLoading = false, isSignInSuccessful = true, currentUser = user, error = null)
 
           // Initialize FCM for push notifications
           initializeFCM()
         }
             ?: run {
               _uiState.value =
-                  _uiState.value.copy(
-                      isLoading = false, errorMessage = "Sign-in failed: No user returned")
+                  _uiState.value.copy(isLoading = false, error = AuthError.NoUserReturned)
             }
       } catch (e: Exception) {
         Log.e(TAG, "Email sign-in failed", e)
-        val errorMessage =
-            when {
-              e.message?.contains("no user record") == true -> "No account found with this email"
-              e.message?.contains("password is invalid") == true -> "Incorrect email or password"
-              e.message?.contains("badly formatted") == true -> "Please enter a valid email address"
-              e.message?.contains("credential is incorrect") == true ||
-                  e.message?.contains("credential is malformed") == true ||
-                  e.message?.contains("auth credential") == true -> "Incorrect email or password"
-              e.message?.contains("network error") == true ||
-                  e.message?.contains("NETWORK_ERROR") == true ->
-                  "Network error. Please check your connection"
-              e.message?.contains("too many requests") == true ||
-                  e.message?.contains("blocked all requests") == true ->
-                  "Too many attempts. Please try again later"
-              e.message?.contains("user has been disabled") == true ->
-                  "This account has been disabled"
-              else -> "Sign-in failed. Please try again"
-            }
-        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+        val authError = AuthErrorMapper.mapSignInException(e)
+        _uiState.value = _uiState.value.copy(isLoading = false, error = authError)
       }
     }
   }
@@ -285,7 +258,7 @@ class SignInViewModel(context: Context) : ViewModel() {
     if (_uiState.value.isLoading) return
 
     if (email.isBlank() || password.isBlank()) {
-      _uiState.value = _uiState.value.copy(errorMessage = "Email and password cannot be empty")
+      _uiState.value = _uiState.value.copy(error = AuthError.EmailPasswordEmpty)
       return
     }
 
@@ -294,12 +267,12 @@ class SignInViewModel(context: Context) : ViewModel() {
     val validationResult = validation.toResult()
 
     if (validationResult is PasswordValidationResult.Invalid) {
-      val errorMessage = applicationContext.getString(validationResult.messageResId)
-      _uiState.value = _uiState.value.copy(errorMessage = errorMessage)
+      _uiState.value =
+          _uiState.value.copy(error = AuthError.PasswordValidation(validationResult.messageResId))
       return
     }
 
-    _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+    _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
     viewModelScope.launch {
       try {
@@ -308,34 +281,19 @@ class SignInViewModel(context: Context) : ViewModel() {
           Log.i(TAG, "Email sign-up successful for: ${user.email}")
           _uiState.value =
               _uiState.value.copy(
-                  isLoading = false,
-                  isSignInSuccessful = true,
-                  currentUser = user,
-                  errorMessage = null)
+                  isLoading = false, isSignInSuccessful = true, currentUser = user, error = null)
 
           // Initialize FCM for push notifications
           initializeFCM()
         }
             ?: run {
               _uiState.value =
-                  _uiState.value.copy(
-                      isLoading = false, errorMessage = "Sign-up failed: No user returned")
+                  _uiState.value.copy(isLoading = false, error = AuthError.NoUserReturned)
             }
       } catch (e: Exception) {
         Log.e(TAG, "Email sign-up failed", e)
-        val errorMessage =
-            when {
-              e.message?.contains("email address is already in use", ignoreCase = true) == true ->
-                  "An account with this email already exists"
-              e.message?.contains("badly formatted", ignoreCase = true) == true ->
-                  "Please enter a valid email address"
-              e.message?.contains("weak", ignoreCase = true) == true -> "Password is too weak"
-              e.message?.contains("network error", ignoreCase = true) == true ||
-                  e.message?.contains("NETWORK_ERROR", ignoreCase = true) == true ->
-                  "Network error. Please check your connection"
-              else -> "Registration failed. Please try again"
-            }
-        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
+        val authError = AuthErrorMapper.mapSignUpException(e)
+        _uiState.value = _uiState.value.copy(isLoading = false, error = authError)
       }
     }
   }
@@ -360,9 +318,9 @@ class SignInViewModel(context: Context) : ViewModel() {
     }
   }
 
-  /** Clears the current error message from the UI state. */
+  /** Clears the current error from the UI state. */
   fun clearError() {
-    _uiState.value = _uiState.value.copy(errorMessage = null)
+    _uiState.value = _uiState.value.copy(error = null)
   }
 
   companion object {

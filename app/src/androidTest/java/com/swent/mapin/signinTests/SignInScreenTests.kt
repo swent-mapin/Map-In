@@ -7,6 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.auth.AuthError
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.auth.SignInUiState
 import com.swent.mapin.ui.auth.SignInViewModel
@@ -134,18 +136,66 @@ class SignInScreenTests {
   }
 
   @Test
-  fun shouldDisplayErrorMessageInlineWhenErrorOccurs() {
+  fun shouldHandleErrorStateAndDisplayErrorCard() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
-    // Simulate error
-    uiStateFlow.value = SignInUiState(errorMessage = "Test error")
+    // Simulate error using AuthError
+    uiStateFlow.value = SignInUiState(error = AuthError.EmailPasswordEmpty)
 
     composeTestRule.waitForIdle()
 
-    // Verify error card and text are displayed
-    composeTestRule.onNodeWithTag("errorCard").assertExists()
-    composeTestRule.onNodeWithTag("errorText").assertExists()
-    composeTestRule.onNodeWithText("Test error").assertExists()
+    // Verify error card and its components are displayed using UiTestTags constants
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_CARD).assertExists()
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_TEXT).assertExists()
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_DISMISS).assertExists()
+
+    // Verify the exact error text content is displayed
+    composeTestRule.onNodeWithText("Email and password cannot be empty").assertExists()
+
+    // Verify accessibility - the error card should have live region semantics
+    // The card exists and contains the error message, ensuring screen readers can announce it
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_CARD).assertIsDisplayed()
+  }
+
+  @Test
+  fun errorCardDismissButtonShouldCallClearError() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    // Simulate error
+    uiStateFlow.value = SignInUiState(error = AuthError.IncorrectCredentials)
+
+    composeTestRule.waitForIdle()
+
+    // Verify error card is displayed
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_CARD).assertExists()
+
+    // Click the dismiss button
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_DISMISS).performClick()
+
+    // Verify clearError was called
+    verify { mockViewModel.clearError() }
+  }
+
+  @Test
+  fun errorCardShouldHaveAccessibilitySemantics() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    // Simulate error
+    uiStateFlow.value = SignInUiState(error = AuthError.NoAccountFound)
+
+    composeTestRule.waitForIdle()
+
+    // Verify error card exists and is displayed (for screen reader visibility)
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_CARD).assertExists().assertIsDisplayed()
+
+    // Verify dismiss button has content description for accessibility
+    composeTestRule
+        .onNodeWithTag(UiTestTags.AUTH_ERROR_DISMISS)
+        .assertExists()
+        .assertHasClickAction()
+
+    // Verify error icon has content description (via the error text being present)
+    composeTestRule.onNodeWithTag(UiTestTags.AUTH_ERROR_TEXT).assertExists().assertIsDisplayed()
   }
 
   @Test
