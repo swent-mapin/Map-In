@@ -50,7 +50,6 @@ class AiEventCandidateSelector(
   ): List<AiEventSummary> {
     var candidates = allEvents
 
-    // Step 0: Always filter out past events
     val now = Timestamp.now()
     candidates =
         candidates.filter { event ->
@@ -58,12 +57,10 @@ class AiEventCandidateSelector(
           eventTime.seconds >= now.seconds
         }
 
-    // Step 1: Filter by time window if provided
     if (userQueryTimeWindow != null) {
       candidates = candidates.filter { event -> event.matchesTimeWindow(userQueryTimeWindow) }
     }
 
-    // Step 2: Compute distances if user location is available
     val eventDistances =
         if (userLocation != null && distanceCalculator != null) {
           candidates.associateWith { event ->
@@ -73,7 +70,6 @@ class AiEventCandidateSelector(
           emptyMap()
         }
 
-    // Step 3: Filter by distance if applicable
     if (userLocation != null && eventDistances.isNotEmpty()) {
       candidates =
           candidates.filter { event ->
@@ -82,20 +78,15 @@ class AiEventCandidateSelector(
           }
     }
 
-    // Step 4: Sort events
     candidates =
         if (eventDistances.isNotEmpty()) {
-          // Sort by distance (ascending) when distances are available
           candidates.sortedBy { event -> eventDistances[event] ?: Double.MAX_VALUE }
         } else {
-          // Sort by start time (ascending) when distances are not available
           candidates.sortedBy { event -> event.date?.seconds ?: Long.MAX_VALUE }
         }
 
-    // Step 5: Clip to maxCandidates
     candidates = candidates.take(maxCandidates)
 
-    // Step 6: Map to AiEventSummary
     return candidates.map { event ->
       event.toAiEventSummary(
           distanceKm = eventDistances[event],
@@ -122,8 +113,6 @@ class AiEventCandidateSelector(
     val windowStart = timeWindow.start
     val windowEnd = timeWindow.endInclusive
 
-    // Check if intervals overlap:
-    // Event overlaps if: (eventStart <= windowEnd) AND (eventEnd >= windowStart)
     return !startTime.toDate().after(windowEnd.toDate()) &&
         !endTime.toDate().before(windowStart.toDate())
   }
