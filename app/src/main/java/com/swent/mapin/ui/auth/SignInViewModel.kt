@@ -243,9 +243,20 @@ class SignInViewModel(context: Context) : ViewModel() {
         val errorMessage =
             when {
               e.message?.contains("no user record") == true -> "No account found with this email"
-              e.message?.contains("password is invalid") == true -> "Invalid password"
-              e.message?.contains("badly formatted") == true -> "Invalid email format"
-              else -> "Sign-in failed: ${e.message}"
+              e.message?.contains("password is invalid") == true -> "Incorrect email or password"
+              e.message?.contains("badly formatted") == true -> "Please enter a valid email address"
+              e.message?.contains("credential is incorrect") == true ||
+                  e.message?.contains("credential is malformed") == true ||
+                  e.message?.contains("auth credential") == true -> "Incorrect email or password"
+              e.message?.contains("network error") == true ||
+                  e.message?.contains("NETWORK_ERROR") == true ->
+                  "Network error. Please check your connection"
+              e.message?.contains("too many requests") == true ||
+                  e.message?.contains("blocked all requests") == true ->
+                  "Too many attempts. Please try again later"
+              e.message?.contains("user has been disabled") == true ->
+                  "This account has been disabled"
+              else -> "Sign-in failed. Please try again"
             }
         _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
       }
@@ -317,9 +328,12 @@ class SignInViewModel(context: Context) : ViewModel() {
               e.message?.contains("email address is already in use", ignoreCase = true) == true ->
                   "An account with this email already exists"
               e.message?.contains("badly formatted", ignoreCase = true) == true ->
-                  "Invalid email format"
+                  "Please enter a valid email address"
               e.message?.contains("weak", ignoreCase = true) == true -> "Password is too weak"
-              else -> "Sign-up failed: ${e.message}"
+              e.message?.contains("network error", ignoreCase = true) == true ||
+                  e.message?.contains("NETWORK_ERROR", ignoreCase = true) == true ->
+                  "Network error. Please check your connection"
+              else -> "Registration failed. Please try again"
             }
         _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = errorMessage)
       }

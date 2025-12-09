@@ -134,7 +134,7 @@ class SignInScreenTests {
   }
 
   @Test
-  fun shouldHandleErrorStateAndCallClearError() {
+  fun shouldDisplayErrorMessageInlineWhenErrorOccurs() {
     composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
 
     // Simulate error
@@ -142,7 +142,10 @@ class SignInScreenTests {
 
     composeTestRule.waitForIdle()
 
-    verify { mockViewModel.clearError() }
+    // Verify error card and text are displayed
+    composeTestRule.onNodeWithTag("errorCard").assertExists()
+    composeTestRule.onNodeWithTag("errorText").assertExists()
+    composeTestRule.onNodeWithText("Test error").assertExists()
   }
 
   @Test

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -64,14 +65,6 @@ fun SignInScreen(
               Toast.LENGTH_SHORT)
           .show()
       onSignInSuccess()
-    }
-  }
-
-  // Display errors as toast messages and clear them from state
-  LaunchedEffect(uiState.errorMessage) {
-    uiState.errorMessage?.let { message ->
-      Toast.makeText(context, "❌ $message", Toast.LENGTH_LONG).show()
-      viewModel.clearError()
     }
   }
 
@@ -147,6 +140,32 @@ fun SignInScreen(
                     remember(password) { derivedStateOf { validatePassword(password) } }
                 PasswordRequirementsCard(
                     password = password, passwordValidation = passwordValidation)
+              }
+
+              // Show error message below input fields
+              uiState.errorMessage?.let { errorMessage ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("errorCard"),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                      Row(
+                          modifier = Modifier.padding(12.dp),
+                          verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Error,
+                                contentDescription = "Error",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = errorMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.testTag("errorText"))
+                          }
+                    }
               }
 
               Spacer(modifier = Modifier.height(16.dp))

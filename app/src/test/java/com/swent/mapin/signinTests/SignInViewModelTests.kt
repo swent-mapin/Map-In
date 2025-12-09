@@ -759,7 +759,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Invalid password", state.errorMessage)
+    assertEquals("Incorrect email or password", state.errorMessage)
   }
 
   @Test
@@ -783,7 +783,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Invalid email format", state.errorMessage)
+    assertEquals("Please enter a valid email address", state.errorMessage)
   }
 
   @Test
@@ -831,7 +831,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Invalid email format", state.errorMessage)
+    assertEquals("Please enter a valid email address", state.errorMessage)
   }
 
   @Test
@@ -855,7 +855,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-up failed: Unknown Firebase error", state.errorMessage)
+    assertEquals("Registration failed. Please try again", state.errorMessage)
   }
 
   @Test
@@ -1264,7 +1264,7 @@ class SignInViewModelTest {
 
     val state = testViewModel.uiState.first()
     assertFalse(state.isLoading)
-    assertEquals("Sign-in failed: Some other Firebase error", state.errorMessage)
+    assertEquals("Sign-in failed. Please try again", state.errorMessage)
   }
 
   @Test
@@ -1351,8 +1351,9 @@ class SignInViewModelTest {
         listOf(
             "There is no user record corresponding to this identifier" to
                 "No account found with this email",
-            "The password is invalid or the user does not have a password" to "Invalid password",
-            "The email address is badly formatted" to "Invalid email format")
+            "The password is invalid or the user does not have a password" to
+                "Incorrect email or password",
+            "The email address is badly formatted" to "Please enter a valid email address")
 
     for ((firebaseError, expectedMessage) in testCases) {
       val mockAuth = mockk<FirebaseAuth>(relaxed = true)
@@ -1385,7 +1386,7 @@ class SignInViewModelTest {
         listOf(
             "The email address is already in use by another account" to
                 "An account with this email already exists",
-            "The email address is badly formatted" to "Invalid email format",
+            "The email address is badly formatted" to "Please enter a valid email address",
             "The password is too weak" to "Password is too weak")
 
     for ((firebaseError, expectedMessage) in testCases) {
