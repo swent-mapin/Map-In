@@ -2,11 +2,15 @@ package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.*
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -388,5 +392,32 @@ class NotificationServiceTest {
         }
 
     assertEquals("RecipientId cannot be blank", exception.message)
+  }
+
+  @Test
+  fun `sendNewEventFromFollowedUserNotification creates correct notification`() = runTest {
+    val captor = argumentCaptor<Notification>()
+    whenever(mockRepository.send(any())).thenReturn(NotificationResult.Success(Notification()))
+
+    service.sendNewEventFromFollowedUserNotification(
+        recipientId = "follower123",
+        organizerId = "organizer456",
+        organizerName = "Alice",
+        eventId = "event789",
+        eventTitle = "Music Festival")
+
+    verify(mockRepository).send(captor.capture())
+
+    val notification = captor.firstValue
+    assertEquals("New event from Alice", notification.title)
+    assertEquals("Music Festival", notification.message)
+    assertEquals(NotificationType.EVENT_INVITATION, notification.type)
+    assertEquals("follower123", notification.recipientId)
+    assertEquals("organizer456", notification.senderId)
+    assertEquals("event789", notification.getMetadata("eventId"))
+    assertEquals("Music Festival", notification.getMetadata("eventTitle"))
+    assertEquals("Alice", notification.getMetadata("organizerName"))
+    assertEquals("mapin://events/event789", notification.actionUrl)
+    assertEquals(1, notification.priority)
   }
 }
