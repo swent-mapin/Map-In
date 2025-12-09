@@ -541,8 +541,8 @@ class MapScreenTest {
 
     rule.setContent {
       MaterialTheme {
-          val vm = rememberMapScreenViewModel(config)
-          viewModel = vm
+        val vm = rememberMapScreenViewModel(config)
+        viewModel = vm
         MapScreen(renderMap = false, autoRequestPermissions = false)
       }
     }
@@ -550,9 +550,9 @@ class MapScreenTest {
     rule.waitForIdle()
 
     // Verify the onCenterOnUserLocation callback was set
-      val vm = viewModel
-      assertNotNull(vm)
-      assertNotNull(vm!!.onCenterOnUserLocation)
+    val vm = viewModel
+    assertNotNull(vm)
+    assertNotNull(vm!!.onCenterOnUserLocation)
   }
 
   @Test
