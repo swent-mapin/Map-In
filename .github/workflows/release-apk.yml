@@ -1,0 +1,99 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Restore release keystore
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_B64" ] || [ -z "$RELEASE_KEYSTORE_PASSWORD" ] || [ -z "$RELEASE_KEY_ALIAS" ] || [ -z "$RELEASE_KEY_PASSWORD" ]; then
+            echo "Release keystore secrets are not configured." >&2
+            exit 1
+          fi
+          mkdir -p android/keystores
+          echo "$RELEASE_KEYSTORE_B64" | base64 --decode > android/keystores/release.keystore
+
+      - name: Restore google-services.json
+        env:
+          FIREBASE_SERVICE_JSON_B64: ${{ secrets.FIREBASE_SERVICE_JSON_B64 }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_JSON_B64" ]; then
+            echo "FIREBASE_SERVICE_JSON_B64 secret is not set." >&2
+            exit 1
+          fi
+          mkdir -p app
+          echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
+
+      - name: Restore Mapbox access token resource
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
+            echo "MAPBOX_ACCESS_TOKEN secret is not set." >&2
+            exit 1
+          fi
+          mkdir -p app/src/main/res/values
+          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools">
+              <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
+          </resources>
+          EOF
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build signed Release APK
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/android/keystores/release.keystore \
+            -Pandroid.injected.signing.store.password="$RELEASE_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$RELEASE_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$RELEASE_KEY_PASSWORD"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: app/build/outputs/apk/release/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

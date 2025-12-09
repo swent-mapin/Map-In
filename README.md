@@ -1,15 +1,42 @@
-# Map’In
+# Map'In
 
-## App Description
+Your campus in one glance. Map'In is the social map that helps students discover what's happening nearby, jump into events with friends, and relive the best moments — guided by an AI that knows what you'll love.
 
-Map’In is a social map for students that brings events and memories together in one place.  
-The core experience is simple:  
+## Contents
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Install the App](#install-the-app)
+- [Screenshots & Demo](#screenshots--demo)
+- [Tech Highlights](#tech-highlights)
+- [License](#license)
 
-- **Create events** and share them with others  
-- **Join events** organized by friends, associations, or the community  
-- **Add memories** (media in general) once the event is over  
-- **View everything on an interactive map**, combining past and upcoming activities  
+## Features
+- Map-first discovery with filters for time, price, tags, and friends' plans
+- Create and share events in seconds, complete with reminders and invites
+- AI assistant that curates events you'll care about and guides you to the best options
+- Add memories (photos and media) so every event lives on
+- Group and one-to-one chat tied to events and friend circles
+- Smart notifications for invites, reminders, messages, and nearby friends
+- Privacy controls with biometric lock and theme preferences
 
-This way, students can not only discover and attend events, but also relive them afterwards through a collaborative map.  
+## How It Works
+1) Open the map to see what's happening now and what's coming up.  
+2) Tap an event to join, chat with attendees, and get directions.  
+3) After the event, drop photos and memories for everyone to enjoy.  
+4) Let the AI assistant surface the next plan that matches your vibe.  
 
-## Link of the Figma : [https://www.figma.com/design/1O4tdBFh8A6mPBKelmKLjo/Map-In?version-id=2275690016325390039&node-id=238-48&p=f&t=2B8ru3yUVYpRWBZv-0](https://www.figma.com/design/1O4tdBFh8A6mPBKelmKLjo/Map-In?node-id=415-64)
+## Install the App
+- Grab the latest Android APK from Releases and install (Android 9+ recommended).
+- Allow location for nearby picks and notifications for invites/reminders.
+- Sign in, set your preferences, and start exploring the map with friends.
+
+## Screenshots & Demo
+- SOON!
+
+## Tech Highlights
+- Android app built with Kotlin + Jetpack Compose
+- Mapbox-powered interactive map experience (Offline mode, light/dark mode, 3D view, satellite)
+- Firebase for auth, chat, events, notifications, and memories
+
+## License
+MIT License. See `LICENSE` for details.
