@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
+/** Global provider for OkHttpClient instance. Used throughout the app for network operations. */
 object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }
@@ -51,19 +52,29 @@ private enum class BiometricLockState {
 }
 
 /**
- * Main activity of the app. Role: - Android entry point that hosts the Jetpack Compose UI. -
- * Applies the Material 3 theme and shows the map screen.
+ * Main activity of the Map-In application.
+ *
+ * This is the Android entry point that hosts the Jetpack Compose UI. It handles:
+ * - Application initialization (repositories, FCM tokens)
+ * - Deep link processing from push notifications and external sources
+ * - Biometric authentication lock screen when enabled
+ * - Theme configuration (light/dark/system)
+ * - Edge-to-edge display support
+ *
+ * The activity maintains biometric authentication state to prevent unauthorized access when the
+ * feature is enabled in settings.
  */
 class MainActivity : FragmentActivity() {
-  // Simple deep link state instead of queue
+  /** Current deep link to be processed by the navigation system */
   private var deepLink by mutableStateOf<String?>(null)
-  // Pending deep link to be delivered after biometric unlock
+
+  /** Deep link that should be delivered after biometric unlock completes */
   private var pendingDeepLink by mutableStateOf<String?>(null)
 
-  // Atomic guard to prevent concurrent biometric authentication attempts
+  /** Atomic guard to prevent concurrent biometric authentication attempts */
   private val isAuthenticationInProgress = AtomicBoolean(false)
 
-  // Reference to active BiometricPrompt for lifecycle-aware cancellation
+  /** Reference to active BiometricPrompt for lifecycle-aware cancellation */
   private var activeBiometricPrompt: BiometricPrompt? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
