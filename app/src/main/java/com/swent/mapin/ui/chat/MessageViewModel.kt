@@ -16,14 +16,27 @@ import kotlinx.coroutines.launch
 
 // Assisted by AI
 
+/**
+ * ViewModel for managing chat messages within a conversation.
+ *
+ * Handles:
+ * - Real-time message observation with live updates
+ * - Sending new messages
+ * - Pagination for loading older messages
+ * - Error handling for message operations
+ *
+ * @property messageRepository Repository for message data operations
+ */
 class MessageViewModel(
     private val messageRepository: MessageRepository =
         MessageRepositoryFirestore(db = Firebase.firestore, auth = Firebase.auth)
 ) : ViewModel() {
   private val _messages = MutableStateFlow<List<Message>>(emptyList())
+  /** List of messages in the current conversation, ordered by timestamp */
   val messages: StateFlow<List<Message>> = _messages.asStateFlow()
 
   private val _error = MutableStateFlow<String?>(null)
+  /** Error message from failed operations */
   val error: StateFlow<String?> = _error.asStateFlow()
 
   private var messagesJob: Job? = null
@@ -31,7 +44,10 @@ class MessageViewModel(
   /**
    * Start observing messages with live updates and pagination support.
    *
-   * @param conversationId The ID of the Conversation
+   * Subscribes to real-time updates from Firestore. New messages are automatically added to the
+   * list as they arrive.
+   *
+   * @param conversationId The ID of the conversation to observe
    */
   fun observeMessages(conversationId: String) {
     messagesJob?.cancel()
@@ -50,10 +66,10 @@ class MessageViewModel(
   }
 
   /**
-   * Send a new message.
+   * Send a new message to the conversation.
    *
    * @param conversationId The ID of the conversation
-   * @param text The message to be sent
+   * @param text The message text to send
    */
   fun sendMessage(conversationId: String, text: String) {
     viewModelScope.launch {
@@ -69,9 +85,12 @@ class MessageViewModel(
   private var isLoadingMore = false
 
   /**
-   * Loads older messages from firestore starting from the last message
+   * Loads older messages from Firestore for pagination.
    *
-   * @param conversationId the ID of the conversation
+   * Fetches the next batch of messages starting from the last visible message. Prevents concurrent
+   * loading operations.
+   *
+   * @param conversationId The ID of the conversation
    */
   fun loadMoreMessages(conversationId: String) {
     val last = lastVisibleMessage ?: return
