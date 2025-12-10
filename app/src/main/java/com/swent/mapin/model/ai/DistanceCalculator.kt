@@ -2,8 +2,8 @@ package com.swent.mapin.model.ai
 
 // Assisted by AI
 
-import com.swent.mapin.model.location.Location
 import com.google.firebase.firestore.GeoPoint
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.util.EventUtils
 
 /**
