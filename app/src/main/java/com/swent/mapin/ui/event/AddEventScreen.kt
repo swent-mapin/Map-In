@@ -36,7 +36,6 @@ import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlin.String
 
 object AddEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TITLE = "inputEventTitle"

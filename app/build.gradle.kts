@@ -209,7 +209,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-messaging") // For push notifications
-    implementation("com.firebase:geofire-android-common:3.2.0")
+    implementation(libs.geofire.android.common)
 
     // ------------- Google Maps ------------------
     implementation("com.google.maps.android:maps-compose:4.3.3")

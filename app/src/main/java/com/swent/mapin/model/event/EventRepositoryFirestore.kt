@@ -425,8 +425,9 @@ class EventRepositoryFirestore(
 
       val bounds =
           GeoFireUtils.getGeoHashQueryBounds(
-              GeoLocation(filters.place.latitude!!, filters.place.longitude!!),
-              radiusInM.toDouble())
+                  GeoLocation(filters.place.latitude!!, filters.place.longitude!!),
+                  radiusInM.toDouble())
+              .toList()
 
       val bound = bounds[0]
       query = query.orderBy("location.geohash").startAt(bound.startHash).endAt(bound.endHash)

@@ -1,8 +1,9 @@
 package com.swent.mapin.model.location
 
 import android.util.Log
+import com.swent.mapin.model.dispatcher.CoroutineDispatcherProvider
+import com.swent.mapin.model.dispatcher.DefaultDispatcherProvider
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -19,8 +20,11 @@ import org.json.JSONObject
  * @property client The OkHttpClient for network requests.
  * @property token The Mapbox Access Token required for API authentication.
  */
-class MapboxRepository(private val client: OkHttpClient, private val token: String) :
-    LocationRepository {
+class MapboxRepository(
+    private val client: OkHttpClient,
+    private val token: String,
+    private val dispatcherProvider: CoroutineDispatcherProvider = DefaultDispatcherProvider()
+) : LocationRepository {
 
   companion object {
     private const val BASE_URL = "https://api.mapbox.com/geocoding/v5/mapbox.places"
@@ -43,7 +47,7 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
    * making a network request.
    */
   override suspend fun forwardGeocode(query: String): List<Location> =
-      withContext(Dispatchers.IO) {
+      withContext(dispatcherProvider.io) {
         val normalizedQuery = query.trim().lowercase()
 
         // Get or create a mutex for this query
@@ -73,21 +77,7 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
                       ?: throw LocationSearchException("Mapbox API Error: Empty response")
 
               // Parse JSON (Native Android)
-              val json = JSONObject(responseBody)
-              val features = json.optJSONArray("features") ?: return@withContext emptyList()
-              val results = mutableListOf<Location>()
-
-              for (i in 0 until features.length()) {
-                val feature = features.getJSONObject(i)
-                val placeName = feature.optString("place_name", "Unknown")
-                val center = feature.optJSONArray("center")
-
-                if (center != null && center.length() >= 2) {
-                  val lon = center.getDouble(0)
-                  val lat = center.getDouble(1)
-                  results.add(Location.from(placeName, lat, lon))
-                }
-              }
+              val results = parseLocationResponse(responseBody)
 
               // Update Cache
               synchronized(cache) { cache[normalizedQuery] = results }
@@ -103,9 +93,29 @@ class MapboxRepository(private val client: OkHttpClient, private val token: Stri
         }
       }
 
+  private fun parseLocationResponse(responseBody: String): List<Location> {
+    val json = JSONObject(responseBody)
+    val features = json.optJSONArray("features") ?: return emptyList()
+    val results = mutableListOf<Location>()
+
+    for (i in 0 until features.length()) {
+      val feature = features.getJSONObject(i)
+      val placeName = feature.optString("place_name", "Unknown")
+      val center = feature.optJSONArray("center")
+
+      if (center != null && center.length() >= 2) {
+        val lon = center.getDouble(0)
+        val lat = center.getDouble(1)
+        results.add(Location.from(placeName, lat, lon))
+      }
+    }
+
+    return results
+  }
+
   /** Performs reverse geocoding (coordinates to address/name). */
   override suspend fun reverseGeocode(lat: Double, lon: Double): Location =
-      withContext(Dispatchers.IO) {
+      withContext(dispatcherProvider.io) {
         val url = "$BASE_URL/$lon,$lat.json?access_token=$token&limit=1"
         val request = Request.Builder().url(url).build()
 

@@ -23,6 +23,9 @@ data class Location(
   /**
    * Checks if the location is fully defined.
    *
+   * IMPORTANT: This method do not check the name value of the Location() object. Please check it
+   * separately if necessary.
+   *
    * @return True if latitude, longitude, and geohash are non-null; false otherwise.
    */
   fun isDefined(): Boolean {
