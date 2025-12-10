@@ -15,18 +15,39 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for managing event operations and state.
+ *
+ * Coordinates event creation, editing, and deletion operations while maintaining UI state. Works
+ * closely with MapEventStateController to refresh event lists after modifications.
+ *
+ * @property eventRepository Repository for event data operations
+ * @property stateController Controller for managing map event state
+ * @property firebaseAuth Firebase authentication instance
+ */
 class EventViewModel(
     private val eventRepository: EventRepository,
     private val stateController: MapEventStateController,
     private val firebaseAuth: FirebaseAuth = Firebase.auth
 ) : ViewModel() {
   private val _error = MutableStateFlow<String?>(null)
+  /** Error message from failed operations */
   val error = _error.asStateFlow()
 
+  /**
+   * Generates a new unique identifier for an event.
+   *
+   * @return A unique event ID string
+   */
   fun getNewUid(): String {
     return eventRepository.getNewUid()
   }
 
+  /**
+   * Adds a new event to the repository. Refreshes the event list on success.
+   *
+   * @param event The event to add
+   */
   fun addEvent(event: Event) {
     viewModelScope.launch {
       try {
@@ -39,16 +60,29 @@ class EventViewModel(
   }
 
   private val _eventToEdit = MutableStateFlow<Event?>(null)
+  /** Currently selected event for editing */
   val eventToEdit = _eventToEdit.asStateFlow()
 
+  /**
+   * Selects an event for editing.
+   *
+   * @param event The event to edit
+   */
   fun selectEventToEdit(event: Event) {
     _eventToEdit.value = event
   }
 
+  /** Clears the currently selected event for editing */
   fun clearEventToEdit() {
     _eventToEdit.value = null
   }
 
+  /**
+   * Edits an existing event as the owner. Refreshes the event list on success.
+   *
+   * @param eventID The ID of the event to edit
+   * @param event The updated event data
+   */
   fun editEvent(eventID: String, event: Event) {
     viewModelScope.launch {
       try {
@@ -60,6 +94,18 @@ class EventViewModel(
     }
   }
 
+  /**
+   * Saves an edited event after validating ownership.
+   *
+   * @param originalEvent The original event before editing
+   * @param title Updated title
+   * @param description Updated description
+   * @param location Updated location
+   * @param startTs Updated start timestamp
+   * @param endTs Updated end timestamp
+   * @param tagsString Updated tags as comma-separated string
+   * @param onSuccess Callback invoked on successful save
+   */
   fun saveEditedEvent(
       originalEvent: Event,
       title: String,
@@ -94,6 +140,11 @@ class EventViewModel(
     }
   }
 
+  /**
+   * Deletes an event from the repository. Refreshes the event list on success.
+   *
+   * @param eventID The ID of the event to delete
+   */
   fun deleteEvent(eventID: String) {
     viewModelScope.launch {
       try {
