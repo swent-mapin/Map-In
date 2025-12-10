@@ -10,9 +10,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+/** Dark color scheme using the app's custom colors */
 private val DarkColorScheme =
     darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
 
+/** Light color scheme using the app's custom colors */
 private val LightColorScheme =
     lightColorScheme(
         primary = Purple40, secondary = PurpleGrey40, tertiary = Pink40
@@ -28,6 +30,18 @@ private val LightColorScheme =
         */
         )
 
+/**
+ * Main theme composable for the Map-In application.
+ *
+ * Applies Material Design 3 theming with support for:
+ * - Light/Dark theme switching
+ * - Dynamic color on Android 12+ (Material You)
+ * - Custom color schemes for older Android versions
+ *
+ * @param darkTheme Whether to use dark theme (defaults to system setting)
+ * @param dynamicColor Whether to use dynamic color from system (Android 12+)
+ * @param content The composable content to be themed
+ */
 @Composable
 fun MapInTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
