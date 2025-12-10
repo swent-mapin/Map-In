@@ -3,7 +3,6 @@ package com.swent.mapin.ui.auth
 import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,10 +66,9 @@ fun SignInScreen(
     }
   }
 
-  // Display errors as toast messages and clear them from state
-  LaunchedEffect(uiState.errorMessage) {
-    uiState.errorMessage?.let { message ->
-      Toast.makeText(context, "❌ $message", Toast.LENGTH_LONG).show()
+  // Clear error state when user starts editing input fields
+  LaunchedEffect(email, password) {
+    if (uiState.error != null) {
       viewModel.clearError()
     }
   }
@@ -147,6 +145,16 @@ fun SignInScreen(
                     remember(password) { derivedStateOf { validatePassword(password) } }
                 PasswordRequirementsCard(
                     password = password, passwordValidation = passwordValidation)
+              }
+
+              // Show error message below input fields
+              uiState.error?.let { error ->
+                val errorMessage = error.getMessage(context)
+                if (errorMessage.isNotBlank()) {
+                  Spacer(modifier = Modifier.height(8.dp))
+                  SignInErrorCard(
+                      errorMessage = errorMessage, onDismiss = { viewModel.clearError() })
+                }
               }
 
               Spacer(modifier = Modifier.height(16.dp))

@@ -230,6 +230,41 @@ class NotificationService(
   }
 
   /**
+   * Send a new event notification to a follower.
+   *
+   * @param recipientId The follower user ID to notify
+   * @param organizerId The ID of the event organizer
+   * @param organizerName The name of the event organizer
+   * @param eventId The ID of the new event
+   * @param eventTitle The title of the new event
+   */
+  suspend fun sendNewEventFromFollowedUserNotification(
+      recipientId: String,
+      organizerId: String,
+      organizerName: String,
+      eventId: String,
+      eventTitle: String
+  ): NotificationResult {
+    val notification =
+        Notification(
+            title = "New event from $organizerName",
+            message = eventTitle,
+            type = NotificationType.EVENT_INVITATION,
+            recipientId = recipientId,
+            senderId = organizerId,
+            readStatus = false,
+            metadata =
+                mapOf(
+                    "eventId" to eventId,
+                    "eventTitle" to eventTitle,
+                    "organizerName" to organizerName),
+            actionUrl = "mapin://events/$eventId",
+            priority = 1)
+
+    return repository.send(notification)
+  }
+
+  /**
    * Send notifications to multiple recipients.
    *
    * @param recipientIds List of recipient user IDs
