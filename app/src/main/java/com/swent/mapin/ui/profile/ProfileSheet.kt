@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
@@ -243,6 +244,34 @@ private fun ProfileHeader(profile: UserProfile) {
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               modifier = Modifier.testTag("profileBio"))
+        }
+
+        // Location
+        if (profile.location.isNotEmpty() && profile.location != "Unknown") {
+          Spacer(modifier = Modifier.height(4.dp))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = profile.location,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("profileLocation"))
+          }
+        }
+
+        // Hobbies
+        if (profile.hobbies.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+              text = profile.hobbies.joinToString(", "),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.testTag("profileHobbies"))
         }
       }
 }
