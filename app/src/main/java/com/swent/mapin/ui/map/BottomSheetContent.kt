@@ -363,11 +363,9 @@ fun BottomSheetContent(
                                     Modifier
                                   }
                               val contentModifier =
-                                  if (isFull)
-                                      Modifier.fillMaxWidth()
-                                          .then(imePaddingModifier)
-                                          .verticalScroll(scrollState)
-                                  else Modifier.fillMaxWidth()
+                                  Modifier.fillMaxWidth()
+                                      .then(imePaddingModifier)
+                                      .verticalScroll(scrollState)
 
                               Column(modifier = contentModifier) {
                                 Spacer(modifier = Modifier.height(19.dp))
@@ -474,16 +472,15 @@ fun BottomSheetContent(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                // Filters section visible unless collapsed
-                                if (state != BottomSheetState.COLLAPSED) {
-                                  filterSection.Render(
-                                      Modifier.fillMaxWidth(),
-                                      filterViewModel,
-                                      locationViewModel,
-                                      userProfile)
+                                // Always render filters - clipToBounds handles visibility during
+                                // drag
+                                filterSection.Render(
+                                    Modifier.fillMaxWidth(),
+                                    filterViewModel,
+                                    locationViewModel,
+                                    userProfile)
 
-                                  Spacer(modifier = Modifier.height(16.dp))
-                                }
+                                Spacer(modifier = Modifier.height(16.dp))
 
                                 Spacer(modifier = Modifier.height(24.dp))
                               }
