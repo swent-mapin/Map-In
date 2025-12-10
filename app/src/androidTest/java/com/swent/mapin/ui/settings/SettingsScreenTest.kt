@@ -242,7 +242,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithText("Confirm Logout").assertIsDisplayed()
@@ -255,7 +255,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("deleteAccountButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("deleteAccountButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule
@@ -270,7 +270,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithText("Cancel").assertIsDisplayed().assertHasClickAction()
@@ -344,7 +344,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithText("Cancel").performClick()
@@ -360,7 +360,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("deleteAccountButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("deleteAccountButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithText("Cancel").performClick()
@@ -496,7 +496,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("logoutButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("logoutButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     // Verify dialog is displayed by checking the title
@@ -511,7 +511,7 @@ class SettingsScreenTest {
       SettingsScreen(onNavigateBack = {}, onNavigateToSignIn = {}, onNavigateToChangePassword = {})
     }
 
-    composeTestRule.onNodeWithTag("deleteAccountButton_action").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("deleteAccountButton").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
     // Verify the dialog is displayed by checking for unique dialog message

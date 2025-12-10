@@ -1,9 +1,10 @@
 package com.swent.mapin.ui.event
 
-import android.R.attr.timeZone
+import android.annotation.SuppressLint
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,7 +86,8 @@ fun EventDetailSheet(
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
     showDirections: Boolean = false,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean = false,
+    onOrganizerClick: (String) -> Unit = {}
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("eventDetailSheet")) {
     when (sheetState) {
@@ -115,7 +117,8 @@ fun EventDetailSheet(
             onUnsaveForLater = onUnsaveForLater,
             onGetDirections = onGetDirections,
             showDirections = showDirections,
-            hasLocationPermission = hasLocationPermission)
+            hasLocationPermission = hasLocationPermission,
+            onOrganizerClick = onOrganizerClick)
       }
     }
   }
@@ -346,7 +349,8 @@ private fun FullEventContent(
     modifier: Modifier = Modifier,
     onGetDirections: () -> Unit = {},
     showDirections: Boolean = false,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean = false,
+    onOrganizerClick: (String) -> Unit = {}
 ) {
   val scrollState = rememberScrollState()
 
@@ -437,7 +441,13 @@ private fun FullEventContent(
                   text = organizerState.name,
                   style = MaterialTheme.typography.bodyMedium,
                   fontWeight = FontWeight.SemiBold,
-                  modifier = Modifier.testTag("organizerName"))
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier =
+                      Modifier.testTag("organizerName").clickable {
+                        if (organizerState.userId.isNotEmpty()) {
+                          onOrganizerClick(organizerState.userId)
+                        }
+                      })
             }
             is OrganizerState.Error -> {
               Text(
@@ -458,6 +468,14 @@ private fun FullEventContent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testTag("eventLocationFull"))
+
+        // Price section
+        event.price
+            .takeIf { it > 0.0 }
+            ?.let { price ->
+              Spacer(modifier = Modifier.height(12.dp))
+              PriceSection(price = price)
+            }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -603,7 +621,7 @@ private fun AttendeeInfo(event: Event, testTagSuffix: String) {
 @VisibleForTesting
 internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): String {
   val zone = TimeZone.getDefault()
-  val locale = Locale.getDefault()
+  val locale = Locale.US
 
   val startDate = start.toDate()
   // Treat end equal to start as no end
@@ -677,11 +695,11 @@ internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String
           sameYearRange &&
           calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
 
-  val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault())
+  val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.US)
 
   // 24-hour format always showing minutes
   fun timeFull(d: Date): String {
-    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
+    return SimpleDateFormat("HH:mm", Locale.US).format(d)
   }
 
   return if (endDate == null) {
@@ -696,4 +714,27 @@ internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String
       "$startStr at ${timeFull(startDate)} - $endStr at ${timeFull(endDate)}"
     }
   }
+}
+
+@SuppressLint("DefaultLocale")
+@Composable
+fun PriceSection(price: Double) {
+  Card(
+      modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("priceSection"),
+      shape = RoundedCornerShape(12.dp),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+      elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = "\uD83D\uDCB5",
+              style = MaterialTheme.typography.titleMedium,
+              modifier = Modifier.padding(end = 8.dp))
+
+          Text(
+              text = String.format(Locale.US, "%.2f CHF", price),
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.SemiBold,
+              color = MaterialTheme.colorScheme.onSurface)
+        }
+      }
 }

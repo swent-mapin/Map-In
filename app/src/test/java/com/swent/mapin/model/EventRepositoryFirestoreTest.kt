@@ -5,7 +5,19 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.*
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.EventListener
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QueryDocumentSnapshot
+import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Transaction
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
@@ -26,7 +38,14 @@ import org.junit.Test
 import org.mockito.MockedStatic
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockStatic
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventRepositoryFirestoreTest {
@@ -40,12 +59,21 @@ class EventRepositoryFirestoreTest {
   private lateinit var friendRepo: FriendRequestRepository
   private lateinit var transaction: Transaction
   private lateinit var firebaseAuthMock: MockedStatic<FirebaseAuth>
+  private lateinit var notificationService: NotificationService
+  private lateinit var userProfileRepository: UserProfileRepository
 
   @Before
   fun setup() {
     db = mock()
     friendRepo = mock()
-    repo = EventRepositoryFirestore(db, friendRequestRepository = friendRepo)
+    notificationService = mock()
+    userProfileRepository = mock()
+    repo =
+        EventRepositoryFirestore(
+            db,
+            friendRequestRepository = friendRepo,
+            notificationService = notificationService,
+            userProfileRepository = userProfileRepository)
     document = mock()
     transaction = mock()
     collection =
@@ -128,6 +156,16 @@ class EventRepositoryFirestoreTest {
   private fun <T> taskOf(value: T): Task<T> = Tasks.forResult(value)
 
   private fun voidTask(): Task<Void> = Tasks.forResult(null)
+
+  private fun createRepoWithNotifications(
+      notificationService: NotificationService = mock(),
+      userProfileRepo: UserProfileRepository = mock()
+  ) =
+      EventRepositoryFirestore(
+          db,
+          friendRequestRepository = friendRepo,
+          notificationService = notificationService,
+          userProfileRepository = userProfileRepo)
 
   // ========== BASIC CRUD TESTS ==========
 
@@ -1229,5 +1267,167 @@ class EventRepositoryFirestoreTest {
     assertTrue(removedIds.isEmpty())
 
     registration.remove()
+  }
+
+  // ========== FOLLOWER NOTIFICATION TESTS ==========
+
+  @Test
+  fun addEvent_notifiesFollowersOfNewEvent() = runTest {
+    // Create repository with mocked dependencies
+    val mockNotificationService = mock<NotificationService>()
+    val mockUserProfileRepo = mock<UserProfileRepository>()
+
+    val repoWithNotifications =
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
+
+    val ownerProfile =
+        UserProfile(
+            userId = "owner123",
+            name = "Event Creator",
+            followerIds = listOf("follower1", "follower2", "follower3"))
+
+    whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
+    whenever(
+            mockNotificationService.sendNewEventFromFollowedUserNotification(
+                any(), any(), any(), any(), any()))
+        .thenReturn(NotificationResult.Success(Notification()))
+
+    val newEventDocRef = mock<DocumentReference>()
+    whenever(collection.document()).thenReturn(newEventDocRef)
+    whenever(newEventDocRef.id).thenReturn("E123")
+    whenever(db.runBatch(any())).thenReturn(voidTask())
+
+    val input =
+        createEvent(
+            uid = "",
+            title = "New Music Festival",
+            ownerId = "owner123",
+            participantIds = emptyList())
+
+    repoWithNotifications.addEvent(input)
+
+    // Verify notifications were sent to all followers
+    verify(mockNotificationService)
+        .sendNewEventFromFollowedUserNotification(
+            recipientId = "follower1",
+            organizerId = "owner123",
+            organizerName = "Event Creator",
+            eventId = "E123",
+            eventTitle = "New Music Festival")
+    verify(mockNotificationService)
+        .sendNewEventFromFollowedUserNotification(
+            recipientId = "follower2",
+            organizerId = "owner123",
+            organizerName = "Event Creator",
+            eventId = "E123",
+            eventTitle = "New Music Festival")
+    verify(mockNotificationService)
+        .sendNewEventFromFollowedUserNotification(
+            recipientId = "follower3",
+            organizerId = "owner123",
+            organizerName = "Event Creator",
+            eventId = "E123",
+            eventTitle = "New Music Festival")
+  }
+
+  @Test
+  fun addEvent_doesNotNotifyWhenNoFollowers() = runTest {
+    val mockNotificationService = mock<NotificationService>()
+    val mockUserProfileRepo = mock<UserProfileRepository>()
+
+    val repoWithNotifications =
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
+
+    val ownerProfile =
+        UserProfile(userId = "owner123", name = "Event Creator", followerIds = emptyList())
+
+    whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
+
+    val newEventDocRef = mock<DocumentReference>()
+    whenever(collection.document()).thenReturn(newEventDocRef)
+    whenever(newEventDocRef.id).thenReturn("E123")
+    whenever(db.runBatch(any())).thenReturn(voidTask())
+
+    val input =
+        createEvent(
+            uid = "",
+            title = "New Music Festival",
+            ownerId = "owner123",
+            participantIds = emptyList())
+
+    repoWithNotifications.addEvent(input)
+
+    // Verify no notifications were sent
+    verify(mockNotificationService, never())
+        .sendNewEventFromFollowedUserNotification(any(), any(), any(), any(), any())
+  }
+
+  @Test
+  fun addEvent_continuesEvenIfOwnerProfileNotFound() = runTest {
+    val mockNotificationService = mock<NotificationService>()
+    val mockUserProfileRepo = mock<UserProfileRepository>()
+
+    val repoWithNotifications =
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
+
+    whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(null)
+
+    val newEventDocRef = mock<DocumentReference>()
+    whenever(collection.document()).thenReturn(newEventDocRef)
+    whenever(newEventDocRef.id).thenReturn("E123")
+    whenever(db.runBatch(any())).thenReturn(voidTask())
+
+    val input =
+        createEvent(
+            uid = "",
+            title = "New Music Festival",
+            ownerId = "owner123",
+            participantIds = emptyList())
+
+    // Should not throw even when owner profile not found
+    repoWithNotifications.addEvent(input)
+
+    // Verify no notifications were sent
+    verify(mockNotificationService, never())
+        .sendNewEventFromFollowedUserNotification(any(), any(), any(), any(), any())
+  }
+
+  @Test
+  fun addEvent_usesDefaultNameWhenOrganizerNameIsBlank() = runTest {
+    val mockNotificationService = mock<NotificationService>()
+    val mockUserProfileRepo = mock<UserProfileRepository>()
+
+    val repoWithNotifications =
+        createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
+
+    // Owner profile with blank name
+    val ownerProfile =
+        UserProfile(userId = "owner123", name = "", followerIds = listOf("follower1"))
+
+    whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
+    whenever(
+            mockNotificationService.sendNewEventFromFollowedUserNotification(
+                any(), any(), any(), any(), any()))
+        .thenReturn(NotificationResult.Success(Notification()))
+
+    val newEventDocRef = mock<DocumentReference>()
+    whenever(collection.document()).thenReturn(newEventDocRef)
+    whenever(newEventDocRef.id).thenReturn("E123")
+    whenever(db.runBatch(any())).thenReturn(voidTask())
+
+    val input =
+        createEvent(
+            uid = "", title = "New Event", ownerId = "owner123", participantIds = emptyList())
+
+    repoWithNotifications.addEvent(input)
+
+    // Verify fallback name "Someone you follow" is used
+    verify(mockNotificationService)
+        .sendNewEventFromFollowedUserNotification(
+            recipientId = "follower1",
+            organizerId = "owner123",
+            organizerName = "Someone you follow",
+            eventId = "E123",
+            eventTitle = "New Event")
   }
 }

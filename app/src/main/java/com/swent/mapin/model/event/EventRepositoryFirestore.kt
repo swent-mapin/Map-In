@@ -12,6 +12,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.NotificationService
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
@@ -55,11 +56,14 @@ enum class UserEventSource(val fieldName: String) {
  *
  * @param db Firestore instance to use.
  * @param friendRequestRepository Repository for friend-related queries.
+ * @param notificationService Service for sending push notifications.
+ * @param userProfileRepository Repository for accessing user profile data.
  */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val friendRequestRepository: FriendRequestRepository =
-        FriendRequestRepository(notificationService = NotificationService())
+    private val friendRequestRepository: FriendRequestRepository,
+    private val notificationService: NotificationService,
+    private val userProfileRepository: UserProfileRepository
 ) : EventRepository {
 
   /**
@@ -93,9 +97,56 @@ class EventRepositoryFirestore(
                 FieldValue.arrayUnion(id))
           }
           .await()
+
+      // Send notifications to followers of the event creator
+      notifyFollowersOfNewEvent(eventToSave)
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to add event (id=${event.uid}): ${e.message}", e)
       throw Exception("Failed to add event: ${e.message}", e)
+    }
+  }
+
+  /**
+   * Sends notifications to all followers of the event creator about the new event.
+   *
+   * @param event The newly created event.
+   */
+  private suspend fun notifyFollowersOfNewEvent(event: Event) {
+    try {
+      val ownerProfile = userProfileRepository.getUserProfile(event.ownerId)
+      if (ownerProfile == null) {
+        Log.w("EventRepositoryFirestore", "Owner profile not found for event notification")
+        return
+      }
+
+      val followerIds = ownerProfile.followerIds
+      if (followerIds.isEmpty()) {
+        Log.w("EventRepositoryFirestore", "No followers to notify for new event")
+        return
+      }
+
+      val organizerName = ownerProfile.name.ifBlank { "Someone you follow" }
+
+      Log.w(
+          "EventRepositoryFirestore",
+          "Notifying ${followerIds.size} followers about new event: ${event.title}")
+
+      followerIds.forEach { followerId ->
+        try {
+          notificationService.sendNewEventFromFollowedUserNotification(
+              recipientId = followerId,
+              organizerId = event.ownerId,
+              organizerName = organizerName,
+              eventId = event.uid,
+              eventTitle = event.title)
+        } catch (e: Exception) {
+          Log.e(
+              "EventRepositoryFirestore", "Failed to notify follower $followerId: ${e.message}", e)
+        }
+      }
+    } catch (e: Exception) {
+      Log.e("EventRepositoryFirestore", "Failed to notify followers: ${e.message}", e)
+      // Don't throw - event creation succeeded, notification failure is non-critical
     }
   }
 

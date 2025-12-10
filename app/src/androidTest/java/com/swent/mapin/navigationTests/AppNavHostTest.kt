@@ -111,8 +111,8 @@ class AppNavHostTest {
     }
 
     // Scroll to and click logout button in Settings
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
 
@@ -167,8 +167,8 @@ class AppNavHostTest {
     // Scroll to and click logout button in Settings
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     // Wait for dialog to appear (increased timeout for CI)
     composeTestRule.waitUntil(timeoutMillis = 10000) {
@@ -227,8 +227,8 @@ class AppNavHostTest {
     composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
     composeTestRule.waitUntil(timeoutMillis = 10000) {
       composeTestRule
           .onAllNodesWithText("Confirm Logout", useUnmergedTree = true)

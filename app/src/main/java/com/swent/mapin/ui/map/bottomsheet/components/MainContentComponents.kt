@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -243,6 +244,7 @@ fun EventRow(
                             onEditEvent(event)
                             expanded = false
                           })
+                      HorizontalDivider()
                       DropdownMenuItem(
                           text = { Text("Delete") },
                           onClick = {
@@ -349,4 +351,37 @@ fun NoEventsMessage(title: String, subtitle: String) {
           textAlign = TextAlign.Center)
     }
   }
+}
+
+@Composable
+fun MenuListItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 14.dp),
+      verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp))
+
+        Spacer(Modifier.width(16.dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f))
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Go",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(22.dp).testTag("menuItemArrow"))
+      }
+}
+
+@Composable
+fun MenuDivider() {
+  HorizontalDivider(
+      modifier = Modifier.fillMaxWidth().padding(start = 40.dp), // aligns with text
+      color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 }

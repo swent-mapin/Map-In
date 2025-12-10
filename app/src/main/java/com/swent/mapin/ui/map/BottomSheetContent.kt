@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,11 +26,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoAlbum
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
@@ -46,11 +51,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +74,8 @@ import com.swent.mapin.ui.map.bottomsheet.SearchBarState
 import com.swent.mapin.ui.map.bottomsheet.components.AllRecentItemsPage
 import com.swent.mapin.ui.map.bottomsheet.components.AttendedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.CreateEventSection
+import com.swent.mapin.ui.map.bottomsheet.components.MenuDivider
+import com.swent.mapin.ui.map.bottomsheet.components.MenuListItem
 import com.swent.mapin.ui.map.bottomsheet.components.OwnedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SavedEventsSection
 import com.swent.mapin.ui.map.bottomsheet.components.SearchBar
@@ -77,13 +84,15 @@ import com.swent.mapin.ui.map.bottomsheet.components.UpcomingEventsSection
 import com.swent.mapin.ui.map.search.RecentItem
 import com.swent.mapin.ui.memory.MemoryFormData
 import com.swent.mapin.ui.memory.MemoryFormScreen
+import com.swent.mapin.ui.profile.ProfileSheet
 import com.swent.mapin.ui.profile.ProfileViewModel
 
 enum class BottomSheetScreen {
   MAIN_CONTENT,
   MEMORY_FORM,
   ADD_EVENT,
-  EDIT_EVENT
+  EDIT_EVENT,
+  PROFILE_SHEET
 }
 
 // Animation constants for consistent transitions
@@ -140,9 +149,13 @@ fun BottomSheetContent(
     recentItems: List<RecentItem> = emptyList(),
     onRecentSearchClick: (String) -> Unit = {},
     onRecentEventClick: (String) -> Unit = {},
+    onRecentProfileClick: (String) -> Unit = {},
     topCategories: List<String> = emptyList(),
     onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    // User search results
+    userSearchResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+    onUserSearchClick: (String, String) -> Unit = { _, _ -> },
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
     availableEvents: List<Event> = emptyList(),
@@ -164,6 +177,7 @@ fun BottomSheetContent(
     onCreateMemoryClick: (Event) -> Unit = {},
     onCreateEventClick: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
+    onNavigateToMemories: () -> Unit = {},
     onMemorySave: (MemoryFormData) -> Unit = {},
     onMemoryCancel: () -> Unit = {},
     onCreateEventDone: () -> Unit = {},
@@ -179,7 +193,11 @@ fun BottomSheetContent(
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
     profileViewModel: ProfileViewModel,
-    eventViewModel: EventViewModel
+    eventViewModel: EventViewModel,
+    // Profile sheet parameters
+    profileSheetUserId: String? = null,
+    onProfileSheetClose: () -> Unit = {},
+    onProfileSheetEventClick: (Event) -> Unit = {}
 ) {
   val isFull = state == BottomSheetState.FULL
   val scrollState = remember(fullEntryKey) { ScrollState(0) }
@@ -241,6 +259,14 @@ fun BottomSheetContent(
                   onDone = onEditEventDone)
             }
           }
+          BottomSheetScreen.PROFILE_SHEET -> {
+            if (profileSheetUserId != null) {
+              ProfileSheet(
+                  userId = profileSheetUserId,
+                  onClose = onProfileSheetClose,
+                  onEventClick = onProfileSheetEventClick)
+            }
+          }
           BottomSheetScreen.MAIN_CONTENT -> {
             var showAllRecents by remember { mutableStateOf(false) }
             var showProfileMenu by remember { mutableStateOf(false) }
@@ -275,6 +301,10 @@ fun BottomSheetContent(
                           showAllRecents = false
                           onRecentEventClick(eventId)
                         },
+                        onRecentProfileClick = { userId ->
+                          showAllRecents = false
+                          onRecentProfileClick(userId)
+                        },
                         onClearAll = {
                           onClearRecentSearches()
                           showAllRecents = false
@@ -301,37 +331,34 @@ fun BottomSheetContent(
                       AnimatedContent(
                           targetState = isSearchMode,
                           transitionSpec = {
-                            (fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS)) +
-                                    slideInVertically(
-                                        animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS),
-                                        initialOffsetY = { it / TRANSITION_SLIDE_OFFSET_DIVISOR }))
+                            fadeIn(animationSpec = tween(TRANSITION_FADE_IN_DURATION_MS))
                                 .togetherWith(
-                                    fadeOut(
-                                        animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)) +
-                                        slideOutVertically(
-                                            animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS),
-                                            targetOffsetY = {
-                                              it / TRANSITION_SLIDE_OFFSET_DIVISOR
-                                            }))
+                                    fadeOut(animationSpec = tween(TRANSITION_FADE_OUT_DURATION_MS)))
                           },
                           modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
                           label = "searchModeTransition") { searchActive ->
+                            val density = LocalDensity.current
+                            val imeBottom = WindowInsets.ime.getBottom(density)
+                            val imePaddingDp = with(density) { imeBottom.toDp() }
+
                             if (searchActive) {
                               SearchResultsSection(
-                                  modifier = Modifier.fillMaxSize(),
+                                  modifier = Modifier.fillMaxSize().padding(bottom = imePaddingDp),
                                   results = searchResults,
                                   query = searchBarState.query,
                                   recentItems = recentItems,
                                   onRecentSearchClick = onRecentSearchClick,
                                   onRecentEventClick = onRecentEventClick,
+                                  onRecentProfileClick = onRecentProfileClick,
                                   onShowAllRecents = { showAllRecents = true },
-                                  onEventClick = onEventClick)
+                                  onEventClick = onEventClick,
+                                  sheetState = state,
+                                  userResults = userSearchResults,
+                                  onUserClick = onUserSearchClick)
                             } else {
-                              val density = LocalDensity.current
-                              val imeBottom = WindowInsets.ime.getBottom(density)
                               val imePaddingModifier =
                                   if (imeBottom > 0) {
-                                    Modifier.padding(bottom = with(density) { imeBottom.toDp() })
+                                    Modifier.padding(bottom = imePaddingDp)
                                   } else {
                                     Modifier
                                   }
@@ -343,13 +370,11 @@ fun BottomSheetContent(
                                   else Modifier.fillMaxWidth()
 
                               Column(modifier = contentModifier) {
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(19.dp))
 
                                 CreateEventSection(onCreateEventClick = onCreateEventClick)
 
                                 Spacer(modifier = Modifier.height(19.dp))
-                                HorizontalDivider(color = Color.Gray.copy(alpha = 0.15f))
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
@@ -447,7 +472,7 @@ fun BottomSheetContent(
                                   }
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 // Filters section visible unless collapsed
                                 if (state != BottomSheetState.COLLAPSED) {
@@ -470,73 +495,85 @@ fun BottomSheetContent(
 
             // Modal bottom sheet for profile menu (larger & scrollable)
             if (showProfileMenu) {
-              ModalBottomSheet(onDismissRequest = { showProfileMenu = false }) {
-                val sheetScroll = rememberScrollState()
-                Column(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .fillMaxHeight(0.75f)
-                            .verticalScroll(sheetScroll)
-                            .padding(16.dp)) {
-                      // En-tête : photo de profil + message de bienvenue
-                      Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = userProfile.avatarUrl ?: avatarUrl,
-                            contentDescription = "Profile picture",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(56.dp).clip(CircleShape))
+              ModalBottomSheet(
+                  onDismissRequest = { showProfileMenu = false },
+                  containerColor = MaterialTheme.colorScheme.surface,
+                  dragHandle = {
+                    Box(
+                        modifier =
+                            Modifier.padding(vertical = 8.dp)
+                                .width(40.dp)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)))
+                  }) {
+                    val sheetScroll = rememberScrollState()
+                    Column(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .fillMaxHeight(0.75f)
+                                .verticalScroll(sheetScroll)
+                                .padding(16.dp)) {
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                          // En-tête : photo de profil + message de bienvenue
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = userProfile.avatarUrl ?: avatarUrl,
+                                contentDescription = "Profile picture",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(56.dp).clip(CircleShape))
 
-                        Text("Hello ${userProfile.name}!")
-                      }
+                            Spacer(modifier = Modifier.width(12.dp))
 
-                      Spacer(modifier = Modifier.height(8.dp))
-
-                      Button(
-                          onClick = {
-                            // Navigate immediately, then dismiss the sheet to avoid waiting for the
-                            // sheet close animation which causes perceived latency.
-                            onProfileClick()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Profile")
+                            Text(
+                                text = "Hello ${userProfile.name}!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold)
                           }
 
-                      Spacer(modifier = Modifier.height(8.dp))
+                          Spacer(modifier = Modifier.height(24.dp))
 
-                      Button(
-                          onClick = {
-                            // Navigate first so the target screen starts loading immediately.
-                            onNavigateToFriends()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Friends")
-                          }
+                          // ------- Profile -------
+                          MenuListItem(
+                              icon = Icons.Default.Person,
+                              label = "Profile",
+                              onClick = {
+                                onProfileClick()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Spacer(modifier = Modifier.height(8.dp))
+                          // ------- Friends -------
+                          MenuListItem(
+                              icon = Icons.Default.Group,
+                              label = "Friends",
+                              onClick = {
+                                onNavigateToFriends()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Button(
-                          onClick = { showProfileMenu = false },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Memories")
-                          }
+                          // ------- Memories -------
+                          MenuListItem(
+                              icon = Icons.Default.PhotoAlbum,
+                              label = "Memories",
+                              onClick = {
+                                onNavigateToMemories()
+                                showProfileMenu = false
+                              })
+                          MenuDivider()
 
-                      Spacer(modifier = Modifier.height(8.dp))
-
-                      Button(
-                          onClick = {
-                            // Same for settings: start navigation immediately, then close sheet.
-                            onSettingsClick()
-                            showProfileMenu = false
-                          },
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text("Settings")
-                          }
-                    }
-              }
+                          // ------- Settings -------
+                          MenuListItem(
+                              icon = Icons.Default.Settings,
+                              label = "Settings",
+                              onClick = {
+                                onSettingsClick()
+                                showProfileMenu = false
+                              })
+                        }
+                  }
             }
           }
         }

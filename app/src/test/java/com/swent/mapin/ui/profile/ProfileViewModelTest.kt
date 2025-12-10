@@ -93,7 +93,6 @@ class ProfileViewModelTest {
     assertEquals("", viewModel.editBio)
     assertEquals("", viewModel.editLocation)
     assertEquals("", viewModel.editHobbies)
-    assertTrue(viewModel.hobbiesVisible)
   }
 
   @Test
@@ -121,7 +120,6 @@ class ProfileViewModelTest {
     assertEquals("Reading, Gaming", viewModel.editHobbies)
     assertEquals("https://example.com/avatar.jpg", viewModel.selectedAvatar)
     assertEquals("https://example.com/banner.jpg", viewModel.selectedBanner)
-    assertTrue(viewModel.hobbiesVisible)
   }
 
   @Test
@@ -332,19 +330,6 @@ class ProfileViewModelTest {
   }
 
   @Test
-  fun `toggleAvatarSelector toggles avatar selector visibility`() = runTest {
-    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
-
-    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
-
-    assertFalse(viewModel.showAvatarSelector)
-    viewModel.toggleAvatarSelector()
-    assertTrue(viewModel.showAvatarSelector)
-    viewModel.toggleAvatarSelector()
-    assertFalse(viewModel.showAvatarSelector)
-  }
-
-  @Test
   fun `toggleBannerSelector toggles banner selector visibility`() = runTest {
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
 
@@ -355,20 +340,6 @@ class ProfileViewModelTest {
     assertTrue(viewModel.showBannerSelector)
     viewModel.toggleBannerSelector()
     assertFalse(viewModel.showBannerSelector)
-  }
-
-  @Test
-  fun `toggleHobbiesVisibility toggles hobbies visibility`() = runTest {
-    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
-
-    viewModel = ProfileViewModel(mockRepository, mockImageUploadHelper)
-    viewModel.startEditing()
-
-    assertTrue(viewModel.hobbiesVisible)
-    viewModel.toggleHobbiesVisibility()
-    assertFalse(viewModel.hobbiesVisible)
-    viewModel.toggleHobbiesVisibility()
-    assertTrue(viewModel.hobbiesVisible)
   }
 
   @Test

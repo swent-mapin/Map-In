@@ -58,4 +58,7 @@ sealed class Route(val route: String) {
 
   /** New conversation screen - Create a new chat conversation */
   object NewConversation : Route("newConversation")
+
+  /** Memories screen - Displays and allows editing of user's memories */
+  object Memories : Route("memories")
 }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
@@ -38,25 +39,7 @@ sealed class OfflineAction {
 /** Anti spam debounce */
 const val ANTI_SPAM_DEBOUNCE: Long = 500
 
-interface TimeProvider {
-  fun currentTimeMillis(): Long
-}
-
-/** Provides the current time in milliseconds. */
-class SystemTimeProvider : TimeProvider {
-  override fun currentTimeMillis() = System.currentTimeMillis()
-}
-
-/** Provides a chosen time in milliseconds for tests */
-class FakeTimeProvider : TimeProvider {
-  var currentTime = 0L
-
-  override fun currentTimeMillis() = currentTime
-
-  fun advance(millis: Long) {
-    currentTime += millis
-  }
-}
+typealias TimeProvider = () -> Long
 
 /**
  * Encapsulates all event-related state (filtered, search results, joined, saved) and repository
@@ -78,7 +61,7 @@ class MapEventStateController(
     // Used to disable features that rely on infinite or long-running coroutines (e.g., periodic
     // auto-refresh loops) which would otherwise block or hang the test runner.
     private val autoRefreshEnabled: Boolean = true,
-    private val timeProvider: TimeProvider = SystemTimeProvider()
+    private val timeProvider: TimeProvider = { System.currentTimeMillis() }
 ) {
 
   private var _allEvents by mutableStateOf<List<Event>>(emptyList())
@@ -88,6 +71,11 @@ class MapEventStateController(
   private var _searchResults by mutableStateOf<List<Event>>(emptyList())
   val searchResults: List<Event>
     get() = _searchResults
+
+  // User search results for profile search
+  private var _userSearchResults by mutableStateOf<List<UserProfile>>(emptyList())
+  val userSearchResults: List<UserProfile>
+    get() = _userSearchResults
 
   private var _availableEvents by mutableStateOf<List<Event>>(emptyList())
   val availableEvents: List<Event>
@@ -184,7 +172,7 @@ class MapEventStateController(
 
   /** Check whether the user is spamming the same action. */
   private fun isSpamming(eventId: String): Boolean {
-    val now = timeProvider.currentTimeMillis()
+    val now = timeProvider()
     if (lastActionEventId == eventId && (now - lastActionTimestamp) < ANTI_SPAM_DEBOUNCE) {
       return true
     }
@@ -464,7 +452,8 @@ class MapEventStateController(
   }
 
   /**
-   * Performs a local search on [allEvents] for events containing the [query] in their title.
+   * Performs a local search on [allEvents] for events containing the [query] in their title. Also
+   * searches for users by name.
    *
    * @param query The search query string.
    */
@@ -480,6 +469,18 @@ class MapEventStateController(
             } || event.tags.any { tag -> tag.lowercase().contains(lowerQuery) }
           }
         }
+
+    // Also search users
+    scope.launch {
+      userProfileRepository.searchUsers(query).collect { users ->
+        _userSearchResults = users.take(3)
+      }
+    }
+  }
+
+  /** Clears user search results. */
+  fun clearUserSearchResults() {
+    _userSearchResults = emptyList()
   }
 
   /**

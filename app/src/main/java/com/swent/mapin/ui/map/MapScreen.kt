@@ -136,6 +136,7 @@ fun MapScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
+    onNavigateToMemories: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     deepLinkEventId: String? = null,
     onDeepLinkConsumed: () -> Unit = {}
@@ -654,12 +655,13 @@ fun MapScreen(
                       onUnregisterEvent = { viewModel.unregisterFromEvent() },
                       onSaveForLater = { viewModel.saveEventForLater() },
                       onUnsaveForLater = { viewModel.unsaveEventForLater() },
-                      onClose = { viewModel.closeEventDetail() },
+                      onClose = { viewModel.closeEventDetailWithNavigation() },
                       onShare = { viewModel.showShareDialog() },
                       onGetDirections = { viewModel.toggleDirections(selectedEvent) },
                       showDirections =
                           viewModel.directionViewModel.directionState is DirectionState.Displayed,
-                      hasLocationPermission = viewModel.hasLocationPermission)
+                      hasLocationPermission = viewModel.hasLocationPermission,
+                      onOrganizerClick = { userId -> viewModel.showProfileSheet(userId) })
                 } else {
                   BottomSheetContent(
                       onModalShown = { shown ->
@@ -689,7 +691,13 @@ fun MapScreen(
                       recentItems = viewModel.recentItems,
                       onRecentSearchClick = viewModel::applyRecentSearch,
                       onRecentEventClick = viewModel::onRecentEventClicked,
+                      onRecentProfileClick = viewModel::onRecentProfileClicked,
                       onClearRecentSearches = viewModel::clearRecentSearches,
+                      userSearchResults = viewModel.userSearchResults,
+                      onUserSearchClick = { userId, userName ->
+                        viewModel.saveRecentUser(userId, userName)
+                        viewModel.openUserProfileSheet(userId)
+                      },
                       currentScreen = viewModel.currentBottomSheetScreen,
                       availableEvents = viewModel.availableEvents,
                       initialMemoryEvent = viewModel.memoryFormInitialEvent,
@@ -711,6 +719,7 @@ fun MapScreen(
                       onCreateMemoryClick = viewModel::showMemoryForm,
                       onCreateEventClick = viewModel::showAddEventForm,
                       onNavigateToFriends = onNavigateToFriends,
+                      onNavigateToMemories = onNavigateToMemories,
                       onProfileClick = onNavigateToProfile,
                       onMemorySave = viewModel::onMemorySave,
                       onMemoryCancel = viewModel::onMemoryCancel,
@@ -730,7 +739,10 @@ fun MapScreen(
                       onSettingsClick = onNavigateToSettings,
                       locationViewModel = locationViewModel,
                       profileViewModel = remember { ProfileViewModel() },
-                      eventViewModel = eventViewModel)
+                      eventViewModel = eventViewModel,
+                      profileSheetUserId = viewModel.profileSheetUserId,
+                      onProfileSheetClose = viewModel::hideProfileSheet,
+                      onProfileSheetEventClick = viewModel::onProfileSheetEventClick)
                 }
               }
         }

@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.filters
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.UserProfile
@@ -55,26 +56,24 @@ class FiltersSectionTest {
   // ---------------------- TIME SECTION ----------------------
   @Test
   fun timeSection_toggleExpandsAndCollapses() {
-    val toggle = composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME)
-    val expand = composeTestRule.onNodeWithTag(FiltersSectionTestTags.EXPAND_TIME)
+    val toggle = composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_DATE)
 
     toggle.performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.DATE_PICKER_BUTTON).assertIsDisplayed()
 
-    expand.assertExists()
-    expand.performClick()
+    toggle.performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.DATE_PICKER_BUTTON).assertDoesNotExist()
   }
 
   @Test
   fun datePicker_showsTodayByDefault() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_DATE).performClick()
 
     val today =
-        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Calendar.getInstance().time)
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
 
     composeTestRule
-        .onNodeWithTag(FiltersSectionTestTags.FROM_DATE_TEXT)
+        .onNodeWithTag(FiltersSectionTestTags.FROM_DATE_TEXT, useUnmergedTree = true)
         .assert(hasText("From: $today"))
 
     composeTestRule.runOnIdle {
@@ -89,7 +88,7 @@ class FiltersSectionTest {
 
   @Test
   fun placeSection_switchToUser_setsUserLocation() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performClick()
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_USER).performClick()
 
@@ -98,7 +97,7 @@ class FiltersSectionTest {
 
   @Test
   fun radiusInput_acceptsOnlyDigits() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performClick()
 
     val radiusField = composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT)
 
@@ -114,7 +113,7 @@ class FiltersSectionTest {
 
   @Test
   fun searchPlaceInput_updatesQuery() {
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performClick()
 
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performClick()
 
@@ -126,7 +125,7 @@ class FiltersSectionTest {
   @Test
   fun searchResultsDropdown_displaysResultsAndSelectsLocation() {
     // Open the Place section and switch to Search mode
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.AROUND_SEARCH).performClick()
 
     // Type a query — this will trigger the fake repo to return results
@@ -142,23 +141,37 @@ class FiltersSectionTest {
     composeTestRule.onNodeWithText("Lausanne").assertIsDisplayed()
 
     // Click one of the results
-    composeTestRule.onNodeWithText("Geneva").performClick()
+    composeTestRule.onNodeWithText("Lausanne").performClick()
 
     // The dropdown should collapse and the selected name should appear in the input
-    searchField.assert(hasText("Geneva"))
+    searchField.assert(hasText("Lausanne"))
   }
 
   // ---------------------- PRICE SECTION ----------------------
   @Test
-  fun priceSection_filtersDigitsOnly() {
+  fun priceSection_updatesMaxPrice_whenSliderMoves() {
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
 
-    val priceField = composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT)
-    priceField.performTextReplacement("")
-    priceField.performTextInput("abc999xyz")
-    priceField.assert(hasText("999"))
+    val sliderNode =
+        composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT).fetchSemanticsNode()
 
-    composeTestRule.runOnIdle { assertEquals(999, viewModel.filters.value.maxPrice) }
+    val bounds = sliderNode.boundsInRoot
+
+    val localX = bounds.width * 0.8f
+    val localY = bounds.height / 2f
+
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.PRICE_INPUT).performTouchInput {
+      click(Offset(localX, localY))
+    }
+
+    // Read actual value from the ViewModel after slider event
+    val actualValue = composeTestRule.runOnIdle { viewModel.filters.value.maxPrice }
+
+    // Assert UI displays the right CHF value
+    composeTestRule.onNodeWithText("$actualValue CHF").assertExists()
+
+    // Sanity check: value should be in the upper range (slider was clicked ~80%)
+    assert(actualValue in 70..100)
   }
 
   // ---------------------- FRIENDS / POPULAR ----------------------
@@ -193,7 +206,7 @@ class FiltersSectionTest {
   @Test
   fun reset_clearsAllFiltersAndResetsToDefaults() {
     // Enable some filters
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TIME).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_DATE).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PRICE).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_TAGS).performClick()
 
@@ -202,7 +215,7 @@ class FiltersSectionTest {
     sportTag.performClick()
 
     // Set radius manually
-    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_PLACE).performClick()
+    composeTestRule.onNodeWithTag(FiltersSectionTestTags.TOGGLE_LOCATION).performClick()
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextReplacement("")
     composeTestRule.onNodeWithTag(FiltersSectionTestTags.RADIUS_INPUT).performTextInput("25")
 

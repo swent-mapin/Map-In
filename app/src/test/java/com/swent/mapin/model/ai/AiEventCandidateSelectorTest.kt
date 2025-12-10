@@ -45,7 +45,7 @@ class AiEventCandidateSelectorTest {
 
   private class FakeDistanceCalculator(
       private val distanceMap: Map<Pair<Location, Location>, Double>
-  ) : DistanceCalculator {
+  ) : DistanceCalculator() {
     override fun distanceKm(from: Location, to: Location): Double? {
       return distanceMap[Pair(from, to)]
     }

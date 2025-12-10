@@ -209,6 +209,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-messaging") // For push notifications
+    implementation("com.google.firebase:firebase-functions") // For Cloud Functions
     implementation(libs.geofire.android.common)
 
     // ------------- Google Maps ------------------
@@ -219,6 +220,7 @@ dependencies {
 
     // ------------- Networking ------------------
     implementation(libs.okhttp)
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // ------------- Google Identity & Auth ------------------
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
@@ -257,6 +259,7 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("org.json:json:20250517")
     testImplementation(libs.mockk)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // ------------- Instrumented Tests (androidTest) ------------------
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

@@ -1711,4 +1711,42 @@ class MapScreenViewModelTest {
     assertNull(viewModel.eventPendingDeletion)
     assertFalse(viewModel.showDeleteDialog)
   }
+
+  // Profile Sheet Navigation Tests
+
+  @Test
+  fun `showProfileSheet sets userId and clears navigation flags`() {
+    viewModel.showProfileSheet("user-123")
+
+    assertEquals("user-123", viewModel.profileSheetUserId)
+  }
+
+  @Test
+  fun `hideProfileSheet clears userId`() {
+    viewModel.showProfileSheet("user-123")
+    viewModel.hideProfileSheet()
+
+    assertNull(viewModel.profileSheetUserId)
+  }
+
+  @Test
+  fun `onProfileSheetEventClick sets selected event`() {
+    viewModel.showProfileSheet("user-123")
+    viewModel.onProfileSheetEventClick(testEvent)
+
+    assertEquals(testEvent, viewModel.selectedEvent)
+  }
+
+  @Test
+  fun `closeEventDetailWithNavigation closes event without navigation`() = runTest {
+    viewModel.showProfileSheet("user-123")
+    viewModel.onProfileSheetEventClick(testEvent)
+    advanceUntilIdle()
+
+    viewModel.closeEventDetailWithNavigation()
+    advanceUntilIdle()
+
+    assertNull(viewModel.profileSheetUserId)
+    assertNull(viewModel.selectedEvent)
+  }
 }

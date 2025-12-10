@@ -234,4 +234,109 @@ class SearchStateControllerTest {
     assertNotNull("Recent items should not be null", controller.recentItems)
     assertEquals("Should have empty list on malformed JSON", 0, controller.recentItems.size)
   }
+
+  // Tests for ClickedProfile type and saveRecentProfile method
+
+  @Test
+  fun saveRecentProfile_addsNewProfileToRecents() {
+    val userId = "user123"
+    val userName = "John Doe"
+
+    controller.saveRecentProfile(userId, userName)
+
+    assertEquals("Should have one recent item", 1, controller.recentItems.size)
+    assertTrue(
+        "Recent item should be ClickedProfile",
+        controller.recentItems[0] is RecentItem.ClickedProfile)
+    val clickedProfile = controller.recentItems[0] as RecentItem.ClickedProfile
+    assertEquals("User ID should match", userId, clickedProfile.userId)
+    assertEquals("User name should match", userName, clickedProfile.userName)
+  }
+
+  @Test
+  fun saveRecentProfile_updatesSharedPreferences() {
+    val userId = "user456"
+    val userName = "Jane Smith"
+    val stringCaptor = argumentCaptor<String>()
+
+    controller.saveRecentProfile(userId, userName)
+
+    verify(mockEditor).putString(eq("recent_items"), stringCaptor.capture())
+    verify(mockEditor, times(1)).apply()
+
+    val savedJson = stringCaptor.firstValue
+    assertTrue("Saved JSON should contain profile type", savedJson.contains("\"type\":\"profile\""))
+    assertTrue("Saved JSON should contain user ID", savedJson.contains(userId))
+    assertTrue("Saved JSON should contain user name", savedJson.contains(userName))
+  }
+
+  @Test
+  fun saveRecentProfile_withDuplicateUserId_movesToFront() {
+    val userId = "user789"
+    val originalName = "Original Name"
+    val updatedName = "Updated Name"
+
+    controller.saveRecentProfile(userId, originalName)
+    val firstSize = controller.recentItems.size
+
+    controller.saveRecentProfile(userId, updatedName)
+
+    assertEquals("Should still have same number of items", firstSize, controller.recentItems.size)
+    val firstItem = controller.recentItems[0] as RecentItem.ClickedProfile
+    assertEquals("Profile should be at front", userId, firstItem.userId)
+    assertEquals("Name should be updated", updatedName, firstItem.userName)
+  }
+
+  @Test
+  fun saveRecentProfile_preservesExistingSearchAndEventItems() {
+    val searchQuery = "test query"
+    val eventId = "event1"
+    val eventTitle = "Test Event"
+    whenever(mockSharedPrefs.getString("recent_items", "[]"))
+        .thenReturn(
+            """[{"type":"search","value":"$searchQuery"},{"type":"event","value":"$eventId","eventTitle":"$eventTitle"}]""")
+
+    controller.loadRecentSearches()
+
+    val userId = "user999"
+    val userName = "New User"
+
+    controller.saveRecentProfile(userId, userName)
+
+    assertEquals("Should have three items", 3, controller.recentItems.size)
+    assertTrue(
+        "First item should be ClickedProfile",
+        controller.recentItems[0] is RecentItem.ClickedProfile)
+    assertTrue("Second item should be Search", controller.recentItems[1] is RecentItem.Search)
+    assertTrue(
+        "Third item should be ClickedEvent", controller.recentItems[2] is RecentItem.ClickedEvent)
+  }
+
+  @Test
+  fun loadRecentSearches_deserializesProfileTypeCorrectly() {
+    val profileJson = """[{"type":"profile","value":"user123","eventTitle":"John Doe"}]"""
+    whenever(mockSharedPrefs.getString("recent_items", "[]")).thenReturn(profileJson)
+
+    controller.loadRecentSearches()
+
+    assertEquals("Should have one item", 1, controller.recentItems.size)
+    assertTrue(
+        "Item should be ClickedProfile type",
+        controller.recentItems[0] is RecentItem.ClickedProfile)
+    val clickedProfile = controller.recentItems[0] as RecentItem.ClickedProfile
+    assertEquals("User ID should match", "user123", clickedProfile.userId)
+    assertEquals("User name should match", "John Doe", clickedProfile.userName)
+  }
+
+  @Test
+  fun saveRecentProfile_whenExceptionInSaving_doesNotCrash() {
+    whenever(mockEditor.putString(any(), any())).doThrow(RuntimeException("Storage error"))
+
+    try {
+      controller.saveRecentProfile("user-error", "Error User")
+      assertTrue("Should handle exception gracefully", true)
+    } catch (e: Exception) {
+      fail("Should not throw exception: ${e.message}")
+    }
+  }
 }
