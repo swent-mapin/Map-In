@@ -514,10 +514,8 @@ class FiltersSection {
                 displayResults.take(5).forEachIndexed { index, loc ->
                   Column {
                     Text(
-                        text =
-                            loc
-                                .name!!, // loc.name cannot be null as we already filtered it but
-                                         // still
+                        text = loc.name!!, // loc.name cannot be null as we already filtered it but
+                        // still
                         // need to check for null or it gives a warning
                         modifier =
                             Modifier.fillMaxWidth()
