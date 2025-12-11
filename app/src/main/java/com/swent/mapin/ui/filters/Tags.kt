@@ -1,19 +1,22 @@
 package com.swent.mapin.ui.filters
 
 /**
- * Centralized list of all available event tags in the application.
+ * Centralized and exhaustive list of event tags.
  *
- * This class provides a single source of truth for event categorization tags used throughout the
- * app for filtering and organizing events.
+ * This is the single source of truth for all event categorization tags. Any tag used for event
+ * filtering or categorization must be defined here. To add a new tag category, update [allTags] and
+ * ensure consistency across:
+ * - Event creation forms (tag selection)
+ * - Filter UI components
+ * - Backend event schema validation
+ * - Search and recommendation algorithms
  */
 class Tags {
   companion object {
     /**
-     * Set of all available event tags.
+     * Complete set of available event tags.
      *
-     * These tags can be used to categorize events and allow users to filter events based on their
-     * interests. The tags cover various event types including entertainment, sports, cultural
-     * activities, and social events.
+     * Tags must match exactly (case-sensitive) when assigned to events or used in filters.
      */
     val allTags =
         setOf(
