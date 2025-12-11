@@ -74,7 +74,7 @@ private val USER_AVATAR_SIZE = 56.dp
  * @property description Detailed description of what happened
  * @property eventId Optional ID of the event this memory is associated with
  * @property isPublic Whether the memory should be visible to others
- * @property mediaUris List of URIs for photos/videos to attach (max 5)
+ * @property mediaUris List of URIs for photos/videos to attach
  * @property taggedUserIds List of user IDs tagged in this memory
  */
 data class MemoryFormData(
