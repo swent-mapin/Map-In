@@ -61,7 +61,9 @@ class FriendRequestRepositoryTest {
     coEvery { notificationService.sendInfoNotification(any(), any(), any(), any(), any()) } returns
         NotificationResult.Success(mockNotification)
 
-    repository = FriendRequestRepository(firestore, userProfileRepo, badgeRepository = badgeRepository, notificationService)
+    repository =
+        FriendRequestRepository(
+            firestore, userProfileRepo, badgeRepository = badgeRepository, notificationService)
   }
 
   // ==================== Helper Methods ====================

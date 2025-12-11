@@ -76,8 +76,7 @@ class EventRepositoryFirestoreTest {
             friendRequestRepository = friendRepo,
             notificationService = notificationService,
             userProfileRepository = userProfileRepository,
-            badgeRepository = badgeRepo
-        )
+            badgeRepository = badgeRepo)
     document = mock()
     transaction = mock()
     collection =
@@ -170,8 +169,7 @@ class EventRepositoryFirestoreTest {
           friendRequestRepository = friendRepo,
           notificationService = notificationService,
           userProfileRepository = userProfileRepo,
-          badgeRepository = badgeRepo
-        )
+          badgeRepository = badgeRepo)
 
   // ========== BASIC CRUD TESTS ==========
 
