@@ -10,8 +10,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.OrganizerState
 import java.util.Calendar
@@ -29,7 +29,7 @@ class EventDetailSheetTest {
           uid = "test-event-1",
           title = "Test Event",
           description = "This is a test event description",
-          location = Location(name = "Paris", latitude = 48.8566, longitude = 2.3522),
+          location = Location.from(name = "Paris", lat = 48.8566, lng = 2.3522),
           date = Timestamp(Calendar.getInstance().apply { set(2025, 9, 20, 14, 30) }.time),
           ownerId = "owner123",
           participantIds = listOf("user1", "user2"),

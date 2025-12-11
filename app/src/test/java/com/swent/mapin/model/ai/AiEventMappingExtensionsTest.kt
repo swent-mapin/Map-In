@@ -3,8 +3,8 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
@@ -21,7 +21,7 @@ class AiEventMappingExtensionsTest {
             date = Timestamp.now(),
             endDate = null,
             tags = listOf("tech", "networking"),
-            location = Location("EPFL", 46.5197, 6.5657),
+            location = Location.from("EPFL", 46.5197, 6.5657),
             capacity = null,
             participantIds = emptyList(),
             price = 0.0)
@@ -46,7 +46,7 @@ class AiEventMappingExtensionsTest {
             uid = "event456",
             title = "Workshop",
             date = Timestamp.now(),
-            location = Location("Room 101", 0.0, 0.0),
+            location = Location.from("Room 101", 0.0, 0.0),
             capacity = 50,
             participantIds = listOf("user1", "user2", "user3"),
             price = 25.0)
@@ -64,7 +64,7 @@ class AiEventMappingExtensionsTest {
             uid = "event789",
             title = "Full Event",
             date = Timestamp.now(),
-            location = Location("Venue", 0.0, 0.0),
+            location = Location.from("Venue", 0.0, 0.0),
             capacity = 3,
             participantIds = listOf("user1", "user2", "user3"))
 
@@ -80,7 +80,7 @@ class AiEventMappingExtensionsTest {
             uid = "event111",
             title = "Local Event",
             date = Timestamp.now(),
-            location = Location("Default Location", 0.0, 0.0))
+            location = Location.from("Default Location", 0.0, 0.0))
 
     val summary = event.toAiEventSummary(distanceKm = 2.5, locationDescription = "Near city center")
 
@@ -96,17 +96,17 @@ class AiEventMappingExtensionsTest {
                 uid = "e1",
                 title = "Event 1",
                 date = Timestamp.now(),
-                location = Location("Loc1", 0.0, 0.0)),
+                location = Location.from("Loc1", 0.0, 0.0)),
             Event(
                 uid = "e2",
                 title = "Event 2",
                 date = Timestamp.now(),
-                location = Location("Loc2", 0.0, 0.0)),
+                location = Location.from("Loc2", 0.0, 0.0)),
             Event(
                 uid = "e3",
                 title = "Event 3",
                 date = Timestamp.now(),
-                location = Location("Loc3", 0.0, 0.0)))
+                location = Location.from("Loc3", 0.0, 0.0)))
 
     val summaries = events.toAiEventSummaries()
 
@@ -125,12 +125,12 @@ class AiEventMappingExtensionsTest {
                 uid = "e1",
                 title = "Event 1",
                 date = Timestamp.now(),
-                location = Location("Loc1", 0.0, 0.0)),
+                location = Location.from("Loc1", 0.0, 0.0)),
             Event(
                 uid = "e2",
                 title = "Event 2",
                 date = Timestamp.now(),
-                location = Location("Loc2", 0.0, 0.0)))
+                location = Location.from("Loc2", 0.0, 0.0)))
 
     val distanceProvider: (String) -> Double? = { eventId ->
       when (eventId) {
@@ -154,12 +154,12 @@ class AiEventMappingExtensionsTest {
                 uid = "e1",
                 title = "Event 1",
                 date = Timestamp.now(),
-                location = Location("Loc1", 0.0, 0.0)),
+                location = Location.from("Loc1", 0.0, 0.0)),
             Event(
                 uid = "e2",
                 title = "Event 2",
                 date = Timestamp.now(),
-                location = Location("Loc2", 0.0, 0.0)))
+                location = Location.from("Loc2", 0.0, 0.0)))
 
     val locationProvider: (String) -> String? = { eventId ->
       when (eventId) {

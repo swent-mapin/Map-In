@@ -9,8 +9,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.util.Calendar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,7 +30,7 @@ class ShareEventDialogTest {
           uid = "test-event-123",
           title = "Summer Music Festival",
           description = "Amazing outdoor concert",
-          location = Location(name = "Paris", latitude = 48.8566, longitude = 2.3522),
+          location = Location.from(name = "Paris", lat = 48.8566, lng = 2.3522),
           date = Timestamp(Calendar.getInstance().apply { set(2025, 9, 20, 14, 30) }.time),
           ownerId = "owner456",
           participantIds = listOf("user1", "user2"),
@@ -157,7 +157,7 @@ class ShareEventDialogTest {
             uid = "min-event",
             title = "Min",
             description = "",
-            location = Location(name = "Test", latitude = 0.0, longitude = 0.0),
+            location = Location.from(name = "Test", lat = 0.0, lng = 0.0),
             date = null,
             ownerId = "owner",
             participantIds = emptyList(),
@@ -241,7 +241,7 @@ class ShareEventDialogTest {
             uid = "min-event",
             title = "Min",
             description = "",
-            location = Location(name = "Test", latitude = 0.0, longitude = 0.0),
+            location = Location.from(name = "Test", lat = 0.0, lng = 0.0),
             date = null,
             ownerId = "owner",
             participantIds = emptyList(),

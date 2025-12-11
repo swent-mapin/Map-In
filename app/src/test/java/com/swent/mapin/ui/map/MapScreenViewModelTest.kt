@@ -5,11 +5,11 @@ import android.content.SharedPreferences
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityServiceProvider
@@ -74,7 +74,7 @@ class MapScreenViewModelTest {
       Event(
           uid = "event1",
           title = "Test Event",
-          location = Location("Test Location", 46.5, 6.5),
+          location = Location.from("Test Location", 46.5, 6.5),
           participantIds = emptyList(),
           ownerId = "owner123")
 
@@ -630,12 +630,12 @@ class MapScreenViewModelTest {
             Event(
                 uid = "event1",
                 title = "Event 1",
-                location = Location("Location 1", 46.5, 6.5),
+                location = Location.from("Location 1", 46.5, 6.5),
                 participantIds = List(10) { "user$it" }),
             Event(
                 uid = "event2",
                 title = "Event 2",
-                location = Location("Location 2", 47.0, 7.0),
+                location = Location.from("Location 2", 47.0, 7.0),
                 participantIds = List(25) { "user$it" }))
 
     val geoJson = eventsToGeoJson(events)
@@ -725,7 +725,7 @@ class MapScreenViewModelTest {
             Event(
                 uid = "event1",
                 title = "Event 1",
-                location = Location("Location 1", 46.5, 6.5),
+                location = Location.from("Location 1", 46.5, 6.5),
                 participantIds = listOf("user1")))
 
     val geoJson = eventsToGeoJson(events)
@@ -1346,12 +1346,13 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     // Manually set to displayed state to test the clear branch
+    assertTrue(testEvent.location.isDefined())
     val userLocation =
         com.mapbox.geojson.Point.fromLngLat(
             MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
     val eventLocation =
         com.mapbox.geojson.Point.fromLngLat(
-            testEvent.location.longitude, testEvent.location.latitude)
+            testEvent.location.longitude!!, testEvent.location.latitude!!)
     viewModel.directionViewModel.requestDirections(userLocation, eventLocation)
     advanceUntilIdle()
 

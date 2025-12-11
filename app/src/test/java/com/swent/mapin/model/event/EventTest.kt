@@ -1,7 +1,7 @@
 package com.swent.mapin.model.event
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import java.util.Date
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,7 +22,7 @@ class EventTest {
             url = "https://example.com",
             description = "Test description",
             date = timestamp,
-            location = Location("Test Location", 46.5197, 6.5668),
+            location = Location.from("Test Location", 46.5197, 6.5668),
             tags = listOf("Music", "Festival"),
             public = true,
             ownerId = "owner123",
@@ -35,9 +35,10 @@ class EventTest {
     assertEquals("https://example.com", event.url)
     assertEquals("Test description", event.description)
     assertEquals(timestamp, event.date)
+    assertTrue(event.location.isDefined())
     assertEquals("Test Location", event.location.name)
-    assertEquals(46.5197, event.location.latitude, 0.0001)
-    assertEquals(6.5668, event.location.longitude, 0.0001)
+    assertEquals(46.5197, event.location.latitude!!, 0.0001)
+    assertEquals(6.5668, event.location.longitude!!, 0.0001)
     assertEquals(listOf("Music", "Festival"), event.tags)
     assertTrue(event.public)
     assertEquals("owner123", event.ownerId)
@@ -55,9 +56,8 @@ class EventTest {
     assertNull(event.url)
     assertEquals("", event.description)
     assertNull(event.date)
-    assertEquals("", event.location.name)
-    assertEquals(0.0, event.location.latitude, 0.0001)
-    assertEquals(0.0, event.location.longitude, 0.0001)
+    assertTrue(event.location == Location.UNDEFINED)
+    assertNull(event.location.name)
     assertEquals(emptyList<String>(), event.tags)
     assertTrue(event.public)
     assertEquals("", event.ownerId)
@@ -72,7 +72,7 @@ class EventTest {
         Event(
             uid = "event456",
             title = "Partial Event",
-            location = Location("Some Location", 0.0, 0.0),
+            location = Location.from("Some Location", 0.0, 0.0),
             public = false)
 
     assertEquals("event456", event.uid)
@@ -90,7 +90,7 @@ class EventTest {
             uid = "original123",
             title = "Original Title",
             description = "Original Description",
-            location = Location("Original Location", 0.0, 0.0))
+            location = Location.from("Original Location", 0.0, 0.0))
 
     val modified = original.copy(title = "Modified Title", description = "Modified Description")
 
@@ -142,10 +142,11 @@ class EventTest {
   @Test
   fun event_withZeroCoordinates() {
     val event =
-        Event(uid = "event303", title = "Null Island Event", location = Location("", 0.0, 0.0))
+        Event(uid = "event303", title = "Null Island Event", location = Location.from("", 0.0, 0.0))
 
-    assertEquals(0.0, event.location.latitude, 0.0001)
-    assertEquals(0.0, event.location.longitude, 0.0001)
+    assertTrue(event.location.isDefined())
+    assertEquals(0.0, event.location.latitude!!, 0.0001)
+    assertEquals(0.0, event.location.longitude!!, 0.0001)
   }
 
   @Test
@@ -154,10 +155,11 @@ class EventTest {
         Event(
             uid = "event404",
             title = "Southern Hemisphere Event",
-            location = Location("", -33.8688, 151.2093))
+            location = Location.from("", -33.8688, 151.2093))
 
-    assertEquals(-33.8688, event.location.latitude, 0.0001)
-    assertEquals(151.2093, event.location.longitude, 0.0001)
+    assertTrue(event.location.isDefined())
+    assertEquals(-33.8688, event.location.latitude!!, 0.0001)
+    assertEquals(151.2093, event.location.longitude!!, 0.0001)
   }
 
   @Test
@@ -209,13 +211,13 @@ class EventTest {
             uid = "event111",
             title = "Same Event",
             date = timestamp,
-            location = Location("Same Location", 0.0, 0.0))
+            location = Location.from("Same Location", 0.0, 0.0))
     val event2 =
         Event(
             uid = "event111",
             title = "Same Event",
             date = timestamp,
-            location = Location("Same Location", 0.0, 0.0))
+            location = Location.from("Same Location", 0.0, 0.0))
 
     assertEquals(event1, event2)
   }
@@ -226,7 +228,7 @@ class EventTest {
         Event(
             uid = "event222",
             title = "String Test Event",
-            location = Location("String Test Location", 0.0, 0.0))
+            location = Location.from("String Test Location", 0.0, 0.0))
 
     val eventString = event.toString()
     assertTrue(eventString.contains("event222"))
@@ -240,11 +242,11 @@ class EventTest {
             uid = "event333",
             title = "Café & Restaurant 🍕",
             description = "Special chars: @#$%^&*()",
-            location = Location("Zürich, Café ☕", 0.0, 0.0))
+            location = Location.from("Zürich, Café ☕", 0.0, 0.0))
 
     assertEquals("Café & Restaurant 🍕", event.title)
     assertTrue(event.description.contains("@#$%^&*()"))
-    assertTrue(event.location.name.contains("☕"))
+    assertTrue(event.location.name?.contains("☕") ?: false)
   }
 
   @Test
@@ -265,7 +267,7 @@ class EventTest {
             title = "Original",
             description = "Original Description",
             date = timestamp,
-            location = Location("Original Location", 46.5197, 6.5668),
+            location = Location.from("Original Location", 46.5197, 6.5668),
             tags = listOf("Tag1", "Tag2"),
             public = true,
             ownerId = "owner555",
@@ -278,9 +280,10 @@ class EventTest {
     assertEquals("Modified", modified.title)
     assertEquals("Original Description", modified.description)
     assertEquals(timestamp, modified.date)
+    assertTrue(modified.location.isDefined())
     assertEquals("Original Location", modified.location.name)
-    assertEquals(46.5197, modified.location.latitude, 0.0001)
-    assertEquals(6.5668, modified.location.longitude, 0.0001)
+    assertEquals(46.5197, modified.location.latitude!!, 0.0001)
+    assertEquals(6.5668, modified.location.longitude!!, 0.0001)
     assertEquals(listOf("Tag1", "Tag2"), modified.tags)
     assertTrue(modified.public)
     assertEquals("owner555", modified.ownerId)
@@ -293,7 +296,11 @@ class EventTest {
   fun event_withEmptyStrings() {
     val event =
         Event(
-            uid = "", title = "", description = "", location = Location("", 0.0, 0.0), ownerId = "")
+            uid = "",
+            title = "",
+            description = "",
+            location = Location.from("", 0.0, 0.0),
+            ownerId = "")
 
     assertEquals("", event.uid)
     assertEquals("", event.title)
@@ -312,7 +319,7 @@ class EventTest {
             title = "Valid",
             description = "Desc",
             date = Timestamp(now),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertTrue(event.isValidEvent())
@@ -327,7 +334,7 @@ class EventTest {
             title = "Valid",
             description = "Desc",
             date = Timestamp(now),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "")
 
     assertFalse(event.isValidEvent())
@@ -342,7 +349,7 @@ class EventTest {
             title = "",
             description = "Desc",
             date = Timestamp(now),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertFalse(event.isValidEvent())
@@ -357,7 +364,7 @@ class EventTest {
             title = "Title",
             description = "",
             date = Timestamp(now),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertFalse(event.isValidEvent())
@@ -371,7 +378,7 @@ class EventTest {
             title = "Title",
             description = "Desc",
             date = null,
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertFalse(event.isValidEvent())
@@ -386,7 +393,7 @@ class EventTest {
             title = "Title",
             description = "Desc",
             date = Timestamp(now),
-            location = Location("", 1.0, 2.0),
+            location = Location.from("", 1.0, 2.0),
             ownerId = "owner")
 
     assertFalse(event.isValidEvent())
@@ -403,7 +410,7 @@ class EventTest {
             description = "Desc",
             date = Timestamp(now),
             endDate = Timestamp(earlier),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertFalse(event.isValidEvent())
@@ -422,7 +429,7 @@ class EventTest {
             description = "Desc",
             date = Timestamp(now),
             endDate = Timestamp(equal),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     val eventLater =
@@ -432,7 +439,7 @@ class EventTest {
             description = "Desc",
             date = Timestamp(now),
             endDate = Timestamp(later),
-            location = Location("Loc", 1.0, 2.0),
+            location = Location.from("Loc", 1.0, 2.0),
             ownerId = "owner")
 
     assertTrue(eventEqual.isValidEvent())

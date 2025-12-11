@@ -3,8 +3,8 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.util.Date
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
@@ -23,7 +23,7 @@ class AiEventCandidateSelectorTest {
       id: String,
       title: String,
       daysFromNow: Int,
-      location: Location = Location("Test Location", 46.5197, 6.5657),
+      location: Location = Location.from("Test Location", 46.5197, 6.5657),
       tags: List<String> = emptyList(),
       capacity: Int? = null,
       participantIds: List<String> = emptyList(),
@@ -102,10 +102,10 @@ class AiEventCandidateSelectorTest {
 
   @Test
   fun `selectCandidates sorts by distance when user location is available`() {
-    val userLocation = Location("User", 46.5197, 6.5657)
-    val location1 = Location("Far", 47.0, 7.0)
-    val location2 = Location("Near", 46.52, 6.57)
-    val location3 = Location("Medium", 46.7, 6.8)
+    val userLocation = Location.from("User", 46.5197, 6.5657)
+    val location1 = Location.from("Far", 47.0, 7.0)
+    val location2 = Location.from("Near", 46.52, 6.57)
+    val location3 = Location.from("Medium", 46.7, 6.8)
 
     val distanceMap =
         mapOf(
@@ -154,10 +154,10 @@ class AiEventCandidateSelectorTest {
 
   @Test
   fun `selectCandidates filters by maxDistanceKm`() {
-    val userLocation = Location("User", 46.5197, 6.5657)
-    val location1 = Location("Far", 47.0, 7.0)
-    val location2 = Location("Near", 46.52, 6.57)
-    val location3 = Location("TooFar", 48.0, 8.0)
+    val userLocation = Location.from("User", 46.5197, 6.5657)
+    val location1 = Location.from("Far", 47.0, 7.0)
+    val location2 = Location.from("Near", 46.52, 6.57)
+    val location3 = Location.from("TooFar", 48.0, 8.0)
 
     val distanceMap =
         mapOf(
@@ -185,7 +185,7 @@ class AiEventCandidateSelectorTest {
   @Test
   fun `selectCandidates maps event fields to AiEventSummary correctly`() {
     val selector = AiEventCandidateSelector()
-    val location = Location("EPFL", 46.5197, 6.5657)
+    val location = Location.from("EPFL", 46.5197, 6.5657)
     val events =
         listOf(
             createEvent(
@@ -212,8 +212,8 @@ class AiEventCandidateSelectorTest {
 
   @Test
   fun `selectCandidates includes distance when location is provided`() {
-    val userLocation = Location("User", 46.5197, 6.5657)
-    val eventLocation = Location("Event", 46.52, 6.57)
+    val userLocation = Location.from("User", 46.5197, 6.5657)
+    val eventLocation = Location.from("Event", 46.52, 6.57)
 
     val distanceMap = mapOf(Pair(userLocation, eventLocation) to 5.5)
     val distanceCalculator = FakeDistanceCalculator(distanceMap)
@@ -240,9 +240,9 @@ class AiEventCandidateSelectorTest {
 
   @Test
   fun `selectCandidates combines time and distance filtering`() {
-    val userLocation = Location("User", 46.5197, 6.5657)
-    val nearLocation = Location("Near", 46.52, 6.57)
-    val farLocation = Location("Far", 48.0, 8.0)
+    val userLocation = Location.from("User", 46.5197, 6.5657)
+    val nearLocation = Location.from("Near", 46.52, 6.57)
+    val farLocation = Location.from("Far", 48.0, 8.0)
 
     val distanceMap =
         mapOf(Pair(userLocation, nearLocation) to 5.0, Pair(userLocation, farLocation) to 150.0)

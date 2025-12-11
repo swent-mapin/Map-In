@@ -6,8 +6,8 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +34,7 @@ class DownloadNotificationManagerTest {
           description = "Test Description",
           date = Timestamp.now(),
           endDate = null,
-          location = Location("Test Location", 46.5197, 6.6323),
+          location = Location.from("Test Location", 46.5197, 6.6323),
           tags = listOf("test"),
           public = true,
           ownerId = "owner123",

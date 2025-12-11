@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -62,7 +63,7 @@ fun EventPickerDialog(
         } else {
           events.filter {
             it.title.contains(searchQuery, ignoreCase = true) ||
-                it.location.name.contains(searchQuery, ignoreCase = true) ||
+                it.location.name?.contains(searchQuery, ignoreCase = true) ?: false ||
                 it.description.contains(searchQuery, ignoreCase = true)
           }
         }
@@ -136,7 +137,7 @@ fun EventPickerDialog(
                                   style = MaterialTheme.typography.bodySmall,
                                   color = MaterialTheme.colorScheme.onSurfaceVariant)
                               Text(
-                                  text = event.location.name,
+                                  text = event.location.name ?: Location.NO_NAME,
                                   style = MaterialTheme.typography.bodySmall,
                                   color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
