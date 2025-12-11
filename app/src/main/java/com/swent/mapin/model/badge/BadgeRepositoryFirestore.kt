@@ -5,15 +5,14 @@ import com.swent.mapin.model.UserProfile
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.tasks.await
 
-
 data class BadgeContext(
-  val friendsCount: Int = 0,
-  val createdEvents: Int = 0,
-  val joinedEvents: Int = 0,
-  val earlyJoin: Int = 0,       // user joined an event in the morning
-  val lateJoin: Int = 0,        // user joined an event in the evening
-  val earlyCreate: Int = 0,     // user created an event in the morning
-  val lateCreate: Int = 0,      // user created an event in the evening
+    val friendsCount: Int = 0,
+    val createdEvents: Int = 0,
+    val joinedEvents: Int = 0,
+    val earlyJoin: Int = 0, // user joined an event in the morning
+    val lateJoin: Int = 0, // user joined an event in the evening
+    val earlyCreate: Int = 0, // user created an event in the morning
+    val lateCreate: Int = 0, // user created an event in the evening
 )
 /**
  * Firestore implementation of BadgeRepository.
@@ -46,10 +45,11 @@ class BadgeRepositoryFirestore(
   override suspend fun saveBadgeContext(userId: String, context: BadgeContext): Boolean {
     return executeWithRetry {
       try {
-        firestore.collection(COLLECTION_USERS)
-          .document(userId)
-          .update(FIELD_BADGE_CONTEXT, context)
-          .await()
+        firestore
+            .collection(COLLECTION_USERS)
+            .document(userId)
+            .update(FIELD_BADGE_CONTEXT, context)
+            .await()
         badgeContextCache[userId] = context
         println("Saved BadgeContext for user $userId: $context")
         true
@@ -63,7 +63,9 @@ class BadgeRepositoryFirestore(
 
   override suspend fun getBadgeContext(userId: String): BadgeContext {
     // Return from cache if available
-    badgeContextCache[userId]?.let { return it }
+    badgeContextCache[userId]?.let {
+      return it
+    }
 
     return executeWithRetry {
       val doc = firestore.collection(COLLECTION_USERS).document(userId).get().await()

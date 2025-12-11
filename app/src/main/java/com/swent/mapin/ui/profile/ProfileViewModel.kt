@@ -162,17 +162,20 @@ class ProfileViewModel(
       val currentUser = FirebaseAuth.getInstance().currentUser ?: return@launch
 
       // Only proceed if badgeRepository is initialized
-      val repo = badgeRepository ?: run {
-        println("ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
-        return@launch
-      }
+      val repo =
+          badgeRepository
+              ?: run {
+                println("ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
+                return@launch
+              }
 
-      val context = try {
-        repo.getBadgeContext(currentUser.uid)
-      } catch (e: Exception) {
-        println("ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
-        BadgeContext()
-      }
+      val context =
+          try {
+            repo.getBadgeContext(currentUser.uid)
+          } catch (e: Exception) {
+            println("ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
+            BadgeContext()
+          }
 
       // Update safely
       _badgeContext.value = context
@@ -216,7 +219,7 @@ class ProfileViewModel(
 
     // Persist to Firestore
     try {
-      val success = badgeRepository!!.saveBadgeProgress(currentUser.uid,  calculatedBadges)
+      val success = badgeRepository!!.saveBadgeProgress(currentUser.uid, calculatedBadges)
       if (success) {
         println("ProfileViewModel - Successfully saved ${calculatedBadges.size} badges")
       } else {

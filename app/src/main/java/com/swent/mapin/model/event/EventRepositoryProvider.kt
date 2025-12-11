@@ -45,8 +45,10 @@ object EventRepositoryProvider {
     val friendRepository = FriendRequestRepository(notificationService = notificationService)
     val userProfileRepository = UserProfileRepository()
     return EventRepositoryFirestore(
-        firestore, friendRepository, notificationService, badgeRepository = BadgeRepositoryFirestore(),
-        userProfileRepository = userProfileRepository
-    )
+        firestore,
+        friendRepository,
+        notificationService,
+        badgeRepository = BadgeRepositoryFirestore(),
+        userProfileRepository = userProfileRepository)
   }
 }
