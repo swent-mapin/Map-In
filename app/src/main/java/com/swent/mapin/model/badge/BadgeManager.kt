@@ -72,10 +72,10 @@ object BadgeManager {
     val progress = (friendsCount / 10f).coerceAtMost(1f)
     val isUnlocked = friendsCount >= 10
     return Badge(
-        id = "social_butterfly",
+        id = "social_but_not_quite",
         title = "Social, but not quite",
         description = "Make 10 friends",
-        iconName = "group",
+        iconName = "group-add",
         rarity = BadgeRarity.RARE,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -88,7 +88,7 @@ object BadgeManager {
         id = "social_butterfly",
         title = "Social Butterfly",
         description = "Make 25 friends",
-        iconName = "group",
+        iconName = "diversity-3",
         rarity = BadgeRarity.EPIC,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -205,7 +205,7 @@ object BadgeManager {
         id = "event_master",
         title = "Event Master",
         description = "Create 25 events",
-        iconName = "calendar-check",
+        iconName = "workspace-premium",
         rarity = BadgeRarity.EPIC,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -218,7 +218,7 @@ object BadgeManager {
         id = "probably_too_tired",
         title = "Probably too tired",
         description = "Create 50 events",
-        iconName = "calendar-check",
+        iconName = "military-tech",
         rarity = BadgeRarity.LEGENDARY,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -231,7 +231,7 @@ object BadgeManager {
         id = "first_step",
         title = "Event Enjoyer",
         description = "Join your first event",
-        iconName = "calendar-star",
+        iconName = "thumb-up",
         rarity = BadgeRarity.COMMON,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -244,7 +244,7 @@ object BadgeManager {
         id = "event_enjoyer",
         title = "Event Enjoyer",
         description = "Join 10 events",
-        iconName = "calendar-star",
+        iconName = "star",
         rarity = BadgeRarity.RARE,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -283,7 +283,7 @@ object BadgeManager {
         id = "night_owl",
         title = "Night Owl",
         description = "Another sleepless night? Go to sleep",
-        iconName = "trophy",
+        iconName = "dark-mode",
         rarity = BadgeRarity.LEGENDARY,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -296,7 +296,7 @@ object BadgeManager {
         id = "early_bird",
         title = "Early Bird",
         description = "Well someone is up early!",
-        iconName = "trophy",
+        iconName = "brightness-5",
         rarity = BadgeRarity.LEGENDARY,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -309,7 +309,7 @@ object BadgeManager {
         id = "procrastination",
         title = "Procrastination",
         description = "Shouldn't you have planned this out earlier?",
-        iconName = "trophy",
+        iconName = "hourglass-bottom",
         rarity = BadgeRarity.LEGENDARY,
         isUnlocked = isUnlocked,
         progress = progress)
@@ -322,7 +322,7 @@ object BadgeManager {
         id = "morning_person",
         title = "Morning Person",
         description = "Someone's got their life in check!",
-        iconName = "trophy",
+        iconName = "wp-sunny",
         rarity = BadgeRarity.LEGENDARY,
         isUnlocked = isUnlocked,
         progress = progress)
