@@ -4,8 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import org.junit.Rule
 import org.junit.Test
 
@@ -17,7 +17,7 @@ class DownloadIndicatorTest {
       Event(
           uid = "test-event-1",
           title = "Test Event",
-          location = Location("Test Location", 46.5, 6.5))
+          location = Location.from("Test Location", 46.5, 6.5))
 
   @Test
   fun downloadIndicator_notVisible_whenNoDownloadAndNoComplete() {

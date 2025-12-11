@@ -238,6 +238,15 @@ internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileView
       fontWeight = FontWeight.Bold,
       modifier = Modifier.testTag("profileCard_Name"))
 
+  Spacer(modifier = Modifier.height(8.dp))
+
+  // Followers count
+  Text(
+      text = "${userProfile.followerIds.size} Followers",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.testTag("profileFollowersCount"))
+
   Spacer(modifier = Modifier.height(16.dp))
 
   // Bio

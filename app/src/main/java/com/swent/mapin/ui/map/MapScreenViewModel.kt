@@ -924,7 +924,13 @@ class MapScreenViewModel(
             _errorMessage = "Waiting for location... Please try again in a moment"
             return
           }
-      val eventLocation = Point.fromLngLat(event.location.longitude, event.location.latitude)
+      val eventLocation =
+          if (event.location.isDefined()) {
+            Point.fromLngLat(event.location.longitude!!, event.location.latitude!!)
+          } else {
+            _errorMessage = "Event location is not defined, sorry for this inconvenience."
+            return
+          }
 
       directionViewModel.requestDirections(userLocation, eventLocation, userLoc)
     }
@@ -1118,10 +1124,12 @@ fun rememberMapScreenViewModel(
 
 fun eventsToGeoJson(events: List<Event>): String {
   val features =
-      events.map { event ->
-        Feature.fromGeometry(
-            Point.fromLngLat(event.location.longitude, event.location.latitude),
-            JsonObject().apply { addProperty("weight", event.participantIds.size) })
-      }
+      events
+          .filter { it.location.isDefined() }
+          .map { event ->
+            Feature.fromGeometry(
+                Point.fromLngLat(event.location.longitude!!, event.location.latitude!!),
+                JsonObject().apply { addProperty("weight", event.participantIds.size) })
+          }
   return FeatureCollection.fromFeatures(features).toJson()
 }

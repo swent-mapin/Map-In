@@ -116,9 +116,11 @@ internal fun createEventAnnotations(
     selectedEventId: String? = null,
     eventBitmaps: Map<String, Bitmap>? = null
 ): List<PointAnnotationOptions> {
-  return events.mapIndexed { index, event ->
-    val isSelected = event.uid == selectedEventId
-    val visual = computeAnnotationVisualParameters(isSelected)
+  return events
+      .filter { it.location.isDefined() }
+      .mapIndexed { index, event ->
+        val isSelected = event.uid == selectedEventId
+        val visual = computeAnnotationVisualParameters(isSelected)
 
     // Use event-specific bitmap if available, otherwise fall back to default
     val iconBitmap = eventBitmaps?.get(event.uid) ?: style.markerBitmap

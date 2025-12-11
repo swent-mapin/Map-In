@@ -2,6 +2,7 @@ package com.swent.mapin.model.event
 
 import android.content.Context
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.location.Location
 
 /**
  * Local cache wrapper for saved events using Room. Provides simple conversion between Room entities
@@ -48,7 +49,7 @@ private fun SavedEventEntity.toEvent(): Event {
       description = description,
       date = ts,
       endDate = endTs,
-      location = com.swent.mapin.model.Location(locationName, locationLat, locationLng),
+      location = Location.from(locationName, locationLat, locationLng),
       tags = if (tagsCsv.isBlank()) emptyList() else tagsCsv.split(","),
       public = isPublic,
       ownerId = ownerId,
