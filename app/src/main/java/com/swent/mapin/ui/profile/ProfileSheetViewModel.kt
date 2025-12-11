@@ -16,10 +16,25 @@ import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
 import kotlinx.coroutines.launch
 
-/** State for the profile sheet */
+/**
+ * Sealed class representing the state of the profile sheet.
+ *
+ * This follows the loading-loaded-error pattern for async data fetching.
+ */
 sealed class ProfileSheetState {
+  /** Initial state while profile data is being fetched */
   object Loading : ProfileSheetState()
 
+  /**
+   * Success state with loaded profile data.
+   *
+   * @property profile The user's profile information
+   * @property upcomingEvents List of future/ongoing events owned by this user
+   * @property pastEvents List of past events owned by this user
+   * @property isFollowing Whether the current user is following this profile owner
+   * @property isOwnProfile Whether this is the current user's own profile
+   * @property friendStatus Current friendship status with this user
+   */
   data class Loaded(
       val profile: UserProfile,
       val upcomingEvents: List<Event>,
@@ -29,16 +44,38 @@ sealed class ProfileSheetState {
       val friendStatus: FriendStatus
   ) : ProfileSheetState()
 
+  /**
+   * Error state when profile loading fails.
+   *
+   * @property message Human-readable error message
+   */
   data class Error(val message: String) : ProfileSheetState()
 }
 
+/** Enum representing the friendship status between current user and profile owner. */
 enum class FriendStatus {
+  /** No friendship or request exists */
   NOT_FRIEND,
+  /** Friend request is pending */
   PENDING,
+  /** Users are friends */
   FRIENDS
 }
 
-/** ViewModel for the ProfileSheet component */
+/**
+ * ViewModel for the ProfileSheet component.
+ *
+ * Manages the state and operations for viewing another user's profile in a bottom sheet. Handles:
+ * - Loading user profile and their events
+ * - Checking friendship and following status
+ * - Following/unfollowing users
+ * - Sending and managing friend requests
+ *
+ * @property userProfileRepository Repository for user profile operations
+ * @property eventRepository Repository for event operations
+ * @property friendRequestRepository Repository for friend request operations
+ * @property auth Firebase authentication instance
+ */
 class ProfileSheetViewModel(
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(),
     private val eventRepository: EventRepository = EventRepositoryProvider.getRepository(),

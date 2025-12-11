@@ -65,7 +65,18 @@ private val MEDIA_THUMBNAIL_SIZE = 100.dp
 private val DESCRIPTION_MIN_HEIGHT = 120.dp
 private val USER_AVATAR_SIZE = 56.dp
 
-/** Data class to hold memory form input */
+/**
+ * Data class to hold memory form input data.
+ *
+ * This represents the complete state of the memory creation form before it's submitted.
+ *
+ * @property title The title/headline of the memory
+ * @property description Detailed description of what happened
+ * @property eventId Optional ID of the event this memory is associated with
+ * @property isPublic Whether the memory should be visible to others
+ * @property mediaUris List of URIs for photos/videos to attach
+ * @property taggedUserIds List of user IDs tagged in this memory
+ */
 data class MemoryFormData(
     val title: String,
     val description: String,
