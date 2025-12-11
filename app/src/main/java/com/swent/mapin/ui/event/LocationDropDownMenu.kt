@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.PopupProperties
 import com.swent.mapin.R
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 
 @Composable
@@ -51,9 +51,9 @@ fun LocationDropDownMenu(
           locations.forEachIndexed { index, loc ->
             DropdownMenuItem(
                 modifier = Modifier.testTag("locationItem$index"),
-                text = { Text(loc.name) },
+                text = { Text(loc.name ?: Location.NO_NAME) },
                 onClick = {
-                  location.value = loc.name
+                  location.value = loc.name ?: Location.NO_NAME
                   gotLocation.value = loc
                   expanded.value = false
                   locationError.value = false

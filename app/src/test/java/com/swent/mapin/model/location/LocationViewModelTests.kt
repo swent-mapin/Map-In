@@ -1,8 +1,5 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.location
 
-import com.swent.mapin.model.location.LocationRepository
-import com.swent.mapin.model.location.LocationSearchException
-import com.swent.mapin.model.location.LocationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -27,7 +24,7 @@ class LocationViewModelTest {
   fun setup() {
     Dispatchers.setMain(testDispatcher)
     fakeRepository = FakeMapboxRepository()
-    fakeRepository.results = listOf(Location("X", 0.0, 0.0))
+    fakeRepository.results = listOf(Location.from("X", 0.0, 0.0))
     viewModel = LocationViewModel(fakeRepository)
   }
 
@@ -57,7 +54,7 @@ class LocationViewModelTest {
     val fakeRepo =
         object : LocationRepository {
           override suspend fun forwardGeocode(query: String): List<Location> {
-            return listOf(Location("Test", 0.0, 0.0))
+            return listOf(Location.from("Test", 0.0, 0.0))
           }
 
           override suspend fun reverseGeocode(lat: Double, lon: Double): Location {
@@ -102,14 +99,14 @@ class LocationViewModelTest {
   // Fake repository
   class FakeMapboxRepository : LocationRepository {
     var shouldThrow = false
-    var results = listOf(Location("MockCity", 0.0, 0.0))
+    var results = listOf(Location.from("MockCity", 0.0, 0.0))
 
     override suspend fun forwardGeocode(query: String): List<Location> {
       if (shouldThrow) throw LocationSearchException("Fake error")
       return results
     }
 
-    override suspend fun reverseGeocode(lat: Double, lon: Double): Location? {
+    override suspend fun reverseGeocode(lat: Double, lon: Double): Location {
       throw UnsupportedOperationException()
     }
   }

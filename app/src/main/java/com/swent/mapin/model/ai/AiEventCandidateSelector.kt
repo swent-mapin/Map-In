@@ -3,8 +3,8 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 
 /**
  * Component responsible for selecting and preparing candidate events for AI recommendations.
@@ -62,7 +62,7 @@ class AiEventCandidateSelector(
     }
 
     val eventDistances =
-        if (userLocation != null && distanceCalculator != null) {
+        if (userLocation?.isDefined() == true && distanceCalculator != null) {
           candidates.associateWith { event ->
             distanceCalculator.distanceKm(userLocation, event.location)
           }
@@ -91,7 +91,7 @@ class AiEventCandidateSelector(
       event.toAiEventSummary(
           distanceKm = eventDistances[event],
           locationDescription =
-              event.location.name.takeIf { it.isNotBlank() } ?: "Location not specified")
+              event.location.name.takeIf { !it.isNullOrBlank() } ?: "Location not specified")
     }
   }
 

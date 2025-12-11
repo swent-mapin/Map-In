@@ -1,6 +1,5 @@
 package com.swent.mapin.model.location
 
-import com.swent.mapin.model.Location
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -58,13 +57,14 @@ class MapboxRepositoryTest {
     assertEquals(2, results.size)
 
     // First result - Paris, France
+    assertTrue(results[0].isDefined())
     assertEquals("Paris, France", results[0].name)
-    assertEquals(48.8566, results[0].latitude, 0.0001)
-    assertEquals(2.3522, results[0].longitude, 0.0001)
+    assertEquals(48.8566, results[0].latitude!!, 0.0001)
+    assertEquals(2.3522, results[0].longitude!!, 0.0001)
     // Second result - Paris, Texas
     assertEquals("Paris, Texas, USA", results[1].name)
-    assertEquals(33.6609, results[1].latitude, 0.0001)
-    assertEquals(-95.5555, results[1].longitude, 0.0001)
+    assertEquals(33.6609, results[1].latitude!!, 0.0001)
+    assertEquals(-95.5555, results[1].longitude!!, 0.0001)
 
     // Verify URL contains correct parameters
     val request = requestSlot.captured
@@ -288,14 +288,14 @@ class MapboxRepositoryTest {
     val repo = MapboxRepository(mockClient, "test_token")
     val result = repo.reverseGeocode(48.8584, 2.2945)
 
-    assertNotNull(result)
-    assertEquals("Eiffel Tower, Paris, France", result!!.name)
-    assertEquals(48.8584, result.latitude, 0.0001)
-    assertEquals(2.2945, result.longitude, 0.0001)
+    assertTrue(result.isDefined())
+    assertEquals("Eiffel Tower, Paris, France", result.name)
+    assertEquals(48.8584, result.latitude!!, 0.0001)
+    assertEquals(2.2945, result.longitude!!, 0.0001)
   }
 
   @Test
-  fun `reverseGeocode returns null when no features found`() = runTest {
+  fun `reverseGeocode returns UNDEFINED when no features found`() = runTest {
     val mockClient = mockk<OkHttpClient>()
     val mockCall = mockk<Call>()
     val mockResponse = mockk<Response>()
@@ -319,7 +319,7 @@ class MapboxRepositoryTest {
     val repo = MapboxRepository(mockClient, "test_token")
     val result = repo.reverseGeocode(0.0, 0.0)
 
-    assertNull(result)
+    assertEquals(Location.UNDEFINED, result)
   }
 
   @Test(expected = LocationSearchException::class)
@@ -380,8 +380,8 @@ class MapboxRepositoryTest {
     val repo = MapboxRepository(mockClient, "test_token")
     val result = repo.reverseGeocode(90.0, 0.0)
 
-    assertNotNull(result)
-    assertEquals("North Pole", result!!.name)
-    assertEquals(90.0, result.latitude, 0.0001)
+    assertTrue(result.isDefined())
+    assertEquals("North Pole", result.name)
+    assertEquals(90.0, result.latitude!!, 0.0001)
   }
 }

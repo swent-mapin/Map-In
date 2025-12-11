@@ -111,25 +111,27 @@ internal fun createEventAnnotations(
     style: AnnotationStyle,
     selectedEventId: String? = null
 ): List<PointAnnotationOptions> {
-  return events.mapIndexed { index, event ->
-    val isSelected = event.uid == selectedEventId
-    val visual = computeAnnotationVisualParameters(isSelected)
+  return events
+      .filter { it.location.isDefined() }
+      .mapIndexed { index, event ->
+        val isSelected = event.uid == selectedEventId
+        val visual = computeAnnotationVisualParameters(isSelected)
 
-    PointAnnotationOptions()
-        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
-        .apply { style.markerBitmap?.let { withIconImage(it) } }
-        .withIconSize(visual.iconSize)
-        .withIconAnchor(IconAnchor.BOTTOM)
-        .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(visual.textOffset)
-        .withTextSize(visual.textSize)
-        .withTextColor(style.textColorInt)
-        .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(visual.textHaloWidth)
-        .withTextField(event.title)
-        .withData(JsonPrimitive(index))
-        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
-  }
+        PointAnnotationOptions()
+            .withPoint(Point.fromLngLat(event.location.longitude!!, event.location.latitude!!))
+            .apply { style.markerBitmap?.let { withIconImage(it) } }
+            .withIconSize(visual.iconSize)
+            .withIconAnchor(IconAnchor.BOTTOM)
+            .withTextAnchor(TextAnchor.TOP)
+            .withTextOffset(visual.textOffset)
+            .withTextSize(visual.textSize)
+            .withTextColor(style.textColorInt)
+            .withTextHaloColor(style.haloColorInt)
+            .withTextHaloWidth(visual.textHaloWidth)
+            .withTextField(event.title)
+            .withData(JsonPrimitive(index))
+            .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
+      }
 }
 
 /**

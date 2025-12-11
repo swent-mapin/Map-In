@@ -3,7 +3,7 @@ package com.swent.mapin.ui.filters
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -49,7 +49,9 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   fun setWhereChecked(checked: Boolean) {
-    updateFiltersAndToggle(checked, isWhereChecked) { copy(place = null, radiusKm = 10) }
+    updateFiltersAndToggle(checked, isWhereChecked) {
+      copy(place = Location.UNDEFINED, radiusKm = 10)
+    }
   }
 
   fun setPriceChecked(checked: Boolean) {
@@ -94,9 +96,9 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   // WHERE FILTER
-  fun setLocation(location: Location?) {
+  fun setLocation(location: Location) {
     _filters.value = _filters.value.copy(place = location)
-    if (location != null) isWhereChecked.value = true
+    if (location.isDefined()) isWhereChecked.value = true
   }
 
   fun setRadius(km: Int?) {

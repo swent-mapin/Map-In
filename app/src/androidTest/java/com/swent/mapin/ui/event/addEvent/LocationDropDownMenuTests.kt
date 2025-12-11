@@ -6,7 +6,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.LocationDropDownMenu
@@ -24,8 +24,8 @@ class LocationDropDownMenuTests {
     val location = mutableStateOf("")
     val locationError = mutableStateOf(false)
     val expanded = mutableStateOf(false)
-    val gotLocation = mutableStateOf(Location("Initial", 0.0, 0.0))
-    val locations = listOf(Location("Paris", 0.0, 0.0), Location("Tokyo", 0.0, 0.0))
+    val gotLocation = mutableStateOf(Location.from("Initial", 0.0, 0.0))
+    val locations = listOf(Location.from("Paris", 0.0, 0.0), Location.from("Tokyo", 0.0, 0.0))
     val fakeViewModel = mockk<LocationViewModel>(relaxed = true)
 
     composeTestRule.setContent {

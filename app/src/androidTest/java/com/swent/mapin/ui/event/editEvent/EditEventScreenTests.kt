@@ -3,8 +3,8 @@ package com.swent.mapin.ui.event.editEvent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.EditEventScreen
 import com.swent.mapin.ui.event.EditEventScreenTestTags
@@ -27,7 +27,7 @@ class EditEventScreenTests {
           uid = "123",
           title = "Test Event",
           description = "Test Description",
-          location = Location("Test Location", 0.0, 0.0),
+          location = Location.from("Test Location", 0.0, 0.0),
           date = Timestamp.now(),
           endDate = Timestamp.now(),
           tags = listOf("tag1", "tag2"),
@@ -35,7 +35,7 @@ class EditEventScreenTests {
           ownerId = "owner123")
 
   private fun setEditEventScreen(onCancel: () -> Unit = {}, onDone: () -> Unit = {}) {
-    val testLocations = listOf(Location("Test", 0.0, 0.0))
+    val testLocations = listOf(Location.from("Test", 0.0, 0.0))
     val locationFlow = MutableStateFlow(testLocations)
 
     locationViewModel = mockk(relaxed = true)

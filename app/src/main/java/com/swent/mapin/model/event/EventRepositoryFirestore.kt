@@ -3,16 +3,16 @@ package com.swent.mapin.model.event
 import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.firebase.geofire.GeoFireUtils
+import com.firebase.geofire.GeoLocation
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeContext
@@ -510,6 +510,20 @@ class EventRepositoryFirestore(
       query = query.whereLessThan("date", endOfDayExclusive)
     }
 
+    // Apply location filter if provided
+    if (filters.place.isDefined()) {
+      val radiusInM = filters.radiusKm * 1000
+
+      val bounds =
+          GeoFireUtils.getGeoHashQueryBounds(
+                  GeoLocation(filters.place.latitude!!, filters.place.longitude!!),
+                  radiusInM.toDouble())
+              .toList()
+
+      val bound = bounds[0]
+      query = query.orderBy("location.geohash").startAt(bound.startHash).endAt(bound.endHash)
+    }
+
     // Add price to query if present
     if (filters.maxPrice != null) {
       query = query.whereLessThanOrEqualTo("price", filters.maxPrice.toDouble())
@@ -525,17 +539,6 @@ class EventRepositoryFirestore(
     // Apply popularOnly filter (requires counting participants)
     if (filters.popularOnly) {
       filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT_PARTICIPANT_THRESHOLD }
-    }
-
-    // Apply location/radius filter (requires haversine distance calculation)
-    if (filters.place != null) {
-      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
-      filtered =
-          filtered.filter { event ->
-            val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
-            val distance = calculateHaversineDistance(eventGeoPoint, placeGeoPoint)
-            distance <= filters.radiusKm
-          }
     }
 
     return filtered.sortedByDescending { it.date }
@@ -881,19 +884,4 @@ class EventRepositoryFirestore(
         Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${this.id})", e)
         throw e
       }
-
-  /**
-   * Parse Location to GeoPoint.
-   *
-   * @param place The location.
-   * @return GeoPoint or null if invalid.
-   */
-  private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
-    return try {
-      if (place == null) null else GeoPoint(place.latitude, place.longitude)
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "Invalid location coordinates: $place", e)
-      null
-    }
-  }
 }

@@ -4,8 +4,8 @@ import com.google.gson.JsonPrimitive
 import com.mapbox.geojson.Point
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotation
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.components.computeAnnotationVisualParameters
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
@@ -25,7 +25,7 @@ class MapScreenHelpersTest {
     return Event(
         uid = uid,
         title = "Event $uid",
-        location = Location(name = "Loc$uid", latitude = latitude, longitude = longitude))
+        location = Location.from(name = "Loc$uid", lat = latitude, lng = longitude))
   }
 
   @Test

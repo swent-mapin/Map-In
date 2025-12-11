@@ -27,6 +27,7 @@ import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -123,7 +124,7 @@ class EventRepositoryFirestoreTest {
       url: String = "",
       description: String = "Description",
       date: Timestamp = Timestamp.now(),
-      location: Location = Location("Location", 0.0, 0.0),
+      location: Location = Location.from("Location", 0.0, 0.0),
       tags: List<String> = emptyList(),
       public: Boolean = true,
       ownerId: String = "owner",
@@ -206,7 +207,7 @@ class EventRepositoryFirestoreTest {
         createEvent(
             uid = "E1",
             title = "Title",
-            location = Location("Zurich", 47.3769, 8.5417),
+            location = Location.from("Zurich", 47.3769, 8.5417),
             tags = listOf("music"),
             capacity = 50)
     val docSnapshot = doc("E1", event)
