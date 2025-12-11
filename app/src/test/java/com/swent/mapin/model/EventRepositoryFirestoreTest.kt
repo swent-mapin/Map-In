@@ -18,6 +18,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import com.swent.mapin.model.badge.BadgeContext
 import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
@@ -32,7 +33,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.MockedStatic
@@ -69,7 +72,22 @@ class EventRepositoryFirestoreTest {
     friendRepo = mock()
     notificationService = mock()
     userProfileRepository = mock()
+    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
+
+    val fakeAuth = mock<FirebaseAuth>()
+    val fakeUser = mock<FirebaseUser>()
+
+    whenever(fakeUser.uid).thenReturn("currentUser")
+    whenever(fakeAuth.currentUser).thenReturn(fakeUser)
+
+    firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }
+      .thenReturn(fakeAuth)
     badgeRepo = mock()
+    runBlocking {
+      whenever(badgeRepo.getBadgeContext(any())).thenReturn(BadgeContext())
+      whenever(badgeRepo.saveBadgeContext(any(), any())).thenReturn(true)
+      whenever(badgeRepo.updateBadgesAfterContextChange(any())).thenReturn(Unit)
+    }
     repo =
         EventRepositoryFirestore(
             db,
@@ -93,9 +111,12 @@ class EventRepositoryFirestoreTest {
     whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
     whenever(collection.document()).thenReturn(document)
     whenever(collection.document(any())).thenReturn(document)
-    whenever(usersCollection.document(any())).thenReturn(userDocRef)
   }
 
+  @After
+  fun tearDown() {
+    firebaseAuthMock.close()
+  }
   // Helper methods
   private fun createEvent(
       uid: String = "",
@@ -367,7 +388,8 @@ class EventRepositoryFirestoreTest {
         createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1"), capacity = 10)
     val docSnapshot = doc("E1", event)
     val eventDocRef = mock<DocumentReference>()
-
+    val userRef = mock<DocumentReference>()
+    whenever(usersCollection.document(any())).thenReturn(userRef)
     whenever(collection.document("E1")).thenReturn(eventDocRef)
     whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
       val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
@@ -409,7 +431,8 @@ class EventRepositoryFirestoreTest {
         createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1", "user2"))
     val docSnapshot = doc("E1", event)
     val eventDocRef = mock<DocumentReference>()
-
+    val userRef = mock<DocumentReference>()
+    whenever(usersCollection.document(any())).thenReturn(userRef)
     whenever(collection.document("E1")).thenReturn(eventDocRef)
     whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
       val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
@@ -652,37 +675,20 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_friendsOnly_withNoFriends_returnsEmpty() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
 
       val filters = Filters(friendsOnly = true)
 
       // No friends
       whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
+      val result = repo.getFilteredEvents(filters, "currentUser")
 
       verify(friendRepo).getFriends("currentUser")
       assertTrue(result.isEmpty())
-    } finally {
-      firebaseAuthMock.close()
-    }
   }
 
   @Test
   fun getFilteredEvents_friendsOnly_withTags_appliesTagsClientSide() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
 
       val filters = Filters(friendsOnly = true, tags = setOf("music"))
 
@@ -704,16 +710,13 @@ class EventRepositoryFirestoreTest {
       whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
       whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
+      val result = repo.getFilteredEvents(filters, "currentUser")
 
       // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
       verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
       assertEquals(1, result.size)
       assertEquals("Concert", result.first().title)
       assertTrue("music" in result.first().tags)
-    } finally {
-      firebaseAuthMock.close()
-    }
   }
 
   @Test
@@ -732,14 +735,6 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_allFilters_combinesCorrectly() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
-
       val filters =
           Filters(
               friendsOnly = true,
@@ -796,14 +791,11 @@ class EventRepositoryFirestoreTest {
       whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
       whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
+      val result = repo.getFilteredEvents(filters, "currentUser")
 
       // Only validEvent should pass all filters
       assertEquals(1, result.size)
       assertEquals("Valid Event", result.first().title)
-    } finally {
-      firebaseAuthMock.close()
-    }
   }
 
   // ========== LISTEN TO FILTERED EVENTS TESTS ==========
