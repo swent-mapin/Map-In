@@ -1,6 +1,8 @@
 package com.swent.mapin.model.event
 
 import android.util.Log
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
@@ -13,6 +15,8 @@ import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.Location
 import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeContext
+import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
@@ -25,6 +29,7 @@ import java.time.ZoneOffset
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 
 object FirestoreSchema {
   const val EVENTS_COLLECTION_PATH = "events"
@@ -64,7 +69,8 @@ class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val friendRequestRepository: FriendRequestRepository,
     private val notificationService: NotificationService,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val badgeRepository: BadgeRepository
 ) : EventRepository {
 
   /**
@@ -98,6 +104,25 @@ class EventRepositoryFirestore(
                 FieldValue.arrayUnion(id))
           }
           .await()
+
+      // Increment the user's number of events created
+      val userId = Firebase.auth.currentUser?.uid
+      val ctx = if (userId == null) {
+          BadgeContext()
+      } else {
+          badgeRepository.getBadgeContext(userId)
+      }
+      var newCtx = ctx.copy(createdEvents = ctx.createdEvents + 1)
+      val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+      if (hour in 5..8) {
+          newCtx = newCtx.copy(earlyCreate = newCtx.earlyCreate + 1)
+      } else if (hour in 0..2) {
+          newCtx = newCtx.copy(lateCreate = newCtx.lateCreate + 1)
+      }
+      if (userId != null) {
+          badgeRepository.saveBadgeContext(userId, newCtx)
+          badgeRepository.updateBadgesAfterContextChange(userId)
+      }
 
       // Send notifications to followers of the event creator
       notifyFollowersOfNewEvent(eventToSave)
@@ -232,6 +257,20 @@ class EventRepositoryFirestore(
                 if (join) FieldValue.arrayUnion(eventId) else FieldValue.arrayRemove(eventId))
           }
           .await()
+
+        if (join) {
+            val ctx = badgeRepository.getBadgeContext(userId)
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            var newCtx = ctx.copy(joinedEvents = ctx.joinedEvents + 1)
+            if (hour in 5..8) {
+                newCtx = newCtx.copy(earlyJoin = newCtx.earlyJoin + 1)
+            } else if (hour in 0..2) {
+                newCtx = newCtx.copy(lateJoin = newCtx.lateJoin + 1)
+            }
+            badgeRepository.saveBadgeContext(userId, newCtx)
+            badgeRepository.updateBadgesAfterContextChange(userId)
+        }
+
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed editEventAsUser(id=$eventId): ${e.message}", e)
       throw Exception("Failed to edit event (id=$eventId) as user: ${e.message}", e)

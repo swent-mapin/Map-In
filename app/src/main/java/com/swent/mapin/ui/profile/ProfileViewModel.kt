@@ -13,6 +13,7 @@ import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.Badge
+import com.swent.mapin.model.badge.BadgeContext
 import com.swent.mapin.model.badge.BadgeManager
 import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.badge.BadgeRepositoryFirestore
@@ -37,19 +38,9 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
     private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
-    private val badgeRepository: BadgeRepository? =
-        try {
-          BadgeRepositoryFirestore()
-        } catch (e: Exception) {
-          null
-        },
-    private val friendRequestRepository: FriendRequestRepository? =
-        try {
-          FriendRequestRepository(notificationService = NotificationService())
-        } catch (e: Exception) {
-          null
-        }
 ) : ViewModel() {
+  private var badgeRepository: BadgeRepository? = null
+  private var friendRequestRepository: FriendRequestRepository? = null
 
   // Current user profile from Firestore
   private val _userProfile = MutableStateFlow(UserProfile())
@@ -62,6 +53,9 @@ class ProfileViewModel(
   // Badges state
   private val _badges = MutableStateFlow<List<Badge>>(emptyList())
   val badges: StateFlow<List<Badge>> = _badges.asStateFlow()
+
+  private val _badgeContext = MutableStateFlow<BadgeContext>(BadgeContext())
+  val badgeContext: StateFlow<BadgeContext> = _badgeContext.asStateFlow()
 
   // Whether the profile is in edit mode
   var isEditMode by mutableStateOf(false)
@@ -117,7 +111,15 @@ class ProfileViewModel(
 
   init {
     try {
+      badgeRepository = BadgeRepositoryFirestore()
+      friendRequestRepository = FriendRequestRepository(notificationService = NotificationService())
+    } catch (e: Exception) {
+      println("ProfileViewModel - Failed initializing repositories: ${e.message}")
+    }
+
+    try {
       loadUserProfile()
+      fetchBadgeContext()
     } catch (e: Exception) {
       // Gracefully handle initialization errors (e.g., Firebase not initialized in tests)
       println("ProfileViewModel - Init error: ${e.message}")
@@ -147,12 +149,39 @@ class ProfileViewModel(
                   profilePictureUrl = currentUser.photoUrl?.toString())
           _userProfile.value = defaultProfile
         }
-        // Calculate and load badges after profile is loaded
-        calculateAndUpdateBadges()
       }
       // When currentUser is null, just keep the default empty UserProfile()
       // This allows tests to run without authentication
       _isLoading.value = false
+    }
+  }
+
+  /** Fetch badge context from Firestore and update StateFlow */
+  private fun fetchBadgeContext() {
+    viewModelScope.launch {
+      val currentUser = FirebaseAuth.getInstance().currentUser ?: return@launch
+
+      // Only proceed if badgeRepository is initialized
+      val repo = badgeRepository ?: run {
+        println("ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
+        return@launch
+      }
+
+      val context = try {
+        repo.getBadgeContext(currentUser.uid)
+      } catch (e: Exception) {
+        println("ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
+        BadgeContext()
+      }
+
+      // Update safely
+      _badgeContext.value = context
+
+      try {
+        calculateAndUpdateBadges()
+      } catch (e: Exception) {
+        println("ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
+      }
     }
   }
 
@@ -175,17 +204,8 @@ class ProfileViewModel(
     val currentUser = FirebaseAuth.getInstance().currentUser ?: return
     val profile = _userProfile.value
 
-    // Get friend count
-    val friendsCount =
-        try {
-          friendRequestRepository.getFriends(currentUser.uid).size
-        } catch (e: Exception) {
-          println("ProfileViewModel - Error fetching friends: ${e.message}")
-          0
-        }
-
     // Calculate badges
-    val calculatedBadges = BadgeManager.calculateBadges(profile, friendsCount)
+    val calculatedBadges = BadgeManager.calculateBadges(profile, badgeContext.value)
 
     // Update userProfile with calculated badges
     val updatedProfile = profile.copy(badges = calculatedBadges)
@@ -196,7 +216,7 @@ class ProfileViewModel(
 
     // Persist to Firestore
     try {
-      val success = badgeRepository.saveBadgeProgress(currentUser.uid, calculatedBadges)
+      val success = badgeRepository!!.saveBadgeProgress(currentUser.uid,  calculatedBadges)
       if (success) {
         println("ProfileViewModel - Successfully saved ${calculatedBadges.size} badges")
       } else {

@@ -32,6 +32,25 @@ interface BadgeRepository {
   suspend fun getUserBadges(userId: String): List<Badge>?
 
   /**
+   * Saved the BadgeContext item of a user
+   *
+   * @param userId The unique identifier of the user
+   * @param context The metadata stored for badges of a user
+   * @return True if saved successfully, false if failed
+   */
+  suspend fun saveBadgeContext(userId: String, context: BadgeContext): Boolean
+
+  /**
+   * Gets the BadgeContext item of a user
+   *
+   * @param userId The unique identifier of the user
+   * @return True if saved successfully, false if failed
+   */
+  suspend fun getBadgeContext(userId: String): BadgeContext
+
+  suspend fun updateBadgesAfterContextChange(userId: String)
+
+  /**
    * Update the unlock status of a specific badge.
    *
    * Updates a single badge's unlock status and timestamp without affecting other badges. Useful for

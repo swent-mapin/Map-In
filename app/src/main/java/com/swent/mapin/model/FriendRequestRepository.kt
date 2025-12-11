@@ -2,6 +2,8 @@ package com.swent.mapin.model
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.swent.mapin.model.badge.BadgeRepository
+import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.tasks.await
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
+    private val badgeRepository: BadgeRepository = BadgeRepositoryFirestore(firestore),
     private val notificationService: NotificationService
 ) {
   companion object {
@@ -101,6 +104,16 @@ class FriendRequestRepository(
       if (success) {
         // Send notification to the original sender that their request was accepted
         sendFriendRequestAcceptedNotificationSafely(request.toUserId, request.fromUserId)
+        val ctxSender = badgeRepository.getBadgeContext(request.fromUserId)
+        val updatedSender = ctxSender.copy(friendsCount = ctxSender.friendsCount + 1)
+        badgeRepository.saveBadgeContext(request.fromUserId, updatedSender)
+
+        val ctxReceiver = badgeRepository.getBadgeContext(request.toUserId)
+        val updatedReceiver = ctxReceiver.copy(friendsCount = ctxReceiver.friendsCount + 1)
+        badgeRepository.saveBadgeContext(request.toUserId, updatedReceiver)
+
+        badgeRepository.updateBadgesAfterContextChange(request.fromUserId)
+        badgeRepository.updateBadgesAfterContextChange(request.toUserId)
       }
 
       success
