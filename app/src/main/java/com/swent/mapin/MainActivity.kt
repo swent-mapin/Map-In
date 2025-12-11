@@ -65,10 +65,34 @@ private enum class BiometricLockState {
  * feature is enabled in settings.
  */
 class MainActivity : FragmentActivity() {
-  /** Current deep link to be processed by the navigation system */
+  /**
+   * Deep link extracted from the initial Intent (onCreate) or subsequent Intents (onNewIntent).
+   *
+   * **Lifecycle:**
+   * - Set in onCreate() from the launching intent
+   * - Updated in onNewIntent() when app receives new deep links while running
+   * - Consumed by AppNavHost to trigger navigation when biometric lock is not active
+   * - Cleared automatically after navigation processes it
+   *
+   * **Interaction with pendingDeepLink:** When biometric authentication is required, this value is
+   * stored in pendingDeepLink and delivered only after successful authentication. If no biometric
+   * lock is active, this is passed directly to AppNavHost.
+   */
   private var deepLink by mutableStateOf<String?>(null)
 
-  /** Deep link that should be delivered after biometric unlock completes */
+  /**
+   * Deep link awaiting delivery after biometric authentication completes.
+   *
+   * **Lifecycle:**
+   * - Set in onNewIntent() when a new deep link arrives while the app is locked
+   * - Replaces deepLink as the effective navigation target after unlock
+   * - Cleared in a LaunchedEffect after being consumed by AppNavHost
+   * - Remains null if no deep link arrives during locked state
+   *
+   * **Interaction with deepLink:** Takes precedence over deepLink when both are set. This ensures
+   * that deep links received while the user is authenticating are not lost. Once authentication
+   * succeeds, pendingDeepLink becomes the effectiveDeepLink passed to navigation.
+   */
   private var pendingDeepLink by mutableStateOf<String?>(null)
 
   /** Atomic guard to prevent concurrent biometric authentication attempts */
