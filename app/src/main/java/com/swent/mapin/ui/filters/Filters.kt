@@ -1,12 +1,12 @@
 package com.swent.mapin.ui.filters
 
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import java.time.LocalDate
 
 data class Filters(
     val startDate: LocalDate = LocalDate.now(),
     val endDate: LocalDate? = null,
-    val place: Location? = null,
+    val place: Location = Location.UNDEFINED,
     val radiusKm: Int = 10,
     val maxPrice: Int? = null,
     val tags: Set<String> = emptySet(),
@@ -17,7 +17,7 @@ data class Filters(
   fun isEmpty(): Boolean =
       startDate == LocalDate.now() &&
           endDate == null &&
-          place == null &&
+          place == Location.UNDEFINED &&
           radiusKm == 10 &&
           maxPrice == null &&
           tags.isEmpty() &&

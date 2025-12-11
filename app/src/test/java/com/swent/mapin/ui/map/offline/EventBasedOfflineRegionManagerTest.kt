@@ -1,7 +1,7 @@
 package com.swent.mapin.ui.map.offline
 
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.network.ConnectivityService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,7 +58,10 @@ class EventBasedOfflineRegionManagerTest {
 
     // Emit saved events
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     savedEventsFlow.value = listOf(event1)
 
     testScheduler.advanceUntilIdle()
@@ -84,7 +87,10 @@ class EventBasedOfflineRegionManagerTest {
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     savedEventsFlow.value = listOf(event1)
 
     testScheduler.advanceUntilIdle()
@@ -114,9 +120,15 @@ class EventBasedOfflineRegionManagerTest {
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     val event2 =
-        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+        Event(
+            uid = "event2",
+            title = "Event 2",
+            location = Location.from("Location 2", 46.5300, 6.5800))
 
     // Set both saved and joined to contain event1 (duplicate) and event2
     savedEventsFlow.value = listOf(event1, event2)
@@ -165,9 +177,18 @@ class EventBasedOfflineRegionManagerTest {
     // Create 3 events but only 2 should be downloaded
     val events =
         listOf(
-            Event(uid = "event1", title = "Event 1", location = Location("Loc1", 46.5197, 6.5660)),
-            Event(uid = "event2", title = "Event 2", location = Location("Loc2", 46.5300, 6.5800)),
-            Event(uid = "event3", title = "Event 3", location = Location("Loc3", 46.5400, 6.5900)))
+            Event(
+                uid = "event1",
+                title = "Event 1",
+                location = Location.from("Loc1", 46.5197, 6.5660)),
+            Event(
+                uid = "event2",
+                title = "Event 2",
+                location = Location.from("Loc2", 46.5300, 6.5800)),
+            Event(
+                uid = "event3",
+                title = "Event 3",
+                location = Location.from("Loc3", 46.5400, 6.5900)))
 
     manager.downloadRegionsForEvents(events)
 
@@ -192,9 +213,15 @@ class EventBasedOfflineRegionManagerTest {
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     val event2 =
-        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+        Event(
+            uid = "event2",
+            title = "Event 2",
+            location = Location.from("Location 2", 46.5300, 6.5800))
 
     // First download
     savedEventsFlow.value = listOf(event1)
@@ -228,7 +255,10 @@ class EventBasedOfflineRegionManagerTest {
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
 
     // First download
     savedEventsFlow.value = listOf(event1)
@@ -273,9 +303,15 @@ class EventBasedOfflineRegionManagerTest {
     assertEquals(0, manager.getDownloadedCount())
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     val event2 =
-        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+        Event(
+            uid = "event2",
+            title = "Event 2",
+            location = Location.from("Location 2", 46.5300, 6.5800))
 
     savedEventsFlow.value = listOf(event1, event2)
     testScheduler.advanceUntilIdle()
@@ -317,9 +353,15 @@ class EventBasedOfflineRegionManagerTest {
     coEvery { mockOfflineRegionManager.removeTileRegion(any()) } returns Result.success(Unit)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     val event2 =
-        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+        Event(
+            uid = "event2",
+            title = "Event 2",
+            location = Location.from("Location 2", 46.5300, 6.5800))
 
     // Start observing for downloads and deletions
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
@@ -362,11 +404,20 @@ class EventBasedOfflineRegionManagerTest {
     coEvery { mockOfflineRegionManager.removeTileRegion(any()) } returns Result.success(Unit)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
     val event2 =
-        Event(uid = "event2", title = "Event 2", location = Location("Location 2", 46.5300, 6.5800))
+        Event(
+            uid = "event2",
+            title = "Event 2",
+            location = Location.from("Location 2", 46.5300, 6.5800))
     val event3 =
-        Event(uid = "event3", title = "Event 3", location = Location("Location 3", 46.5400, 6.5900))
+        Event(
+            uid = "event3",
+            title = "Event 3",
+            location = Location.from("Location 3", 46.5400, 6.5900))
 
     // Start observing
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
@@ -405,7 +456,10 @@ class EventBasedOfflineRegionManagerTest {
         }
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
 
     // Start observing for deletions
     manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
@@ -438,7 +492,10 @@ class EventBasedOfflineRegionManagerTest {
     coEvery { mockOfflineRegionManager.removeTileRegion(any()) } returns Result.success(Unit)
 
     val event1 =
-        Event(uid = "event1", title = "Event 1", location = Location("Location 1", 46.5197, 6.5660))
+        Event(
+            uid = "event1",
+            title = "Event 1",
+            location = Location.from("Location 1", 46.5197, 6.5660))
 
     // Download event first
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
@@ -481,7 +538,7 @@ class EventBasedOfflineRegionManagerTest {
         Event(
             uid = "finished1",
             title = "Finished Event",
-            location = Location("Location 1", 46.5197, 6.5660),
+            location = Location.from("Location 1", 46.5197, 6.5660),
             date = pastTime,
             endDate = pastTime)
 
@@ -489,7 +546,7 @@ class EventBasedOfflineRegionManagerTest {
         Event(
             uid = "active1",
             title = "Active Event",
-            location = Location("Location 2", 46.5300, 6.5800),
+            location = Location.from("Location 2", 46.5300, 6.5800),
             date = com.google.firebase.Timestamp(now.seconds + 3600, 0))
 
     // Start observing
@@ -532,7 +589,7 @@ class EventBasedOfflineRegionManagerTest {
         Event(
             uid = "event1",
             title = "Event 1",
-            location = Location("Location 1", 46.5197, 6.5660),
+            location = Location.from("Location 1", 46.5197, 6.5660),
             date = futureTime,
             endDate = futureTime)
 
@@ -585,7 +642,7 @@ class EventBasedOfflineRegionManagerTest {
         Event(
             uid = "finished1",
             title = "Finished Event",
-            location = Location("Location 1", 46.5197, 6.5660),
+            location = Location.from("Location 1", 46.5197, 6.5660),
             date = pastTime,
             endDate = null)
 
@@ -623,7 +680,7 @@ class EventBasedOfflineRegionManagerTest {
         {
           arg<(Result<Unit>) -> Unit>(3)(Result.failure(error))
         }
-    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    val event = Event(uid = "e1", title = "E1", location = Location.from("L1", 46.5197, 6.5660))
     manager.downloadRegionsForEvents(listOf(event))
     coVerify(exactly = 1) { mockOfflineRegionManager.downloadRegion(any(), any(), any(), any()) }
     assertNotNull(capturedResult)
@@ -650,7 +707,7 @@ class EventBasedOfflineRegionManagerTest {
           arg<(Result<Unit>) -> Unit>(3)(Result.success(Unit))
         }
     manager.downloadRegionsForEvents(
-        listOf(Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))))
+        listOf(Event(uid = "e1", title = "E1", location = Location.from("L1", 46.5197, 6.5660))))
     assertEquals(2, updates.size)
     assertEquals(0.25f, updates[0], 0.01f)
     assertEquals(0.75f, updates[1], 0.01f)
@@ -666,7 +723,7 @@ class EventBasedOfflineRegionManagerTest {
         }
     coEvery { mockOfflineRegionManager.removeTileRegion(any()) } returns
         Result.failure(Exception("Failed"))
-    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    val event = Event(uid = "e1", title = "E1", location = Location.from("L1", 46.5197, 6.5660))
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
     manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
     savedEventsFlow.value = listOf(event)
@@ -684,7 +741,7 @@ class EventBasedOfflineRegionManagerTest {
   fun `deleteRegionsForEvents handles event without stored location`() = runTest {
     manager =
         EventBasedOfflineRegionManager(mockOfflineRegionManager, mockConnectivityService, this)
-    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    val event = Event(uid = "e1", title = "E1", location = Location.from("L1", 46.5197, 6.5660))
     manager.observeEventsForDeletion(savedEventsFlow, joinedEventsFlow)
     savedEventsFlow.value = listOf(event)
     testScheduler.advanceUntilIdle()
@@ -705,7 +762,7 @@ class EventBasedOfflineRegionManagerTest {
         }
     coEvery { mockOfflineRegionManager.removeTileRegion(any()) } returns
         Result.failure(Exception("Failed"))
-    val event = Event(uid = "e1", title = "E1", location = Location("L1", 46.5197, 6.5660))
+    val event = Event(uid = "e1", title = "E1", location = Location.from("L1", 46.5197, 6.5660))
     manager.observeEvents(savedEventsFlow, joinedEventsFlow)
     savedEventsFlow.value = listOf(event)
     testScheduler.advanceUntilIdle()

@@ -13,8 +13,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import java.util.Calendar
 import org.junit.Rule
 import org.junit.Test
@@ -33,7 +33,7 @@ class MemoryFormScreenTest {
               url = "url1",
               description = "Fun at the beach",
               date = Timestamp.now(),
-              location = Location("Santa Monica Beach", -118.4965, 34.0195),
+              location = Location.from("Santa Monica Beach", -18.4965, 34.0195),
               tags = listOf("party", "beach"),
               public = true,
               ownerId = "user1",
@@ -45,7 +45,7 @@ class MemoryFormScreenTest {
               url = "url2",
               description = "Hiking adventure",
               date = Timestamp.now(),
-              location = Location("Mt. Wilson", -118.0617, 34.2256),
+              location = Location.from("Mt. Wilson", -18.0617, 34.2256),
               tags = listOf("hiking", "nature"),
               public = true,
               ownerId = "user2",
@@ -149,7 +149,7 @@ class MemoryFormScreenTest {
     val event =
         Event(
             title = "Test Event",
-            location = Location(name = "Paris", latitude = 0.0, longitude = 0.0),
+            location = Location.from(name = "Paris", lat = 0.0, lng = 0.0),
             date = Timestamp(date))
     rule.setContent {
       MaterialTheme {
@@ -170,7 +170,9 @@ class MemoryFormScreenTest {
     rule.onNodeWithText("2025", substring = true).assertIsDisplayed()
     rule.onNodeWithText("20", substring = true).assertIsDisplayed()
     rule.onNodeWithText("Oct", substring = true).assertIsDisplayed()
-    rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+    rule
+        .onNodeWithText(event.location.name ?: Location.NO_NAME, substring = true)
+        .assertIsDisplayed()
   }
 
   @Test
@@ -180,7 +182,7 @@ class MemoryFormScreenTest {
     val event =
         Event(
             title = "Test Event",
-            location = Location(name = "Paris", latitude = 0.0, longitude = 0.0),
+            location = Location.from(name = "Paris", lat = 0.0, lng = 0.0),
             date = Timestamp(date))
     rule.setContent {
       MaterialTheme {
@@ -197,7 +199,9 @@ class MemoryFormScreenTest {
     rule.onNodeWithTag("eventSelectionCard").performScrollTo()
     rule.onNodeWithText(event.title).assertIsDisplayed()
     rule.onNodeWithText("Oct 20, 2025", substring = true).assertIsDisplayed()
-    rule.onNodeWithText(event.location.name, substring = true).assertIsDisplayed()
+    rule
+        .onNodeWithText(event.location.name ?: Location.NO_NAME, substring = true)
+        .assertIsDisplayed()
   }
 
   @Test

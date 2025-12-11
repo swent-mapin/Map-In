@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.event
 
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import junit.framework.TestCase
 import kotlin.test.Test
 import org.junit.Assert.assertEquals
@@ -74,16 +74,16 @@ class AddEventUtilsTest {
   fun `returns true when location name matches ignoring case`() {
     val locations =
         listOf(
-            Location("Paris", 0.0, 0.0),
-            Location("London", 0.0, 0.0),
-            Location("New York", 0.0, 0.0))
+            Location.from("Paris", 0.0, 0.0),
+            Location.from("London", 0.0, 0.0),
+            Location.from("New York", 0.0, 0.0))
     assertTrue(isValidLocation("paris", locations))
     assertTrue(isValidLocation("LONDON", locations))
   }
 
   @Test
   fun `returns false when location not in list`() {
-    val locations = listOf(Location("Berlin", 0.0, 0.0), Location("Rome", 0.0, 0.0))
+    val locations = listOf(Location.from("Berlin", 0.0, 0.0), Location.from("Rome", 0.0, 0.0))
     TestCase.assertFalse(isValidLocation("Madrid", locations))
   }
 

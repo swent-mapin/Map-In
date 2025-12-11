@@ -214,6 +214,58 @@ class ProfileSheetTest {
   }
 
   @Test
+  fun profileSheet_showsLocationWhenPresent() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person", badges = listOf(testBadge()), location = "New York"))
+
+    setProfileContent(mockViewModel)
+
+    composeTestRule.onNodeWithTag("profileLocation").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("profileLocation").assertTextEquals("New York")
+  }
+
+  @Test
+  fun profileSheet_hidesLocationWhenUnknown() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person", badges = listOf(testBadge()), location = "Unknown"))
+
+    setProfileContent(mockViewModel)
+
+    composeTestRule.onAllNodesWithTag("profileLocation").assertCountEquals(0)
+  }
+
+  @Test
+  fun profileSheet_showsHobbiesWhenPresent() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person",
+                badges = listOf(testBadge()),
+                hobbies = listOf("Reading", "Gaming")))
+
+    setProfileContent(mockViewModel)
+
+    composeTestRule.onNodeWithTag("profileHobbies").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("profileHobbies").assertTextEquals("Reading, Gaming")
+  }
+
+  @Test
+  fun profileSheet_hidesHobbiesWhenEmpty() {
+    val mockViewModel =
+        mockViewModelWithState(
+            buildLoadedState(
+                avatarUrl = "person", badges = listOf(testBadge()), hobbies = emptyList()))
+
+    setProfileContent(mockViewModel)
+
+    composeTestRule.onAllNodesWithTag("profileHobbies").assertCountEquals(0)
+  }
+
+  @Test
   fun profileSheet_triggersEventClickCallback() {
     val upcoming = testEvent(uid = "click1", title = "Tap me")
     val mockViewModel =
@@ -246,6 +298,8 @@ class ProfileSheetTest {
       avatarUrl: String,
       badges: List<Badge>,
       bio: String = "",
+      location: String = "Unknown",
+      hobbies: List<String> = emptyList(),
       isFollowing: Boolean = false,
       isOwnProfile: Boolean = false,
       friendStatus: FriendStatus = FriendStatus.NOT_FRIEND,
@@ -259,6 +313,8 @@ class ProfileSheetTest {
             avatarUrl = avatarUrl,
             badges = badges,
             bio = bio,
+            location = location,
+            hobbies = hobbies,
             followerIds = listOf("follower1"))
 
     return ProfileSheetState.Loaded(
