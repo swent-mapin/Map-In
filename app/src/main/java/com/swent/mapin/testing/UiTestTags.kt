@@ -18,6 +18,9 @@ object UiTestTags {
   // Authentication Screen
   const val AUTH_SCREEN = "AuthScreen"
   const val AUTH_CONTINUE_BUTTON = "AuthContinueButton"
+  const val AUTH_ERROR_CARD = "AuthErrorCard"
+  const val AUTH_ERROR_TEXT = "AuthErrorText"
+  const val AUTH_ERROR_DISMISS = "AuthErrorDismiss"
 
   // Map Screen
   const val MAP_SCREEN = "MapScreen"

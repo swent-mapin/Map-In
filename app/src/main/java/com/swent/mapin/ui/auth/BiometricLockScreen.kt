@@ -15,11 +15,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,7 +60,7 @@ fun BiometricLockScreen(
                       Brush.verticalGradient(
                           colors =
                               listOf(
-                                  MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                  MaterialTheme.colorScheme.primary,
                                   MaterialTheme.colorScheme.background)))
               .testTag("biometricLockScreen")) {
         Column(
@@ -71,7 +71,10 @@ fun BiometricLockScreen(
               Image(
                   painter = painterResource(id = R.drawable.logo),
                   contentDescription = "Map'In Logo",
-                  modifier = Modifier.size(120.dp).testTag("biometricLockScreen_logo"))
+                  modifier =
+                      Modifier.size(120.dp)
+                          .testTag("biometricLockScreen_logo")
+                          .clip(RoundedCornerShape(16.dp)))
 
               Spacer(modifier = Modifier.height(48.dp))
 
@@ -146,7 +149,7 @@ private fun StatusText(isAuthenticating: Boolean, hasError: Boolean) {
   Text(
       text = getStatusText(isAuthenticating, hasError),
       style = MaterialTheme.typography.bodyLarge,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      color = MaterialTheme.colorScheme.primary,
       modifier = Modifier.testTag("biometricLockScreen_statusText"))
 }
 
@@ -168,18 +171,20 @@ private fun ErrorMessage(errorMessage: String?) {
 @Composable
 private fun UseAnotherAccountButton(isAuthenticating: Boolean, onUseAnotherAccount: () -> Unit) {
   if (!isAuthenticating) {
-    OutlinedButton(
+    Button(
         onClick = onUseAnotherAccount,
         modifier =
             Modifier.padding(horizontal = 24.dp)
                 .height(56.dp)
                 .testTag("biometricLockScreen_useAnotherAccountButton"),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(25.dp),
         colors =
-            ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f))) {
           Text(
               text = "Use another account",
               style = MaterialTheme.typography.labelLarge,
+              color = MaterialTheme.colorScheme.error,
               fontWeight = FontWeight.Bold)
         }
   }

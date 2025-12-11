@@ -7,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.theme.MapInTheme
 import io.mockk.mockk

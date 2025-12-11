@@ -3,7 +3,7 @@ package com.swent.mapin.ui.filters
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.swent.mapin.model.Location
+import com.swent.mapin.model.location.Location
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -90,7 +90,9 @@ class FiltersSectionViewModel : ViewModel() {
    * **Side Effect**: When disabled, clears location and resets radius to 10 km.
    */
   fun setWhereChecked(checked: Boolean) {
-    updateFiltersAndToggle(checked, isWhereChecked) { copy(place = null, radiusKm = 10) }
+    updateFiltersAndToggle(checked, isWhereChecked) {
+      copy(place = Location.UNDEFINED, radiusKm = 10)
+    }
   }
 
   /**
@@ -167,16 +169,9 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   // WHERE FILTER
-  /**
-   * Sets the location center for proximity-based filtering.
-   *
-   * **Side Effect**: Auto-enables the "Where" section when a non-null location is provided.
-   *
-   * @param location The geographic location to filter around, or null to clear
-   */
-  fun setLocation(location: Location?) {
+  fun setLocation(location: Location) {
     _filters.value = _filters.value.copy(place = location)
-    if (location != null) isWhereChecked.value = true
+    if (location.isDefined()) isWhereChecked.value = true
   }
 
   /**

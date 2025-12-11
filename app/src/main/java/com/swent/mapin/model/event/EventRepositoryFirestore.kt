@@ -1,24 +1,24 @@
 package com.swent.mapin.model.event
 
 import android.util.Log
+import com.firebase.geofire.GeoFireUtils
+import com.firebase.geofire.GeoLocation
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.NotificationService
+import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
 import com.swent.mapin.ui.filters.Filters
-import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import com.swent.mapin.util.TimeUtils
 import java.time.ZoneOffset
 import kotlinx.coroutines.async
@@ -56,11 +56,14 @@ enum class UserEventSource(val fieldName: String) {
  *
  * @param db Firestore instance to use.
  * @param friendRequestRepository Repository for friend-related queries.
+ * @param notificationService Service for sending push notifications.
+ * @param userProfileRepository Repository for accessing user profile data.
  */
 class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
-    private val friendRequestRepository: FriendRequestRepository =
-        FriendRequestRepository(notificationService = NotificationService())
+    private val friendRequestRepository: FriendRequestRepository,
+    private val notificationService: NotificationService,
+    private val userProfileRepository: UserProfileRepository
 ) : EventRepository {
 
   /**
@@ -94,9 +97,56 @@ class EventRepositoryFirestore(
                 FieldValue.arrayUnion(id))
           }
           .await()
+
+      // Send notifications to followers of the event creator
+      notifyFollowersOfNewEvent(eventToSave)
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to add event (id=${event.uid}): ${e.message}", e)
       throw Exception("Failed to add event: ${e.message}", e)
+    }
+  }
+
+  /**
+   * Sends notifications to all followers of the event creator about the new event.
+   *
+   * @param event The newly created event.
+   */
+  private suspend fun notifyFollowersOfNewEvent(event: Event) {
+    try {
+      val ownerProfile = userProfileRepository.getUserProfile(event.ownerId)
+      if (ownerProfile == null) {
+        Log.w("EventRepositoryFirestore", "Owner profile not found for event notification")
+        return
+      }
+
+      val followerIds = ownerProfile.followerIds
+      if (followerIds.isEmpty()) {
+        Log.w("EventRepositoryFirestore", "No followers to notify for new event")
+        return
+      }
+
+      val organizerName = ownerProfile.name.ifBlank { "Someone you follow" }
+
+      Log.w(
+          "EventRepositoryFirestore",
+          "Notifying ${followerIds.size} followers about new event: ${event.title}")
+
+      followerIds.forEach { followerId ->
+        try {
+          notificationService.sendNewEventFromFollowedUserNotification(
+              recipientId = followerId,
+              organizerId = event.ownerId,
+              organizerName = organizerName,
+              eventId = event.uid,
+              eventTitle = event.title)
+        } catch (e: Exception) {
+          Log.e(
+              "EventRepositoryFirestore", "Failed to notify follower $followerId: ${e.message}", e)
+        }
+      }
+    } catch (e: Exception) {
+      Log.e("EventRepositoryFirestore", "Failed to notify followers: ${e.message}", e)
+      // Don't throw - event creation succeeded, notification failure is non-critical
     }
   }
 
@@ -420,6 +470,20 @@ class EventRepositoryFirestore(
       query = query.whereLessThan("date", endOfDayExclusive)
     }
 
+    // Apply location filter if provided
+    if (filters.place.isDefined()) {
+      val radiusInM = filters.radiusKm * 1000
+
+      val bounds =
+          GeoFireUtils.getGeoHashQueryBounds(
+                  GeoLocation(filters.place.latitude!!, filters.place.longitude!!),
+                  radiusInM.toDouble())
+              .toList()
+
+      val bound = bounds[0]
+      query = query.orderBy("location.geohash").startAt(bound.startHash).endAt(bound.endHash)
+    }
+
     // Add price to query if present
     if (filters.maxPrice != null) {
       query = query.whereLessThanOrEqualTo("price", filters.maxPrice.toDouble())
@@ -435,17 +499,6 @@ class EventRepositoryFirestore(
     // Apply popularOnly filter (requires counting participants)
     if (filters.popularOnly) {
       filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT_PARTICIPANT_THRESHOLD }
-    }
-
-    // Apply location/radius filter (requires haversine distance calculation)
-    if (filters.place != null) {
-      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
-      filtered =
-          filtered.filter { event ->
-            val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
-            val distance = calculateHaversineDistance(eventGeoPoint, placeGeoPoint)
-            distance <= filters.radiusKm
-          }
     }
 
     return filtered.sortedByDescending { it.date }
@@ -791,19 +844,4 @@ class EventRepositoryFirestore(
         Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${this.id})", e)
         throw e
       }
-
-  /**
-   * Parse Location to GeoPoint.
-   *
-   * @param place The location.
-   * @return GeoPoint or null if invalid.
-   */
-  private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
-    return try {
-      if (place == null) null else GeoPoint(place.latitude, place.longitude)
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "Invalid location coordinates: $place", e)
-      null
-    }
-  }
 }

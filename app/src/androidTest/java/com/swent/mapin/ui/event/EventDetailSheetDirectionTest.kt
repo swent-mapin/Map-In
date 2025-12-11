@@ -3,8 +3,8 @@ package com.swent.mapin.ui.event
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.OrganizerState
@@ -27,7 +27,7 @@ class EventDetailSheetDirectionTest {
           title = "Test Event",
           description = "Test event description",
           date = Timestamp(Date()),
-          location = Location("Test Location", 46.5220, 6.5700),
+          location = Location.from("Test Location", 46.5220, 6.5700),
           tags = listOf("Music", "Festival"),
           public = true,
           ownerId = "test-user",

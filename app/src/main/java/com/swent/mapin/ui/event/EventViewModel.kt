@@ -7,9 +7,9 @@ import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

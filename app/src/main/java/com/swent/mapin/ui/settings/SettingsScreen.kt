@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -50,7 +51,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -199,9 +199,7 @@ fun SettingsScreen(
 
                     // Theme Mode Selection
                     ThemeModeSelector(
-                        currentMode = themeMode,
-                        onModeChanged = { viewModel.updateThemeMode(it) },
-                        testTag = "themeModeSelector")
+                        currentMode = themeMode, onModeChanged = { viewModel.updateThemeMode(it) })
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -214,7 +212,6 @@ fun SettingsScreen(
                     SettingsToggleItem(
                         title = "Points of Interest",
                         subtitle = "Show POI labels on the map",
-                        icon = Icons.Default.Visibility,
                         isEnabled = mapPreferences.showPOIs,
                         onToggle = { viewModel.updateShowPOIs(it) },
                         testTag = "poiToggle")
@@ -225,7 +222,6 @@ fun SettingsScreen(
                     SettingsToggleItem(
                         title = "Road Labels",
                         subtitle = "Display road labels on the map",
-                        icon = Icons.Default.Visibility,
                         isEnabled = mapPreferences.showRoadNumbers,
                         onToggle = { viewModel.updateShowRoadNumbers(it) },
                         testTag = "roadNumbersToggle")
@@ -236,7 +232,6 @@ fun SettingsScreen(
                     SettingsToggleItem(
                         title = "Transit Labels",
                         subtitle = "Show transit and street labels",
-                        icon = Icons.Default.Visibility,
                         isEnabled = mapPreferences.showStreetNames,
                         onToggle = { viewModel.updateShowStreetNames(it) },
                         testTag = "streetNamesToggle")
@@ -248,6 +243,7 @@ fun SettingsScreen(
                         title = "3D Buildings",
                         subtitle = "Enable 3D buildings on the map",
                         icon = Icons.Default.ViewInAr,
+                        useIcon = true,
                         isEnabled = mapPreferences.enable3DView,
                         onToggle = { viewModel.updateEnable3DView(it) },
                         testTag = "threeDViewToggle")
@@ -285,7 +281,6 @@ fun SettingsScreen(
                           description = "Update your account password",
                           icon = Icons.Default.Key,
                           backgroundColor = Color(0xFF667eea),
-                          contentColor = Color.White,
                           onAction = onNavigateToChangePassword,
                           testTag = "changePasswordButton")
 
@@ -298,7 +293,6 @@ fun SettingsScreen(
                         description = "Sign out of your account",
                         icon = Icons.AutoMirrored.Filled.Logout,
                         backgroundColor = Color(0xFF667eea),
-                        contentColor = Color.White,
                         onAction = { showLogoutConfirmation = true },
                         testTag = "logoutButton")
 
@@ -310,7 +304,6 @@ fun SettingsScreen(
                         description = "Permanently delete your account and data",
                         icon = Icons.Default.Delete,
                         backgroundColor = Color(0xFFef5350),
-                        contentColor = Color.White,
                         onAction = { showDeleteConfirmation = true },
                         testTag = "deleteAccountButton")
 
@@ -355,13 +348,9 @@ fun SettingsScreen(
 /** Theme mode selector with segmented buttons */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ThemeModeSelector(
-    currentMode: ThemeMode,
-    onModeChanged: (ThemeMode) -> Unit,
-    testTag: String
-) {
+private fun ThemeModeSelector(currentMode: ThemeMode, onModeChanged: (ThemeMode) -> Unit) {
   Card(
-      modifier = Modifier.fillMaxWidth().testTag(testTag),
+      modifier = Modifier.fillMaxWidth().testTag("themeModeSelector"),
       shape = RoundedCornerShape(12.dp),
       colors =
           CardDefaults.cardColors(
@@ -412,7 +401,7 @@ private fun ThemeModeSelector(
                   selected = currentMode == mode,
                   onClick = { onModeChanged(mode) },
                   shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
-                  modifier = Modifier.testTag("${testTag}_${mode.toStorageString()}")) {
+                  modifier = Modifier.testTag("${"themeModeSelector"}_${mode.toStorageString()}")) {
                     Text(mode.toDisplayString())
                   }
             }
@@ -456,7 +445,8 @@ private fun SettingsSectionTitle(title: String, icon: ImageVector) {
 internal fun SettingsToggleItem(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: ImageVector = Icons.Default.Visibility,
+    useIcon: Boolean = false,
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
     testTag: String
@@ -490,8 +480,12 @@ internal fun SettingsToggleItem(
                     contentAlignment = Alignment.Center) {
                       Icon(
                           imageVector =
-                              if (isEnabled) Icons.Default.Visibility
-                              else Icons.Default.VisibilityOff,
+                              if (useIcon) {
+                                icon
+                              } else {
+                                if (isEnabled) Icons.Default.Visibility
+                                else Icons.Default.VisibilityOff
+                              },
                           contentDescription = title,
                           tint = MaterialTheme.colorScheme.primary,
                           modifier = Modifier.size(20.dp))
@@ -514,12 +508,6 @@ internal fun SettingsToggleItem(
               Switch(
                   checked = isEnabled,
                   onCheckedChange = onToggle,
-                  colors =
-                      SwitchDefaults.colors(
-                          checkedThumbColor = Color.White,
-                          checkedTrackColor = Color(0xFF667eea),
-                          uncheckedThumbColor = Color.White,
-                          uncheckedTrackColor = MaterialTheme.colorScheme.outline),
                   modifier = Modifier.testTag("${testTag}_switch"))
             }
       }
@@ -539,6 +527,7 @@ private fun BiometricUnlockToggle(
       title = "Biometric Unlock",
       subtitle = "Use fingerprint or face to unlock the app",
       icon = Icons.Default.Fingerprint,
+      useIcon = true,
       isEnabled = isEnabled,
       onToggle = { enabled ->
         handleBiometricToggle(
@@ -582,12 +571,11 @@ private fun SettingsActionButton(
     description: String,
     icon: ImageVector,
     backgroundColor: Color,
-    contentColor: Color,
     onAction: () -> Unit,
     testTag: String
 ) {
   Card(
-      modifier = Modifier.fillMaxWidth().testTag(testTag),
+      modifier = Modifier.fillMaxWidth().testTag(testTag).clickable { onAction() },
       shape = RoundedCornerShape(12.dp),
       colors =
           CardDefaults.cardColors(
@@ -621,7 +609,7 @@ private fun SettingsActionButton(
                       Icon(
                           imageVector = icon,
                           contentDescription = label,
-                          tint = contentColor, // use contentColor so the param is used
+                          tint = backgroundColor,
                           modifier = Modifier.size(20.dp))
                     }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -638,16 +626,11 @@ private fun SettingsActionButton(
                       color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
               }
-              OutlinedButton(
-                  onClick = onAction,
-                  shape = RoundedCornerShape(8.dp),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = backgroundColor),
-                  modifier = Modifier.testTag("${testTag}_action")) {
-                    Text(
-                        "Go",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold)
-                  }
+              Icon(
+                  imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                  contentDescription = "Go",
+                  tint = backgroundColor.copy(alpha = 0.6f),
+                  modifier = Modifier.size(22.dp))
             }
       }
 }

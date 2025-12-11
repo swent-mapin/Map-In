@@ -19,9 +19,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.swent.mapin.model.FriendRequest
 import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.navigation.Route
@@ -86,7 +86,7 @@ class EndToEndM2 {
   private val testEventId = "test-event-$testId"
   private val testEventTitle = "Test Concert"
   private val testEventDescription = "An amazing music concert in the park"
-  private val testEventLocation = Location("Central Park", 40.7829, -73.9654)
+  private val testEventLocation = Location.from("Central Park", 40.7829, -73.9654)
   private val testEventTags = listOf("Music", "Outdoor")
   private var testEvent: Event = Event()
 
@@ -109,7 +109,7 @@ class EndToEndM2 {
 
   // Map search test data (M2)
   private val searchQuery = "Central Park"
-  private val searchLocation = Location("Central Park, New York", 40.7829, -73.9654)
+  private val searchLocation = Location.from("Central Park, New York", 40.7829, -73.9654)
   private val renderMapInTests = false // Disable Mapbox rendering on CI emulators
 
   companion object {
@@ -403,8 +403,8 @@ class EndToEndM2 {
     }
 
     // Logout - scroll to button as Settings screen is scrollable
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performScrollTo()
-    composeTestRule.onNodeWithTag("logoutButton_action", useUnmergedTree = true).performClick()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performScrollTo()
+    composeTestRule.onNodeWithTag("logoutButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntil(timeoutMillis = 10000) {
