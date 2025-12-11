@@ -20,7 +20,15 @@ import kotlinx.coroutines.flow.StateFlow
  * - Tags: Event category filtering
  * - Additional: Friends-only and popular-only filters
  *
- * Each filter section can be independently enabled/disabled with toggle states.
+ * **Date Format**: Accepts dates in dd/MM/yyyy format (day first). Alternative formats MM/dd/yyyy
+ * and yyyy-MM-dd are also supported but may cause ambiguity. Validation errors are exposed through
+ * [errorMessage].
+ *
+ * **Section Toggling**: Disabling a filter section automatically resets its values to defaults.
+ * Enabling a section (by setting filter values) automatically toggles it on.
+ *
+ * **Error Propagation**: All validation errors (invalid dates, date range violations) are exposed
+ * through the [errorMessage] StateFlow.
  */
 class FiltersSectionViewModel : ViewModel() {
   // Single Filters state
@@ -50,8 +58,9 @@ class FiltersSectionViewModel : ViewModel() {
     private set
 
   /**
-   * Internal helper to update filter state and toggle visibility. When unchecked, resets the
-   * associated filter values to defaults.
+   * Internal helper to update filter state and toggle visibility.
+   *
+   * **Side Effect**: When unchecked, resets the associated filter values to defaults.
    */
   private fun updateFiltersAndToggle(
       checked: Boolean,
@@ -64,24 +73,40 @@ class FiltersSectionViewModel : ViewModel() {
     }
   }
 
-  /** Enables/disables the "When" filter section. Resets dates when disabled. */
+  /**
+   * Toggles the "When" filter section.
+   *
+   * **Side Effect**: When disabled, resets start date to today and clears end date.
+   */
   fun setWhenChecked(checked: Boolean) {
     updateFiltersAndToggle(checked, isWhenChecked) {
       copy(startDate = LocalDate.now(), endDate = null)
     }
   }
 
-  /** Enables/disables the "Where" filter section. Resets location and radius when disabled. */
+  /**
+   * Toggles the "Where" filter section.
+   *
+   * **Side Effect**: When disabled, clears location and resets radius to 10 km.
+   */
   fun setWhereChecked(checked: Boolean) {
     updateFiltersAndToggle(checked, isWhereChecked) { copy(place = null, radiusKm = 10) }
   }
 
-  /** Enables/disables the price filter section. Resets max price when disabled. */
+  /**
+   * Toggles the price filter section.
+   *
+   * **Side Effect**: When disabled, clears the maximum price constraint.
+   */
   fun setPriceChecked(checked: Boolean) {
     updateFiltersAndToggle(checked, isPriceChecked) { copy(maxPrice = null) }
   }
 
-  /** Enables/disables the tags filter section. Clears selected tags when disabled. */
+  /**
+   * Toggles the tags filter section.
+   *
+   * **Side Effect**: When disabled, clears all selected tags.
+   */
   fun setIsTagsChecked(enabled: Boolean) {
     updateFiltersAndToggle(enabled, isTagsChecked) { copy(tags = emptySet()) }
   }
@@ -90,7 +115,13 @@ class FiltersSectionViewModel : ViewModel() {
   /**
    * Sets the start date for event filtering.
    *
-   * @param date Date string in formats: dd/MM/yyyy, MM/dd/yyyy, or yyyy-MM-dd
+   * **Format**: Preferred format is dd/MM/yyyy (e.g., 25/12/2024 for Dec 25, 2024). Also accepts
+   * MM/dd/yyyy and yyyy-MM-dd, but these may be ambiguous.
+   *
+   * **Side Effect**: Auto-enables the "When" section on successful parse. Validation errors are
+   * exposed via [errorMessage].
+   *
+   * @param date Date string in dd/MM/yyyy, MM/dd/yyyy, or yyyy-MM-dd format
    */
   fun setStartDate(date: String) {
     when (val result = parseDate(date)) {
@@ -107,9 +138,15 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   /**
-   * Sets the end date for event filtering. Validates that end date is not before start date.
+   * Sets the end date for event filtering.
    *
-   * @param date Date string in formats: dd/MM/yyyy, MM/dd/yyyy, or yyyy-MM-dd
+   * **Format**: Preferred format is dd/MM/yyyy (e.g., 31/12/2024 for Dec 31, 2024). Also accepts
+   * MM/dd/yyyy and yyyy-MM-dd, but these may be ambiguous.
+   *
+   * **Side Effect**: Auto-enables the "When" section on successful parse. Validates that end date
+   * is not before start date. Errors exposed via [errorMessage].
+   *
+   * @param date Date string in dd/MM/yyyy, MM/dd/yyyy, or yyyy-MM-dd format
    */
   fun setEndDate(date: String) {
     when (val result = parseDate(date)) {
@@ -131,8 +168,9 @@ class FiltersSectionViewModel : ViewModel() {
 
   // WHERE FILTER
   /**
-   * Sets the location center for proximity-based filtering. Automatically enables the "Where"
-   * section when a location is provided.
+   * Sets the location center for proximity-based filtering.
+   *
+   * **Side Effect**: Auto-enables the "Where" section when a non-null location is provided.
    *
    * @param location The geographic location to filter around, or null to clear
    */
@@ -143,6 +181,8 @@ class FiltersSectionViewModel : ViewModel() {
 
   /**
    * Sets the search radius for location-based filtering.
+   *
+   * **Side Effect**: Auto-enables the "Where" section when radius is set.
    *
    * @param km Radius in kilometers (clamped to 0-999), or null to use default (10 km)
    */
@@ -156,6 +196,8 @@ class FiltersSectionViewModel : ViewModel() {
   /**
    * Sets the maximum price filter for events.
    *
+   * **Side Effect**: Auto-enables the price section when a non-null price is provided.
+   *
    * @param value Maximum price in CHF (clamped to 0-999), or null to clear filter
    */
   fun setMaxPriceCHF(value: Int?) {
@@ -167,8 +209,10 @@ class FiltersSectionViewModel : ViewModel() {
 
   // TAGS FILTER
   /**
-   * Toggles a tag in the filter selection. Adds the tag if not present, removes it if already
-   * selected.
+   * Toggles a tag in the filter selection.
+   *
+   * **Side Effect**: Auto-enables the tags section when tags are added. Adds the tag if not
+   * present, removes it if already selected.
    *
    * @param tag The tag name to toggle
    */
@@ -185,8 +229,7 @@ class FiltersSectionViewModel : ViewModel() {
 
   // OTHER FILTERS
   /**
-   * Enables/disables friends-only filtering. When enabled, only shows events with participating
-   * friends.
+   * Filters to show only events with participating friends.
    *
    * @param enabled Whether to filter for friends-only events
    */
@@ -195,8 +238,7 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   /**
-   * Enables/disables popular-only filtering. When enabled, only shows events with high
-   * participation.
+   * Filters to show only events with high participation.
    *
    * @param enabled Whether to filter for popular events only
    */
@@ -243,8 +285,16 @@ class FiltersSectionViewModel : ViewModel() {
   }
 
   /**
-   * Parses a date string using multiple format attempts. Tries formats: dd/MM/yyyy, MM/dd/yyyy, and
-   * yyyy-MM-dd.
+   * Parses a date string using multiple format attempts.
+   *
+   * **Format Priority**:
+   * 1. dd/MM/yyyy (preferred - day first, e.g., 25/12/2024 for Dec 25)
+   * 2. MM/dd/yyyy (month first, may be ambiguous)
+   * 3. yyyy-MM-dd (ISO format, unambiguous but less common in UI)
+   *
+   * **Note**: Dates like 01/02/2024 are ambiguous. The parser tries dd/MM/yyyy first, so this would
+   * be interpreted as Feb 1, 2024. Consider using unambiguous formats like yyyy-MM-dd or providing
+   * format hints in the UI.
    *
    * @param input The date string to parse
    * @return ParseResult indicating success or failure with details
