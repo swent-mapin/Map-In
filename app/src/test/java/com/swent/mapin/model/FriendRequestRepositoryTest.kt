@@ -2,6 +2,7 @@ package com.swent.mapin.model
 
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.*
+import com.swent.mapin.model.badge.BadgeRepository
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -27,6 +28,7 @@ class FriendRequestRepositoryTest {
   private lateinit var userProfileRepo: UserProfileRepository
   private lateinit var notificationService: NotificationService
   private lateinit var repository: FriendRequestRepository
+  private lateinit var badgeRepository: BadgeRepository
   private lateinit var mockCollection: CollectionReference
   private lateinit var mockDocument: DocumentReference
 
@@ -34,6 +36,7 @@ class FriendRequestRepositoryTest {
   fun setup() {
     firestore = mockk(relaxed = true)
     userProfileRepo = mockk(relaxed = true)
+    badgeRepository = mockk(relaxed = true)
     notificationService = mockk(relaxed = true)
     mockCollection = mockk(relaxed = true)
     mockDocument = mockk(relaxed = true)
@@ -58,7 +61,7 @@ class FriendRequestRepositoryTest {
     coEvery { notificationService.sendInfoNotification(any(), any(), any(), any(), any()) } returns
         NotificationResult.Success(mockNotification)
 
-    repository = FriendRequestRepository(firestore, userProfileRepo, notificationService)
+    repository = FriendRequestRepository(firestore, userProfileRepo, badgeRepository = badgeRepository, notificationService)
   }
 
   // ==================== Helper Methods ====================

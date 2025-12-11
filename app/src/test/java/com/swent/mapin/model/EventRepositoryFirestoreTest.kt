@@ -18,6 +18,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
@@ -60,6 +61,7 @@ class EventRepositoryFirestoreTest {
   private lateinit var firebaseAuthMock: MockedStatic<FirebaseAuth>
   private lateinit var notificationService: NotificationService
   private lateinit var userProfileRepository: UserProfileRepository
+  private lateinit var badgeRepo: BadgeRepository
 
   @Before
   fun setup() {
@@ -67,12 +69,15 @@ class EventRepositoryFirestoreTest {
     friendRepo = mock()
     notificationService = mock()
     userProfileRepository = mock()
+    badgeRepo = mock()
     repo =
         EventRepositoryFirestore(
             db,
             friendRequestRepository = friendRepo,
             notificationService = notificationService,
-            userProfileRepository = userProfileRepository)
+            userProfileRepository = userProfileRepository,
+            badgeRepository = badgeRepo
+        )
     document = mock()
     transaction = mock()
     collection =
@@ -164,7 +169,9 @@ class EventRepositoryFirestoreTest {
           db,
           friendRequestRepository = friendRepo,
           notificationService = notificationService,
-          userProfileRepository = userProfileRepo)
+          userProfileRepository = userProfileRepo,
+          badgeRepository = badgeRepo
+        )
 
   // ========== BASIC CRUD TESTS ==========
 

@@ -102,6 +102,7 @@ class BadgeRepositoryFirestore(
     saveBadgeProgress(userId, updatedBadges)
   }
 
+
   /**
    * Save badge progress for a user to Firestore.
    *

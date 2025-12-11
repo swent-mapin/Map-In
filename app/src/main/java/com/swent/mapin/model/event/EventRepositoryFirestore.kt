@@ -123,6 +123,7 @@ class EventRepositoryFirestore(
       if (userId != null) {
         badgeRepository.saveBadgeContext(userId, newCtx)
         badgeRepository.updateBadgesAfterContextChange(userId)
+
       }
 
       // Send notifications to followers of the event creator
