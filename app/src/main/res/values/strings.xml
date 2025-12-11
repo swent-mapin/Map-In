@@ -61,6 +61,30 @@
     <string name="password_error_missing_digit">Password must contain at least one number</string>
     <string name="password_error_missing_special_char">Password must contain at least one special character</string>
 
+    <!-- Authentication Error Messages -->
+    <string name="auth_error_sign_in_cancelled">Sign-in was cancelled</string>
+    <string name="auth_error_no_google_accounts">No Google accounts found on device</string>
+    <string name="auth_error_credential">Credential error: %1$s</string>
+    <string name="auth_error_sign_in_failed">Sign-in failed. Please try again</string>
+    <string name="auth_error_sign_in_failed_with_message">Sign-in failed: %1$s</string>
+    <string name="auth_error_no_user_returned">No user returned</string>
+    <string name="auth_error_microsoft_sign_in_failed">Microsoft sign-in failed: %1$s</string>
+    <string name="auth_error_email_password_empty">Email and password cannot be empty</string>
+    <string name="auth_error_no_account_found">No account found with this email</string>
+    <string name="auth_error_invalid_password">Invalid password</string>
+    <string name="auth_error_incorrect_credentials">Incorrect email or password</string>
+    <string name="auth_error_invalid_email_format">Please enter a valid email address</string>
+    <string name="auth_error_email_already_in_use">An account with this email already exists</string>
+    <string name="auth_error_weak_password">Password is too weak</string>
+    <string name="auth_error_sign_up_failed">Sign-up failed: %1$s</string>
+    <string name="auth_error_network">Network error. Please check your connection</string>
+    <string name="auth_error_too_many_requests">Too many attempts. Please try again later</string>
+    <string name="auth_error_account_disabled">This account has been disabled</string>
+
+    <!-- Sign-in Error Card -->
+    <string name="signin_error_icon_cd">Authentication error indicator</string>
+    <string name="signin_error_dismiss_cd">Dismiss error message</string>
+
     <!-- Offline map indicators -->
     <string name="offline_mode">Offline</string>
     <string name="cached_region">Cached area</string>

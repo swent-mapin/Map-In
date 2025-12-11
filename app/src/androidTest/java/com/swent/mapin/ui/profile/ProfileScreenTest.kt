@@ -3,14 +3,21 @@ package com.swent.mapin.ui.profile
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeRarity
-import io.mockk.*
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -269,6 +276,36 @@ class ProfileScreenTest {
     }
 
     composeTestRule.onNodeWithText("John Doe").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileContent_displaysFollowersCount() {
+    val userProfile =
+        UserProfile(
+            name = "John Doe",
+            userId = "123",
+            followerIds = listOf("follower1", "follower2", "follower3"))
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+
+    composeTestRule.setContent {
+      MaterialTheme { ViewProfileContent(userProfile = userProfile, viewModel = mockViewModel) }
+    }
+
+    composeTestRule.onNodeWithTag("profileFollowersCount").assertIsDisplayed()
+    composeTestRule.onNodeWithText("3 Followers").assertIsDisplayed()
+  }
+
+  @Test
+  fun viewProfileContent_displaysZeroFollowers_whenNoFollowers() {
+    val userProfile = UserProfile(name = "John Doe", userId = "123", followerIds = emptyList())
+    val mockViewModel = mockk<ProfileViewModel>(relaxed = true)
+
+    composeTestRule.setContent {
+      MaterialTheme { ViewProfileContent(userProfile = userProfile, viewModel = mockViewModel) }
+    }
+
+    composeTestRule.onNodeWithTag("profileFollowersCount").assertIsDisplayed()
+    composeTestRule.onNodeWithText("0 Followers").assertIsDisplayed()
   }
 
   @Test

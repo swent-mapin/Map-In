@@ -4,10 +4,24 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.*
 import com.swent.mapin.model.badge.BadgeRepository
 import io.mockk.*
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -215,27 +229,34 @@ class FriendRequestRepositoryTest {
   // ==================== Accept/Reject Request Tests ====================
 
   @Test
-  fun `acceptFriendRequest updates status to ACCEPTED`() = runTest {
-    val requestId = "req123"
-    val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
-    val friendRequest =
-        FriendRequest(
-            requestId = requestId,
-            fromUserId = "user1",
-            toUserId = "user2",
-            status = FriendshipStatus.PENDING)
+  fun `acceptFriendRequest updates status to ACCEPTED and establishes bidirectional follow`() =
+      runTest {
+        val requestId = "req123"
+        val fromUserId = "user1"
+        val toUserId = "user2"
+        val mockDocSnapshot = mockk<DocumentSnapshot>(relaxed = true)
+        val friendRequest =
+            FriendRequest(
+                requestId = requestId,
+                fromUserId = fromUserId,
+                toUserId = toUserId,
+                status = FriendshipStatus.PENDING)
 
-    every { mockDocument.get() } returns Tasks.forResult(mockDocSnapshot)
-    every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns friendRequest
-    every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
-    coEvery { userProfileRepo.getUserProfile(any()) } returns
-        UserProfile(userId = "user2", name = "Test User")
+        every { mockDocument.get() } returns Tasks.forResult(mockDocSnapshot)
+        every { mockDocSnapshot.toObject(FriendRequest::class.java) } returns friendRequest
+        every { mockDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
+        coEvery { userProfileRepo.getUserProfile(any()) } returns
+            UserProfile(userId = toUserId, name = "Test User")
+        coEvery { userProfileRepo.followUser(any(), any()) } returns true
 
-    val result = repository.acceptFriendRequest(requestId)
+        val result = repository.acceptFriendRequest(requestId)
 
-    assert(result)
-    verify { mockDocument.update("status", FriendshipStatus.ACCEPTED.name) }
-  }
+        assert(result)
+        verify { mockDocument.update("status", FriendshipStatus.ACCEPTED.name) }
+        // Verify bidirectional follow: both users follow each other when becoming friends
+        coVerify { userProfileRepo.followUser(fromUserId, toUserId) }
+        coVerify { userProfileRepo.followUser(toUserId, fromUserId) }
+      }
 
   @Test
   fun `rejectFriendRequest updates status to REJECTED`() = runTest {

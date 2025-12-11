@@ -84,6 +84,9 @@ class FriendRequestRepository(
   /**
    * Accepts a friend request by updating its status to ACCEPTED.
    *
+   * When a friend request is accepted, both users automatically follow each other (bidirectional
+   * follow). This ensures friends are always mutually following.
+   *
    * @param requestId The ID of the request to accept.
    * @return True if the request was accepted successfully, false on error.
    */
@@ -102,6 +105,11 @@ class FriendRequestRepository(
       val success = updateStatus(requestId, FriendshipStatus.ACCEPTED)
 
       if (success) {
+        // When becoming friends, establish bidirectional follow
+        // fromUserId follows toUserId and toUserId follows fromUserId
+        userProfileRepository.followUser(request.fromUserId, request.toUserId)
+        userProfileRepository.followUser(request.toUserId, request.fromUserId)
+
         // Send notification to the original sender that their request was accepted
         sendFriendRequestAcceptedNotificationSafely(request.toUserId, request.fromUserId)
         val ctxSender = badgeRepository.getBadgeContext(request.fromUserId)
