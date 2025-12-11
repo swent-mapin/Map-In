@@ -122,24 +122,24 @@ internal fun createEventAnnotations(
         val isSelected = event.uid == selectedEventId
         val visual = computeAnnotationVisualParameters(isSelected)
 
-    // Use event-specific bitmap if available, otherwise fall back to default
-    val iconBitmap = eventBitmaps?.get(event.uid) ?: style.markerBitmap
+        // Use event-specific bitmap if available, otherwise fall back to default
+        val iconBitmap = eventBitmaps?.get(event.uid) ?: style.markerBitmap
 
-    PointAnnotationOptions()
-        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
-        .apply { iconBitmap?.let { withIconImage(it) } }
-        .withIconSize(visual.iconSize)
-        .withIconAnchor(IconAnchor.BOTTOM)
-        .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(visual.textOffset)
-        .withTextSize(visual.textSize)
-        .withTextColor(style.textColorInt)
-        .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(visual.textHaloWidth)
-        .withTextField(event.title)
-        .withData(JsonPrimitive(index))
-        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
-  }
+        PointAnnotationOptions()
+            .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
+            .apply { iconBitmap?.let { withIconImage(it) } }
+            .withIconSize(visual.iconSize)
+            .withIconAnchor(IconAnchor.BOTTOM)
+            .withTextAnchor(TextAnchor.TOP)
+            .withTextOffset(visual.textOffset)
+            .withTextSize(visual.textSize)
+            .withTextColor(style.textColorInt)
+            .withTextHaloColor(style.haloColorInt)
+            .withTextHaloWidth(visual.textHaloWidth)
+            .withTextField(event.title)
+            .withData(JsonPrimitive(index))
+            .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
+      }
 }
 
 /**
