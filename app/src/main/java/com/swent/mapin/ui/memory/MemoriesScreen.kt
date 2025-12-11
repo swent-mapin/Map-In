@@ -12,10 +12,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.memory.Memory
@@ -39,16 +41,19 @@ private val memoryDateFormatter =
  * Memories screen displaying a list of the user's memories.
  *
  * @param onNavigateBack Callback to navigate back to the previous screen.
- * @param memories List of memories to display.
+ * @param onOpenEvent Callback to navigate to the event detail screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(
     onNavigateBack: () -> Unit,
-    memories: List<Memory> = emptyList(),
-    /*viewModel: MemoryViewModel TODO make the viewModel*/
+    onOpenEvent: (eventId: String) -> Unit = {},
+    viewModel: MemoriesViewModel = viewModel()
 ) {
-  // val memories by viewModel.memories.collectAsState()
+
+  val memories by viewModel.memories.collectAsState()
+  val error by viewModel.error.collectAsState()
+
   Scaffold(
       modifier = Modifier.fillMaxSize(),
       topBar = {
@@ -82,12 +87,22 @@ fun MemoriesScreen(
                   modifier = Modifier.fillMaxSize().padding(16.dp),
                   contentPadding = PaddingValues(bottom = 16.dp)) {
                     item {
-                      Text(
-                          "Your Memories",
-                          style = MaterialTheme.typography.titleMedium,
-                          fontWeight = FontWeight.Bold,
-                          modifier =
-                              Modifier.padding(bottom = 16.dp).testTag("yourMemoriesMessage"))
+                      Row(
+                          verticalAlignment = Alignment.CenterVertically,
+                          modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                "Your Memories",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f).testTag("yourMemoriesMessage"))
+
+                            TextButton(
+                                onClick = { viewModel.refresh() },
+                                modifier = Modifier.testTag("refreshAllButton")) {
+                                  Text("Refresh All")
+                                }
+                          }
+                      Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     if (memories.isEmpty()) {
@@ -120,22 +135,39 @@ fun MemoriesScreen(
                       items(memories, key = { it.uid }) { memory ->
                         MemoryItem(
                             memory = memory,
-                            onClick = { /*onMemoryClick(memory)*/},
-                            firstMediaUrl = memory.mediaUrls.firstOrNull())
+                            onClick = {
+                              viewModel.selectMemoryToView(memory.uid)
+                              onNavigateBack()
+                            },
+                            mediaUrls = memory.mediaUrls,
+                            taggedNames = memory.taggedUserIds)
                         Spacer(modifier = Modifier.height(12.dp))
                       }
                     }
                   }
+
+              error?.let { err ->
+                Text(
+                    err, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(8.dp))
+              }
             }
       }
 }
 
 @Composable
-private fun MemoryItem(memory: Memory, onClick: () -> Unit, firstMediaUrl: String?) {
+private fun MemoryItem(
+    memory: Memory,
+    onClick: () -> Unit,
+    mediaUrls: List<String>,
+    taggedNames: List<String>
+) {
   val dateText =
       memory.createdAt?.toDate()?.time?.let { millis ->
         memoryDateFormatter.format(Instant.ofEpochMilli(millis))
       } ?: ""
+  val items = parseMediaItems(mediaUrls)
+  // Find the first image
+  val firstImage = items.firstOrNull { it is MediaItem.Image } as? MediaItem.Image
 
   Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -151,9 +183,9 @@ private fun MemoryItem(memory: Memory, onClick: () -> Unit, firstMediaUrl: Strin
                       .aspectRatio(16f / 9f)
                       .background(MaterialTheme.colorScheme.surfaceVariant),
               contentAlignment = Alignment.Center) {
-                if (firstMediaUrl != null) {
+                if (firstImage != null) {
                   AsyncImage(
-                      model = firstMediaUrl,
+                      model = firstImage.url,
                       contentDescription = "Memory photo",
                       modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
                       contentScale = ContentScale.Crop)
@@ -168,28 +200,21 @@ private fun MemoryItem(memory: Memory, onClick: () -> Unit, firstMediaUrl: Strin
 
           Column(modifier = Modifier.padding(16.dp)) {
 
-            // Title + menu
+            // Title
             Row(verticalAlignment = Alignment.CenterVertically) {
               Text(
                   text = memory.title.ifBlank { "Memory ${memory.uid}" },
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.SemiBold,
                   modifier = Modifier.weight(1f))
-
-              IconButton(onClick = { /* TODO: Show menu */}) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.primary)
-              }
             }
 
             // Tagged users
             if (memory.taggedUserIds.isNotEmpty()) {
               Text(
-                  text = "Tagged: " + memory.taggedUserIds.joinToString { it },
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  text = "Tagged: " + taggedNames.joinToString { it },
+                  style = MaterialTheme.typography.titleSmall,
+                  color = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.padding(top = 4.dp))
             }
 
