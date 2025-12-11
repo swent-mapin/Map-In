@@ -45,6 +45,7 @@ object AddEventScreenTestTags : EventScreenTestTag {
   override val INPUT_EVENT_TITLE = "inputEventTitle"
   override val INPUT_EVENT_DESCRIPTION = "inputEventDescription"
   override val INPUT_EVENT_TAG = "inputEventTag"
+  const val INPUT_EVENT_CAPACITY = "inputEventCapacity"
 
   override val EVENT_CANCEL = "eventCancel"
   override val EVENT_SAVE = "eventSave"
@@ -88,6 +89,7 @@ fun AddEventTextField(
     modifier: Modifier = Modifier,
     isLocation: Boolean = false,
     isPrice: Boolean = false,
+    isCapacity: Boolean = false,
     isTag: Boolean = false,
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
@@ -104,6 +106,8 @@ fun AddEventTextField(
           error.value = !isValidTagInput(it)
         } else if (isPrice) {
           error.value = !isValidPriceInput(it)
+        } else if (isCapacity) {
+          error.value = !isValidCapacityInput(it)
         } else {
           error.value = textField.value.isBlank()
         }
@@ -142,6 +146,7 @@ fun AddEventScreen(
   val time = remember { mutableStateOf("") }
   val endTime = remember { mutableStateOf("") }
   val price = remember { mutableStateOf("") }
+  val capacity = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
 
   val dateError = remember { mutableStateOf(false) }
@@ -153,6 +158,7 @@ fun AddEventScreen(
   val locationError = remember { mutableStateOf(false) }
   val tagError = remember { mutableStateOf(false) }
   val priceError = remember { mutableStateOf(false) }
+  val capacityError = remember { mutableStateOf(false) }
   val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
   val locationExpanded = remember { mutableStateOf(false) }
@@ -179,7 +185,8 @@ fun AddEventScreen(
           endDate.value.isBlank() ||
           endTimeError.value ||
           endTime.value.isBlank() ||
-          priceError.value
+          priceError.value ||
+          capacityError.value
 
   val errorFields =
       listOfNotNull(
@@ -197,7 +204,8 @@ fun AddEventScreen(
               stringResource(R.string.description_field)
           else null,
           if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (priceError.value) stringResource(R.string.price_field) else null)
+          if (priceError.value) stringResource(R.string.price_field) else null,
+          if (capacityError.value) stringResource(R.string.capacity_field) else null)
 
   val isEventValid = !error && isLoggedIn.value
   val showValidation = remember { mutableStateOf(false) }
@@ -233,6 +241,7 @@ fun AddEventScreen(
                 endTimeError.value = endTime.value.isBlank()
                 tagError.value = !isValidTagInput(tag.value)
                 priceError.value = !isValidPriceInput(price.value)
+                capacityError.value = !isValidCapacityInput(capacity.value)
 
                 // Run relational validation for start/end (may clear or set end errors)
                 validateStartEndLogic(
@@ -248,7 +257,8 @@ fun AddEventScreen(
                         endDateError.value ||
                         endTimeError.value ||
                         tagError.value ||
-                        priceError.value) && isLoggedIn.value
+                        priceError.value ||
+                        capacityError.value) && isLoggedIn.value
                 if (!nowValid) return@EventTopBar
 
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
@@ -293,7 +303,8 @@ fun AddEventScreen(
                     extractTags(tag.value),
                     isPublic.value,
                     onDone,
-                    price.value.toDoubleOrNull() ?: 0.0)
+                    price.value.toDoubleOrNull() ?: 0.0,
+                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull())
               })
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
@@ -347,6 +358,21 @@ fun AddEventScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
           }
+
+          Spacer(modifier = Modifier.padding(vertical = 10.dp))
+          Text(
+              stringResource(R.string.capacity_text),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(bottom = 8.dp))
+          AddEventTextField(
+              capacity,
+              capacityError,
+              stringResource(R.string.capacity_place_holder),
+              modifier =
+                  Modifier.fillMaxWidth(0.4f).testTag(AddEventScreenTestTags.INPUT_EVENT_CAPACITY),
+              singleLine = true,
+              isCapacity = true)
 
           Spacer(modifier = Modifier.padding(bottom = 5.dp))
 

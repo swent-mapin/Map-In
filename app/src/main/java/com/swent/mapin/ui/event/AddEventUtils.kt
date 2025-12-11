@@ -39,6 +39,18 @@ fun isValidPriceInput(input: String): Boolean {
 }
 
 /**
+ * Helper that validates optional capacity input. Accepts blank, otherwise requires a positive
+ * integer.
+ */
+fun isValidCapacityInput(input: String): Boolean {
+  if (input.isBlank()) return true
+  val trimmed = input.trim()
+  val regex = Regex("^\\d+$")
+  if (!regex.matches(trimmed)) return false
+  return trimmed.toIntOrNull()?.let { it > 0 } ?: false
+}
+
+/**
  * With Help of GPT: Helper function that extracts individual tags from a valid input string.
  *
  * The input string is expected to follow the same format checked by [isValidTagInput], where each
@@ -96,7 +108,8 @@ fun saveEvent(
     tags: List<String>,
     isPublic: Boolean,
     onDone: () -> Unit,
-    price: Double = 0.0
+    price: Double = 0.0,
+    capacity: Int? = null,
 ) {
   val uid = currentUserId ?: return
   val newEvent =
@@ -112,7 +125,7 @@ fun saveEvent(
           public = isPublic,
           ownerId = uid,
           imageUrl = null,
-          capacity = null,
+          capacity = capacity,
           price = price)
   viewModel.addEvent(newEvent)
   onDone()
