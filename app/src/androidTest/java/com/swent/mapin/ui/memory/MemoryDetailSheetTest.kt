@@ -39,14 +39,12 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.COLLAPSED,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {})
       }
     }
 
     composeTestRule.onNodeWithTag("memoryDetailSheet").assertExists()
     // Collapsed uses Icons with contentDescription "Share" and "Close"
-    composeTestRule.onNode(hasContentDescription("Share")).assertExists()
     composeTestRule.onNode(hasContentDescription("Close")).assertExists()
     composeTestRule.onNodeWithTag("memoryTitleCollapsed").assertIsDisplayed()
     composeTestRule
@@ -55,7 +53,7 @@ class MemoryDetailSheetTest {
   }
 
   @Test
-  fun medium_shows_title_description_and_linked_event_chip() {
+  fun medium_shows_title_description() {
     val memory =
         Memory(
             uid = "m2",
@@ -72,7 +70,6 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = listOf("Bob", "Charlie"),
-            onShare = {},
             onClose = {},
             onOpenLinkedEvent = {})
       }
@@ -80,38 +77,6 @@ class MemoryDetailSheetTest {
 
     composeTestRule.onNodeWithTag("memoryTitleMedium").assertExists()
     composeTestRule.onNodeWithTag("memoryDescriptionPreview").assertExists()
-    composeTestRule.onNodeWithTag("linkedEventChip").assertExists()
-  }
-
-  @Test
-  fun full_shows_edit_and_delete_when_owner_and_description_full() {
-    val memory =
-        Memory(
-            uid = "m3",
-            title = "Full Memory",
-            description = "Detailed description for the full view.",
-            ownerId = "u1",
-            createdAt = Timestamp(Date()))
-
-    composeTestRule.setContent {
-      MapInTheme {
-        MemoryDetailSheet(
-            memory = memory,
-            sheetState = BottomSheetState.FULL,
-            ownerName = "Alice",
-            isOwner = true,
-            taggedUserNames = listOf("Bob"),
-            onShare = {},
-            onClose = {},
-            onEdit = {},
-            onDelete = {})
-      }
-    }
-
-    composeTestRule.onNodeWithTag("memoryTitleFull").assertExists()
-    composeTestRule.onNodeWithTag("memoryDescriptionFull").assertExists()
-    composeTestRule.onNodeWithTag("editMemoryButton").assertExists()
-    composeTestRule.onNodeWithTag("deleteMemoryButton").assertExists()
   }
 
   // New tests start here
@@ -134,7 +99,6 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
             onOpenLinkedEvent = {})
       }
@@ -160,12 +124,8 @@ class MemoryDetailSheetTest {
             memory = memory,
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
-            isOwner = false,
             taggedUserNames = emptyList(),
-            onShare = {},
-            onClose = {},
-            onEdit = {},
-            onDelete = {})
+            onClose = {})
       }
     }
 
@@ -191,7 +151,6 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = listOf("Bob", "Charlie"),
-            onShare = {},
             onClose = {},
             onOpenLinkedEvent = {})
       }
@@ -225,7 +184,6 @@ class MemoryDetailSheetTest {
             sheetState = sheetState.value,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
             onOpenLinkedEvent = {})
       }
@@ -260,7 +218,6 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
             onOpenLinkedEvent = {})
       }
@@ -292,7 +249,6 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.COLLAPSED,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {})
       }
     }
@@ -327,12 +283,8 @@ class MemoryDetailSheetTest {
             memory = memory,
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
-            isOwner = false,
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
-            onEdit = {},
-            onDelete = {},
             onOpenLinkedEvent = {})
       }
     }
@@ -392,12 +344,8 @@ class MemoryDetailSheetTest {
             memory = memory,
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
-            isOwner = false,
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
-            onEdit = {},
-            onDelete = {},
             onOpenLinkedEvent = {})
       }
     }
@@ -433,12 +381,8 @@ class MemoryDetailSheetTest {
             memory = memory,
             sheetState = sheetState.value,
             ownerName = "Alice",
-            isOwner = false,
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
-            onEdit = {},
-            onDelete = {},
             onOpenLinkedEvent = {})
       }
     }
@@ -474,12 +418,8 @@ class MemoryDetailSheetTest {
             memory = memory,
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
-            isOwner = false,
             taggedUserNames = emptyList(),
-            onShare = {},
             onClose = {},
-            onEdit = {},
-            onDelete = {},
             onOpenLinkedEvent = {})
       }
     }
