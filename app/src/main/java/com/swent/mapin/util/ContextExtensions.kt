@@ -11,16 +11,17 @@ import android.content.ContextWrapper
  * particularly useful in Compose where you might have nested ContextWrappers but need to access the
  * Activity for operations like showing dialogs or checking lifecycle state.
  *
- * **Tail-Recursive Implementation:**
- * This function is marked with `tailrec`, allowing the Kotlin compiler to optimize the recursion
- * into an iterative loop, preventing stack overflow issues when traversing deep Context hierarchies.
+ * **Tail-Recursive Implementation:** This function is marked with `tailrec`, allowing the Kotlin
+ * compiler to optimize the recursion into an iterative loop, preventing stack overflow issues when
+ * traversing deep Context hierarchies.
  *
- * **Common Android/Compose Use Case:**
- * In Jetpack Compose, the `LocalContext.current` often provides a ContextWrapper rather than the
- * Activity directly. This is a common gotcha when you need Activity-specific methods (e.g.,
- * `startActivity()`, `requestPermissions()`, or accessing the `ComponentActivity` for lifecycle).
+ * **Common Android/Compose Use Case:** In Jetpack Compose, the `LocalContext.current` often
+ * provides a ContextWrapper rather than the Activity directly. This is a common gotcha when you
+ * need Activity-specific methods (e.g., `startActivity()`, `requestPermissions()`, or accessing the
+ * `ComponentActivity` for lifecycle).
  *
  * **Usage Example:**
+ *
  * ```kotlin
  * @Composable
  * fun MyScreen() {
@@ -45,8 +46,10 @@ import android.content.ContextWrapper
  * - In tests or special contexts (e.g., background services), this may not return an Activity.
  *
  * @return The Activity instance if found in the Context hierarchy, null otherwise
- * @see [ContextWrapper Documentation](https://developer.android.com/reference/android/content/ContextWrapper)
- * @see [Compose LocalContext](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#LocalContext())
+ * @see
+ *   [ContextWrapper Documentation](https://developer.android.com/reference/android/content/ContextWrapper)
+ * @see
+ *   [Compose LocalContext](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#LocalContext())
  */
 tailrec fun Context.findActivity(): Activity? =
     when (this) {
