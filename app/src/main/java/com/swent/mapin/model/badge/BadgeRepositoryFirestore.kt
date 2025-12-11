@@ -62,37 +62,38 @@ class BadgeRepositoryFirestore(
   }
 
   override suspend fun getBadgeContext(userId: String): BadgeContext {
+
     // Return from cache if available
     badgeContextCache[userId]?.let {
       return it
     }
 
-    return executeWithRetry {
+    val result = executeWithRetry {
       val doc = firestore.collection(COLLECTION_USERS).document(userId).get().await()
 
-      if (doc.exists()) {
-        // Existing user
-        val context = doc.toObject(BadgeContext::class.java)
+      val context =
+          if (doc.exists()) {
+            val existing = doc.toObject(BadgeContext::class.java)
+            if (existing != null) {
+              badgeContextCache[userId] = existing
+              existing
+            } else {
+              val defaultCtx = BadgeContext()
+              saveBadgeContext(userId, defaultCtx)
+              badgeContextCache[userId] = defaultCtx
+              println("Created missing BadgeContext for legacy user $userId")
+              defaultCtx
+            }
+          } else {
+            val defaultCtx = BadgeContext()
+            println("User document missing for $userId — returning default BadgeContext")
+            defaultCtx
+          }
 
-        if (context != null) {
-          // Found badgeContext in Firestore → normal case
-          badgeContextCache[userId] = context
-          return@executeWithRetry context
-        } else {
-          // No badgeContext → create it to maintain compatibility
-          val defaultCtx = BadgeContext()
-          saveBadgeContext(userId, defaultCtx)
-          badgeContextCache[userId] = defaultCtx
-          println("Created missing BadgeContext for legacy user $userId")
-          return@executeWithRetry defaultCtx
-        }
-      } else {
-        // User doesn't exist — shouldn't happen, but safe fallback
-        val defaultCtx = BadgeContext()
-        println("User document missing for $userId — returning default BadgeContext")
-        return@executeWithRetry defaultCtx
-      }
-    } ?: BadgeContext()
+      context
+    }
+
+    return result ?: BadgeContext()
   }
 
   override suspend fun updateBadgesAfterContextChange(userId: String) {

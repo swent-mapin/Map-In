@@ -1,10 +1,10 @@
 package com.swent.mapin.model.event
 
 import android.util.Log
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.firebase.geofire.GeoFireUtils
 import com.firebase.geofire.GeoLocation
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
@@ -23,7 +23,6 @@ import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
 import com.swent.mapin.ui.filters.Filters
-import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import com.swent.mapin.util.TimeUtils
 import java.time.ZoneOffset
 import java.util.Calendar
@@ -73,6 +72,13 @@ class EventRepositoryFirestore(
     private val badgeRepository: BadgeRepository
 ) : EventRepository {
 
+  companion object {
+    private const val EARLY_MORNING_START = 5
+    private const val EARLY_MORNING_END = 8
+    private const val LATE_NIGHT_START = 0
+    private const val LATE_NIGHT_END = 2
+  }
+
   /**
    * Generates and returns a new unique identifier for an Event item.
    *
@@ -114,10 +120,10 @@ class EventRepositoryFirestore(
             badgeRepository.getBadgeContext(userId)
           }
       var newCtx = ctx.copy(createdEvents = ctx.createdEvents + 1)
-      val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-      if (hour in 5..8) {
+      val hour = Calendar.getInstance()[Calendar.HOUR_OF_DAY]
+      if (hour in EARLY_MORNING_START..EARLY_MORNING_END) {
         newCtx = newCtx.copy(earlyCreate = newCtx.earlyCreate + 1)
-      } else if (hour in 0..2) {
+      } else if (hour in LATE_NIGHT_START..LATE_NIGHT_END) {
         newCtx = newCtx.copy(lateCreate = newCtx.lateCreate + 1)
       }
       if (userId != null) {
@@ -261,11 +267,11 @@ class EventRepositoryFirestore(
 
       if (join) {
         val ctx = badgeRepository.getBadgeContext(userId)
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val hour = Calendar.getInstance()[Calendar.HOUR_OF_DAY]
         var newCtx = ctx.copy(joinedEvents = ctx.joinedEvents + 1)
-        if (hour in 5..8) {
+        if (hour in EARLY_MORNING_START..EARLY_MORNING_END) {
           newCtx = newCtx.copy(earlyJoin = newCtx.earlyJoin + 1)
-        } else if (hour in 0..2) {
+        } else if (hour in LATE_NIGHT_START..LATE_NIGHT_END) {
           newCtx = newCtx.copy(lateJoin = newCtx.lateJoin + 1)
         }
         badgeRepository.saveBadgeContext(userId, newCtx)

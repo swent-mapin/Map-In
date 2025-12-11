@@ -1,6 +1,7 @@
 package com.swent.mapin.ui.profile
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -114,7 +115,9 @@ class ProfileViewModel(
       badgeRepository = BadgeRepositoryFirestore()
       friendRequestRepository = FriendRequestRepository(notificationService = NotificationService())
     } catch (e: Exception) {
-      println("ProfileViewModel - Failed initializing repositories: ${e.message}")
+      Log.e(
+          "BadgeRepoInitialization",
+          "ProfileViewModel - Failed initializing repositories: ${e.message}")
     }
 
     try {
@@ -122,7 +125,7 @@ class ProfileViewModel(
       fetchBadgeContext()
     } catch (e: Exception) {
       // Gracefully handle initialization errors (e.g., Firebase not initialized in tests)
-      println("ProfileViewModel - Init error: ${e.message}")
+      Log.e("BadgeRepoInitialization", "ProfileViewModel - Init error: ${e.message}")
       _isLoading.value = false
     }
   }
@@ -165,7 +168,9 @@ class ProfileViewModel(
       val repo =
           badgeRepository
               ?: run {
-                println("ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
+                Log.e(
+                    "badgeRepoInitialization",
+                    "ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
                 return@launch
               }
 
@@ -173,7 +178,9 @@ class ProfileViewModel(
           try {
             repo.getBadgeContext(currentUser.uid)
           } catch (e: Exception) {
-            println("ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
+            Log.e(
+                "badgeFetchFail",
+                "ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
             BadgeContext()
           }
 
@@ -183,7 +190,9 @@ class ProfileViewModel(
       try {
         calculateAndUpdateBadges()
       } catch (e: Exception) {
-        println("ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
+        Log.e(
+            "badgeCalculationFail",
+            "ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
       }
     }
   }
@@ -200,7 +209,9 @@ class ProfileViewModel(
   private suspend fun calculateAndUpdateBadges() {
     // Skip badge calculation if dependencies are not available (e.g., in tests)
     if (badgeRepository == null || friendRequestRepository == null) {
-      println("ProfileViewModel - Skipping badge calculation (dependencies not available)")
+      Log.e(
+          "BadgeCalculationSkip",
+          "ProfileViewModel - Skipping badge calculation (dependencies not available)")
       return
     }
 
@@ -219,14 +230,16 @@ class ProfileViewModel(
 
     // Persist to Firestore
     try {
-      val success = badgeRepository!!.saveBadgeProgress(currentUser.uid, calculatedBadges)
+      val success = badgeRepository?.saveBadgeProgress(currentUser.uid, calculatedBadges) ?: false
       if (success) {
-        println("ProfileViewModel - Successfully saved ${calculatedBadges.size} badges")
+        Log.e(
+            "BadgeCalculationSuccess",
+            "ProfileViewModel - Successfully saved ${calculatedBadges.size} badges")
       } else {
-        println("ProfileViewModel - Failed to save badges to Firestore")
+        Log.e("BadgeCalculationFail", "ProfileViewModel - Failed to save badges to Firestore")
       }
     } catch (e: Exception) {
-      println("ProfileViewModel - Exception saving badges: ${e.message}")
+      Log.e("BadgeCalculationException", "ProfileViewModel - Exception saving badges: ${e.message}")
       e.printStackTrace()
     }
   }
