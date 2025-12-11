@@ -25,6 +25,13 @@ import kotlinx.coroutines.launch
  * - Pagination for loading older messages
  * - Error handling for message operations
  *
+ * **Error Propagation**: All operation errors are exposed through the [error] StateFlow for
+ * centralized error observation and handling.
+ *
+ * **Lifecycle**: Active message subscriptions are automatically cancelled when switching
+ * conversations ([observeMessages]) or when the ViewModel is cleared ([onCleared]) to prevent
+ * memory leaks.
+ *
  * @property messageRepository Repository for message data operations
  */
 class MessageViewModel(
@@ -44,13 +51,13 @@ class MessageViewModel(
   /**
    * Start observing messages with live updates and pagination support.
    *
-   * Subscribes to real-time updates from Firestore. New messages are automatically added to the
-   * list as they arrive.
+   * Cancels any existing subscription before starting a new one to prevent memory leaks when
+   * switching conversations.
    *
    * @param conversationId The ID of the conversation to observe
    */
   fun observeMessages(conversationId: String) {
-    messagesJob?.cancel()
+    messagesJob?.cancel() // Cancel existing subscription when switching conversations
     messagesJob =
         viewModelScope.launch {
           try {
@@ -115,6 +122,6 @@ class MessageViewModel(
 
   override fun onCleared() {
     super.onCleared()
-    messagesJob?.cancel()
+    messagesJob?.cancel() // Cleanup: prevent memory leaks when ViewModel is destroyed
   }
 }
