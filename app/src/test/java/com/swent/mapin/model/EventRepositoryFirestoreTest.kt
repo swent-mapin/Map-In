@@ -80,8 +80,7 @@ class EventRepositoryFirestoreTest {
     whenever(fakeUser.uid).thenReturn("currentUser")
     whenever(fakeAuth.currentUser).thenReturn(fakeUser)
 
-    firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }
-      .thenReturn(fakeAuth)
+    firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(fakeAuth)
     badgeRepo = mock()
     runBlocking {
       whenever(badgeRepo.getBadgeContext(any())).thenReturn(BadgeContext())
@@ -675,48 +674,46 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_friendsOnly_withNoFriends_returnsEmpty() = runTest {
+    val filters = Filters(friendsOnly = true)
 
-      val filters = Filters(friendsOnly = true)
+    // No friends
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
 
-      // No friends
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      val result = repo.getFilteredEvents(filters, "currentUser")
-
-      verify(friendRepo).getFriends("currentUser")
-      assertTrue(result.isEmpty())
+    verify(friendRepo).getFriends("currentUser")
+    assertTrue(result.isEmpty())
   }
 
   @Test
   fun getFilteredEvents_friendsOnly_withTags_appliesTagsClientSide() = runTest {
+    val filters = Filters(friendsOnly = true, tags = setOf("music"))
 
-      val filters = Filters(friendsOnly = true, tags = setOf("music"))
+    val friend1 =
+        FriendWithProfile(
+            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+            friendshipStatus = FriendshipStatus.ACCEPTED)
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
-      val friend1 =
-          FriendWithProfile(
-              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-              friendshipStatus = FriendshipStatus.ACCEPTED)
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
+    val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
+    val sportEvent = createEvent("E2", "Game", ownerId = "friend1", tags = listOf("sport"))
+    val doc1 = doc("E1", musicEvent)
+    val doc2 = doc("E2", sportEvent)
+    val snap = qs(doc1, doc2)
 
-      val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
-      val sportEvent = createEvent("E2", "Game", ownerId = "friend1", tags = listOf("sport"))
-      val doc1 = doc("E1", musicEvent)
-      val doc2 = doc("E2", sportEvent)
-      val snap = qs(doc1, doc2)
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+    whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val queryMock = mock<Query>()
-      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
-          .thenReturn(queryMock)
-      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
-      whenever(queryMock.get()).thenReturn(taskOf(snap))
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      val result = repo.getFilteredEvents(filters, "currentUser")
-
-      // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
-      verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
-      assertEquals(1, result.size)
-      assertEquals("Concert", result.first().title)
-      assertTrue("music" in result.first().tags)
+    // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
+    verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
+    assertEquals(1, result.size)
+    assertEquals("Concert", result.first().title)
+    assertTrue("music" in result.first().tags)
   }
 
   @Test
@@ -735,67 +732,67 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_allFilters_combinesCorrectly() = runTest {
-      val filters =
-          Filters(
-              friendsOnly = true,
-              tags = setOf("music"),
-              popularOnly = true,
-              maxPrice = 50,
-              startDate = LocalDate.now(),
-              endDate = LocalDate.now().plusDays(7))
+    val filters =
+        Filters(
+            friendsOnly = true,
+            tags = setOf("music"),
+            popularOnly = true,
+            maxPrice = 50,
+            startDate = LocalDate.now(),
+            endDate = LocalDate.now().plusDays(7))
 
-      val friend1 =
-          FriendWithProfile(
-              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-              friendshipStatus = FriendshipStatus.ACCEPTED)
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
+    val friend1 =
+        FriendWithProfile(
+            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+            friendshipStatus = FriendshipStatus.ACCEPTED)
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
-      val validEvent =
-          createEvent(
-              uid = "E1",
-              title = "Valid Event",
-              ownerId = "friend1",
-              tags = listOf("music"),
-              participantIds = List(35) { "user$it" },
-              price = 30.0)
+    val validEvent =
+        createEvent(
+            uid = "E1",
+            title = "Valid Event",
+            ownerId = "friend1",
+            tags = listOf("music"),
+            participantIds = List(35) { "user$it" },
+            price = 30.0)
 
-      val invalidEvent1 =
-          createEvent(
-              uid = "E2",
-              title = "Wrong Tag",
-              ownerId = "friend1",
-              tags = listOf("sport"),
-              participantIds = List(35) { "user$it" },
-              price = 30.0)
+    val invalidEvent1 =
+        createEvent(
+            uid = "E2",
+            title = "Wrong Tag",
+            ownerId = "friend1",
+            tags = listOf("sport"),
+            participantIds = List(35) { "user$it" },
+            price = 30.0)
 
-      val invalidEvent2 =
-          createEvent(
-              uid = "E3",
-              title = "Not Popular",
-              ownerId = "friend1",
-              tags = listOf("music"),
-              participantIds = listOf("user1"),
-              price = 30.0)
+    val invalidEvent2 =
+        createEvent(
+            uid = "E3",
+            title = "Not Popular",
+            ownerId = "friend1",
+            tags = listOf("music"),
+            participantIds = listOf("user1"),
+            price = 30.0)
 
-      val doc1 = doc("E1", validEvent)
-      val doc2 = doc("E2", invalidEvent1)
-      val doc3 = doc("E3", invalidEvent2)
-      val snap = qs(doc1, doc2, doc3)
+    val doc1 = doc("E1", validEvent)
+    val doc2 = doc("E2", invalidEvent1)
+    val doc3 = doc("E3", invalidEvent2)
+    val snap = qs(doc1, doc2, doc3)
 
-      val queryMock = mock<Query>()
-      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
-          .thenReturn(queryMock)
-      whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
-      whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
-      whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
-      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
-      whenever(queryMock.get()).thenReturn(taskOf(snap))
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+    whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+    whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
+    whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+    whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val result = repo.getFilteredEvents(filters, "currentUser")
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      // Only validEvent should pass all filters
-      assertEquals(1, result.size)
-      assertEquals("Valid Event", result.first().title)
+    // Only validEvent should pass all filters
+    assertEquals(1, result.size)
+    assertEquals("Valid Event", result.first().title)
   }
 
   // ========== LISTEN TO FILTERED EVENTS TESTS ==========
