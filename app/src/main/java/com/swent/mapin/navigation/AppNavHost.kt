@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.swent.mapin.ui.ai.AiAssistantScreen
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.chat.ChatScreen
 import com.swent.mapin.ui.chat.ConversationScreen
@@ -27,6 +28,8 @@ import com.swent.mapin.ui.memory.MemoriesScreen
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
+
+// Assisted by AI
 
 /**
  * Extracts an event ID from a deep link URL using proper URI parsing.
@@ -118,6 +121,7 @@ fun AppNavHost(
           onNavigateToFriends = { navController.navigate(Route.Friends.route) },
           onNavigateToMemories = { navController.navigate(Route.Memories.route) },
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
+          onNavigateToAiAssistant = { navController.navigate(Route.AiAssistant.route) },
           renderMap = renderMap,
           deepLinkEventId = currentDeepLinkEventId,
           onDeepLinkConsumed = { currentDeepLinkEventId = null },
@@ -215,6 +219,18 @@ fun AppNavHost(
           conversationId = conversationId,
           conversationName = name,
           onNavigateBack = { safePopBackStack() })
+    }
+
+    composable(Route.AiAssistant.route) {
+      AiAssistantScreen(
+          onNavigateBack = { safePopBackStack() },
+          onEventSelected = { eventId ->
+            // Navigate back to map with the selected event
+            navController.navigate(Route.Map.route) {
+              popUpTo(Route.Map.route) { inclusive = true }
+              launchSingleTop = true
+            }
+          })
     }
   }
 }
