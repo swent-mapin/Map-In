@@ -127,8 +127,17 @@ class AiAssistantScreenTest {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
+    // Wait for composition to stabilize
+    composeTestRule.waitForIdle()
+
     composeTestRule.onNodeWithText("Recommended Events:").assertIsDisplayed()
     composeTestRule.onNodeWithTag("eventCard_event1").assertIsDisplayed()
+
+    // Scroll to second event to ensure it's visible
+    composeTestRule
+        .onNodeWithTag("conversationList")
+        .performScrollToNode(hasTestTag("eventCard_event2"))
+
     composeTestRule.onNodeWithTag("eventCard_event2").assertIsDisplayed()
   }
 
@@ -143,9 +152,20 @@ class AiAssistantScreenTest {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
-    // Verify event details
+    // Wait for composition to stabilize
+    composeTestRule.waitForIdle()
+
+    // Verify first event details
+    composeTestRule.onNodeWithTag("eventCard_event1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Jazz Concert at Sunset Club").assertIsDisplayed()
     composeTestRule.onNodeWithText("🕐 8:00 PM").assertIsDisplayed()
+
+    // Scroll to second event to make it visible
+    composeTestRule
+        .onNodeWithTag("conversationList")
+        .performScrollToNode(hasTestTag("eventCard_event2"))
+
+    composeTestRule.onNodeWithTag("eventCard_event2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Rock Concert at Olympia").assertIsDisplayed()
     composeTestRule.onNodeWithText("🕐 9:30 PM").assertIsDisplayed()
   }
@@ -226,9 +246,19 @@ class AiAssistantScreenTest {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
+    // Wait for composition to stabilize
+    composeTestRule.waitForIdle()
+
     // Click first event
     composeTestRule.onNodeWithTag("eventCard_event1").performClick()
     assert(eventSelectedCount == 1)
+
+    // Scroll to second event to make it visible and clickable
+    composeTestRule
+        .onNodeWithTag("conversationList")
+        .performScrollToNode(hasTestTag("eventCard_event2"))
+
+    composeTestRule.waitForIdle()
 
     // Click second event
     composeTestRule.onNodeWithTag("eventCard_event2").performClick()
