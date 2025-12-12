@@ -63,5 +63,5 @@ sealed class Route(val route: String) {
   object Memories : Route("memories")
 
   /** AI Assistant screen - Voice-based AI event recommendations */
-  object AiAssistant : Route("aiAssistant")
+  object AiAssistant : Route("aiassistant")
 }
