@@ -97,20 +97,27 @@ enum class EventPinType(
 
   companion object {
     /**
-     * Determines the appropriate pin type based on the event's first tag. Falls back to DEFAULT if
-     * no matching tag is found.
+     * Determines the appropriate pin type based on the event's tags. Scans all tags to find the
+     * first matching keyword. Falls back to DEFAULT if no matching tag is found.
      *
      * @param event The event to determine pin type for
      * @return The matching EventPinType
      */
     @VisibleForTesting
     fun fromEvent(event: Event): EventPinType {
-      val firstTag = event.tags.firstOrNull()?.lowercase() ?: return DEFAULT
+      if (event.tags.isEmpty()) return DEFAULT
 
-      // Check each pin type's keywords for a match
-      return entries.firstOrNull { pinType ->
-        pinType != DEFAULT && pinType.keywords.any { keyword -> firstTag.contains(keyword) }
-      } ?: DEFAULT
+      // Check all tags to find the first match
+      for (tag in event.tags) {
+        val lowerTag = tag.lowercase()
+        val matchingType =
+            entries.firstOrNull { pinType ->
+              pinType != DEFAULT && pinType.keywords.any { keyword -> lowerTag.contains(keyword) }
+            }
+        if (matchingType != null) return matchingType
+      }
+
+      return DEFAULT
     }
   }
 }
@@ -150,20 +157,15 @@ fun calculateCapacityState(event: Event): CapacityState {
 /**
  * Gets the appropriate drawable resource ID for an event based on its type and capacity.
  *
+ * Delegates to [getEventPinInfo] to ensure single source of truth for pin drawable logic.
+ *
  * @param event The event to get the pin icon for
  * @return The drawable resource ID for the appropriate pin icon
  */
 @VisibleForTesting
 @DrawableRes
 fun getEventPinDrawableRes(event: Event): Int {
-  val pinType = EventPinType.fromEvent(event)
-  val capacityState = calculateCapacityState(event)
-
-  return when (capacityState) {
-    CapacityState.AVAILABLE -> pinType.greenIcon
-    CapacityState.LIMITED -> pinType.orangeIcon
-    CapacityState.FULL -> pinType.redIcon
-  }
+  return getEventPinInfo(event).drawableRes
 }
 
 /**

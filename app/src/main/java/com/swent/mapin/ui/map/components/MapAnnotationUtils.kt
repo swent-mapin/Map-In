@@ -148,14 +148,23 @@ internal fun createEventAnnotations(
  * Each event gets a pin based on its first tag (determines shape/icon) and its capacity state
  * (determines color: green, orange, or red).
  *
+ * Bitmaps are cached by drawable resource ID to avoid duplicate allocations when multiple events
+ * share the same icon.
+ *
  * @param context The context to load drawable resources
  * @param events List of events to create bitmaps for
  * @return Map of event UID to Bitmap, events with failed bitmap loading are omitted
  */
 fun createEventBitmaps(context: Context, events: List<Event>): Map<String, Bitmap> {
+  val bitmapCache = mutableMapOf<Int, Bitmap>()
   return events
       .mapNotNull { event ->
-        getEventPinBitmap(context, event)?.let { bitmap -> event.uid to bitmap }
+        val drawableRes = getEventPinDrawableRes(event)
+        val bitmap =
+            bitmapCache.getOrPut(drawableRes) {
+              context.drawableToBitmap(drawableRes) ?: return@mapNotNull null
+            }
+        event.uid to bitmap
       }
       .toMap()
 }

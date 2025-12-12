@@ -902,7 +902,9 @@ private fun MapLayers(
 
   // Create event-specific pin bitmaps based on event tag and capacity
   val eventBitmaps =
-      remember(context, viewModel.events) { createEventBitmaps(context, viewModel.events) }
+      remember(context, viewModel.events.map { it.uid }) {
+        createEventBitmaps(context, viewModel.events)
+      }
 
   val annotations =
       remember(viewModel.events, annotationStyle, viewModel.selectedEvent, eventBitmaps) {
