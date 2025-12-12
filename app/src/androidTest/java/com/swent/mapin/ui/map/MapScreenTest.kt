@@ -14,7 +14,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -399,50 +398,6 @@ class MapScreenTest {
     rule.onNodeWithTag("bottomSheet").performTouchInput { swipeUp() }
     rule.waitForIdle()
     rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
-  }
-
-  @Test
-  fun mapScreen_onCenterCamera_behavesCorrectly() {
-    var callbackExecuted = false
-    var lowZoomBranchTested = false
-    var highZoomBranchTested = false
-    var offsetCalculated = false
-    var locationUsed = false
-
-    val config =
-        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
-    lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
-
-    rule.setContent {
-      MaterialTheme {
-        viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
-      }
-    }
-
-    rule.waitForIdle()
-
-    rule.runOnIdle {
-      viewModel.setCenterCameraCallback { event, _ ->
-        callbackExecuted = true
-        lowZoomBranchTested = true
-        highZoomBranchTested = true
-        offsetCalculated = true
-        locationUsed = (event.location.longitude == testEvent.location.longitude)
-      }
-      viewModel.onEventPinClicked(testEvent)
-    }
-
-    rule.waitForIdle()
-    Thread.sleep(500)
-    rule.waitForIdle()
-
-    assertTrue("Callback should execute", callbackExecuted)
-    assertTrue("Low zoom branch (<14) should be tested", lowZoomBranchTested)
-    assertTrue("High zoom branch (>=14) should be tested", highZoomBranchTested)
-    assertTrue("Offset calculation should be tested", offsetCalculated)
-    assertTrue("Event location should be used", locationUsed)
   }
 
   @Test

@@ -4,11 +4,6 @@ import com.swent.mapin.model.UserProfile
 import org.junit.Assert.*
 import org.junit.Test
 
-/**
- * Unit tests for BadgeManager.
- *
- * Tests badge calculation logic including unlock criteria and progress tracking.
- */
 class BadgeManagerTest {
 
   // ==================== Friendly Badge Tests ====================
@@ -16,9 +11,9 @@ class BadgeManagerTest {
   @Test
   fun `calculateBadges returns Friendly badge unlocked when user has one friend`() {
     val profile = UserProfile(userId = "user1", name = "Test User")
-    val friendsCount = 1
+    val badgeContext = BadgeContext(friendsCount = 1) // updated
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val friendlyBadge = badges.find { it.id == "friendly" }
     assertNotNull("Friendly badge should exist", friendlyBadge)
@@ -31,9 +26,9 @@ class BadgeManagerTest {
   @Test
   fun `calculateBadges returns Friendly badge locked when user has no friends`() {
     val profile = UserProfile(userId = "user1", name = "Test User")
-    val friendsCount = 0
+    val badgeContext = BadgeContext(friendsCount = 0) // updated
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val friendlyBadge = badges.find { it.id == "friendly" }
     assertNotNull("Friendly badge should exist", friendlyBadge)
@@ -53,9 +48,9 @@ class BadgeManagerTest {
             location = "Paris",
             hobbies = listOf("Reading", "Gaming"),
             avatarUrl = "https://example.com/avatar.jpg")
-    val friendsCount = 0
+    val badgeContext = BadgeContext() // friendsCount not relevant here
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
     assertNotNull("Profile Pro badge should exist", profileProBadge)
@@ -73,9 +68,9 @@ class BadgeManagerTest {
             location = "Paris",
             hobbies = emptyList(),
             avatarUrl = null)
-    val friendsCount = 0
+    val badgeContext = BadgeContext()
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
     assertFalse("Profile Pro badge should be locked", profileProBadge!!.isUnlocked)
@@ -92,9 +87,9 @@ class BadgeManagerTest {
             location = "Unknown",
             hobbies = listOf("Reading"),
             avatarUrl = "person")
-    val friendsCount = 0
+    val badgeContext = BadgeContext()
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
     assertFalse(
@@ -117,9 +112,9 @@ class BadgeManagerTest {
             hobbies = listOf("Reading"),
             avatarUrl = null,
             profilePictureUrl = "https://example.com/profile.jpg")
-    val friendsCount = 0
+    val badgeContext = BadgeContext()
 
-    val badges = BadgeManager.calculateBadges(profile, friendsCount)
+    val badges = BadgeManager.calculateBadges(profile, badgeContext)
 
     val profileProBadge = badges.find { it.id == "profile_pro" }
     assertTrue(

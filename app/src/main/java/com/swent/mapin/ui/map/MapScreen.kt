@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
@@ -69,7 +70,6 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
@@ -110,6 +110,7 @@ import com.swent.mapin.ui.map.components.SheetInteractionMetrics
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
 import com.swent.mapin.ui.map.components.createEventAnnotations
+import com.swent.mapin.ui.map.components.createEventBitmaps
 import com.swent.mapin.ui.map.components.drawableToBitmap
 import com.swent.mapin.ui.map.components.findEventForAnnotation
 import com.swent.mapin.ui.map.components.mapPointerInput
@@ -141,6 +142,7 @@ fun MapScreen(
     onNavigateToFriends: () -> Unit = {},
     onNavigateToMemories: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToAiAssistant: () -> Unit = {},
     deepLinkEventId: String? = null,
     onDeepLinkConsumed: () -> Unit = {},
     memoryVM: MemoriesViewModel = viewModel(),
@@ -582,18 +584,33 @@ fun MapScreen(
         modifier =
             Modifier.align(Alignment.BottomStart)
                 .padding(start = 16.dp, bottom = chatBottomPadding)) {
-          FilledIconButton(
-              onClick = { onNavigateToChat() },
-              shape = CircleShape,
-              modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
-              colors =
-                  IconButtonDefaults.filledIconButtonColors(
-                      containerColor = MaterialTheme.colorScheme.primary,
-                      contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Go to Chats")
-              }
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // AI Assistant button
+            FilledIconButton(
+                onClick = { onNavigateToAiAssistant() },
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp).testTag("aiAssistantButton"),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary)) {
+                  Icon(imageVector = Icons.Default.Mic, contentDescription = "AI Assistant")
+                }
+
+            // Chat button
+            FilledIconButton(
+                onClick = { onNavigateToChat() },
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.Send,
+                      contentDescription = "Go to Chats")
+                }
+          }
         }
 
     ScrimOverlay(
@@ -929,9 +946,16 @@ private fun MapLayers(
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
+  // Create event-specific pin bitmaps based on event tag and capacity
+  val eventBitmaps =
+      remember(context, viewModel.events.map { it.uid }) {
+        createEventBitmaps(context, viewModel.events)
+      }
+
   val annotations =
-      remember(viewModel.events, annotationStyle, selectedEvent) {
-        createEventAnnotations(viewModel.events, annotationStyle, selectedEvent?.uid)
+      remember(viewModel.events, annotationStyle, selectedEvent, eventBitmaps) {
+        createEventAnnotations(
+            viewModel.events, annotationStyle, selectedEvent?.uid, eventBitmaps)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -953,7 +977,6 @@ private fun MapLayers(
   if (viewModel.showHeatmap || !shouldCluster) {
     // No clustering: used for heatmap mode or when a pin is selected
     PointAnnotationGroup(annotations = annotations) {
-      markerBitmap?.let { iconImage = IconImage(it) }
       iconAllowOverlap = false // Enable collision detection
       textAllowOverlap = false // Enable collision detection for text
       iconIgnorePlacement = false // Respect other symbols
@@ -968,7 +991,6 @@ private fun MapLayers(
   } else {
     // With clustering: default behavior when no pin is selected
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-      markerBitmap?.let { iconImage = IconImage(it) }
       iconAllowOverlap = false // Enable collision detection
       textAllowOverlap = false // Enable collision detection for text
       iconIgnorePlacement = false // Respect other symbols
