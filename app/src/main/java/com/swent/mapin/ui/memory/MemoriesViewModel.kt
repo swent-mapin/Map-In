@@ -25,9 +25,6 @@ class MemoriesViewModel(
   private val _memories = MutableStateFlow<List<Memory>>(emptyList())
   val memories = _memories.asStateFlow()
 
-  private val _isLoading = MutableStateFlow(false)
-  val isLoading = _isLoading.asStateFlow()
-
   private val _selectedMemory = MutableStateFlow<Memory?>(null)
   val selectedMemory = _selectedMemory.asStateFlow()
 
@@ -44,12 +41,9 @@ class MemoriesViewModel(
   fun loadMemoriesOfOwner() {
     viewModelScope.launch {
       try {
-        _isLoading.value = true
         _memories.value = memoryRepository.getMemoriesByOwner(firebaseAuth.currentUser!!.uid)
       } catch (e: Exception) {
         _error.value = e.message
-      } finally {
-        _isLoading.value = false
       }
     }
   }

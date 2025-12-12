@@ -46,7 +46,7 @@ private val memoryDateFormatter =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit = {},
     onOpenEvent: (eventId: String) -> Unit = {},
     viewModel: MemoriesViewModel = viewModel()
 ) {
