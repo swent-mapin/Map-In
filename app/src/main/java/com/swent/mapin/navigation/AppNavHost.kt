@@ -71,6 +71,9 @@ fun AppNavHost(
   // Track current deep link being processed
   var currentDeepLinkEventId by remember { mutableStateOf<String?>(null) }
 
+  // Track event selected from AI Assistant
+  var aiSelectedEventId by remember { mutableStateOf<String?>(null) }
+
   // Process deep link with LaunchedEffect
   LaunchedEffect(deepLink) {
     if (deepLink != null) {
@@ -123,8 +126,11 @@ fun AppNavHost(
           onNavigateToChat = { navController.navigate(Route.Chat.route) },
           onNavigateToAiAssistant = { navController.navigate(Route.AiAssistant.route) },
           renderMap = renderMap,
-          deepLinkEventId = currentDeepLinkEventId,
-          onDeepLinkConsumed = { currentDeepLinkEventId = null },
+          deepLinkEventId = currentDeepLinkEventId ?: aiSelectedEventId,
+          onDeepLinkConsumed = {
+            currentDeepLinkEventId = null
+            aiSelectedEventId = null
+          },
           autoRequestPermissions = autoRequestPermissions)
     }
 
@@ -225,6 +231,8 @@ fun AppNavHost(
       AiAssistantScreen(
           onNavigateBack = { safePopBackStack() },
           onEventSelected = { eventId ->
+            // Store the selected event ID
+            aiSelectedEventId = eventId
             // Navigate back to map with the selected event
             navController.navigate(Route.Map.route) {
               popUpTo(Route.Map.route) { inclusive = true }
