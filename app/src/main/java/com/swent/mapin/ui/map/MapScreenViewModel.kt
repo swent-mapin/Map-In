@@ -34,6 +34,7 @@ import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.DirectionViewModel
+import com.swent.mapin.ui.map.eventstate.EventLists
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationController
 import com.swent.mapin.ui.map.location.LocationManager
@@ -966,7 +967,7 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.joinSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
     }
   }
 
@@ -976,7 +977,7 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.leaveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
@@ -986,7 +987,7 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.saveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.SAVED)
     }
   }
 
@@ -996,7 +997,7 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.unsaveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid)
+      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
