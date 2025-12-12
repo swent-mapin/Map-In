@@ -134,8 +134,8 @@ fun AppNavHost(
           renderMap = renderMap,
           deepLinkEventId = currentDeepLinkEventId ?: aiSelectedEventId,
           onDeepLinkConsumed = {
-              currentDeepLinkEventId = null
-              aiSelectedEventId = null
+            currentDeepLinkEventId = null
+            aiSelectedEventId = null
           },
           autoRequestPermissions = autoRequestPermissions,
           memoryVM = memoryVM)

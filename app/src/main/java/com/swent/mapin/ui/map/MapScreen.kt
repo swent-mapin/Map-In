@@ -954,8 +954,7 @@ private fun MapLayers(
 
   val annotations =
       remember(viewModel.events, annotationStyle, selectedEvent, eventBitmaps) {
-        createEventAnnotations(
-            viewModel.events, annotationStyle, selectedEvent?.uid, eventBitmaps)
+        createEventAnnotations(viewModel.events, annotationStyle, selectedEvent?.uid, eventBitmaps)
       }
 
   val clusterConfig = remember { createClusterConfig() }

@@ -35,13 +35,13 @@ class MemoriesScreenTest {
 
   @Test
   fun memoriesScreen_showsTopBarAndMemories() {
-      val memoryViewModelMock = mockk<MemoriesViewModel>(relaxed = true)
+    val memoryViewModelMock = mockk<MemoriesViewModel>(relaxed = true)
 
-      every { memoryViewModelMock.memories } returns MutableStateFlow(sampleMemories)
-      every { memoryViewModelMock.error } returns MutableStateFlow(null)
-      every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
-      every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
-      every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
+    every { memoryViewModelMock.memories } returns MutableStateFlow(sampleMemories)
+    every { memoryViewModelMock.error } returns MutableStateFlow(null)
+    every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
+    every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
+    every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
 
     // Compose a small test UI that mirrors the important parts of MemoriesScreen
     composeTestRule.setContent { MemoriesScreen(viewModel = memoryViewModelMock) }
@@ -69,11 +69,11 @@ class MemoriesScreenTest {
   fun memoriesScreen_showsNoMemoriesMessage() {
     val memoryViewModelMock = mockk<MemoriesViewModel>(relaxed = true)
 
-      every { memoryViewModelMock.memories } returns MutableStateFlow(emptyList())
-      every { memoryViewModelMock.error } returns MutableStateFlow(null)
-      every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
-      every { memoryViewModelMock.ownerName } returns MutableStateFlow("")
-      every { memoryViewModelMock.taggedNames } returns MutableStateFlow(emptyList())
+    every { memoryViewModelMock.memories } returns MutableStateFlow(emptyList())
+    every { memoryViewModelMock.error } returns MutableStateFlow(null)
+    every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
+    every { memoryViewModelMock.ownerName } returns MutableStateFlow("")
+    every { memoryViewModelMock.taggedNames } returns MutableStateFlow(emptyList())
 
     composeTestRule.setContent { MemoriesScreen(viewModel = memoryViewModelMock) }
     // Top app bar title
@@ -88,11 +88,11 @@ class MemoriesScreenTest {
   fun navigateBack_buttonExistsAndClickable() {
     val memoryViewModelMock = mockk<MemoriesViewModel>(relaxed = true)
 
-      every { memoryViewModelMock.memories } returns MutableStateFlow(sampleMemories)
-      every { memoryViewModelMock.error } returns MutableStateFlow(null)
-      every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
-      every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
-      every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
+    every { memoryViewModelMock.memories } returns MutableStateFlow(sampleMemories)
+    every { memoryViewModelMock.error } returns MutableStateFlow(null)
+    every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
+    every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
+    every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
 
     var clicked = false
     composeTestRule.setContent {
@@ -108,5 +108,3 @@ class MemoriesScreenTest {
     assert(clicked)
   }
 }
-
-
