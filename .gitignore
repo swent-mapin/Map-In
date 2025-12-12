@@ -36,6 +36,9 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+mapin-release-key.jks
+
+# release.properties
 
 
 #Mac files
