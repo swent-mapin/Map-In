@@ -1,8 +1,8 @@
 package com.swent.mapin.ui.map.components
 
 import com.swent.mapin.R
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
