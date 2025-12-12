@@ -70,7 +70,6 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.sources.GeoJSONData
@@ -110,6 +109,7 @@ import com.swent.mapin.ui.map.components.SheetInteractionMetrics
 import com.swent.mapin.ui.map.components.createAnnotationStyle
 import com.swent.mapin.ui.map.components.createClusterConfig
 import com.swent.mapin.ui.map.components.createEventAnnotations
+import com.swent.mapin.ui.map.components.createEventBitmaps
 import com.swent.mapin.ui.map.components.drawableToBitmap
 import com.swent.mapin.ui.map.components.findEventForAnnotation
 import com.swent.mapin.ui.map.components.mapPointerInput
@@ -917,9 +917,16 @@ private fun MapLayers(
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
+  // Create event-specific pin bitmaps based on event tag and capacity
+  val eventBitmaps =
+      remember(context, viewModel.events.map { it.uid }) {
+        createEventBitmaps(context, viewModel.events)
+      }
+
   val annotations =
-      remember(viewModel.events, annotationStyle, viewModel.selectedEvent) {
-        createEventAnnotations(viewModel.events, annotationStyle, viewModel.selectedEvent?.uid)
+      remember(viewModel.events, annotationStyle, viewModel.selectedEvent, eventBitmaps) {
+        createEventAnnotations(
+            viewModel.events, annotationStyle, viewModel.selectedEvent?.uid, eventBitmaps)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -941,7 +948,6 @@ private fun MapLayers(
   if (viewModel.showHeatmap || !shouldCluster) {
     // No clustering: used for heatmap mode or when a pin is selected
     PointAnnotationGroup(annotations = annotations) {
-      markerBitmap?.let { iconImage = IconImage(it) }
       iconAllowOverlap = false // Enable collision detection
       textAllowOverlap = false // Enable collision detection for text
       iconIgnorePlacement = false // Respect other symbols
@@ -956,7 +962,6 @@ private fun MapLayers(
   } else {
     // With clustering: default behavior when no pin is selected
     PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-      markerBitmap?.let { iconImage = IconImage(it) }
       iconAllowOverlap = false // Enable collision detection
       textAllowOverlap = false // Enable collision detection for text
       iconIgnorePlacement = false // Respect other symbols
