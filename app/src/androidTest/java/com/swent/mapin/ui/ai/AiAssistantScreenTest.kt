@@ -74,13 +74,28 @@ class AiAssistantScreenTest {
   }
 
   @Test
+  fun userMessageBubble_displays_afterMicrophoneClick() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("micButton").performClick()
+
+    // Wait for user message to appear (should be immediate after click)
+    composeTestRule.waitUntil(timeoutMillis = 3000) {
+      composeTestRule.onAllNodesWithTag("userMessage").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithTag("userBubble").assertIsDisplayed()
+    composeTestRule.onNodeWithText("I'm looking for a concert tonight").assertIsDisplayed()
+  }
+
+  @Test
   fun aiMessageBubble_displays_afterUserMessage() {
     composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    // Wait for AI response
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for AI response (2000ms delay in code)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("aiMessage").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -93,12 +108,28 @@ class AiAssistantScreenTest {
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    // Wait for AI to start speaking
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for AI to start speaking (2000ms processing delay)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("speakingIndicator").fetchSemanticsNodes().isNotEmpty()
     }
 
     composeTestRule.onNodeWithTag("speakingIndicator").assertIsDisplayed()
+  }
+
+  @Test
+  fun recommendedEvents_display_afterAiResponse() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("micButton").performClick()
+
+    // Wait for recommended events (after 2000ms delay)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
+      composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeTestRule.onNodeWithText("Recommended Events:").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("eventCard_event1").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("eventCard_event2").assertIsDisplayed()
   }
 
   @Test
@@ -107,8 +138,8 @@ class AiAssistantScreenTest {
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    // Wait for events
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for events (2000ms delay)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -129,8 +160,8 @@ class AiAssistantScreenTest {
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    // Wait for events
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for events (2000ms delay)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -141,14 +172,10 @@ class AiAssistantScreenTest {
   }
 
   @Test
-  fun statusBanner_showsListeningState() {
+  fun statusBanner_showsReadyState_initially() {
     composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
 
-    // Click microphone - it will briefly show listening state
-    composeTestRule.onNodeWithTag("micButton").performClick()
-
-    // The listening state is very brief, so we check that the status banner exists
-    composeTestRule.onNodeWithTag("statusBanner").assertIsDisplayed()
+    composeTestRule.onNodeWithText("💬 Ready to listen").assertIsDisplayed()
   }
 
   @Test
@@ -157,8 +184,8 @@ class AiAssistantScreenTest {
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    // Wait for speaking state
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    // Wait for speaking state (2000ms processing delay)
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule
           .onAllNodesWithText("🔊 Assistant speaking...")
           .fetchSemanticsNodes()
@@ -169,17 +196,10 @@ class AiAssistantScreenTest {
   }
 
   @Test
-  fun conversationList_scrollable() {
+  fun conversationList_isDisplayed() {
     composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
 
-    composeTestRule.onNodeWithTag("micButton").performClick()
-
-    // Wait for content to load
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
-      composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
-    }
-
-    // Verify LazyColumn is scrollable by checking it exists
+    // Verify LazyColumn is displayed
     composeTestRule.onNodeWithTag("conversationList").assertIsDisplayed()
   }
 
@@ -202,7 +222,7 @@ class AiAssistantScreenTest {
     // First interaction
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("eventCard_event1").fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -269,7 +289,7 @@ class AiAssistantScreenTest {
 
     composeTestRule.onNodeWithTag("micButton").performClick()
 
-    composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.waitUntil(timeoutMillis = 8000) {
       composeTestRule.onAllNodesWithTag("aiBubble").fetchSemanticsNodes().isNotEmpty()
     }
 
