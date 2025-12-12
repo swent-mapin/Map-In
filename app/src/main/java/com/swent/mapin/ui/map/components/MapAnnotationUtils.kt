@@ -126,7 +126,7 @@ internal fun createEventAnnotations(
         val iconBitmap = eventBitmaps?.get(event.uid) ?: style.markerBitmap
 
         PointAnnotationOptions()
-            .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
+            .withPoint(Point.fromLngLat(event.location.longitude!!, event.location.latitude!!))
             .apply { iconBitmap?.let { withIconImage(it) } }
             .withIconSize(visual.iconSize)
             .withIconAnchor(IconAnchor.BOTTOM)
