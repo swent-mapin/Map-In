@@ -44,6 +44,26 @@ jobs:
           TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
           EOF
 
+      - name: Restore release keystore
+        env:
+          RELEASE_STORE_FILE_BASE64: ${{ secrets.RELEASE_STORE_FILE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD:  ${{ secrets. RELEASE_KEY_PASSWORD }}
+        run:  |
+          if [ -n "$RELEASE_STORE_FILE_BASE64" ]; then
+            echo "$RELEASE_STORE_FILE_BASE64" | base64 --decode > ${{ github.workspace }}/app/release-keystore.jks
+            cat <<EOF >> gradle.properties
+          RELEASE_STORE_FILE=${{ github.workspace }}/app/release-keystore.jks
+          RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD
+          RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD
+          EOF
+            echo "Release keystore configured"
+          else
+            echo "Release keystore secrets not configured, skipping..."
+          fi
+
       - name: Verify shared SHA-1
         env:
           TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
