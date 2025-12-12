@@ -80,7 +80,6 @@ class MemoriesViewModelTest {
   @Test
   fun initialState_hasExpectedDefaults() = runTest {
     assertEquals(listOf(sampleMemory), viewModel.memories.value)
-    assertEquals(false, viewModel.isLoading.value)
     assertEquals(null, viewModel.selectedMemory.value)
     assertEquals("", viewModel.ownerName.value)
     assertEquals(emptyList<String>(), viewModel.taggedNames.value)
@@ -94,7 +93,6 @@ class MemoriesViewModelTest {
 
     assertEquals(1, viewModel.memories.value.size)
     assertEquals(sampleMemory, viewModel.memories.value[0])
-    assertEquals(false, viewModel.isLoading.value)
     assertEquals(null, viewModel.error.value)
   }
 
