@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
@@ -138,6 +139,7 @@ fun MapScreen(
     onNavigateToFriends: () -> Unit = {},
     onNavigateToMemories: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToAiAssistant: () -> Unit = {},
     deepLinkEventId: String? = null,
     onDeepLinkConsumed: () -> Unit = {}
 ) {
@@ -577,18 +579,33 @@ fun MapScreen(
         modifier =
             Modifier.align(Alignment.BottomStart)
                 .padding(start = 16.dp, bottom = chatBottomPadding)) {
-          FilledIconButton(
-              onClick = { onNavigateToChat() },
-              shape = CircleShape,
-              modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
-              colors =
-                  IconButtonDefaults.filledIconButtonColors(
-                      containerColor = MaterialTheme.colorScheme.primary,
-                      contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Go to Chats")
-              }
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // AI Assistant button
+            FilledIconButton(
+                onClick = { onNavigateToAiAssistant() },
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp).testTag("aiAssistantButton"),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary)) {
+                  Icon(imageVector = Icons.Default.Mic, contentDescription = "AI Assistant")
+                }
+
+            // Chat button
+            FilledIconButton(
+                onClick = { onNavigateToChat() },
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp).testTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary)) {
+                  Icon(
+                      imageVector = Icons.AutoMirrored.Filled.Send,
+                      contentDescription = "Go to Chats")
+                }
+          }
         }
 
     ScrimOverlay(
