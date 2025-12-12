@@ -8,6 +8,9 @@ package com.swent.mapin.model.ai
  * This interface abstracts the TTS implementation to allow for different providers and make testing
  * easier.
  *
+ * Thread Safety: All callback functions (onComplete) are guaranteed to be invoked on the main/UI
+ * thread, making it safe to update UI components directly from these callbacks.
+ *
  * Note: This is a minimal interface for the AI assistant pipeline. UI integration and lifecycle
  * management are handled separately.
  */
@@ -16,7 +19,7 @@ interface TextToSpeechService {
    * Speak the given text aloud.
    *
    * @param text The text to speak
-   * @param onComplete Optional callback invoked when speech is complete
+   * @param onComplete Optional callback invoked when speech is complete (called on main thread)
    */
   fun speak(text: String, onComplete: (() -> Unit)? = null)
 

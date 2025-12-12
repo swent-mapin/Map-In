@@ -3,8 +3,11 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
 import java.util.Locale
 
 /**
@@ -23,6 +26,7 @@ class AndroidTextToSpeechService(
   private var tts: TextToSpeech? = null
   private var isInitialized = false
   private val pendingSpeeches = mutableListOf<Pair<String, (() -> Unit)?>>()
+  private val mainHandler = Handler(Looper.getMainLooper())
 
   init {
     tts =
@@ -33,7 +37,10 @@ class AndroidTextToSpeechService(
                 result != TextToSpeech.LANG_MISSING_DATA &&
                     result != TextToSpeech.LANG_NOT_SUPPORTED
 
-            // Process any pending speeches
+            if (!isInitialized) {
+              Log.w("AndroidTTS", "Language not supported")
+            }
+
             if (isInitialized) {
               pendingSpeeches.forEach { (text, callback) -> speakInternal(text, callback) }
               pendingSpeeches.clear()
@@ -41,6 +48,7 @@ class AndroidTextToSpeechService(
 
             onInitComplete?.invoke(isInitialized)
           } else {
+            Log.e("AndroidTTS", "TTS initialization failed")
             onInitComplete?.invoke(false)
           }
         }
@@ -50,7 +58,6 @@ class AndroidTextToSpeechService(
     if (isInitialized) {
       speakInternal(text, onComplete)
     } else {
-      // Queue for later if not initialized yet
       pendingSpeeches.add(text to onComplete)
     }
   }
@@ -61,17 +68,23 @@ class AndroidTextToSpeechService(
     if (onComplete != null) {
       tts?.setOnUtteranceProgressListener(
           object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-              // Speech started
-            }
+            @Suppress("OVERRIDE_DEPRECATION") override fun onStart(utteranceId: String?) {}
 
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onDone(utteranceId: String?) {
-              onComplete()
+              mainHandler.post { onComplete() }
             }
 
+            @Suppress("OVERRIDE_DEPRECATION")
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
-              onComplete()
+              Log.e("AndroidTTS", "Speech error for utterance: $utteranceId")
+              mainHandler.post { onComplete() }
+            }
+
+            override fun onError(utteranceId: String?, errorCode: Int) {
+              Log.e("AndroidTTS", "Speech error: $errorCode for utterance: $utteranceId")
+              mainHandler.post { onComplete() }
             }
           })
     }
@@ -88,8 +101,10 @@ class AndroidTextToSpeechService(
   }
 
   override fun shutdown() {
-    tts?.stop()
-    tts?.shutdown()
+    tts?.let {
+      it.stop()
+      it.shutdown()
+    }
     tts = null
     isInitialized = false
     pendingSpeeches.clear()

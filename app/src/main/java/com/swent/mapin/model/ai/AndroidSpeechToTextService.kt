@@ -5,9 +5,12 @@ package com.swent.mapin.model.ai
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import java.util.Locale
 
 /**
@@ -27,6 +30,7 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
   private var listening = false
   private var currentOnResult: ((String) -> Unit)? = null
   private var currentOnError: ((String) -> Unit)? = null
+  private val mainHandler = Handler(Looper.getMainLooper())
 
   override fun startListening(onResult: (String) -> Unit, onError: (String) -> Unit) {
     if (listening) {
@@ -107,16 +111,21 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
                 else -> "Unknown error: $error"
               }
-          currentOnError?.invoke(errorMessage)
+          Log.e("AndroidSTT", "Recognition error: $errorMessage")
+          val callback = currentOnError
+          mainHandler.post { callback?.invoke(errorMessage) }
         }
 
         override fun onResults(results: Bundle?) {
           listening = false
           val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
           if (matches != null && matches.isNotEmpty()) {
-            currentOnResult?.invoke(matches[0])
+            val result = matches[0]
+            val callback = currentOnResult
+            mainHandler.post { callback?.invoke(result) }
           } else {
-            currentOnError?.invoke("No speech recognized")
+            val callback = currentOnError
+            mainHandler.post { callback?.invoke("No speech recognized") }
           }
         }
 
