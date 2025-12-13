@@ -388,12 +388,8 @@ fun MemoryFormScreen(
       rememberLauncherForActivityResult(
           contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = MAX_MEDIA_COUNT)) {
               uris ->
-            uris.forEach { uri ->
-              // Avoid duplicates
-              if (!selectedMediaUris.contains(uri)) {
-                selectedMediaUris.add(uri)
-              }
-            }
+          val existingUris = selectedMediaUris.toSet()
+          selectedMediaUris.addAll(uris.filterNot { it in existingUris })
           }
 
   val isFormValid = description.isNotBlank()
