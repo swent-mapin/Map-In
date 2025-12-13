@@ -44,10 +44,7 @@ private val memoryDateFormatter =
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoriesScreen(
-    onNavigateBack: () -> Unit = {},
-    viewModel: MemoriesViewModel = viewModel()
-) {
+fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel = viewModel()) {
 
   val memories by viewModel.memories.collectAsState()
   val error by viewModel.error.collectAsState()
@@ -158,11 +155,9 @@ fun MemoriesScreen(
  * @param memory Memory to format.
  */
 private fun formatMemoryDate(memory: Memory): String =
-    memory.createdAt
-        ?.toDate()
-        ?.time
-        ?.let { millis -> memoryDateFormatter.format(Instant.ofEpochMilli(millis)) }
-        ?: ""
+    memory.createdAt?.toDate()?.time?.let { millis ->
+      memoryDateFormatter.format(Instant.ofEpochMilli(millis))
+    } ?: ""
 
 /**
  * Returns the first image URL from a list of media URLs.
@@ -181,29 +176,26 @@ private fun firstImageUrl(mediaUrls: List<String>): String? =
  */
 @Composable
 private fun MemoryThumbnail(imageUrl: String?) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
+  Box(
+      modifier =
+          Modifier.fillMaxWidth()
+              .aspectRatio(16f / 9f)
+              .background(MaterialTheme.colorScheme.surfaceVariant),
+      contentAlignment = Alignment.Center) {
         if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Memory photo",
-                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                contentScale = ContentScale.Crop
-            )
+          AsyncImage(
+              model = imageUrl,
+              contentDescription = "Memory photo",
+              modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+              contentScale = ContentScale.Crop)
         } else {
-            Icon(
-                imageVector = Icons.Default.Image,
-                contentDescription = "Placeholder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                modifier = Modifier.size(48.dp)
-            )
+          Icon(
+              imageVector = Icons.Default.Image,
+              contentDescription = "Placeholder",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+              modifier = Modifier.size(48.dp))
         }
-    }
+      }
 }
 
 /**
@@ -214,27 +206,21 @@ private fun MemoryThumbnail(imageUrl: String?) {
  */
 @Composable
 private fun MemoryFooter(isPublic: Boolean, dateText: String) {
-    Row(
-        modifier = Modifier.padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
-            contentDescription = if (isPublic) "Public" else "Private",
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = if (isPublic) "Public" else "Private",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp)
-        )
-        Text(
-            text = "  •  Created $dateText",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+  Row(modifier = Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Icon(
+        imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
+        contentDescription = if (isPublic) "Public" else "Private",
+        tint = MaterialTheme.colorScheme.primary)
+    Text(
+        text = if (isPublic) "Public" else "Private",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp))
+    Text(
+        text = "  •  Created $dateText",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
 }
 
 @Composable
@@ -244,8 +230,8 @@ private fun MemoryItem(
     mediaUrls: List<String>,
     taggedNames: List<String>
 ) {
-    val dateText = formatMemoryDate(memory)
-    val imageUrl = firstImageUrl(mediaUrls)
+  val dateText = formatMemoryDate(memory)
+  val imageUrl = firstImageUrl(mediaUrls)
 
   Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
