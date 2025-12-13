@@ -278,12 +278,15 @@ sealed class MediaItem {
 
 // Convert URLs to MediaItem
 fun parseMediaItems(urls: List<String>): List<MediaItem> {
-  val videoExtensions = listOf(".mp4", ".mov", ".avi", ".mkv", ".webm")
-
+  val videoExtensions = setOf("mp4", "mov", "avi", "mkv", "webm")
   return urls.map { url ->
-    val lower = url.lowercase()
-
-    if (videoExtensions.any { lower.contains(it) }) {
+    // 1. Remove query params
+    val withoutQuery = url.substringBefore('?')
+    // 2. Extract filename
+    val fileName = withoutQuery.substringAfterLast('/')
+    // 3. Extract extension
+    val extension = fileName.substringAfterLast('.', "").lowercase()
+    if (extension in videoExtensions) {
       MediaItem.Video(url)
     } else {
       MediaItem.Image(url)
