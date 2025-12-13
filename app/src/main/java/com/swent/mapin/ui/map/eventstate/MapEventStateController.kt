@@ -438,21 +438,21 @@ class MapEventStateController(
    * @return The refreshed [Event] if found, otherwise null.
    */
   fun refreshSelectedEvent(eventId: String, listType: EventLists): Event? {
-    when (listType) {
+    return when (listType) {
       EventLists.ALL -> {
-        return allEvents.find { it.uid == eventId }
+        allEvents.find { it.uid == eventId }
       }
       EventLists.JOINED -> {
-        return joinedEvents.find { it.uid == eventId }
+        joinedEvents.find { it.uid == eventId }
       }
       EventLists.SAVED -> {
-        return savedEvents.find { it.uid == eventId }
+        savedEvents.find { it.uid == eventId }
       }
       EventLists.OWNED -> {
-        return ownedEvents.find { it.uid == eventId }
+        ownedEvents.find { it.uid == eventId }
       }
       EventLists.PAST -> {
-        return attendedEvents.find { it.uid == eventId }
+        attendedEvents.find { it.uid == eventId }
       }
     }
   }

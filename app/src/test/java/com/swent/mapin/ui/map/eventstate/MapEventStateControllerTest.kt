@@ -204,6 +204,41 @@ class MapEventStateControllerTest {
     assertNull(result)
   }
 
+  @Test
+  fun `refreshSelectedEvent returns event from JOINED list`() {
+    val joinedEvent = testEvent.copy(uid = "joined1", participantIds = listOf(testUserId))
+    controller.setJoinedEventsForTest(listOf(joinedEvent))
+    val result = controller.refreshSelectedEvent(joinedEvent.uid, EventLists.JOINED)
+    assertEquals(joinedEvent, result)
+  }
+
+  @Test
+  fun `refreshSelectedEvent returns event from SAVED list`() {
+    val savedEvent = testEvent.copy(uid = "saved1")
+    controller.setSavedEventsForTest(listOf(savedEvent))
+    val result = controller.refreshSelectedEvent(savedEvent.uid, EventLists.SAVED)
+    assertEquals(savedEvent, result)
+  }
+
+  @Test
+  fun `refreshSelectedEvent returns event from OWNED list`() {
+    val ownedEvent = testEvent.copy(uid = "owned1", ownerId = testUserId)
+    controller.setOwnedEventsForTest(listOf(ownedEvent))
+    val result = controller.refreshSelectedEvent(ownedEvent.uid, EventLists.OWNED)
+    assertEquals(ownedEvent, result)
+  }
+
+  @Test
+  fun `refreshSelectedEvent returns event from PAST list`() {
+    val pastTimestamp = com.google.firebase.Timestamp(System.currentTimeMillis() / 1000 - 3600, 0)
+    val pastEvent =
+        testEvent.copy(uid = "past1", participantIds = listOf(testUserId), endDate = pastTimestamp)
+    controller.setJoinedEventsForTest(listOf(pastEvent))
+
+    val result = controller.refreshSelectedEvent(pastEvent.uid, EventLists.PAST)
+    assertEquals(pastEvent, result)
+  }
+
   // ========== Search Tests ==========
   @Test
   fun `searchEvents filters events by title`() {
