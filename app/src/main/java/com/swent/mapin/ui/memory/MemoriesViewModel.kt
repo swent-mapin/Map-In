@@ -38,13 +38,21 @@ class MemoriesViewModel(
     loadMemoriesOfOwner()
   }
 
-  fun loadMemoriesOfOwner() {
+    private fun requireUserUid(): String {
+        return firebaseAuth.currentUser?.uid
+            ?: throw IllegalStateException("User not authenticated")
+    }
+
+    fun loadMemoriesOfOwner() {
     viewModelScope.launch {
-      try {
-        _memories.value = memoryRepository.getMemoriesByOwner(firebaseAuth.currentUser!!.uid)
-      } catch (e: Exception) {
-        _error.value = e.message
-      }
+        try {
+            val uid = requireUserUid()
+            _memories.value = memoryRepository.getMemoriesByOwner(uid)
+        } catch (e: IllegalStateException) {
+            _error.value = e.message
+        } catch (_: Exception) {
+            _error.value = "Failed to load memories"
+        }
     }
   }
 
