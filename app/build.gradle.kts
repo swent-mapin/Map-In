@@ -15,7 +15,7 @@ plugins {
 
 android {
     namespace = "com.swent.mapin"
-    compileSdk = 34
+    compileSdk = 35
 
     val localProps = Properties()
     val localPropsFile = rootProject.file("local.properties")
@@ -39,6 +39,12 @@ android {
     val teamDebugKeyAlias = findSharedKeystoreProperty("TEAM_DEBUG_KEY_ALIAS")
     val teamDebugKeyPassword = findSharedKeystoreProperty("TEAM_DEBUG_KEY_PASSWORD")
 
+    // Release keystore properties
+    val releaseStoreFile = findSharedKeystoreProperty("RELEASE_STORE_FILE")
+    val releaseStorePassword = findSharedKeystoreProperty("RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = findSharedKeystoreProperty("RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = findSharedKeystoreProperty("RELEASE_KEY_PASSWORD")
+
     signingConfigs {
         getByName("debug") {
             val missingProperty = listOf(
@@ -57,15 +63,33 @@ android {
             keyAlias = teamDebugKeyAlias
             keyPassword = teamDebugKeyPassword
         }
+
+        create("release") {
+            val missingProperty = listOf(
+                "RELEASE_STORE_FILE" to releaseStoreFile,
+                "RELEASE_STORE_PASSWORD" to releaseStorePassword,
+                "RELEASE_KEY_ALIAS" to releaseKeyAlias,
+                "RELEASE_KEY_PASSWORD" to releaseKeyPassword
+            ).firstOrNull { it.second.isNullOrBlank() }
+
+            check(missingProperty == null) {
+                "Missing release keystore property: ${missingProperty?.first}. Add it to android/gradle.properties or your local gradle.properties."
+            }
+
+            storeFile = rootProject.file(releaseStoreFile!!)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
     }
 
 
     defaultConfig {
         applicationId = "com.swent.mapin"
         minSdk = 28
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -77,6 +101,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs. getByName("release")  // ADD THIS LINE
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -70,8 +70,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = listOf("Bob", "Charlie"),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -99,8 +98,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -151,8 +149,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = listOf("Bob", "Charlie"),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -184,8 +181,7 @@ class MemoryDetailSheetTest {
             sheetState = sheetState.value,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -218,8 +214,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.MEDIUM,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -284,8 +279,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -345,8 +339,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -382,8 +375,7 @@ class MemoryDetailSheetTest {
             sheetState = sheetState.value,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
@@ -419,8 +411,7 @@ class MemoryDetailSheetTest {
             sheetState = BottomSheetState.FULL,
             ownerName = "Alice",
             taggedUserNames = emptyList(),
-            onClose = {},
-            onOpenLinkedEvent = {})
+            onClose = {})
       }
     }
 
