@@ -967,7 +967,8 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.joinSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
+      _selectedEvent =
+          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
     }
   }
 
