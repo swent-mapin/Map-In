@@ -193,14 +193,14 @@ class MapEventStateControllerTest {
   @Test
   fun `refreshSelectedEvent returns event by ID`() {
     controller.setAllEventsForTest(listOf(testEvent))
-    val result = controller.refreshSelectedEvent(testEvent.uid)
+    val result = controller.refreshSelectedEvent(testEvent.uid, EventLists.ALL)
     assertEquals(testEvent, result)
   }
 
   @Test
   fun `refreshSelectedEvent returns null for non-existent ID`() {
     controller.setAllEventsForTest(listOf(testEvent))
-    val result = controller.refreshSelectedEvent("nonexistent")
+    val result = controller.refreshSelectedEvent("nonexistent", EventLists.ALL)
     assertNull(result)
   }
 
