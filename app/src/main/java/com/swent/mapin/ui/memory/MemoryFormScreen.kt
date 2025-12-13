@@ -297,7 +297,7 @@ private fun UserTaggingSection(
                           modifier = Modifier.size(16.dp),
                           tint = MaterialTheme.colorScheme.onPrimaryContainer)
                       Text(
-                          text = userId, // TODO: Show user name instead of ID
+                          text = userId,
                           style = MaterialTheme.typography.bodySmall,
                           color = MaterialTheme.colorScheme.onPrimaryContainer)
                       IconButton(

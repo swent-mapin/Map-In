@@ -63,19 +63,19 @@ private val USER_DIALOG_LIST_HEIGHT = 250.dp
  */
 @Composable
 fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
-    val notificationService = remember { NotificationService() }
-    val friendRepository = remember {
-        FriendRequestRepository(notificationService = notificationService)
-    }
+  val notificationService = remember { NotificationService() }
+  val friendRepository = remember {
+    FriendRequestRepository(notificationService = notificationService)
+  }
 
-    val viewModel: UserPickerViewModel = viewModel(factory = UserPickerVMFactory(friendRepository))
+  val viewModel: UserPickerViewModel = viewModel(factory = UserPickerVMFactory(friendRepository))
 
-    val friends by viewModel.friends.collectAsState()
-    var userIdInput by remember { mutableStateOf("") }
+  val friends by viewModel.friends.collectAsState()
+  var userIdInput by remember { mutableStateOf("") }
 
-    val friendsList = friends.map { it.userProfile.name }
+  val friendsList = friends.map { it.userProfile.name }
 
-    AlertDialog(
+  AlertDialog(
       onDismissRequest = onDismiss,
       title = { Text("Tag people", style = MaterialTheme.typography.titleLarge) },
       text = {
@@ -140,24 +140,23 @@ class UserPickerViewModel(
     private val firebaseAuth: FirebaseAuth = Firebase.auth
 ) : ViewModel() {
 
-    private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
-    val friends = _friends.asStateFlow()
+  private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
+  val friends = _friends.asStateFlow()
 
-
-    init {
-        viewModelScope.launch {
-            try {
-                val userId = firebaseAuth.currentUser!!.uid
-                _friends.value = friendRepository.getFriends(userId)
-            } catch (e: Exception) {
-                Log.e("UserPickerViewModel", "Error fetching friends", e)
-            }
-        }
+  init {
+    viewModelScope.launch {
+      try {
+        val userId = firebaseAuth.currentUser!!.uid
+        _friends.value = friendRepository.getFriends(userId)
+      } catch (e: Exception) {
+        Log.e("UserPickerViewModel", "Error fetching friends", e)
+      }
     }
+  }
 }
 
 class UserPickerVMFactory(private val repo: FriendRequestRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return UserPickerViewModel(repo) as T
-    }
+  override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    return UserPickerViewModel(repo) as T
+  }
 }
