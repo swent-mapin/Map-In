@@ -48,6 +48,8 @@ import com.swent.mapin.ui.memory.MemoryFormData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -109,7 +111,7 @@ class MapScreenViewModel(
           scope = viewModelScope,
           filterViewModel = filterViewModel,
           connectivityService = connectivityService,
-          getSelectedEvent = { _selectedEvent },
+          getSelectedEvent = { _selectedEvent.value },
           setErrorMessage = { _errorMessage = it },
           clearErrorMessage = { _errorMessage = null })
   private val memoryActionController =
@@ -311,9 +313,8 @@ class MapScreenViewModel(
   val selectedBottomSheetTab: BottomSheetTab
     get() = _selectedBottomSheetTab
 
-  private var _selectedEvent by mutableStateOf<Event?>(null)
-  val selectedEvent: Event?
-    get() = _selectedEvent
+  private var _selectedEvent = MutableStateFlow<Event?>(null)
+  val selectedEvent = _selectedEvent.asStateFlow()
   // Initial event to prefill the memory form when opening it via the '+' button
   private var _memoryFormInitialEvent by mutableStateOf<Event?>(null)
   val memoryFormInitialEvent: Event?
@@ -761,7 +762,7 @@ class MapScreenViewModel(
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {
     // Save current sheet state before opening event detail
     _sheetStateBeforeEvent = bottomSheetState
-    _selectedEvent = event
+    _selectedEvent.value = event
     _organizerState = OrganizerState.Loading
 
     // Try to fetch the name of the owner
@@ -864,7 +865,7 @@ class MapScreenViewModel(
   }
 
   fun closeEventDetail() {
-    _selectedEvent = null
+    _selectedEvent.value = null
     _organizerState = OrganizerState.Loaded(userId = "", name = "")
 
     // Clear directions when closing event detail
@@ -945,7 +946,7 @@ class MapScreenViewModel(
     _showShareDialog = false
   }
 
-  fun isEventJoined(event: Event? = _selectedEvent): Boolean {
+  fun isEventJoined(event: Event? = _selectedEvent.value): Boolean {
     return if (event == null) {
       false
     } else {
@@ -953,7 +954,7 @@ class MapScreenViewModel(
     }
   }
 
-  fun isEventSaved(event: Event? = _selectedEvent): Boolean {
+  fun isEventSaved(event: Event? = _selectedEvent.value): Boolean {
     return if (event == null) {
       false
     } else {
@@ -963,42 +964,41 @@ class MapScreenViewModel(
 
   /** Add the selected event to the current user's joined events. */
   fun joinEvent() {
-    val currentEvent = _selectedEvent ?: return
+    val currentEvent = _selectedEvent.value ?: return
 
     viewModelScope.launch {
       eventStateController.joinSelectedEvent()
-      _selectedEvent =
-          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
+      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
     }
   }
 
   /** Remove the selected event from the current user's joined events. */
   fun unregisterFromEvent() {
-    val currentEvent = _selectedEvent ?: return
+    val currentEvent = _selectedEvent.value ?: return
 
     viewModelScope.launch {
       eventStateController.leaveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
+      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
   /** Saves the selected event for later by the current user. */
   fun saveEventForLater() {
-    val currentEvent = _selectedEvent ?: return
+    val currentEvent = _selectedEvent.value ?: return
 
     viewModelScope.launch {
       eventStateController.saveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.SAVED)
+      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.SAVED)
     }
   }
 
   /** Unsaves the selected event for later by the current user. */
   fun unsaveEventForLater() {
-    val currentEvent = _selectedEvent ?: return
+    val currentEvent = _selectedEvent.value ?: return
 
     viewModelScope.launch {
       eventStateController.unsaveSelectedEvent()
-      _selectedEvent = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
+      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
@@ -1065,7 +1065,7 @@ class MapScreenViewModel(
 
   fun showProfileSheet(userId: String) {
     // Clear selected event to switch UI from EventDetailSheet to BottomSheetContent
-    _selectedEvent = null
+    _selectedEvent.value = null
 
     // Clear any navigation state
     _sheetStateBeforeEvent = null

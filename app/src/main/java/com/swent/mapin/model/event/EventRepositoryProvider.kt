@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.FriendRequestRepository
 import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import com.swent.mapin.model.event.EventRepositoryProvider.getRepository
 
 /** Provider for [EventRepository] implementations to allow easy swapping between data sources. */
@@ -44,6 +45,10 @@ object EventRepositoryProvider {
     val friendRepository = FriendRequestRepository(notificationService = notificationService)
     val userProfileRepository = UserProfileRepository()
     return EventRepositoryFirestore(
-        firestore, friendRepository, notificationService, userProfileRepository)
+        firestore,
+        friendRepository,
+        notificationService,
+        badgeRepository = BadgeRepositoryFirestore(),
+        userProfileRepository = userProfileRepository)
   }
 }

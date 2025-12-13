@@ -61,4 +61,7 @@ sealed class Route(val route: String) {
 
   /** Memories screen - Displays and allows editing of user's memories */
   object Memories : Route("memories")
+
+  /** AI Assistant screen - Voice-based AI event recommendations */
+  object AiAssistant : Route("aiassistant")
 }
