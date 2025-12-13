@@ -65,7 +65,7 @@ class LocalMemoryRepositoryTest {
   @Test
   fun getPublicMemoriesByEvent_returnsOnlyPublicMemories() = runTest {
     val memories = repository.getPublicMemoriesByEvent("1")
-    assertTrue(memories.all { it.isPublic })
+    assertTrue(memories.all { it.public })
     assertTrue(memories.any { it.uid == "mem2" })
   }
 
@@ -136,7 +136,7 @@ class LocalMemoryRepositoryTest {
             description = "Updated description",
             ownerId = "user1",
             eventId = "2",
-            isPublic = false,
+            public = false,
             createdAt = Timestamp.now())
 
     repository.editMemory("mem1", updated)
@@ -179,7 +179,7 @@ class LocalMemoryRepositoryTest {
             description = "Description",
             ownerId = "testUser",
             eventId = null,
-            isPublic = true,
+            public = true,
             createdAt = Timestamp.now(),
             mediaUrls = listOf("url1", "url2"),
             taggedUserIds = listOf("user1", "user2"))

@@ -28,7 +28,7 @@ class MemoriesScreenTest {
               description = "Had an incredible time playing volleyball with friends!",
               eventId = "2",
               ownerId = "user1",
-              isPublic = true,
+              public = true,
               createdAt = Timestamp.now(),
               mediaUrls = listOf("https://picsum.photos/id/69/200"),
               taggedUserIds = listOf("user2", "user3")))

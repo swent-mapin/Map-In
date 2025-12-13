@@ -40,7 +40,7 @@ class MemoryRepositoryFirestore(private val db: FirebaseFirestore) : MemoryRepos
     val snap =
         db.collection(MEMORIES_COLLECTION_PATH)
             .whereEqualTo("eventId", eventId)
-            .whereEqualTo("isPublic", true)
+            .whereEqualTo("public", true)
             .orderBy("createdAt")
             .get()
             .await()

@@ -234,12 +234,12 @@ private fun MemoryItem(
                 verticalAlignment = Alignment.CenterVertically) {
                   Icon(
                       imageVector =
-                          if (memory.isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
-                      contentDescription = if (memory.isPublic) "Public" else "Private",
+                          if (memory.public) Icons.Default.LockOpen else Icons.Default.Lock,
+                      contentDescription = if (memory.public) "Public" else "Private",
                       tint = MaterialTheme.colorScheme.primary,
                   )
                   Text(
-                      text = if (memory.isPublic) "Public" else "Private",
+                      text = if (memory.public) "Public" else "Private",
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
                       modifier = Modifier.padding(start = 4.dp))

@@ -173,7 +173,7 @@ class EndToEndM2 {
               description = testMemoryDescription,
               eventId = testEventId,
               ownerId = testUserId,
-              isPublic = false,
+              public = false,
               createdAt = Timestamp.now(),
               mediaUrls = emptyList(),
               taggedUserIds = emptyList())
