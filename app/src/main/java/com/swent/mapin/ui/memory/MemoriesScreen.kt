@@ -41,13 +41,11 @@ private val memoryDateFormatter =
  * Memories screen displaying a list of the user's memories.
  *
  * @param onNavigateBack Callback to navigate back to the previous screen.
- * @param onOpenEvent Callback to navigate to the event detail screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(
     onNavigateBack: () -> Unit = {},
-    onOpenEvent: (eventId: String) -> Unit = {},
     viewModel: MemoriesViewModel = viewModel()
 ) {
 
@@ -154,6 +152,91 @@ fun MemoriesScreen(
       }
 }
 
+/**
+ * Formats a [Memory] to a human-readable date string.
+ *
+ * @param memory Memory to format.
+ */
+private fun formatMemoryDate(memory: Memory): String =
+    memory.createdAt
+        ?.toDate()
+        ?.time
+        ?.let { millis -> memoryDateFormatter.format(Instant.ofEpochMilli(millis)) }
+        ?: ""
+
+/**
+ * Returns the first image URL from a list of media URLs.
+ *
+ * @param mediaUrls List of media URLs.
+ */
+private fun firstImageUrl(mediaUrls: List<String>): String? =
+    parseMediaItems(mediaUrls)
+        .firstOrNull { it is MediaItem.Image }
+        ?.let { (it as MediaItem.Image).url }
+
+/**
+ * Thumbnail for a memory.
+ *
+ * @param imageUrl URL of the image to display.
+ */
+@Composable
+private fun MemoryThumbnail(imageUrl: String?) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Memory photo",
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Image,
+                contentDescription = "Placeholder",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                modifier = Modifier.size(48.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Footer for a memory.
+ *
+ * @param isPublic Whether the memory is public.
+ * @param dateText Date of the memory.
+ */
+@Composable
+private fun MemoryFooter(isPublic: Boolean, dateText: String) {
+    Row(
+        modifier = Modifier.padding(top = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
+            contentDescription = if (isPublic) "Public" else "Private",
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = if (isPublic) "Public" else "Private",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+        Text(
+            text = "  •  Created $dateText",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @Composable
 private fun MemoryItem(
     memory: Memory,
@@ -161,13 +244,8 @@ private fun MemoryItem(
     mediaUrls: List<String>,
     taggedNames: List<String>
 ) {
-  val dateText =
-      memory.createdAt?.toDate()?.time?.let { millis ->
-        memoryDateFormatter.format(Instant.ofEpochMilli(millis))
-      } ?: ""
-  val items = parseMediaItems(mediaUrls)
-  // Find the first image
-  val firstImage = items.firstOrNull { it is MediaItem.Image } as? MediaItem.Image
+    val dateText = formatMemoryDate(memory)
+    val imageUrl = firstImageUrl(mediaUrls)
 
   Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -177,27 +255,9 @@ private fun MemoryItem(
         Column(modifier = Modifier.fillMaxWidth()) {
 
           // --- 16:9 thumbnail ---
-          Box(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .aspectRatio(16f / 9f)
-                      .background(MaterialTheme.colorScheme.surfaceVariant),
-              contentAlignment = Alignment.Center) {
-                if (firstImage != null) {
-                  AsyncImage(
-                      model = firstImage.url,
-                      contentDescription = "Memory photo",
-                      modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                      contentScale = ContentScale.Crop)
-                } else {
-                  Icon(
-                      imageVector = Icons.Default.Image,
-                      contentDescription = "Placeholder",
-                      tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                      modifier = Modifier.size(48.dp))
-                }
-              }
+          MemoryThumbnail(imageUrl)
 
+          // --- Content ---
           Column(modifier = Modifier.padding(16.dp)) {
 
             // Title
@@ -229,26 +289,7 @@ private fun MemoryItem(
             }
 
             // Footer row: Public + Date
-            Row(
-                modifier = Modifier.padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                  Icon(
-                      imageVector =
-                          if (memory.isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
-                      contentDescription = if (memory.isPublic) "Public" else "Private",
-                      tint = MaterialTheme.colorScheme.primary,
-                  )
-                  Text(
-                      text = if (memory.isPublic) "Public" else "Private",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      modifier = Modifier.padding(start = 4.dp))
-
-                  Text(
-                      text = "  •  Created $dateText",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            MemoryFooter(memory.isPublic, dateText)
           }
         }
       }
