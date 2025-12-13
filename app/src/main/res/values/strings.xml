@@ -17,6 +17,9 @@
     <string name="price_field">Price</string>
     <string name="price_text">Price (optional)</string>
     <string name="price_place_holder">Entry price:</string>
+    <string name="capacity_field">Capacity</string>
+    <string name="capacity_text">Maximum capacity (optional)</string>
+    <string name="capacity_place_holder">Max attendees:</string>
     <string name="currency_switzerland">CHF</string>
     <string name="title_place_holder">Enter the name of your event:</string>
     <string name="day_place_holder">DD</string>
