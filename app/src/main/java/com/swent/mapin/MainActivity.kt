@@ -104,7 +104,8 @@ class MainActivity : FragmentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
-    MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
+    //  Initialize MemoryRepositoryFirestore
+    MemoryRepositoryProvider.getRepository()
 
     // Initialize EventRepositoryFirestore (uncomment to use Firestore backend)
     EventRepositoryProvider.init(this)

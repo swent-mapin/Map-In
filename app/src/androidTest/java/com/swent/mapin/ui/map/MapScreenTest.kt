@@ -5,9 +5,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.memory.MemoriesViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -33,22 +35,30 @@ class MapScreenTest {
 
   @get:Rule val rule = createComposeRule()
 
+  val testMemoryVM = MemoriesViewModel(MemoryRepositoryProvider.getRepository())
+
   @Test
   fun mapScreen_rendersSuccessfully() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
 
   @Test
   fun mapScreen_initialState_showsCollapsedSheet() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").assertIsDisplayed()
     rule.onNodeWithText("Saved").assertExists()
   }
 
   @Test
   fun mapScreen_searchBarClick_expandsToFullState() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").performClick()
     rule.waitForIdle()
     // Verify full state by checking for map interaction blocker (only present in full state)
@@ -57,7 +67,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_searchQuery_persistsAcrossRecomposition() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").performTextInput("basketball")
     rule.waitForIdle()
     rule.onNodeWithText("basketball").assertIsDisplayed()
@@ -65,7 +77,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_mapInteractionBlocker_onlyPresentInFullState() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
 
     rule.onNodeWithText("Search events, people").performClick()
@@ -75,7 +89,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_scrimOverlay_alwaysPresent() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithTag("scrimOverlay").assertIsDisplayed()
 
     rule.onNodeWithText("Search events, people").performClick()
@@ -85,7 +101,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_mapInteractionBlocker_disappearsWhenLeavingFullState() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").performClick()
     rule.waitForIdle()
     rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
@@ -97,7 +115,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_directTransition_collapsedToFull() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").assertIsDisplayed()
     rule.onNodeWithTag("mapInteractionBlocker").assertDoesNotExist()
 
@@ -108,7 +128,9 @@ class MapScreenTest {
 
   @Test
   fun mapScreen_directTransition_fullToCollapsed() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").performClick()
     rule.waitForIdle()
     rule.onNodeWithTag("mapInteractionBlocker").assertIsDisplayed()
@@ -120,7 +142,9 @@ class MapScreenTest {
 
   @Test
   fun mapStyleToggle_isVisible_andToggles() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.waitForIdle()
     rule.onNodeWithTag("mapStyleToggle").ensureVisible().assertIsDisplayed()
     rule.onNodeWithTag("mapStyleToggle").ensureVisible().performClick()
@@ -134,7 +158,9 @@ class MapScreenTest {
 
   @Test
   fun mapStyleToggle_persists_afterBottomSheetTransitions() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.waitForIdle()
     rule.onNodeWithTag("mapStyleToggle").ensureVisible().assertIsDisplayed()
     rule.onNodeWithText("Search events, people").performClick()
@@ -147,7 +173,9 @@ class MapScreenTest {
 
   @Test
   fun searchQuery_clears_whenLeavingFullState() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithText("Search events, people").performTextInput("basketball")
     rule.waitForIdle()
     rule.onNodeWithText("basketball").assertIsDisplayed()
@@ -159,7 +187,9 @@ class MapScreenTest {
 
   @Test
   fun mapStyleToggle_visible_inAllSheetStates() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.onNodeWithTag("mapStyleToggle").ensureVisible().assertIsDisplayed()
     rule.onNodeWithText("Search events, people").performClick()
     rule.waitForIdle()
@@ -172,7 +202,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_heatmapMode_displaysCorrectly() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -188,7 +220,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_satelliteMode_displaysCorrectly() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -213,7 +247,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_locationPermissionFlow_handlesCorrectly() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -234,7 +270,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -246,7 +282,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_switchBetweenStyles_maintainsState() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -283,7 +321,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -317,7 +355,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -343,7 +381,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -365,7 +403,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_showsRegularBottomSheetWhenNoEventSelected() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -374,7 +414,14 @@ class MapScreenTest {
 
   @Test
   fun activity_is_found_after_searching() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme {
+        MapScreen(
+            autoRequestPermissions = false,
+            memoryVM = testMemoryVM,
+        )
+      }
+    }
 
     rule.onNodeWithText("Search events, people").performTextInput("Art Exhibition")
     rule.waitForIdle()
@@ -384,14 +431,18 @@ class MapScreenTest {
 
   @Test
   fun chatButton_is_displayed() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
 
     rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON).ensureVisible().assertIsDisplayed()
   }
 
   @Test
   fun chatButton_staysVisibleAcrossSheetStates() {
-    rule.setContent { MaterialTheme { MapScreen(autoRequestPermissions = false) } }
+    rule.setContent {
+      MaterialTheme { MapScreen(autoRequestPermissions = false, memoryVM = testMemoryVM) }
+    }
     rule.waitForIdle()
 
     val chatButton = rule.onNodeWithTag(ChatScreenTestTags.CHAT_NAVIGATE_BUTTON)
@@ -416,7 +467,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -438,7 +489,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_compassAndLocationButton_positioning() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -454,7 +507,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -477,7 +530,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -498,7 +551,7 @@ class MapScreenTest {
       MaterialTheme {
         val vm = rememberMapScreenViewModel(config)
         viewModel = vm
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -519,7 +572,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -532,7 +585,9 @@ class MapScreenTest {
   @Test
   fun mapScreen_withRenderMapTrue_displaysMapComponents() {
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = true, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = true, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
 
     rule.waitForIdle()
@@ -552,7 +607,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -565,7 +620,7 @@ class MapScreenTest {
     rule.waitForIdle()
 
     // Verify the event was selected (callback worked)
-    rule.runOnIdle { assertEquals(testEvent, viewModel.selectedEvent) }
+    rule.runOnIdle { assertEquals(testEvent, viewModel.selectedEvent.value) }
   }
 
   // ============================================================================
@@ -581,7 +636,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -603,7 +658,7 @@ class MapScreenTest {
         viewModel = rememberMapScreenViewModel(config)
         // Test with autoRequestPermissions = false to avoid launching system dialogs
         // The actual permission request logic is tested through other means
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -630,7 +685,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -657,7 +712,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -676,7 +731,9 @@ class MapScreenTest {
     // This test verifies that the screen renders correctly
     // and the permission check logic doesn't crash
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
 
     rule.waitForIdle()
@@ -696,7 +753,7 @@ class MapScreenTest {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
         // Test that screen handles the permission flow correctly
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -724,7 +781,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -753,7 +810,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 
@@ -781,7 +838,7 @@ class MapScreenTest {
     rule.setContent {
       MaterialTheme {
         viewModel = rememberMapScreenViewModel(config)
-        MapScreen(renderMap = false, autoRequestPermissions = false)
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
 

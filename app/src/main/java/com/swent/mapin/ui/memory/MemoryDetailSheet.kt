@@ -3,8 +3,6 @@ package com.swent.mapin.ui.memory
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -13,20 +11,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,50 +41,28 @@ import java.util.*
  * @param memory Memory to display
  * @param sheetState Current bottom sheet state
  * @param ownerName Human-readable name of the owner
- * @param isOwner Whether the current user is the owner of the memory
  * @param taggedUserNames List of names for tagged users
- * @param onShare Called when share icon is tapped
  * @param onClose Called when close icon is tapped
- * @param onEdit Called when editing is requested
- * @param onDelete Called when delete is requested
- * @param onOpenLinkedEvent Navigate to the event if memory is linked to one
  */
 @Composable
 fun MemoryDetailSheet(
     memory: Memory,
     sheetState: BottomSheetState,
     ownerName: String,
-    isOwner: Boolean = false,
     taggedUserNames: List<String>,
-    onShare: () -> Unit,
-    onClose: () -> Unit,
-    onEdit: () -> Unit = {},
-    onDelete: () -> Unit = {},
-    onOpenLinkedEvent: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
-  Column(modifier = modifier.fillMaxWidth().testTag("memoryDetailSheet")) {
+  Column(modifier = Modifier.fillMaxWidth().testTag("memoryDetailSheet")) {
     when (sheetState) {
-      BottomSheetState.COLLAPSED ->
-          CollapsedMemoryContent(memory = memory, onShare = onShare, onClose = onClose)
+      BottomSheetState.COLLAPSED -> CollapsedMemoryContent(memory = memory, onClose = onClose)
       BottomSheetState.MEDIUM -> {
-        MemoryDetailHeader(onShare = onShare, onClose = onClose)
+        MemoryDetailHeader(onClose = onClose)
         MediumMemoryContent(
-            memory = memory,
-            ownerName = ownerName,
-            taggedUserNames = taggedUserNames,
-            onOpenLinkedEvent = onOpenLinkedEvent)
+            memory = memory, ownerName = ownerName, taggedUserNames = taggedUserNames)
       }
       BottomSheetState.FULL -> {
-        MemoryDetailHeader(onShare = onShare, onClose = onClose)
-        FullMemoryContent(
-            memory = memory,
-            ownerName = ownerName,
-            isOwner = isOwner,
-            taggedUserNames = taggedUserNames,
-            onEdit = onEdit,
-            onDelete = onDelete,
-            onOpenLinkedEvent = onOpenLinkedEvent)
+        MemoryDetailHeader(onClose = onClose)
+        FullMemoryContent(memory = memory, ownerName = ownerName, taggedUserNames = taggedUserNames)
       }
     }
   }
@@ -101,18 +71,11 @@ fun MemoryDetailSheet(
 /* ------------------------ HEADER ------------------------ */
 
 @Composable
-private fun MemoryDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
+private fun MemoryDetailHeader(onClose: () -> Unit) {
   Row(
       modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onShare, modifier = Modifier.testTag("shareMemoryButton")) {
-          Icon(
-              imageVector = Icons.Default.Share,
-              contentDescription = "Share memory",
-              tint = MaterialTheme.colorScheme.primary)
-        }
-
         IconButton(onClick = onClose, modifier = Modifier.testTag("closeMemoryButton")) {
           Icon(
               imageVector = Icons.Default.Close,
@@ -126,18 +89,11 @@ private fun MemoryDetailHeader(onShare: () -> Unit, onClose: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CollapsedMemoryContent(memory: Memory, onShare: () -> Unit, onClose: () -> Unit) {
+private fun CollapsedMemoryContent(memory: Memory, onClose: () -> Unit) {
   Row(
       modifier = Modifier.fillMaxWidth().padding(8.dp),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onShare) {
-          Icon(
-              Icons.Default.Share,
-              contentDescription = "Share",
-              tint = MaterialTheme.colorScheme.primary)
-        }
-
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -162,12 +118,7 @@ private fun CollapsedMemoryContent(memory: Memory, onShare: () -> Unit, onClose:
 /* ------------------------ MEDIUM ------------------------ */
 
 @Composable
-private fun MediumMemoryContent(
-    memory: Memory,
-    ownerName: String,
-    taggedUserNames: List<String>,
-    onOpenLinkedEvent: () -> Unit
-) {
+private fun MediumMemoryContent(memory: Memory, ownerName: String, taggedUserNames: List<String>) {
   Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
     Text(
         text = memory.title.ifBlank { "Memory" },
@@ -199,26 +150,13 @@ private fun MediumMemoryContent(
       Spacer(Modifier.height(8.dp))
       TaggedUsersSection(taggedUserNames)
     }
-
-    if (memory.eventId != null) {
-      Spacer(Modifier.height(16.dp))
-      LinkedEventChip(onOpenLinkedEvent)
-    }
   }
 }
 
 /* ------------------------ FULL ------------------------ */
 
 @Composable
-private fun FullMemoryContent(
-    memory: Memory,
-    ownerName: String,
-    isOwner: Boolean,
-    taggedUserNames: List<String>,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onOpenLinkedEvent: () -> Unit
-) {
+private fun FullMemoryContent(memory: Memory, ownerName: String, taggedUserNames: List<String>) {
   val scrollState = rememberScrollState()
 
   Column(
@@ -260,31 +198,6 @@ private fun FullMemoryContent(
           Spacer(Modifier.height(16.dp))
           TaggedUsersSection(taggedUserNames)
         }
-
-        if (memory.eventId != null) {
-          Spacer(Modifier.height(16.dp))
-          LinkedEventChip(onOpenLinkedEvent)
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        if (isOwner) {
-          // Actions
-          Button(onClick = onEdit, modifier = Modifier.fillMaxWidth().testTag("editMemoryButton")) {
-            Text("Edit Memory")
-          }
-
-          Spacer(Modifier.height(8.dp))
-
-          OutlinedButton(
-              onClick = onDelete,
-              colors =
-                  ButtonDefaults.outlinedButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error),
-              modifier = Modifier.fillMaxWidth().testTag("deleteMemoryButton")) {
-                Text("Delete Memory")
-              }
-        }
       }
 }
 
@@ -295,7 +208,15 @@ private fun MemoryMetadata(memory: Memory, ownerName: String) {
   val dateText = memory.createdAt?.let { formatMemoryDate(it) } ?: "Unknown date"
 
   Column {
-    Text("By $ownerName • $dateText", style = MaterialTheme.typography.bodySmall)
+    Row {
+      Text("By ", style = MaterialTheme.typography.bodySmall)
+      Text(
+          ownerName,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.primary)
+      Text(" • $dateText", style = MaterialTheme.typography.bodySmall)
+    }
+    Spacer(Modifier.height(4.dp))
 
     if (memory.isPublic) {
       Text(
@@ -305,7 +226,7 @@ private fun MemoryMetadata(memory: Memory, ownerName: String) {
     } else {
       Text(
           "Private memory",
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          color = MaterialTheme.colorScheme.primary,
           style = MaterialTheme.typography.bodySmall)
     }
   }
@@ -319,44 +240,9 @@ private fun TaggedUsersSection(names: List<String>) {
     Text(
         names.joinToString(", "),
         style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.testTag("taggedUsersText"))
   }
-}
-
-@Composable
-private fun LinkedEventChip(onClick: () -> Unit) {
-  AssistChip(
-      onClick = onClick,
-      label = { Text("View linked event") },
-      modifier = Modifier.testTag("linkedEventChip"))
-}
-
-// ----- Pinch-to-zoom modifier -----
-@OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.pinchToZoom(resetKey: Any? = null, maxScale: Float = 4f): Modifier = composed {
-  var scale by remember(resetKey) { mutableStateOf(1f) }
-  var offset by remember(resetKey) { mutableStateOf(Offset.Zero) }
-
-  this.pointerInput(resetKey) {
-        detectTransformGestures(
-            onGesture = { _, pan, zoom, _ ->
-              scale = (scale * zoom).coerceIn(1f, maxScale)
-              offset += pan
-            })
-      }
-      .pointerInput(resetKey) {
-        detectTapGestures(
-            onDoubleTap = {
-              scale = 1f
-              offset = Offset.Zero
-            })
-      }
-      .graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-        translationX = offset.x
-        translationY = offset.y
-      }
 }
 
 // ----- Video Player -----
@@ -390,13 +276,37 @@ sealed class MediaItem {
   data class Video(val url: String) : MediaItem()
 }
 
+// Convert URLs to MediaItem
+fun parseMediaItems(urls: List<String>): List<MediaItem> {
+  val videoExtensions = setOf("mp4", "mov", "avi", "mkv", "webm")
+  return urls.map { url ->
+    // 1. Remove query params
+    val withoutQuery = url.substringBefore('?')
+    // 2. Extract filename
+    val fileName = withoutQuery.substringAfterLast('/')
+    // 3. Extract extension
+    val extension = fileName.substringAfterLast('.', "").lowercase()
+    if (extension in videoExtensions) {
+      MediaItem.Video(url)
+    } else {
+      MediaItem.Image(url)
+    }
+  }
+}
+
 /* ------------------------ MEDIA ------------------------ */
 
 @Composable
 private fun MemoryMediaPreview(urls: List<String>) {
-  if (urls.isNotEmpty()) {
+  if (urls.isEmpty()) return
+  // Parse all media items
+  val items = parseMediaItems(urls)
+  // Find the first image
+  val firstImage = items.firstOrNull { it is MediaItem.Image } as? MediaItem.Image
+
+  firstImage?.let { image ->
     AsyncImage(
-        model = urls.first(),
+        model = image.url,
         contentDescription = "Memory photo",
         modifier =
             Modifier.fillMaxWidth()
@@ -419,17 +329,7 @@ private fun MemoryMediaGallery(urls: List<String>) {
     return
   }
 
-  // Convert URLs to MediaItem
-  val videoExtensions = listOf(".mp4", ".mov", ".avi", ".mkv", ".webm")
-  val items =
-      urls.map { url ->
-        val lower = url.lowercase()
-        when {
-          videoExtensions.any { lower.endsWith(it) } -> MediaItem.Video(url)
-          else -> MediaItem.Image(url)
-        }
-      }
-
+  val items = parseMediaItems(urls)
   val pagerState = rememberPagerState(initialPage = 0) { items.size }
 
   Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -438,16 +338,18 @@ private fun MemoryMediaGallery(urls: List<String>) {
         modifier = Modifier.fillMaxWidth().height(420.dp).testTag("mediaPager")) { page ->
           when (val media = items[page]) {
             is MediaItem.Image -> {
-              AsyncImage(
-                  model = media.url,
-                  contentDescription = "Gallery image $page",
-                  contentScale = ContentScale.Crop,
+              Box(
                   modifier =
                       Modifier.fillMaxSize()
                           .padding(horizontal = 12.dp)
                           .clip(RoundedCornerShape(12.dp))
-                          .pinchToZoom(resetKey = media.url)
-                          .testTag("mediaItem_$page"))
+                          .testTag("mediaItem_$page")) {
+                    AsyncImage(
+                        model = media.url,
+                        contentDescription = "Image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize())
+                  }
             }
             is MediaItem.Video -> {
               Box(

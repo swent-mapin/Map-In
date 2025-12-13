@@ -126,7 +126,7 @@ private fun EventSelectionSection(
                 val dateStr =
                     remember(selectedEvent?.date) {
                       selectedEvent?.date?.toDate()?.let {
-                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it)
+                        SimpleDateFormat("MMM dd, yyyy", Locale.US).format(it)
                       } ?: "No date"
                     }
                 Text(
@@ -388,8 +388,8 @@ fun MemoryFormScreen(
       rememberLauncherForActivityResult(
           contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = MAX_MEDIA_COUNT)) {
               uris ->
-            selectedMediaUris.clear()
-            selectedMediaUris.addAll(uris)
+            val existingUris = selectedMediaUris.toSet()
+            selectedMediaUris.addAll(uris.filterNot { it in existingUris })
           }
 
   val isFormValid = description.isNotBlank()
@@ -421,7 +421,7 @@ fun MemoryFormScreen(
                         eventId = selectedEvent?.uid,
                         isPublic = isPublic,
                         mediaUris = selectedMediaUris.toList(),
-                        taggedUserIds = taggedUserIds.toList()))
+                        taggedUserIds = taggedUserIds))
               },
               enabled = isFormValid,
               modifier =
@@ -481,7 +481,7 @@ fun MemoryFormScreen(
       Spacer(modifier = Modifier.height(24.dp))
 
       MediaSelectionSection(
-          selectedMediaUris = selectedMediaUris.toList(),
+          selectedMediaUris = selectedMediaUris,
           onLaunchMediaPicker = {
             mediaPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
