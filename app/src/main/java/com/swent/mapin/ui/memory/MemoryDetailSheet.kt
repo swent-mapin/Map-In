@@ -43,7 +43,6 @@ import java.util.*
  * @param ownerName Human-readable name of the owner
  * @param taggedUserNames List of names for tagged users
  * @param onClose Called when close icon is tapped
- * @param onOpenLinkedEvent Navigate to the event if memory is linked to one
  */
 @Composable
 fun MemoryDetailSheet(
@@ -51,8 +50,7 @@ fun MemoryDetailSheet(
     sheetState: BottomSheetState,
     ownerName: String,
     taggedUserNames: List<String>,
-    onClose: () -> Unit,
-    onOpenLinkedEvent: () -> Unit = {}
+    onClose: () -> Unit
 ) {
   Column(modifier = Modifier.fillMaxWidth().testTag("memoryDetailSheet")) {
     when (sheetState) {
@@ -280,17 +278,16 @@ sealed class MediaItem {
 
 // Convert URLs to MediaItem
 fun parseMediaItems(urls: List<String>): List<MediaItem> {
-  val videoExtensions = listOf(".mp4", ".mov", ".avi", ".mkv", ".webm")
-
-  return urls.map { url ->
-    val lower = url.lowercase()
-
-    if (videoExtensions.any { lower.contains(it) }) {
-      MediaItem.Video(url)
-    } else {
-      MediaItem.Image(url)
+    val videoExtensions = setOf(".mp4", ".mov", ".avi", ".mkv", ".webm")
+    return urls.map { url ->
+        val lower = url.lowercase()
+        val extension = lower.substringAfterLast('.', "")
+        if (".$extension" in videoExtensions) {
+            MediaItem.Video(url)
+        } else {
+            MediaItem.Image(url)
+        }
     }
-  }
 }
 
 /* ------------------------ MEDIA ------------------------ */
