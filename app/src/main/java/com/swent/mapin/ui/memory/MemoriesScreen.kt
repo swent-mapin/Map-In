@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ private val memoryDateFormatter =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel = viewModel()) {
+  LaunchedEffect(Unit) { viewModel.refresh() }
 
   val memories by viewModel.memories.collectAsState()
   val error by viewModel.error.collectAsState()
@@ -249,7 +251,7 @@ private fun MemoryItem(
             // Title
             Row(verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  text = memory.title.ifBlank { "Memory ${memory.uid}" },
+                  text = memory.title.ifBlank { "My Memory" },
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.SemiBold,
                   modifier = Modifier.weight(1f))
@@ -275,7 +277,7 @@ private fun MemoryItem(
             }
 
             // Footer row: Public + Date
-            MemoryFooter(memory.isPublic, dateText)
+            MemoryFooter(memory.public, dateText)
           }
         }
       }
