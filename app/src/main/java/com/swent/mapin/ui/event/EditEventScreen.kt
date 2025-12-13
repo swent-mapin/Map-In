@@ -102,7 +102,7 @@ fun EditEventScreen(
   val isLoggedIn = remember { mutableStateOf((Firebase.auth.currentUser != null)) }
 
   val locationExpanded = remember { mutableStateOf(false) }
-  val gotLocation = remember { mutableStateOf(Location.UNDEFINED) }
+  val gotLocation = remember { mutableStateOf(event.location) }
   val locations by locationViewModel.locations.collectAsState()
 
   val scrollState = rememberScrollState()
