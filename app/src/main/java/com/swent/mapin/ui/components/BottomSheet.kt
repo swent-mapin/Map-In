@@ -45,6 +45,21 @@ import kotlinx.coroutines.launch
 data class BottomSheetConfig(val collapsedHeight: Dp, val mediumHeight: Dp, val fullHeight: Dp)
 
 /**
+ * Represents the content of the bottom sheet.
+ *
+ * @property None No content
+ * @property Memory Content for a memory
+ * @property Event Content for an event
+ */
+sealed class SheetContent {
+  object None : SheetContent()
+
+  data class Memory(val memory: com.swent.mapin.model.memory.Memory) : SheetContent()
+
+  data class Event(val event: com.swent.mapin.model.event.Event) : SheetContent()
+}
+
+/**
  * Reusable bottom sheet with continuous content reveal, no content switching. Dragging follows
  * finger movement, then snaps to nearest state/height on release. Doesn't block map interaction
  * unless fully expanded.

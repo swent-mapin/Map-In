@@ -142,19 +142,21 @@ class MapScreenViewModelTest {
 
     runBlocking {
       whenever(mockEventStateController.joinSelectedEvent()).thenAnswer {
-        viewModel.selectedEvent?.let { event -> joinedEvents.add(event) }
+        viewModel.selectedEvent.value?.let { event -> joinedEvents.add(event) }
       }
 
       whenever(mockEventStateController.saveSelectedEvent()).thenAnswer {
-        viewModel.selectedEvent?.let { event -> savedEvents.add(event) }
+        viewModel.selectedEvent.value?.let { event -> savedEvents.add(event) }
       }
 
       whenever(mockEventStateController.unsaveSelectedEvent()).thenAnswer {
-        viewModel.selectedEvent?.let { event -> savedEvents.removeIf { it.uid == event.uid } }
+        viewModel.selectedEvent.value?.let { event -> savedEvents.removeIf { it.uid == event.uid } }
       }
 
       whenever(mockEventStateController.leaveSelectedEvent()).thenAnswer {
-        viewModel.selectedEvent?.let { event -> joinedEvents.removeIf { it.uid == event.uid } }
+        viewModel.selectedEvent.value?.let { event ->
+          joinedEvents.removeIf { it.uid == event.uid }
+        }
       }
     }
 
@@ -210,7 +212,7 @@ class MapScreenViewModelTest {
     assertEquals(BottomSheetScreen.MAIN_CONTENT, viewModel.currentBottomSheetScreen)
     assertFalse(viewModel.showShareDialog)
     assertEquals(MapScreenViewModel.BottomSheetTab.SAVED, viewModel.selectedBottomSheetTab)
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
   }
 
   @Test
@@ -664,7 +666,7 @@ class MapScreenViewModelTest {
     viewModel.onEventPinClicked(testEvent)
     advanceUntilIdle()
 
-    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(testEvent, viewModel.selectedEvent.value)
 
     val state = viewModel.organizerState
     assertTrue("State should be Loaded", state is OrganizerState.Loaded)
@@ -681,7 +683,7 @@ class MapScreenViewModelTest {
 
     viewModel.closeEventDetail()
 
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
 
     val state = viewModel.organizerState
     assertTrue(state is OrganizerState.Loaded)
@@ -760,7 +762,7 @@ class MapScreenViewModelTest {
     viewModel.joinEvent()
     advanceUntilIdle()
 
-    assertEquals(updatedEvent, viewModel.selectedEvent)
+    assertEquals(updatedEvent, viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -770,7 +772,7 @@ class MapScreenViewModelTest {
     viewModel.joinEvent()
     advanceUntilIdle()
 
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -787,7 +789,7 @@ class MapScreenViewModelTest {
     viewModel.saveEventForLater()
     advanceUntilIdle()
 
-    assertEquals(updatedEvent, viewModel.selectedEvent)
+    assertEquals(updatedEvent, viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -807,7 +809,7 @@ class MapScreenViewModelTest {
     viewModel.onTabEventClicked(testEvent)
     advanceUntilIdle()
 
-    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(testEvent, viewModel.selectedEvent.value)
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
     assertTrue(cameraCentered)
   }
@@ -828,7 +830,7 @@ class MapScreenViewModelTest {
     viewModel.saveEventForLater()
     advanceUntilIdle()
 
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -845,7 +847,7 @@ class MapScreenViewModelTest {
     viewModel.unsaveEventForLater()
     advanceUntilIdle()
 
-    assertEquals(updatedEvent, viewModel.selectedEvent)
+    assertEquals(updatedEvent, viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -855,7 +857,7 @@ class MapScreenViewModelTest {
     viewModel.unsaveEventForLater()
     advanceUntilIdle()
 
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
     assertNull(viewModel.errorMessage)
   }
 
@@ -1375,7 +1377,7 @@ class MapScreenViewModelTest {
     viewModel.onEventClickedFromSearch(testEvent)
     advanceUntilIdle()
 
-    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(testEvent, viewModel.selectedEvent.value)
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
   }
 
@@ -1386,7 +1388,7 @@ class MapScreenViewModelTest {
     viewModel.onRecentEventClicked(testEvent.uid)
     advanceUntilIdle()
 
-    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(testEvent, viewModel.selectedEvent.value)
     assertEquals(BottomSheetState.MEDIUM, viewModel.bottomSheetState)
   }
 
@@ -1411,14 +1413,14 @@ class MapScreenViewModelTest {
 
   @Test
   fun `onRecentEventClicked does nothing when event not found`() = runTest {
-    val initialSelected = viewModel.selectedEvent
+    val initialSelected = viewModel.selectedEvent.value
 
     // Try to click a non-existent event
     viewModel.onRecentEventClicked("non-existent-id")
     advanceUntilIdle()
 
     // Selected event should not change
-    assertEquals(initialSelected, viewModel.selectedEvent)
+    assertEquals(initialSelected, viewModel.selectedEvent.value)
   }
 
   @Test
@@ -1734,7 +1736,7 @@ class MapScreenViewModelTest {
     viewModel.showProfileSheet("user-123")
     viewModel.onProfileSheetEventClick(testEvent)
 
-    assertEquals(testEvent, viewModel.selectedEvent)
+    assertEquals(testEvent, viewModel.selectedEvent.value)
   }
 
   @Test
@@ -1747,6 +1749,6 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     assertNull(viewModel.profileSheetUserId)
-    assertNull(viewModel.selectedEvent)
+    assertNull(viewModel.selectedEvent.value)
   }
 }

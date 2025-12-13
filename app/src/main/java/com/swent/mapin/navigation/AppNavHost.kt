@@ -9,12 +9,14 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.ui.ai.AiAssistantScreen
 import com.swent.mapin.ui.auth.SignInScreen
 import com.swent.mapin.ui.chat.ChatScreen
@@ -25,6 +27,7 @@ import com.swent.mapin.ui.friends.FriendsTab
 import com.swent.mapin.ui.friends.FriendsViewModel
 import com.swent.mapin.ui.map.MapScreen
 import com.swent.mapin.ui.memory.MemoriesScreen
+import com.swent.mapin.ui.memory.MemoriesViewModel
 import com.swent.mapin.ui.profile.ProfileScreen
 import com.swent.mapin.ui.settings.ChangePasswordScreen
 import com.swent.mapin.ui.settings.SettingsScreen
@@ -94,6 +97,9 @@ fun AppNavHost(
     }
   }
 
+  val memoryRepository = remember { MemoryRepositoryProvider.getRepository() }
+  val memoryVM: MemoriesViewModel = viewModel(factory = MemoriesViewModel.Factory(memoryRepository))
+
   // Debounce navigation to prevent double-click issues
   var lastNavigationTime by remember { mutableLongStateOf(0L) }
   val navigationDebounceMs = 500L
@@ -131,7 +137,8 @@ fun AppNavHost(
             currentDeepLinkEventId = null
             aiSelectedEventId = null
           },
-          autoRequestPermissions = autoRequestPermissions)
+          autoRequestPermissions = autoRequestPermissions,
+          memoryVM = memoryVM)
     }
 
     composable(Route.Profile.route) {
@@ -175,7 +182,9 @@ fun AppNavHost(
             safePopBackStack()
           })
     }
-    composable(Route.Memories.route) { MemoriesScreen(onNavigateBack = { safePopBackStack() }) }
+    composable(Route.Memories.route) {
+      MemoriesScreen(onNavigateBack = { safePopBackStack() }, viewModel = memoryVM)
+    }
 
     composable(
         route = "friends?tab={tab}",

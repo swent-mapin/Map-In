@@ -204,7 +204,6 @@ class MemoryRepositoryFirestoreTest {
     val snap = qs(doc("1", m1), doc("2", m2))
 
     whenever(collection.whereEqualTo(eq("ownerId"), eq("owner1"))).thenReturn(query)
-    whenever(query.orderBy(eq("createdAt"))).thenReturn(query)
     whenever(query.get()).thenReturn(taskOf(snap))
 
     val result = repo.getMemoriesByOwner("owner1")

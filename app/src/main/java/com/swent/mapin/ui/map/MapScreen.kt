@@ -96,6 +96,7 @@ import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
 import com.swent.mapin.ui.components.BottomSheet
 import com.swent.mapin.ui.components.BottomSheetConfig
+import com.swent.mapin.ui.components.SheetContent
 import com.swent.mapin.ui.event.EventDetailSheet
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.event.ShareEventDialog
@@ -118,6 +119,8 @@ import com.swent.mapin.ui.map.directions.DirectionOverlay
 import com.swent.mapin.ui.map.directions.DirectionState
 import com.swent.mapin.ui.map.directions.RouteInfoCard
 import com.swent.mapin.ui.map.offline.EventBasedOfflineRegionManager
+import com.swent.mapin.ui.memory.MemoriesViewModel
+import com.swent.mapin.ui.memory.MemoryDetailSheet
 import com.swent.mapin.ui.profile.ProfileViewModel
 import com.swent.mapin.util.EventUtils
 import kotlinx.coroutines.flow.debounce
@@ -141,7 +144,8 @@ fun MapScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToAiAssistant: () -> Unit = {},
     deepLinkEventId: String? = null,
-    onDeepLinkConsumed: () -> Unit = {}
+    onDeepLinkConsumed: () -> Unit = {},
+    memoryVM: MemoriesViewModel = viewModel(),
 ) {
   val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
   // Bottom sheet heights scale with the current device size
@@ -155,6 +159,7 @@ fun MapScreen(
   val eventViewModel = remember {
     EventViewModel(EventRepositoryProvider.getRepository(), viewModel.eventStateController)
   }
+  val selectedEvent by viewModel.selectedEvent.collectAsState()
 
   val locationViewModel = run {
     val applicationContext = LocalContext.current.applicationContext
@@ -647,10 +652,21 @@ fun MapScreen(
         stateToHeight = viewModel::getHeightForState,
         onHeightChange = { height -> viewModel.currentSheetHeight = height },
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
+          val selectedMemory by memoryVM.selectedMemory.collectAsState()
+
+          // sheetTarget : type of bottomSheetContent to show
+          val sheetTarget =
+              when {
+                selectedMemory != null ->
+                    SheetContent.Memory(selectedMemory!!) // The selected memory
+                selectedEvent != null -> SheetContent.Event(selectedEvent!!) // The selected event
+                else -> SheetContent.None // The bottomsheet
+              }
+
           AnimatedContent(
-              targetState = viewModel.selectedEvent,
+              targetState = sheetTarget,
               transitionSpec = {
-                val direction = if (targetState != null) 1 else -1
+                val direction = if (targetState !is SheetContent.None) 1 else -1
                 (fadeIn(animationSpec = tween(260)) +
                         slideInVertically(
                             animationSpec = tween(260), initialOffsetY = { direction * it / 6 }))
@@ -660,114 +676,125 @@ fun MapScreen(
                                 animationSpec = tween(200),
                                 targetOffsetY = { -direction * it / 6 }))
               },
-              label = "eventSheetTransition") { selectedEvent ->
-                if (selectedEvent != null) {
-                  EventDetailSheet(
-                      event = selectedEvent,
-                      sheetState = viewModel.bottomSheetState,
-                      isParticipating = viewModel.joinedEvents.any { it.uid == selectedEvent.uid },
-                      isSaved = viewModel.savedEvents.any { it.uid == selectedEvent.uid },
-                      organizerState = viewModel.organizerState,
-                      onJoinEvent = { viewModel.joinEvent() },
-                      onUnregisterEvent = { viewModel.unregisterFromEvent() },
-                      onSaveForLater = { viewModel.saveEventForLater() },
-                      onUnsaveForLater = { viewModel.unsaveEventForLater() },
-                      onClose = { viewModel.closeEventDetailWithNavigation() },
-                      onShare = { viewModel.showShareDialog() },
-                      onGetDirections = { viewModel.toggleDirections(selectedEvent) },
-                      showDirections =
-                          viewModel.directionViewModel.directionState is DirectionState.Displayed,
-                      hasLocationPermission = viewModel.hasLocationPermission,
-                      onOrganizerClick = { userId -> viewModel.showProfileSheet(userId) })
-                } else {
-                  BottomSheetContent(
-                      onModalShown = { shown ->
-                        if (shown) {
-                          if (modalPrevState == null) modalPrevState = viewModel.bottomSheetState
-                          viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
-                        } else {
-                          modalPrevState?.let { prev ->
-                            viewModel.setBottomSheetState(prev)
-                            modalPrevState = null
+              label = "memoryOrEventSheetTransition") { content ->
+                when (content) {
+                  is SheetContent.Event -> {
+                    EventDetailSheet(
+                        event = content.event,
+                        sheetState = viewModel.bottomSheetState,
+                        isParticipating =
+                            viewModel.joinedEvents.any { it.uid == content.event.uid },
+                        isSaved = viewModel.savedEvents.any { it.uid == content.event.uid },
+                        organizerState = viewModel.organizerState,
+                        onJoinEvent = { viewModel.joinEvent() },
+                        onUnregisterEvent = { viewModel.unregisterFromEvent() },
+                        onSaveForLater = { viewModel.saveEventForLater() },
+                        onUnsaveForLater = { viewModel.unsaveEventForLater() },
+                        onClose = { viewModel.closeEventDetailWithNavigation() },
+                        onShare = { viewModel.showShareDialog() },
+                        onGetDirections = { viewModel.toggleDirections(content.event) },
+                        showDirections =
+                            viewModel.directionViewModel.directionState is DirectionState.Displayed,
+                        hasLocationPermission = viewModel.hasLocationPermission,
+                        onOrganizerClick = { userId -> viewModel.showProfileSheet(userId) })
+                  }
+                  is SheetContent.Memory -> {
+                    MemoryDetailSheet(
+                        memory = content.memory,
+                        sheetState = viewModel.bottomSheetState,
+                        ownerName = memoryVM.ownerName.collectAsState().value,
+                        taggedUserNames = memoryVM.taggedNames.collectAsState().value,
+                        onClose = { memoryVM.clearSelectedMemory() })
+                  }
+                  is SheetContent.None -> {
+                    BottomSheetContent(
+                        onModalShown = { shown ->
+                          if (shown) {
+                            if (modalPrevState == null) modalPrevState = viewModel.bottomSheetState
+                            viewModel.setBottomSheetState(BottomSheetState.COLLAPSED)
+                          } else {
+                            modalPrevState?.let { prev ->
+                              viewModel.setBottomSheetState(prev)
+                              modalPrevState = null
+                            }
                           }
-                        }
-                      },
-                      state = viewModel.bottomSheetState,
-                      fullEntryKey = viewModel.fullEntryKey,
-                      searchBarState =
-                          SearchBarState(
-                              query = viewModel.searchQuery,
-                              shouldRequestFocus = viewModel.shouldFocusSearch,
-                              onQueryChange = viewModel::onSearchQueryChange,
-                              onTap = viewModel::onSearchTap,
-                              onFocusHandled = viewModel::onSearchFocusHandled,
-                              onClear = viewModel::onClearSearch,
-                              onSubmit = viewModel::onSearchSubmit),
-                      searchResults = viewModel.searchResults,
-                      isSearchMode = viewModel.isSearchMode,
-                      recentItems = viewModel.recentItems,
-                      onRecentSearchClick = viewModel::applyRecentSearch,
-                      onRecentEventClick = viewModel::onRecentEventClicked,
-                      onRecentProfileClick = viewModel::onRecentProfileClicked,
-                      onClearRecentSearches = viewModel::clearRecentSearches,
-                      userSearchResults = viewModel.userSearchResults,
-                      onUserSearchClick = { userId, userName ->
-                        viewModel.saveRecentUser(userId, userName)
-                        viewModel.openUserProfileSheet(userId)
-                      },
-                      currentScreen = viewModel.currentBottomSheetScreen,
-                      availableEvents = viewModel.availableEvents,
-                      initialMemoryEvent = viewModel.memoryFormInitialEvent,
-                      onEventClick = { event ->
-                        // Handle event click from search - focus pin, show details, remember
-                        // search mode
-                        viewModel.onEventClickedFromSearch(event)
-                        onEventClick(event)
-                      },
-                      onEditEvent = { event ->
-                        eventViewModel.selectEventToEdit(event)
-                        viewModel.showEditEventForm()
-                      },
-                      onDeleteEvent = { event -> viewModel.requestDeleteEvent(event) },
-                      onEditEventDone = {
-                        eventViewModel.clearEventToEdit()
-                        viewModel.onEditEventCancel()
-                      },
-                      onCreateMemoryClick = viewModel::showMemoryForm,
-                      onCreateEventClick = viewModel::showAddEventForm,
-                      onNavigateToFriends = onNavigateToFriends,
-                      onNavigateToMemories = onNavigateToMemories,
-                      onProfileClick = onNavigateToProfile,
-                      onMemorySave = viewModel::onMemorySave,
-                      onMemoryCancel = viewModel::onMemoryCancel,
-                      onCreateEventDone = viewModel::onAddEventCancel,
-                      onTabChange = viewModel::setBottomSheetTab,
-                      joinedEvents = viewModel.joinedEvents,
-                      attendedEvents = viewModel.attendedEvents,
-                      savedEvents = viewModel.savedEvents,
-                      ownedEvents = viewModel.ownedEvents,
-                      ownedLoading = viewModel.ownedEventsLoading,
-                      ownedError = viewModel.ownedEventsError,
-                      onRetryOwnedEvents = viewModel::loadOwnedEvents,
-                      selectedTab = viewModel.selectedBottomSheetTab,
-                      onTabEventClick = viewModel::onTabEventClicked,
-                      avatarUrl = viewModel.avatarUrl,
-                      filterViewModel = viewModel.filterViewModel,
-                      onSettingsClick = onNavigateToSettings,
-                      locationViewModel = locationViewModel,
-                      profileViewModel = remember { ProfileViewModel() },
-                      eventViewModel = eventViewModel,
-                      profileSheetUserId = viewModel.profileSheetUserId,
-                      onProfileSheetClose = viewModel::hideProfileSheet,
-                      onProfileSheetEventClick = viewModel::onProfileSheetEventClick)
+                        },
+                        state = viewModel.bottomSheetState,
+                        fullEntryKey = viewModel.fullEntryKey,
+                        searchBarState =
+                            SearchBarState(
+                                query = viewModel.searchQuery,
+                                shouldRequestFocus = viewModel.shouldFocusSearch,
+                                onQueryChange = viewModel::onSearchQueryChange,
+                                onTap = viewModel::onSearchTap,
+                                onFocusHandled = viewModel::onSearchFocusHandled,
+                                onClear = viewModel::onClearSearch,
+                                onSubmit = viewModel::onSearchSubmit),
+                        searchResults = viewModel.searchResults,
+                        isSearchMode = viewModel.isSearchMode,
+                        recentItems = viewModel.recentItems,
+                        onRecentSearchClick = viewModel::applyRecentSearch,
+                        onRecentEventClick = viewModel::onRecentEventClicked,
+                        onRecentProfileClick = viewModel::onRecentProfileClicked,
+                        onClearRecentSearches = viewModel::clearRecentSearches,
+                        userSearchResults = viewModel.userSearchResults,
+                        onUserSearchClick = { userId, userName ->
+                          viewModel.saveRecentUser(userId, userName)
+                          viewModel.openUserProfileSheet(userId)
+                        },
+                        currentScreen = viewModel.currentBottomSheetScreen,
+                        availableEvents = viewModel.availableEvents,
+                        initialMemoryEvent = viewModel.memoryFormInitialEvent,
+                        onEventClick = { event ->
+                          // Handle event click from search - focus pin, show details, remember
+                          // search mode
+                          viewModel.onEventClickedFromSearch(event)
+                          onEventClick(event)
+                        },
+                        onEditEvent = { event ->
+                          eventViewModel.selectEventToEdit(event)
+                          viewModel.showEditEventForm()
+                        },
+                        onDeleteEvent = { event -> viewModel.requestDeleteEvent(event) },
+                        onEditEventDone = {
+                          eventViewModel.clearEventToEdit()
+                          viewModel.onEditEventCancel()
+                        },
+                        onCreateMemoryClick = viewModel::showMemoryForm,
+                        onCreateEventClick = viewModel::showAddEventForm,
+                        onNavigateToFriends = onNavigateToFriends,
+                        onNavigateToMemories = onNavigateToMemories,
+                        onProfileClick = onNavigateToProfile,
+                        onMemorySave = viewModel::onMemorySave,
+                        onMemoryCancel = viewModel::onMemoryCancel,
+                        onCreateEventDone = viewModel::onAddEventCancel,
+                        onTabChange = viewModel::setBottomSheetTab,
+                        joinedEvents = viewModel.joinedEvents,
+                        attendedEvents = viewModel.attendedEvents,
+                        savedEvents = viewModel.savedEvents,
+                        ownedEvents = viewModel.ownedEvents,
+                        ownedLoading = viewModel.ownedEventsLoading,
+                        ownedError = viewModel.ownedEventsError,
+                        onRetryOwnedEvents = viewModel::loadOwnedEvents,
+                        selectedTab = viewModel.selectedBottomSheetTab,
+                        onTabEventClick = viewModel::onTabEventClicked,
+                        avatarUrl = viewModel.avatarUrl,
+                        filterViewModel = viewModel.filterViewModel,
+                        onSettingsClick = onNavigateToSettings,
+                        locationViewModel = locationViewModel,
+                        profileViewModel = remember { ProfileViewModel() },
+                        eventViewModel = eventViewModel,
+                        profileSheetUserId = viewModel.profileSheetUserId,
+                        onProfileSheetClose = viewModel::hideProfileSheet,
+                        onProfileSheetEventClick = viewModel::onProfileSheetEventClick)
+                  }
                 }
               }
         }
 
     // Share dialog
-    if (viewModel.showShareDialog && viewModel.selectedEvent != null) {
-      ShareEventDialog(
-          event = viewModel.selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
+    if (viewModel.showShareDialog && selectedEvent != null) {
+      ShareEventDialog(event = selectedEvent!!, onDismiss = { viewModel.dismissShareDialog() })
     }
 
     viewModel.eventPendingDeletion?.let { eventToDelete ->
@@ -914,6 +941,8 @@ private fun MapLayers(
   val context = LocalContext.current
   val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
 
+  val selectedEvent by viewModel.selectedEvent.collectAsState()
+
   val annotationStyle =
       remember(isDarkTheme, markerBitmap) { createAnnotationStyle(isDarkTheme, markerBitmap) }
 
@@ -924,9 +953,8 @@ private fun MapLayers(
       }
 
   val annotations =
-      remember(viewModel.events, annotationStyle, viewModel.selectedEvent, eventBitmaps) {
-        createEventAnnotations(
-            viewModel.events, annotationStyle, viewModel.selectedEvent?.uid, eventBitmaps)
+      remember(viewModel.events, annotationStyle, selectedEvent, eventBitmaps) {
+        createEventAnnotations(viewModel.events, annotationStyle, selectedEvent?.uid, eventBitmaps)
       }
 
   val clusterConfig = remember { createClusterConfig() }
@@ -942,7 +970,7 @@ private fun MapLayers(
   }
 
   // Disable clustering when a pin is selected to prevent it from being absorbed
-  val shouldCluster = !viewModel.showHeatmap && viewModel.selectedEvent == null
+  val shouldCluster = !viewModel.showHeatmap && selectedEvent == null
 
   // Render annotations (with or without clustering)
   if (viewModel.showHeatmap || !shouldCluster) {

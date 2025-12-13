@@ -49,11 +49,7 @@ class MemoryRepositoryFirestore(private val db: FirebaseFirestore) : MemoryRepos
 
   override suspend fun getMemoriesByOwner(ownerId: String): List<Memory> {
     val snap =
-        db.collection(MEMORIES_COLLECTION_PATH)
-            .whereEqualTo("ownerId", ownerId)
-            .orderBy("createdAt")
-            .get()
-            .await()
+        db.collection(MEMORIES_COLLECTION_PATH).whereEqualTo("ownerId", ownerId).get().await()
     return snap.documents.mapNotNull { documentToMemory(it) }
   }
 
