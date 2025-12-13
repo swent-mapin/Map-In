@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.NotificationService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 // Assisted by AI
 
@@ -48,12 +63,19 @@ private val USER_DIALOG_LIST_HEIGHT = 250.dp
  */
 @Composable
 fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
-  var userIdInput by remember { mutableStateOf("") }
+    val notificationService = remember { NotificationService() }
+    val friendRepository = remember {
+        FriendRequestRepository(notificationService = notificationService)
+    }
 
-  // TODO: Replace with actual friend list from repository
-  val sampleUsers = listOf("user1", "user2", "user3", "user4", "user5")
+    val viewModel: UserPickerViewModel = viewModel(factory = UserPickerVMFactory(friendRepository))
 
-  AlertDialog(
+    val friends by viewModel.friends.collectAsState()
+    var userIdInput by remember { mutableStateOf("") }
+
+    val friendsList = friends.map { it.userProfile.name }
+
+    AlertDialog(
       onDismissRequest = onDismiss,
       title = { Text("Tag people", style = MaterialTheme.typography.titleLarge) },
       text = {
@@ -71,7 +93,7 @@ fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
           Spacer(modifier = Modifier.height(16.dp))
 
           LazyColumn(modifier = Modifier.fillMaxWidth().height(USER_DIALOG_LIST_HEIGHT)) {
-            items(sampleUsers) { userId ->
+            items(friendsList) { userId ->
               Card(
                   modifier =
                       Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable {
@@ -106,4 +128,36 @@ fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
         }
       },
       confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } })
+}
+
+/**
+ * ViewModel for the user picker dialog.
+ *
+ * @param friendRepository Repository for friend requests
+ */
+class UserPickerViewModel(
+    private val friendRepository: FriendRequestRepository,
+    private val firebaseAuth: FirebaseAuth = Firebase.auth
+) : ViewModel() {
+
+    private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
+    val friends = _friends.asStateFlow()
+
+
+    init {
+        viewModelScope.launch {
+            try {
+                val userId = firebaseAuth.currentUser!!.uid
+                _friends.value = friendRepository.getFriends(userId)
+            } catch (e: Exception) {
+                Log.e("UserPickerViewModel", "Error fetching friends", e)
+            }
+        }
+    }
+}
+
+class UserPickerVMFactory(private val repo: FriendRequestRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return UserPickerViewModel(repo) as T
+    }
 }
