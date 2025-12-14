@@ -968,7 +968,8 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.joinSelectedEvent()
-      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
+      _selectedEvent.value =
+          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.JOINED)
     }
   }
 
@@ -978,7 +979,8 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.leaveSelectedEvent()
-      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
+      _selectedEvent.value =
+          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
@@ -988,7 +990,8 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.saveSelectedEvent()
-      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.SAVED)
+      _selectedEvent.value =
+          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.SAVED)
     }
   }
 
@@ -998,7 +1001,8 @@ class MapScreenViewModel(
 
     viewModelScope.launch {
       eventStateController.unsaveSelectedEvent()
-      _selectedEvent.value = eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
+      _selectedEvent.value =
+          eventStateController.refreshSelectedEvent(currentEvent.uid, EventLists.ALL)
     }
   }
 
