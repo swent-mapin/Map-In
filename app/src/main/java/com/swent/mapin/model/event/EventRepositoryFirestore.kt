@@ -211,13 +211,13 @@ class EventRepositoryFirestore(
             }
 
             // Owner cannot change 'public'
-            require(!(newValue.public != oldEvent.public && !newValue.public)) {
+            require(oldEvent.public == newValue.public || newValue.public) {
               "Owner cannot change from public to private"
             }
 
             // Capacity cannot go below existing participant count
             val currentParticipants = oldEvent.participantIds.size
-            require(!(newValue.capacity != null && newValue.capacity < currentParticipants)) {
+            require(newValue.capacity == null || newValue.capacity >= currentParticipants) {
               "Capacity cannot be lower than current participants ($currentParticipants)"
             }
 
@@ -237,14 +237,13 @@ class EventRepositoryFirestore(
     try {
       db.runTransaction { transaction ->
             val docRef = db.collection(EVENTS_COLLECTION_PATH).document(eventId)
-            // Use indexed accessor instead of function call to resolve SonarCloud issue
             val snapshot = transaction[docRef]
 
             if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
             val oldEvent = snapshot.toEvent()!!
 
-            val updatedParticipants = calculateUpdatedParticipants(oldEvent, userId, join)
-            if (updatedParticipants == null) return@runTransaction // no changes
+            val updatedParticipants =
+                calculateUpdatedParticipants(oldEvent, userId, join) ?: return@runTransaction
 
             // Update event
             transaction.update(docRef, "participantIds", updatedParticipants)
@@ -288,7 +287,7 @@ class EventRepositoryFirestore(
       // Return null if user is already a participant (no changes needed)
       if (isParticipant) return null // no changes
       // Check if event has reached capacity before allowing join
-      check(!(event.capacity != null && event.participantIds.size >= event.capacity)) {
+      require(event.capacity == null || event.participantIds.size < event.capacity) {
         "Event is full"
       }
       event.participantIds + userId
@@ -306,16 +305,16 @@ class EventRepositoryFirestore(
    */
   private suspend fun updateBadgeContextForJoin(userId: String) {
     val ctx = badgeRepository.getBadgeContext(userId)
-    // Use indexed accessor to get current hour from Calendar
     val hour = Calendar.getInstance()[Calendar.HOUR_OF_DAY]
     var newCtx = ctx.copy(joinedEvents = ctx.joinedEvents + 1)
 
-    // Increment earlyJoin counter if joining during early morning hours (5-8 AM)
-    if (hour in EARLY_MORNING_START..EARLY_MORNING_END) {
-      newCtx = newCtx.copy(earlyJoin = newCtx.earlyJoin + 1)
-      // Increment lateJoin counter if joining during late night hours (0-2 AM)
-    } else if (hour in LATE_NIGHT_START..LATE_NIGHT_END) {
-      newCtx = newCtx.copy(lateJoin = newCtx.lateJoin + 1)
+    when (hour) {
+      in EARLY_MORNING_START..EARLY_MORNING_END -> {
+        newCtx = newCtx.copy(earlyJoin = newCtx.earlyJoin + 1)
+      }
+      in LATE_NIGHT_START..LATE_NIGHT_END -> {
+        newCtx = newCtx.copy(lateJoin = newCtx.lateJoin + 1)
+      }
     }
 
     badgeRepository.saveBadgeContext(userId, newCtx)
