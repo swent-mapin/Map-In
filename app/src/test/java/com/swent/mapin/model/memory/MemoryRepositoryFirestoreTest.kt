@@ -175,7 +175,7 @@ class MemoryRepositoryFirestoreTest {
     val snap = qs(doc("1", m1))
 
     whenever(collection.whereEqualTo(eq("eventId"), eq("event1"))).thenReturn(query)
-    whenever(query.whereEqualTo(eq("isPublic"), eq(true))).thenReturn(query)
+    whenever(query.whereEqualTo(eq("public"), eq(true))).thenReturn(query)
     whenever(query.orderBy(eq("createdAt"))).thenReturn(query)
     whenever(query.get()).thenReturn(taskOf(snap))
 
