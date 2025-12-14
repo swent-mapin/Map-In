@@ -288,8 +288,8 @@ class EventRepositoryFirestore(
       // Return null if user is already a participant (no changes needed)
       if (isParticipant) return null // no changes
       // Check if event has reached capacity before allowing join
-      if (event.capacity != null && event.participantIds.size >= event.capacity) {
-        throw IllegalStateException("Event is full")
+      check(!(event.capacity != null && event.participantIds.size >= event.capacity)) {
+        "Event is full"
       }
       event.participantIds + userId
     } else {
