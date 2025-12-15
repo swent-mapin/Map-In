@@ -136,6 +136,7 @@ private fun FriendItem(
     onToggleSelection: () -> Unit
 ) {
   val primary = MaterialTheme.colorScheme.primary
+  val url = friend.userProfile.profilePictureUrl
   Row(
       modifier =
           Modifier.fillMaxWidth()
@@ -144,7 +145,6 @@ private fun FriendItem(
               .padding(12.dp)
               .testTag("${NewConversationScreenTestTags.FRIEND_ITEM}_${friend.userProfile.name}"),
       verticalAlignment = Alignment.CenterVertically) {
-        val url = friend.userProfile.profilePictureUrl
         if (url.isNullOrBlank())
             Icon(
                 Icons.Default.AccountCircle,
