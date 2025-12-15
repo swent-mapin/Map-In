@@ -9,21 +9,22 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * With help of GPT: Helper function which checks if the user's input string for tags are of valid
- * format. The regex means: “A string that starts with #, followed by letters/numbers/underscores,
- * and optionally continues with more tags separated by spaces or commas, where each tag also starts
- * with #.”
- * * Examples of valid inputs:
- * * - "#food"
- * * - "#food , #travel"
- * * - "#fun_2025,#study"
+ * Helper function that checks if the user's input string for tags is in a valid format.
  *
- * @param input The string entered by the user
- * @return true if the input matches the valid tag format, false if not.
+ * The input is considered valid if:
+ * - It is empty or contains only whitespace (tags are optional).
+ * - It consists of one or more tags, where each tag is a non-empty word made exclusively of letters
+ *   (a-z, A-Z).
+ * - Tags are separated by one or more spaces and/or commas (with optional surrounding whitespace).
+ *
+ * @param input The string entered by the user for the tags field
+ * @return true if the input is empty or contains only valid letter-only tags, false otherwise
  */
 fun isValidTagInput(input: String): Boolean {
   if (input.isBlank()) return true
-  val tagRegex = Regex("^(#\\w+)(?:[ ,]+#\\w+)*$")
+
+  val tagRegex = Regex("""^\s*[a-zA-Z]+(?:[\s,]+[a-zA-Z]+)*\s*$""")
+
   return input.matches(tagRegex)
 }
 
