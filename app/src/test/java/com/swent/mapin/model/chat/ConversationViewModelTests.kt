@@ -36,10 +36,13 @@ class ConversationViewModelTest {
   }
 
   @Test
-  fun `getNewUID returns repository UID`() {
-    whenever(conversationRepository.getNewUid()).thenReturn("new_uid_123")
-    val uid = viewModel.getNewUID()
-    Assert.assertEquals("new_uid_123", uid)
+  fun `getNewUID delegates to repository`() {
+    whenever(conversationRepository.getNewUid(listOf("a", "b")))
+      .thenReturn("uid_123")
+
+    val uid = viewModel.getNewUID(listOf("a", "b"))
+
+    Assert.assertEquals("uid_123", uid)
   }
 
   @Test

@@ -53,8 +53,8 @@ class ConversationRepositoryFirestoreTest {
     every { mockCollection.document() } returns mockDocRef
     every { mockDb.collection("conversations") } returns mockCollection
 
-    val id = repo.getNewUid()
-    assertEquals("fake-id", id)
+      val id = repo.getNewUid(emptyList())
+      assertEquals("fake-id", id)
   }
 
   @Test
