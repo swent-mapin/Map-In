@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,6 +49,15 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
 
   val memories by viewModel.memories.collectAsState()
   val error by viewModel.error.collectAsState()
+  val displayMode by viewModel.displayMode.collectAsState()
+
+  DisposableEffect(Unit) {
+    onDispose {
+      if (displayMode == MemoryDisplayMode.NEARBY_MEMORIES) {
+        viewModel.returnToOwnerMemories()
+      }
+    }
+  }
 
   Scaffold(
       modifier = Modifier.fillMaxSize(),
@@ -55,7 +65,11 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
         TopAppBar(
             title = {
               Text(
-                  text = "Memories",
+                  text =
+                      when (displayMode) {
+                        MemoryDisplayMode.OWNER_MEMORIES -> "My Memories"
+                        MemoryDisplayMode.NEARBY_MEMORIES -> "Nearby Memories"
+                      },
                   modifier = Modifier.testTag("memoriesScreenTitle"),
                   style = MaterialTheme.typography.headlineSmall,
                   fontWeight = FontWeight.Bold)
@@ -86,7 +100,11 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                           verticalAlignment = Alignment.CenterVertically,
                           modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                "Your Memories",
+                                text =
+                                    when (displayMode) {
+                                      MemoryDisplayMode.OWNER_MEMORIES -> "Your Memories"
+                                      MemoryDisplayMode.NEARBY_MEMORIES -> "Memories in the area"
+                                    },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f).testTag("yourMemoriesMessage"))
@@ -112,12 +130,22 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                                       Modifier.padding(horizontal = 24.dp)
                                           .testTag("noMemoriesMessage")) {
                                     Text(
-                                        text = "No memories yet",
+                                        text =
+                                            when (displayMode) {
+                                              MemoryDisplayMode.OWNER_MEMORIES -> "No memories yet"
+                                              MemoryDisplayMode.NEARBY_MEMORIES ->
+                                                  "No memories in this area"
+                                            },
                                         style = MaterialTheme.typography.titleMedium)
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text =
-                                            "Create memories for attended events and they'll appear here",
+                                            when (displayMode) {
+                                              MemoryDisplayMode.OWNER_MEMORIES ->
+                                                  "Create memories for attended events and they'll appear here"
+                                              MemoryDisplayMode.NEARBY_MEMORIES ->
+                                                  "Try to look in another area if someone posted a memory"
+                                            },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
