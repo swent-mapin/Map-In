@@ -332,6 +332,165 @@ private fun MediumEventContent(
   }
 }
 
+/** Reusable attendee count and capacity display */
+@Composable
+private fun AttendeeInfo(event: Event, testTagSuffix: String) {
+  val attendeeInfo = remember(event.participantIds, event.capacity) { buildAttendeeInfoUi(event) }
+
+  Column {
+    Text(
+        text = attendeeInfo.attendeeText,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
+
+    attendeeInfo.capacityText?.let {
+      Text(
+          text = it,
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
+    }
+  }
+}
+
+/** Event image card with placeholder */
+@Composable
+private fun EventImageCard(imageUrl: String?) {
+  val containerColor =
+      if (imageUrl == null) {
+        MaterialTheme.colorScheme.surfaceVariant
+      } else {
+        MaterialTheme.colorScheme.surface
+      }
+
+  Card(
+      modifier = Modifier.fillMaxWidth().height(200.dp).testTag("eventImage"),
+      elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+      colors = CardDefaults.cardColors(containerColor = containerColor)) {
+        if (imageUrl != null) {
+          AsyncImage(
+              model = imageUrl,
+              contentDescription = "Event image",
+              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+              contentScale = ContentScale.Crop)
+        } else {
+          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "No image available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+        }
+      }
+}
+
+/** Organizer name text based on state */
+@Composable
+private fun OrganizerRow(organizerState: OrganizerState, onOrganizerClick: (String) -> Unit) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Text(
+        text = "Organized by: ",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+    when (organizerState) {
+      is OrganizerState.Loading -> {
+        Text(
+            text = "Loading...",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.testTag("organizerName"))
+      }
+      is OrganizerState.Loaded -> {
+        val clickModifier =
+            if (organizerState.userId.isNotEmpty()) {
+              Modifier.clickable { onOrganizerClick(organizerState.userId) }
+            } else {
+              Modifier
+            }
+        Text(
+            text = organizerState.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag("organizerName").then(clickModifier))
+      }
+      is OrganizerState.Error -> {
+        Text(
+            text = "Unknown",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testTag("organizerName"))
+      }
+    }
+  }
+}
+
+/** Join/Unregister button section */
+@Composable
+private fun JoinButtonSection(
+    joinButtonUi: JoinButtonUi,
+    onJoinEvent: () -> Unit,
+    onUnregisterEvent: () -> Unit,
+    testTagSuffix: String = ""
+) {
+  if (!joinButtonUi.showJoinButton) {
+    OutlinedButton(
+        onClick = onUnregisterEvent,
+        modifier = Modifier.fillMaxWidth().testTag("unregisterButton$testTagSuffix"),
+        colors =
+            ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+          Text("Unregister")
+        }
+  } else {
+    Button(
+        onClick = onJoinEvent,
+        modifier = Modifier.fillMaxWidth().testTag("joinEventButton$testTagSuffix"),
+        enabled = joinButtonUi.enabled) {
+          Text(joinButtonUi.label)
+        }
+  }
+}
+
+/** Save/Unsave button section */
+@Composable
+private fun SaveButtonSection(
+    saveButtonUi: SaveButtonUi,
+    onSaveForLater: () -> Unit,
+    onUnsaveForLater: () -> Unit
+) {
+  if (!saveButtonUi.showSaveButton) {
+    OutlinedButton(
+        onClick = onUnsaveForLater,
+        modifier = Modifier.fillMaxWidth().testTag("unsaveButtonFull"),
+        colors =
+            ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+          Text(saveButtonUi.label)
+        }
+  } else {
+    Button(onClick = onSaveForLater, modifier = Modifier.fillMaxWidth().testTag("saveButtonFull")) {
+      Text(saveButtonUi.label)
+    }
+  }
+}
+
+/** Description section */
+@Composable
+private fun DescriptionSection(description: String) {
+  if (description.isNotBlank()) {
+    Text(
+        text = "Description",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = description,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.testTag("eventDescription"))
+    Spacer(modifier = Modifier.height(16.dp))
+  }
+}
+
 /**
  * Full state: All medium content + description, organizer name, optional image, and "Save for
  * later" button
@@ -361,31 +520,9 @@ private fun FullEventContent(
               .verticalScroll(scrollState)
               .padding(horizontal = 16.dp)
               .padding(bottom = 16.dp)) {
+
         // Event image (with placeholder if no image)
-        Card(
-            modifier = Modifier.fillMaxWidth().height(200.dp).testTag("eventImage"),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        if (event.imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
-                        else MaterialTheme.colorScheme.surface)) {
-              if (event.imageUrl != null) {
-                AsyncImage(
-                    model = event.imageUrl,
-                    contentDescription = "Event image",
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop)
-              } else {
-                // Placeholder when no image
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                  Text(
-                      text = "No image available",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-              }
-            }
+        EventImageCard(imageUrl = event.imageUrl)
         Spacer(modifier = Modifier.height(16.dp))
 
         // Title with direction icon
@@ -422,43 +559,7 @@ private fun FullEventContent(
         }
 
         // Organizer
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-              text = "Organized by: ",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant)
-          when (organizerState) {
-            is OrganizerState.Loading -> {
-              Text(
-                  text = "Loading...",
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                  modifier = Modifier.testTag("organizerName"))
-            }
-            is OrganizerState.Loaded -> {
-              Text(
-                  text = organizerState.name,
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.primary,
-                  modifier =
-                      Modifier.testTag("organizerName").clickable {
-                        if (organizerState.userId.isNotEmpty()) {
-                          onOrganizerClick(organizerState.userId)
-                        }
-                      })
-            }
-            is OrganizerState.Error -> {
-              Text(
-                  text = "Unknown",
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.error,
-                  modifier = Modifier.testTag("organizerName"))
-            }
-          }
-        }
+        OrganizerRow(organizerState = organizerState, onOrganizerClick = onOrganizerClick)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -470,12 +571,10 @@ private fun FullEventContent(
             modifier = Modifier.testTag("eventLocationFull"))
 
         // Price section
-        event.price
-            .takeIf { it > 0.0 }
-            ?.let { price ->
-              Spacer(modifier = Modifier.height(12.dp))
-              PriceSection(price = price)
-            }
+        if (event.price > 0.0) {
+          Spacer(modifier = Modifier.height(12.dp))
+          PriceSection(price = event.price)
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -485,62 +584,27 @@ private fun FullEventContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Description
-        if (event.description.isNotBlank()) {
-          Text(
-              text = "Description",
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold)
-          Spacer(modifier = Modifier.height(8.dp))
-          Text(
-              text = event.description,
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.testTag("eventDescription"))
-          Spacer(modifier = Modifier.height(16.dp))
-        }
+        DescriptionSection(description = event.description)
 
         val joinButtonUi =
             remember(event.participantIds, event.capacity, isParticipating) {
               resolveJoinButtonUi(event, isParticipating)
             }
 
-        if (!joinButtonUi.showJoinButton) {
-          OutlinedButton(
-              onClick = onUnregisterEvent,
-              modifier = Modifier.fillMaxWidth().testTag("unregisterButtonFull"),
-              colors =
-                  ButtonDefaults.outlinedButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error)) {
-                Text("Unregister")
-              }
-        } else {
-          Button(
-              onClick = onJoinEvent,
-              modifier = Modifier.fillMaxWidth().testTag("joinEventButtonFull"),
-              enabled = joinButtonUi.enabled) {
-                Text(joinButtonUi.label)
-              }
-        }
+        JoinButtonSection(
+            joinButtonUi = joinButtonUi,
+            onJoinEvent = onJoinEvent,
+            onUnregisterEvent = onUnregisterEvent,
+            testTagSuffix = "Full")
 
         Spacer(modifier = Modifier.height(12.dp))
 
         val saveButtonUi = remember(isSaved) { resolveSaveButtonUi(isSaved) }
 
-        if (!saveButtonUi.showSaveButton) {
-          OutlinedButton(
-              onClick = onUnsaveForLater,
-              modifier = Modifier.fillMaxWidth().testTag("unsaveButtonFull"),
-              colors =
-                  ButtonDefaults.outlinedButtonColors(
-                      contentColor = MaterialTheme.colorScheme.error)) {
-                Text(saveButtonUi.label)
-              }
-        } else {
-          Button(
-              onClick = onSaveForLater,
-              modifier = Modifier.fillMaxWidth().testTag("saveButtonFull")) {
-                Text(saveButtonUi.label)
-              }
-        }
+        SaveButtonSection(
+            saveButtonUi = saveButtonUi,
+            onSaveForLater = onSaveForLater,
+            onUnsaveForLater = onUnsaveForLater)
       }
 }
 
@@ -595,26 +659,6 @@ internal fun buildAttendeeInfoUi(event: Event): AttendeeInfoUi {
   val attendeeText = "$attendees attending"
   val capacityText = spotsLeft?.takeIf { it > 0 }?.let { "$it spots left" }
   return AttendeeInfoUi(attendeeText = attendeeText, capacityText = capacityText)
-}
-
-/** Reusable attendee count and capacity display */
-@Composable
-private fun AttendeeInfo(event: Event, testTagSuffix: String) {
-  val attendeeInfo = remember(event.participantIds, event.capacity) { buildAttendeeInfoUi(event) }
-
-  Column {
-    Text(
-        text = attendeeInfo.attendeeText,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.testTag("attendeeCount$testTagSuffix"))
-
-    attendeeInfo.capacityText?.let {
-      Text(
-          text = it,
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.testTag("capacityInfo$testTagSuffix"))
-    }
-  }
 }
 
 /** Format helpers for smart start-end date/time display. */
