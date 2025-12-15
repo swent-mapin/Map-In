@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
@@ -41,7 +40,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -52,8 +50,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.PreferencesRepositoryProvider
+import com.swent.mapin.ui.components.StandardTopAppBar
 import com.swent.mapin.util.BiometricAuthManager
 import kotlinx.coroutines.launch
 
@@ -126,7 +123,6 @@ fun SettingsScreen(
   val canUseBiometric =
       remember(activity) { activity?.let { biometricAuthManager.canUseBiometric(it) } ?: false }
   val coroutineScope = rememberCoroutineScope()
-  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   // Display error messages in Snackbar
   LaunchedEffect(errorMessage) {
@@ -146,36 +142,8 @@ fun SettingsScreen(
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("settingsScreen"),
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-      topBar = {
-        TopAppBar(
-            title = {
-              Text(
-                  "Settings",
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = {
-                    if (!hasNavigatedBack) {
-                      hasNavigatedBack = true
-                      onNavigateBack()
-                    }
-                  },
-                  modifier = Modifier.testTag("backButton")) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface)
-                  }
-            },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
-      }) { paddingValues ->
+      topBar = { StandardTopAppBar(title = "Settings", onNavigateBack = onNavigateBack) }) {
+          paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()

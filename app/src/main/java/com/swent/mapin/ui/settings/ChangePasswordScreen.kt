@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
@@ -37,13 +36,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,6 +62,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.changepassword.ChangePasswordRepositoryProvider
+import com.swent.mapin.ui.components.StandardTopAppBar
 
 /**
  * Custom semantic property to expose password visibility state. This allows tests and accessibility
@@ -98,40 +95,11 @@ fun ChangePasswordScreen(
   var confirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
   val isDarkTheme = isSystemInDarkTheme()
   val focusManager = LocalFocusManager.current
-  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("changePasswordScreen"),
-      topBar = {
-        TopAppBar(
-            title = {
-              Text(
-                  "Change Password",
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = {
-                    if (!hasNavigatedBack) {
-                      hasNavigatedBack = true
-                      onNavigateBack()
-                    }
-                  },
-                  modifier = Modifier.testTag("backButton")) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface)
-                  }
-            },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
-      }) { paddingValues ->
+      topBar = { StandardTopAppBar(title = "Change Password", onNavigateBack = onNavigateBack) }) {
+          paddingValues ->
         Column(
             modifier =
                 Modifier.fillMaxSize()
