@@ -544,7 +544,9 @@ class MapScreenViewModelTest {
   fun clearError_clearsErrorMessage() {
     runBlocking {
       whenever(mockAuth.currentUser).thenReturn(null)
-      val formData = MemoryFormData("", "desc", null, location = Location.UNDEFINED, false, emptyList(), emptyList())
+      val formData =
+          MemoryFormData(
+              "", "desc", null, location = Location.UNDEFINED, false, emptyList(), emptyList())
       viewModel.onMemorySave(formData)
       testDispatcher.scheduler.advanceUntilIdle()
     }
