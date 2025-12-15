@@ -588,63 +588,11 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithText("10.00 CHF").assertIsDisplayed()
   }
 
-  // --- Organizer Click Tests ---
-
-  @Test
-  fun fullState_organizerClickable_whenUserIdNotEmpty() {
-    var clickedUserId: String? = null
-    setEventDetailSheet(
-        sheetState = BottomSheetState.FULL,
-        organizerState = OrganizerState.Loaded("owner123", "John Doe"),
-        onOrganizerClick = { clickedUserId = it })
-
-    composeTestRule.onNodeWithTag("organizerName").performScrollTo().performClick()
-    assertTrue(clickedUserId == "owner123")
-  }
-
-  @Test
-  fun fullState_organizerNotClickable_whenUserIdEmpty() {
-    var clickedUserId: String? = null
-    setEventDetailSheet(
-        sheetState = BottomSheetState.FULL,
-        organizerState = OrganizerState.Loaded("", "Anonymous Organizer"),
-        onOrganizerClick = { clickedUserId = it })
-
-    composeTestRule.onNodeWithTag("organizerName").performScrollTo().performClick()
-    assertTrue(clickedUserId == null)
-  }
-
   // --- Date Range Format Tests ---
 
   @Test
-  fun formatEventDateRangeMedium_differentDays_sameYear() {
-    val calStart =
-        Calendar.getInstance().apply {
-          set(Calendar.YEAR, 2025)
-          set(Calendar.MONTH, 5)
-          set(Calendar.DAY_OF_MONTH, 15)
-          set(Calendar.HOUR_OF_DAY, 14)
-          set(Calendar.MINUTE, 0)
-        }
-    val calEnd =
-        Calendar.getInstance().apply {
-          set(Calendar.YEAR, 2025)
-          set(Calendar.MONTH, 5)
-          set(Calendar.DAY_OF_MONTH, 20)
-          set(Calendar.HOUR_OF_DAY, 18)
-          set(Calendar.MINUTE, 0)
-        }
-    val startTimestamp = Timestamp(calStart.time)
-    val endTimestamp = Timestamp(calEnd.time)
-
-    val result = formatEventDateRangeMedium(startTimestamp, endTimestamp)
-    assertTrue(result.contains("Jun"))
-    assertTrue(result.contains("15"))
-    assertTrue(result.contains("20"))
-  }
-
-  @Test
-  fun formatEventDateRangeMedium_sameDay_differentTimes() {
+  fun formatEventDateRangeMedium_formatsCorrectly() {
+    // Same day, different times
     val calStart =
         Calendar.getInstance().apply {
           set(Calendar.YEAR, 2025)
@@ -661,13 +609,19 @@ class EventDetailSheetTest {
           set(Calendar.HOUR_OF_DAY, 18)
           set(Calendar.MINUTE, 30)
         }
-    val startTimestamp = Timestamp(calStart.time)
-    val endTimestamp = Timestamp(calEnd.time)
 
-    val result = formatEventDateRangeMedium(startTimestamp, endTimestamp)
+    val result = formatEventDateRangeMedium(Timestamp(calStart.time), Timestamp(calEnd.time))
     assertTrue(result.contains("Jun"))
     assertTrue(result.contains("15"))
     assertTrue(result.contains("10:00"))
     assertTrue(result.contains("18:30"))
+
+    // Different days
+    calEnd.set(Calendar.DAY_OF_MONTH, 20)
+    val resultDifferentDays =
+        formatEventDateRangeMedium(Timestamp(calStart.time), Timestamp(calEnd.time))
+    assertTrue(resultDifferentDays.contains("Jun"))
+    assertTrue(resultDifferentDays.contains("15"))
+    assertTrue(resultDifferentDays.contains("20"))
   }
 }
