@@ -6,10 +6,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 
@@ -73,34 +76,41 @@ class NewConversationScreenTest {
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).assertDoesNotExist()
   }
 
-  @Test
-  fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
-    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+    @Test
+    fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
+        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
 
-    var confirmed = false
+        // 🔑 IMPORTANT: stub suspend call
+        coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
 
-    composeTestRule.setContent {
-      NewConversationScreen(
-          friendsViewModel = mockFriendsViewModel,
-          conversationViewModel = mockConversationViewModel, // inject mock
-          onConfirm = { confirmed = true })
+        var confirmed = false
+
+        composeTestRule.setContent {
+            NewConversationScreen(
+                friendsViewModel = mockFriendsViewModel,
+                conversationViewModel = mockConversationViewModel,
+                onConfirm = { confirmed = true })
+        }
+
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+            .performClick()
+
+        composeTestRule
+            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
+            .performClick()
+
+        // ⏳ wait for coroutine
+        composeTestRule.waitForIdle()
+
+        Assert.assertTrue(confirmed)
+        coVerify { mockConversationViewModel.createConversation(any()) }
     }
-
-    composeTestRule.waitForIdle()
-
-    // Select Alice and confirm
-    composeTestRule
-        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-        .performClick()
-    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
-
-    // Verify callback and repository call
-    assert(confirmed)
-    verify { mockConversationViewModel.createConversation(any()) }
-  }
 
   @Test
   fun confirmMultipleFriends_opensDialog_andCanCancel() {
@@ -136,40 +146,55 @@ class NewConversationScreenTest {
         .assertIsNotDisplayed()
   }
 
-  @Test
-  fun confirmMultipleFriends_entersGroupName_andCreatesGroup() {
-    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    @Test
+    fun confirmMultipleFriends_entersGroupName_andCreatesGroup() {
+        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-    var confirmed = false
+        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+        coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
 
-    composeTestRule.setContent {
-      NewConversationScreen(
-          friendsViewModel = mockFriendsViewModel, onConfirm = { confirmed = true })
+        var confirmed = false
+
+        composeTestRule.setContent {
+            NewConversationScreen(
+                friendsViewModel = mockFriendsViewModel,
+                conversationViewModel = mockConversationViewModel,
+                onConfirm = { confirmed = true })
+        }
+
+        // Select Alice, Bob, Charlie
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob")
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Charlie")
+            .performClick()
+
+        // Confirm → open dialog
+        composeTestRule
+            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
+            .performClick()
+
+        composeTestRule
+            .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
+            .assertIsDisplayed()
+
+        // Enter group name
+        composeTestRule.onNode(hasSetTextAction()).performTextInput("MyGroup")
+
+        // Press OK
+        composeTestRule.onNodeWithText("OK").performClick()
+
+        // ⏳ wait for coroutine
+        composeTestRule.waitForIdle()
+
+        Assert.assertTrue(confirmed)
+        coVerify { mockConversationViewModel.createConversation(any()) }
     }
-
-    // Select Alice, Bob, Charlie
-    composeTestRule
-        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-        .performClick()
-    composeTestRule.onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob").performClick()
-    composeTestRule
-        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Charlie")
-        .performClick()
-
-    // Confirm → open dialog
-    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
-    composeTestRule.onNodeWithText("Enter Group Name").assertIsDisplayed()
-
-    // Enter group name
-    composeTestRule.onNode(hasSetTextAction()).performTextInput("MyGroup")
-
-    // Press OK
-    composeTestRule.onNodeWithText("OK").performClick()
-
-    // Confirm callback triggered
-    assert(confirmed)
-  }
 
   @Test
   fun clickingBack_callsOnNavigateBack() {
