@@ -37,8 +37,7 @@ class ConversationViewModelTest {
 
   @Test
   fun `getNewUID delegates to repository`() {
-    whenever(conversationRepository.getNewUid(listOf("a", "b")))
-      .thenReturn("uid_123")
+    whenever(conversationRepository.getNewUid(listOf("a", "b"))).thenReturn("uid_123")
 
     val uid = viewModel.getNewUID(listOf("a", "b"))
 
