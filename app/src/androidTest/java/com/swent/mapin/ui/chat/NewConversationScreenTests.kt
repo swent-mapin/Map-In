@@ -10,7 +10,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert
 import org.junit.Rule
@@ -76,41 +75,39 @@ class NewConversationScreenTest {
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).assertDoesNotExist()
   }
 
-    @Test
-    fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
-        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+  @Test
+  fun confirmSingleFriend_createsConversationAndCallsOnConfirm() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
 
-        // 🔑 IMPORTANT: stub suspend call
-        coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
+    // 🔑 IMPORTANT: stub suspend call
+    coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
 
-        var confirmed = false
+    var confirmed = false
 
-        composeTestRule.setContent {
-            NewConversationScreen(
-                friendsViewModel = mockFriendsViewModel,
-                conversationViewModel = mockConversationViewModel,
-                onConfirm = { confirmed = true })
-        }
-
-        composeTestRule.waitForIdle()
-
-        composeTestRule
-            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-            .performClick()
-
-        composeTestRule
-            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
-            .performClick()
-
-        // ⏳ wait for coroutine
-        composeTestRule.waitForIdle()
-
-        Assert.assertTrue(confirmed)
-        coVerify { mockConversationViewModel.createConversation(any()) }
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onConfirm = { confirmed = true })
     }
+
+    composeTestRule.waitForIdle()
+
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    // ⏳ wait for coroutine
+    composeTestRule.waitForIdle()
+
+    Assert.assertTrue(confirmed)
+    coVerify { mockConversationViewModel.createConversation(any()) }
+  }
 
   @Test
   fun confirmMultipleFriends_opensDialog_andCanCancel() {
@@ -146,55 +143,51 @@ class NewConversationScreenTest {
         .assertIsNotDisplayed()
   }
 
-    @Test
-    fun confirmMultipleFriends_entersGroupName_andCreatesGroup() {
-        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
-        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+  @Test
+  fun confirmMultipleFriends_entersGroupName_andCreatesGroup() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
 
-        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
-        coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
 
-        var confirmed = false
+    var confirmed = false
 
-        composeTestRule.setContent {
-            NewConversationScreen(
-                friendsViewModel = mockFriendsViewModel,
-                conversationViewModel = mockConversationViewModel,
-                onConfirm = { confirmed = true })
-        }
-
-        // Select Alice, Bob, Charlie
-        composeTestRule
-            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
-            .performClick()
-        composeTestRule
-            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob")
-            .performClick()
-        composeTestRule
-            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Charlie")
-            .performClick()
-
-        // Confirm → open dialog
-        composeTestRule
-            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
-            .performClick()
-
-        composeTestRule
-            .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
-            .assertIsDisplayed()
-
-        // Enter group name
-        composeTestRule.onNode(hasSetTextAction()).performTextInput("MyGroup")
-
-        // Press OK
-        composeTestRule.onNodeWithText("OK").performClick()
-
-        // ⏳ wait for coroutine
-        composeTestRule.waitForIdle()
-
-        Assert.assertTrue(confirmed)
-        coVerify { mockConversationViewModel.createConversation(any()) }
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onConfirm = { confirmed = true })
     }
+
+    // Select Alice, Bob, Charlie
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+    composeTestRule.onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob").performClick()
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Charlie")
+        .performClick()
+
+    // Confirm → open dialog
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    composeTestRule
+        .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
+        .assertIsDisplayed()
+
+    // Enter group name
+    composeTestRule.onNode(hasSetTextAction()).performTextInput("MyGroup")
+
+    // Press OK
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    // ⏳ wait for coroutine
+    composeTestRule.waitForIdle()
+
+    Assert.assertTrue(confirmed)
+    coVerify { mockConversationViewModel.createConversation(any()) }
+  }
 
   @Test
   fun clickingBack_callsOnNavigateBack() {
