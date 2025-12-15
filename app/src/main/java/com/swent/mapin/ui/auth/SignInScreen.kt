@@ -206,6 +206,7 @@ private fun EmailPasswordSection(
       visualTransformation =
           if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+      singleLine = true,
       trailingIcon = {
         IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
           Icon(
@@ -213,8 +214,7 @@ private fun EmailPasswordSection(
                   if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
               contentDescription = if (passwordVisible) "Hide password" else "Show password")
         }
-      },
-      singleLine = true)
+      })
   if (isRegistering) {
     Spacer(modifier = Modifier.height(16.dp))
     val passwordValidation by remember(password) { derivedStateOf { validatePassword(password) } }
