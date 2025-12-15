@@ -1,5 +1,5 @@
 [versions]
-agp = "8.5.0"
+agp = "8.7.0"
 androidNdk27 = "11.15.2"
 kotlin = "2.1.0"
 coreKtx = "1.12.0"
