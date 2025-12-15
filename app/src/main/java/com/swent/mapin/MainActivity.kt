@@ -163,11 +163,11 @@ class MainActivity : FragmentActivity() {
   ) {
     try {
       startBiometricAuthentication(
-          biometricAuthManager = biometricAuthManager,
-          failedAttempts = failedAttempts,
-          onAuthCompleted = { success -> if (success) authState.onAuthSuccess() },
-          onFailedAttempts = { authState.failedAttempts = it },
-          onErrorMessage = { authState.onAuthError(it) })
+          biometricAuthManager,
+          failedAttempts,
+          { success -> if (success) authState.onAuthSuccess() },
+          { authState.failedAttempts = it },
+          { authState.onAuthError(it) })
     } catch (e: Exception) {
       Log.e("MainActivity", "Biometric authentication failed unexpectedly", e)
       authState.onAuthError("Authentication unavailable. Please try again or use another account.")
@@ -187,20 +187,13 @@ class MainActivity : FragmentActivity() {
           authState.startUnlocking()
           triggerBiometricAuth(biometricAuthManager, authState.failedAttempts, authState)
         },
-        onUseAnotherAccount = {
-          handleUseAnotherAccount(onAuthCompleted = { authState.onAuthSuccess() })
-        })
+        onUseAnotherAccount = { handleUseAnotherAccount { authState.onAuthSuccess() } })
   }
 
   @Composable
   private fun MainAppContent() {
     val effectiveDeepLink = pendingDeepLink ?: deepLink
-
-    LaunchedEffect(Unit) {
-      if (pendingDeepLink != null) {
-        pendingDeepLink = null
-      }
-    }
+    LaunchedEffect(Unit) { if (pendingDeepLink != null) pendingDeepLink = null }
 
     val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
     AppNavHost(isLoggedIn = isLoggedIn, deepLink = effectiveDeepLink)
