@@ -158,4 +158,24 @@ class MainActivityDeepLinkTest {
         }
     assertEquals("mapin://messages/$longId", getDeepLinkUrlFromIntent(intent))
   }
+
+  // ==================== Additional Edge Cases ====================
+
+  @Test
+  fun `getDeepLinkUrlFromIntent handles query parameters`() {
+    val intent =
+        Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java).apply {
+          putExtra("action_url", "mapin://events?filter=upcoming&sort=date")
+        }
+    assertEquals("mapin://events?filter=upcoming&sort=date", getDeepLinkUrlFromIntent(intent))
+  }
+
+  @Test
+  fun `getDeepLinkUrlFromIntent returns null when intent has wrong type for actionUrl`() {
+    val intent =
+        Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java).apply {
+          putExtra("actionUrl", 12345) // wrong type - int instead of string
+        }
+    assertNull(getDeepLinkUrlFromIntent(intent))
+  }
 }
