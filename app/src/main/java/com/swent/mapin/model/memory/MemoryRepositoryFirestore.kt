@@ -1,9 +1,12 @@
 package com.swent.mapin.model.memory
 
 import android.util.Log
+import com.firebase.geofire.GeoFireUtils
+import com.firebase.geofire.GeoLocation
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.swent.mapin.model.location.Location
 import kotlinx.coroutines.tasks.await
 
 // Assisted by AI
@@ -75,6 +78,30 @@ class MemoryRepositoryFirestore(private val db: FirebaseFirestore) : MemoryRepos
             .get()
             .await()
     return snap.documents.mapNotNull { documentToMemory(it) }
+  }
+
+  override suspend fun getMemoriesByLocation(location: Location, radius: Double): List<Memory> {
+    Log.d("MemoryRepositoryFirestore", "getMemoriesByLocation: $location, $radius")
+    if (!location.isDefined()) return emptyList()
+
+    val bounds =
+        GeoFireUtils.getGeoHashQueryBounds(
+                GeoLocation(location.latitude!!, location.longitude!!), radius * 1000)
+            .toList()
+
+    val bound = bounds[0]
+    val snap =
+        db.collection(MEMORIES_COLLECTION_PATH)
+            .orderBy("location.geohash")
+            .startAt(bound.startHash)
+            .endAt(bound.endHash)
+            .get()
+            .await()
+
+    val memories = snap.documents.mapNotNull { documentToMemory(it) }
+
+    Log.d("MemoryRepositoryFirestore", "getMemoriesByLocation: $memories")
+    return memories
   }
 
   override suspend fun addMemory(memory: Memory) {
