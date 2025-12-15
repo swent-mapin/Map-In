@@ -22,8 +22,7 @@ data class Memory(
     val description: String = "",
     val eventId: String? = null,
     val ownerId: String = "",
-    @get:PropertyName("isPublic")
-    val isPublic: Boolean = false,
+    @get:PropertyName("isPublic") val isPublic: Boolean = false,
     val createdAt: Timestamp? = null,
     val mediaUrls: List<String> = emptyList(),
     val taggedUserIds: List<String> = emptyList()

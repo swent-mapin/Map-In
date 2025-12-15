@@ -23,23 +23,23 @@ class UserPickerViewModel(
     private val firebaseAuth: FirebaseAuth = Firebase.auth
 ) : ViewModel() {
 
-    private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
-    val friends = _friends.asStateFlow()
+  private val _friends = MutableStateFlow<List<FriendWithProfile>>(emptyList())
+  val friends = _friends.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            try {
-                val userId = firebaseAuth.currentUser!!.uid
-                _friends.value = friendRepository.getFriends(userId)
-            } catch (e: Exception) {
-                Log.e("UserPickerViewModel", "Error fetching friends", e)
-            }
-        }
+  init {
+    viewModelScope.launch {
+      try {
+        val userId = firebaseAuth.currentUser!!.uid
+        _friends.value = friendRepository.getFriends(userId)
+      } catch (e: Exception) {
+        Log.e("UserPickerViewModel", "Error fetching friends", e)
+      }
     }
+  }
 }
 
 class UserPickerVMFactory(private val repo: FriendRequestRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return UserPickerViewModel(repo) as T
-    }
+  override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    return UserPickerViewModel(repo) as T
+  }
 }
