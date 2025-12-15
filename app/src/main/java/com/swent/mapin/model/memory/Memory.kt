@@ -1,6 +1,7 @@
 package com.swent.mapin.model.memory
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
 /**
  * Represents a memory created by a user, optionally linked to an event.
@@ -21,6 +22,7 @@ data class Memory(
     val description: String = "",
     val eventId: String? = null,
     val ownerId: String = "",
+    @get:PropertyName("isPublic")
     val isPublic: Boolean = false,
     val createdAt: Timestamp? = null,
     val mediaUrls: List<String> = emptyList(),

@@ -277,7 +277,7 @@ private fun MemoryItem(
             }
 
             // Footer row: Public + Date
-            MemoryFooter(memory.public, dateText)
+            MemoryFooter(memory.isPublic, dateText)
           }
         }
       }
