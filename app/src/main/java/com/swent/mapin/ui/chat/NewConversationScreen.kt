@@ -92,6 +92,12 @@ private fun NewConversationTopBar(
     selectedFriends: SnapshotStateList<FriendWithProfile>,
     onConfirmClick: () -> Unit
 ) {
+  val colors =
+      TopAppBarDefaults.topAppBarColors(
+          containerColor = MaterialTheme.colorScheme.primaryContainer,
+          titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+          navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+          actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer)
   TopAppBar(
       title = { Text("New Conversation") },
       navigationIcon = {
@@ -109,12 +115,7 @@ private fun NewConversationTopBar(
                   Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
                 }
       },
-      colors =
-          TopAppBarDefaults.topAppBarColors(
-              containerColor = MaterialTheme.colorScheme.primaryContainer,
-              titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-              navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-              actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
+      colors = colors)
 }
 
 @Composable
