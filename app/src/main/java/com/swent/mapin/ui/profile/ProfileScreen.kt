@@ -163,6 +163,8 @@ fun ProfileScreen(
                                     stiffness = Spring.StiffnessLow)),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                   if (viewModel.isEditMode) {
+                    // Add space for profile picture overlay in edit mode
+                    Spacer(modifier = Modifier.height(100.dp))
                     EditProfileContent(viewModel = viewModel)
                   } else {
                     ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
@@ -365,8 +367,6 @@ internal fun ProfileInfoCard(
 /** Edit mode: displays editable text fields for profile information. */
 @Composable
 internal fun EditProfileContent(viewModel: ProfileViewModel) {
-  // Add space for the profile picture
-  Spacer(modifier = Modifier.height(100.dp))
 
   Card(
       modifier = Modifier.fillMaxWidth(),
