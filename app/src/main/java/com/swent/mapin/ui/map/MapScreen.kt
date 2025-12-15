@@ -125,6 +125,7 @@ import com.swent.mapin.ui.memory.MemoriesViewModel
 import com.swent.mapin.ui.memory.MemoryDetailSheet
 import com.swent.mapin.ui.profile.ProfileViewModel
 import com.swent.mapin.util.EventUtils
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -133,7 +134,7 @@ import kotlinx.coroutines.launch
 private const val MAX_SEARCH_RESULTS_ZOOM = 17.0
 
 /** Map screen that layers Mapbox content with a bottom sheet driven by MapScreenViewModel. */
-@OptIn(MapboxDelicateApi::class)
+@OptIn(MapboxDelicateApi::class, FlowPreview::class)
 @Composable
 fun MapScreen(
     onEventClick: (Event) -> Unit = {},
