@@ -3,8 +3,8 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 
 /**
  * Component responsible for selecting and preparing candidate events for AI recommendations.

@@ -3,8 +3,8 @@ package com.swent.mapin.model.ai
 // Assisted by AI
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.event.EventRepository
+import com.swent.mapin.model.location.Location
 
 /**
  * Result of an AI assistant query.
