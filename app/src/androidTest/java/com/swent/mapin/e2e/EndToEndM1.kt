@@ -508,7 +508,8 @@ class EndToEndM1 {
           .isNotEmpty()
     }
 
-    // Verify the updated name is still displayed
+    // Verify the updated name is still displayed (scroll to ensure visibility)
+    composeTestRule.onNodeWithText(updatedName, useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithText(updatedName, useUnmergedTree = true).assertExists()
   }
 }
