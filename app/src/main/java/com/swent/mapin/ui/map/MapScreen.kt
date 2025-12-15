@@ -82,6 +82,7 @@ import com.mapbox.maps.extension.compose.style.standard.StandardStyleState
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
+import com.mapbox.maps.plugin.gestures.gestures
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.HttpClientProvider
@@ -89,6 +90,7 @@ import com.swent.mapin.R
 import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.model.location.LocationViewModelFactory
 import com.swent.mapin.model.network.ConnectivityServiceProvider
@@ -535,6 +537,26 @@ fun MapScreen(
     heatmapSource.data = GeoJSONData(eventsToGeoJson(viewModel.events))
   }
 
+  LaunchedEffect(viewModel.clickedPosition) {
+    if (viewModel.clickedPosition != null &&
+        viewModel.mapStyle == MapScreenViewModel.MapStyle.HEATMAP) {
+      viewModel.handleHeatmapClickForMemories()
+    }
+  }
+
+  LaunchedEffect(viewModel.shouldNavigateToNearbyMemories) {
+    if (viewModel.shouldNavigateToNearbyMemories) {
+      val params = viewModel.getNearbyMemoriesParams()
+      if (params != null) {
+        memoryVM.loadMemoriesNearLocation(
+            location = Location.from("MapClick", params.first.latitude, params.first.longitude),
+            radius = params.second)
+      }
+      viewModel.onNearbyMemoriesNavigated()
+      onNavigateToMemories()
+    }
+  }
+
   val anchoredSheetHeight =
       if (viewModel.currentSheetHeight < sheetConfig.mediumHeight) {
         viewModel.currentSheetHeight
@@ -912,6 +934,13 @@ private fun MapboxLayer(
               }
         }
       }) {
+        MapEffect(Unit) { mapView ->
+          mapView.gestures.addOnMapClickListener { point ->
+            viewModel.onMapClicked(point.latitude(), point.longitude())
+
+            false
+          }
+        }
         MapLayers(
             viewModel = viewModel,
             mapViewportState = mapViewportState,
@@ -969,53 +998,56 @@ private fun MapLayers(
     DirectionOverlay(routePoints = directionState.routePoints)
   }
 
-  // Disable clustering when a pin is selected to prevent it from being absorbed
-  val shouldCluster = !viewModel.showHeatmap && selectedEvent == null
+  // Only render pins when heatmap is not shown
+  if (!viewModel.showHeatmap) {
+    // Disable clustering when a pin is selected to prevent it from being absorbed
+    val shouldCluster = selectedEvent == null
 
-  // Render annotations (with or without clustering)
-  if (viewModel.showHeatmap || !shouldCluster) {
-    // No clustering: used for heatmap mode or when a pin is selected
-    PointAnnotationGroup(annotations = annotations) {
-      iconAllowOverlap = false // Enable collision detection
-      textAllowOverlap = false // Enable collision detection for text
-      iconIgnorePlacement = false // Respect other symbols
-      textIgnorePlacement = false // Respect other symbols
-      interactionsState.onClicked { annotation ->
-        findEventForAnnotation(annotation, viewModel.events)?.let { event ->
-          onEventClick(event)
-          true
-        } ?: false
-      }
-    }
-  } else {
-    // With clustering: default behavior when no pin is selected
-    PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
-      iconAllowOverlap = false // Enable collision detection
-      textAllowOverlap = false // Enable collision detection for text
-      iconIgnorePlacement = false // Respect other symbols
-      textIgnorePlacement = false // Respect other symbols
-      interactionsState
-          .onClicked { annotation ->
-            findEventForAnnotation(annotation, viewModel.events)?.let { event ->
-              onEventClick(event)
-              true
-            } ?: false
-          }
-          .onClusterClicked { clusterFeature ->
-            val feature = clusterFeature.originalFeature
-            val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
-            val currentZoom =
-                mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
-            val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
-
-            mapViewportState.easeTo(
-                cameraOptions {
-                  center(center)
-                  zoom((currentZoom + 2.0).coerceAtMost(18.0))
-                },
-                animationOptions = animationOptions)
+    // Render annotations (with or without clustering)
+    if (!shouldCluster) {
+      // No clustering: used for heatmap mode or when a pin is selected
+      PointAnnotationGroup(annotations = annotations) {
+        iconAllowOverlap = false // Enable collision detection
+        textAllowOverlap = false // Enable collision detection for text
+        iconIgnorePlacement = false // Respect other symbols
+        textIgnorePlacement = false // Respect other symbols
+        interactionsState.onClicked { annotation ->
+          findEventForAnnotation(annotation, viewModel.events)?.let { event ->
+            onEventClick(event)
             true
-          }
+          } ?: false
+        }
+      }
+    } else {
+      // With clustering: default behavior when no pin is selected
+      PointAnnotationGroup(annotations = annotations, annotationConfig = clusterConfig) {
+        iconAllowOverlap = false // Enable collision detection
+        textAllowOverlap = false // Enable collision detection for text
+        iconIgnorePlacement = false // Respect other symbols
+        textIgnorePlacement = false // Respect other symbols
+        interactionsState
+            .onClicked { annotation ->
+              findEventForAnnotation(annotation, viewModel.events)?.let { event ->
+                onEventClick(event)
+                true
+              } ?: false
+            }
+            .onClusterClicked { clusterFeature ->
+              val feature = clusterFeature.originalFeature
+              val center = (feature.geometry() as? Point) ?: return@onClusterClicked false
+              val currentZoom =
+                  mapViewportState.cameraState?.zoom ?: MapConstants.DEFAULT_ZOOM.toDouble()
+              val animationOptions = MapAnimationOptions.Builder().duration(450L).build()
+
+              mapViewportState.easeTo(
+                  cameraOptions {
+                    center(center)
+                    zoom((currentZoom + 2.0).coerceAtMost(18.0))
+                  },
+                  animationOptions = animationOptions)
+              true
+            }
+      }
     }
   }
 
