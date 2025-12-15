@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,7 @@ import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
+import kotlinx.coroutines.launch
 
 object NewConversationScreenTestTags {
   const val NEW_CONVERSATION_SCREEN = "newConversationScreen"
@@ -89,8 +91,7 @@ fun NewConversationScreen(
   val friends by friendsViewModel.friends.collectAsState()
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
-  val convoExists by conversationViewModel.convoExists.collectAsState()
-  val gotConversation by conversationViewModel.gotConversation.collectAsState()
+  val scope = rememberCoroutineScope()
 
   Scaffold(
       topBar = {
@@ -115,24 +116,26 @@ fun NewConversationScreen(
                         val convoId =
                             conversationViewModel.getNewUID(
                                 listOf(friend.userProfile.userId, currentUserId))
-                        conversationViewModel.conversationExists(convoId)
-                        if (convoExists) { // If the 1 on 1 conversation with this ID already
-                                           // exists, then navigate to the screen
-                          conversationViewModel.getConversationById(convoId)
-                          gotConversation?.let { onCreateExistingConversation(it) }
-                        } else { // Else create a new Conversation
-                          val newConvo =
-                              Conversation(
-                                  id = convoId,
-                                  name = friend.userProfile.name,
-                                  participantIds = listOf(currentUserId, friend.userProfile.userId),
-                                  participants =
-                                      listOf(
-                                          conversationViewModel.currentUserProfile,
-                                          friend.userProfile),
-                                  profilePictureUrl = friend.userProfile.profilePictureUrl)
-                          conversationViewModel.createConversation(newConvo)
-                          onConfirm()
+                        scope.launch {
+                          val existingConvo = conversationViewModel.getExistingConversation(convoId)
+                          if (existingConvo != null) {
+                            onCreateExistingConversation(existingConvo)
+                          } else {
+                            val newConvo =
+                                Conversation(
+                                    id = convoId,
+                                    name = friend.userProfile.name,
+                                    participantIds =
+                                        listOf(currentUserId, friend.userProfile.userId),
+                                    participants =
+                                        listOf(
+                                            conversationViewModel.currentUserProfile,
+                                            friend.userProfile),
+                                    profilePictureUrl = friend.userProfile.profilePictureUrl)
+
+                            conversationViewModel.createConversation(newConvo)
+                            onConfirm()
+                          }
                         }
                       }
                     },
@@ -245,24 +248,24 @@ fun NewConversationScreen(
                 if (groupName.value.isNotBlank()) {
                   val ids = selectedFriends.map { friends -> friends.userProfile.userId }
                   val profiles = selectedFriends.map { friends -> friends.userProfile }
-                  var convoId =
-                      conversationViewModel.getNewUID(
-                          ids + listOf((Firebase.auth.currentUser?.uid ?: "")))
-                  conversationViewModel.conversationExists(convoId)
-                  if (convoExists) { // Generates a random UID since group conversations can have
-                                     // duplicates
-                    convoId = conversationViewModel.getNewUID(emptyList())
+                  scope.launch {
+                    val currentUserId = Firebase.auth.currentUser?.uid ?: ""
+                    var convoId = conversationViewModel.getNewUID(ids + listOf(currentUserId))
+                    val existing = conversationViewModel.getExistingConversation(convoId)
+                    if (existing != null) {
+                      convoId = conversationViewModel.getNewUID(emptyList())
+                    }
+                    conversationViewModel.createConversation(
+                        Conversation(
+                            id = convoId,
+                            name = groupName.value,
+                            participantIds = ids + listOf(currentUserId),
+                            participants =
+                                profiles + listOf(conversationViewModel.currentUserProfile),
+                            profilePictureUrl =
+                                selectedFriends.first().userProfile.profilePictureUrl))
+                    onConfirm()
                   }
-                  val newConvo =
-                      Conversation(
-                          id = convoId,
-                          name = groupName.value,
-                          participantIds = ids + listOf((Firebase.auth.currentUser?.uid ?: "")),
-                          participants =
-                              profiles + listOf(conversationViewModel.currentUserProfile),
-                          profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl)
-                  conversationViewModel.createConversation(newConvo)
-                  onConfirm()
                   showGroupNameDialog.value = false
                   groupName.value = ""
                 }

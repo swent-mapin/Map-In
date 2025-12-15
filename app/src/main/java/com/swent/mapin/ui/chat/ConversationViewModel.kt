@@ -58,12 +58,17 @@ class ConversationViewModel(
     return conversationRepository.getNewUid(participantIds)
   }
 
-  private val _convoExists = MutableStateFlow<Boolean>(false)
-  val convoExists: StateFlow<Boolean> = _convoExists.asStateFlow()
-
-  fun conversationExists(conversationId: String) {
-    viewModelScope.launch {
-      _convoExists.value = conversationRepository.conversationExists(conversationId)
+  /**
+   * Checks if a conversation exists and returns it if it does.
+   *
+   * @param conversationId The ID of the conversation.
+   * @return The existing [Conversation] if found, or null otherwise.
+   */
+  suspend fun getExistingConversation(conversationId: String): Conversation? {
+    return if (conversationRepository.conversationExists(conversationId)) {
+      conversationRepository.getConversationById(conversationId)
+    } else {
+      null
     }
   }
 
