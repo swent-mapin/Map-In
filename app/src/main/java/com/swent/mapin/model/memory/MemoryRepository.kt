@@ -1,6 +1,7 @@
 package com.swent.mapin.model.memory
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.location.Location
 
 interface MemoryRepository {
   /** Generates and returns a new unique identifier for a Memory item. */
@@ -62,6 +63,15 @@ interface MemoryRepository {
    * @return A list of Memory items where the specified user is tagged.
    */
   suspend fun getMemoriesByTaggedUser(userId: String): List<Memory>
+
+  /**
+   * Retrieves Memory items within a specified location and radius.
+   *
+   * @param location The location to search around.
+   * @param radius The radius in kilometers to search within.
+   * @return A list of Memory items within the specified location and radius.
+   */
+  suspend fun getMemoriesByLocation(location: Location, radius: Double): List<Memory>
 
   /**
    * Adds a new Memory item to the repository.
