@@ -669,49 +669,51 @@ class ConversationRepositoryFirestoreTest {
           })
     }
   }
-    @Test
-    fun `conversationExists returns true when document exists`() = runTest {
-        // Arrange
-        val conversationId = "conv123"
 
-        val mockSnapshot = mockk<DocumentSnapshot>()
-        every { mockSnapshot.exists() } returns true
+  @Test
+  fun `conversationExists returns true when document exists`() = runTest {
+    // Arrange
+    val conversationId = "conv123"
 
-        val realTask = Tasks.forResult(mockSnapshot)
+    val mockSnapshot = mockk<DocumentSnapshot>()
+    every { mockSnapshot.exists() } returns true
 
-        val mockDocRef = mockk<DocumentReference>()
-        every { mockDocRef.get() } returns realTask
+    val realTask = Tasks.forResult(mockSnapshot)
 
-        val mockCollection = mockk<CollectionReference>()
-        every { mockCollection.document(conversationId) } returns mockDocRef
+    val mockDocRef = mockk<DocumentReference>()
+    every { mockDocRef.get() } returns realTask
 
-        every { mockDb.collection("conversations") } returns mockCollection
+    val mockCollection = mockk<CollectionReference>()
+    every { mockCollection.document(conversationId) } returns mockDocRef
 
-        // Act
-        val result = repo.conversationExists(conversationId)
+    every { mockDb.collection("conversations") } returns mockCollection
 
-        // Assert
-        assertTrue(result)
-    }
-    @Test
-    fun `conversationExists returns false when document does not exist`() = runTest {
-        val conversationId = "conv123"
+    // Act
+    val result = repo.conversationExists(conversationId)
 
-        val mockSnapshot = mockk<DocumentSnapshot>()
-        every { mockSnapshot.exists() } returns false
+    // Assert
+    assertTrue(result)
+  }
 
-        val realTask = Tasks.forResult(mockSnapshot)
+  @Test
+  fun `conversationExists returns false when document does not exist`() = runTest {
+    val conversationId = "conv123"
 
-        val mockDocRef = mockk<DocumentReference>()
-        every { mockDocRef.get() } returns realTask
+    val mockSnapshot = mockk<DocumentSnapshot>()
+    every { mockSnapshot.exists() } returns false
 
-        val mockCollection = mockk<CollectionReference>()
-        every { mockCollection.document(conversationId) } returns mockDocRef
+    val realTask = Tasks.forResult(mockSnapshot)
 
-        every { mockDb.collection("conversations") } returns mockCollection
+    val mockDocRef = mockk<DocumentReference>()
+    every { mockDocRef.get() } returns realTask
 
-        val result = repo.conversationExists(conversationId)
+    val mockCollection = mockk<CollectionReference>()
+    every { mockCollection.document(conversationId) } returns mockDocRef
 
-        assertFalse(result)
-    }
+    every { mockDb.collection("conversations") } returns mockCollection
+
+    val result = repo.conversationExists(conversationId)
+
+    assertFalse(result)
+  }
 }
