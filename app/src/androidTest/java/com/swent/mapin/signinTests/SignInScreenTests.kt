@@ -549,4 +549,39 @@ class SignInScreenTests {
 
     composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().assertIsNotEnabled()
   }
+
+  @Test
+  fun errorShouldClearWhenUserTypesInEmailField() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    // First show an error
+    uiStateFlow.value = SignInUiState(error = AuthError.IncorrectCredentials)
+    composeTestRule.waitForIdle()
+
+    // Type in email field - this should trigger clearError
+    composeTestRule.onNodeWithText("Email").performScrollTo().performTextInput("a")
+    composeTestRule.waitForIdle()
+
+    // Verify clearError was called
+    verify { mockViewModel.clearError() }
+  }
+
+  @Test
+  fun passwordRequirementsCardShouldDisappearInSignInMode() {
+    composeTestRule.setContent { SignInScreen(viewModel = mockViewModel) }
+
+    // Switch to register mode
+    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+
+    // Card should be visible
+    composeTestRule.onNodeWithTag("passwordRequirementsCard").performScrollTo().assertExists()
+
+    // Switch back to sign in mode
+    composeTestRule.onNodeWithTag("registerSwitch").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+
+    // Card should not be visible
+    composeTestRule.onNodeWithTag("passwordRequirementsCard").assertDoesNotExist()
+  }
 }
