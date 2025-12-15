@@ -226,6 +226,35 @@ fun ConversationTopBar(
         })
   }
 }
+
+/** Helper composable to render the appropriate conversation top bar based on conversation type. */
+@Composable
+private fun ConversationTopBarContent(
+    conversation: Conversation?,
+    conversationName: String,
+    participantNames: List<String>?,
+    currentUserProfile: UserProfile,
+    onNavigateBack: () -> Unit,
+    onLeaveGroup: () -> Unit
+) {
+  val participantCount = conversation?.participantIds?.size ?: return
+
+  if (participantCount > 2) {
+    ConversationTopBar(
+        conversationName,
+        participantNames,
+        onNavigateBack,
+        conversation.profilePictureUrl,
+        isGroupChat = true,
+        onLeaveGroup = onLeaveGroup)
+  } else {
+    val otherParticipant =
+        conversation.participants.firstOrNull { it.userId != currentUserProfile.userId }
+    ConversationTopBar(
+        conversationName, emptyList(), onNavigateBack, otherParticipant?.profilePictureUrl)
+  }
+}
+
 /**
  * Assisted by AI Functions representing the UI for conversations between users
  *
@@ -267,12 +296,9 @@ fun ConversationScreen(
 
   // Handle leave group state changes
   LaunchedEffect(leaveGroupState) {
-    when (leaveGroupState) {
-      is LeaveGroupState.Success -> {
-        conversationViewModel.resetLeaveGroupState()
-        onNavigateBack()
-      }
-      else -> {}
+    if (leaveGroupState is LeaveGroupState.Success) {
+      conversationViewModel.resetLeaveGroupState()
+      onNavigateBack()
     }
   }
 
@@ -296,26 +322,13 @@ fun ConversationScreen(
   }
   Scaffold(
       topBar = {
-        conversation?.participantIds?.size?.let {
-          // If it is a group, then use group profile picture, if not then use the other user's
-          if (it > 2) {
-            ConversationTopBar(
-                conversationName,
-                participantNames,
-                onNavigateBack,
-                conversation?.profilePictureUrl,
-                isGroupChat = true,
-                onLeaveGroup = { conversationViewModel.leaveConversation(conversationId) })
-          } else {
-            val otherParticipant =
-                conversation?.participants?.firstOrNull { it ->
-                  it.userId != currentUserProfile.userId
-                }
-            // For 1-to-1 chats, don't show participant names list at all
-            ConversationTopBar(
-                conversationName, emptyList(), onNavigateBack, otherParticipant?.profilePictureUrl)
-          }
-        }
+        ConversationTopBarContent(
+            conversation = conversation,
+            conversationName = conversationName,
+            participantNames = participantNames,
+            currentUserProfile = currentUserProfile,
+            onNavigateBack = onNavigateBack,
+            onLeaveGroup = { conversationViewModel.leaveConversation(conversationId) })
       },
       bottomBar = {
         Row(
