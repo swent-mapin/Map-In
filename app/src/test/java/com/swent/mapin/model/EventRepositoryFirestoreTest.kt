@@ -18,6 +18,8 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import com.swent.mapin.model.badge.BadgeContext
+import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryFirestore
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
@@ -25,13 +27,17 @@ import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
+import java.util.Calendar
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.MockedStatic
@@ -60,6 +66,7 @@ class EventRepositoryFirestoreTest {
   private lateinit var firebaseAuthMock: MockedStatic<FirebaseAuth>
   private lateinit var notificationService: NotificationService
   private lateinit var userProfileRepository: UserProfileRepository
+  private lateinit var badgeRepo: BadgeRepository
 
   @Before
   fun setup() {
@@ -67,12 +74,28 @@ class EventRepositoryFirestoreTest {
     friendRepo = mock()
     notificationService = mock()
     userProfileRepository = mock()
+    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
+
+    val fakeAuth = mock<FirebaseAuth>()
+    val fakeUser = mock<FirebaseUser>()
+
+    whenever(fakeUser.uid).thenReturn("currentUser")
+    whenever(fakeAuth.currentUser).thenReturn(fakeUser)
+
+    firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(fakeAuth)
+    badgeRepo = mock()
+    runBlocking {
+      whenever(badgeRepo.getBadgeContext(any())).thenReturn(BadgeContext())
+      whenever(badgeRepo.saveBadgeContext(any(), any())).thenReturn(true)
+      whenever(badgeRepo.updateBadgesAfterContextChange(any())).thenReturn(Unit)
+    }
     repo =
         EventRepositoryFirestore(
             db,
             friendRequestRepository = friendRepo,
             notificationService = notificationService,
-            userProfileRepository = userProfileRepository)
+            userProfileRepository = userProfileRepository,
+            badgeRepository = badgeRepo)
     document = mock()
     transaction = mock()
     collection =
@@ -89,9 +112,12 @@ class EventRepositoryFirestoreTest {
     whenever(db.collection(USERS_COLLECTION_PATH)).thenReturn(usersCollection)
     whenever(collection.document()).thenReturn(document)
     whenever(collection.document(any())).thenReturn(document)
-    whenever(usersCollection.document(any())).thenReturn(userDocRef)
   }
 
+  @After
+  fun tearDown() {
+    firebaseAuthMock.close()
+  }
   // Helper methods
   private fun createEvent(
       uid: String = "",
@@ -99,7 +125,7 @@ class EventRepositoryFirestoreTest {
       url: String = "",
       description: String = "Description",
       date: Timestamp = Timestamp.now(),
-      location: Location = Location("Location", 0.0, 0.0),
+      location: Location = Location.from("Location", 0.0, 0.0),
       tags: List<String> = emptyList(),
       public: Boolean = true,
       ownerId: String = "owner",
@@ -164,7 +190,8 @@ class EventRepositoryFirestoreTest {
           db,
           friendRequestRepository = friendRepo,
           notificationService = notificationService,
-          userProfileRepository = userProfileRepo)
+          userProfileRepository = userProfileRepo,
+          badgeRepository = badgeRepo)
 
   // ========== BASIC CRUD TESTS ==========
 
@@ -181,7 +208,7 @@ class EventRepositoryFirestoreTest {
         createEvent(
             uid = "E1",
             title = "Title",
-            location = Location("Zurich", 47.3769, 8.5417),
+            location = Location.from("Zurich", 47.3769, 8.5417),
             tags = listOf("music"),
             capacity = 50)
     val docSnapshot = doc("E1", event)
@@ -362,7 +389,8 @@ class EventRepositoryFirestoreTest {
         createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1"), capacity = 10)
     val docSnapshot = doc("E1", event)
     val eventDocRef = mock<DocumentReference>()
-
+    val userRef = mock<DocumentReference>()
+    whenever(usersCollection.document(any())).thenReturn(userRef)
     whenever(collection.document("E1")).thenReturn(eventDocRef)
     whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
       val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
@@ -404,7 +432,8 @@ class EventRepositoryFirestoreTest {
         createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1", "user2"))
     val docSnapshot = doc("E1", event)
     val eventDocRef = mock<DocumentReference>()
-
+    val userRef = mock<DocumentReference>()
+    whenever(usersCollection.document(any())).thenReturn(userRef)
     whenever(collection.document("E1")).thenReturn(eventDocRef)
     whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
       val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
@@ -647,68 +676,46 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_friendsOnly_withNoFriends_returnsEmpty() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
+    val filters = Filters(friendsOnly = true)
 
-      val filters = Filters(friendsOnly = true)
+    // No friends
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
 
-      // No friends
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(emptyList())
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
-
-      verify(friendRepo).getFriends("currentUser")
-      assertTrue(result.isEmpty())
-    } finally {
-      firebaseAuthMock.close()
-    }
+    verify(friendRepo).getFriends("currentUser")
+    assertTrue(result.isEmpty())
   }
 
   @Test
   fun getFilteredEvents_friendsOnly_withTags_appliesTagsClientSide() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
+    val filters = Filters(friendsOnly = true, tags = setOf("music"))
 
-      val filters = Filters(friendsOnly = true, tags = setOf("music"))
+    val friend1 =
+        FriendWithProfile(
+            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+            friendshipStatus = FriendshipStatus.ACCEPTED)
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
-      val friend1 =
-          FriendWithProfile(
-              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-              friendshipStatus = FriendshipStatus.ACCEPTED)
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
+    val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
+    val sportEvent = createEvent("E2", "Game", ownerId = "friend1", tags = listOf("sport"))
+    val doc1 = doc("E1", musicEvent)
+    val doc2 = doc("E2", sportEvent)
+    val snap = qs(doc1, doc2)
 
-      val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
-      val sportEvent = createEvent("E2", "Game", ownerId = "friend1", tags = listOf("sport"))
-      val doc1 = doc("E1", musicEvent)
-      val doc2 = doc("E2", sportEvent)
-      val snap = qs(doc1, doc2)
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+    whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val queryMock = mock<Query>()
-      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
-          .thenReturn(queryMock)
-      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
-      whenever(queryMock.get()).thenReturn(taskOf(snap))
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
-
-      // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
-      verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
-      assertEquals(1, result.size)
-      assertEquals("Concert", result.first().title)
-      assertTrue("music" in result.first().tags)
-    } finally {
-      firebaseAuthMock.close()
-    }
+    // Tags should be filtered CLIENT-SIDE (not in whereArrayContainsAny)
+    verify(queryMock, never()).whereArrayContainsAny(any<String>(), any<List<String>>())
+    assertEquals(1, result.size)
+    assertEquals("Concert", result.first().title)
+    assertTrue("music" in result.first().tags)
   }
 
   @Test
@@ -727,78 +734,67 @@ class EventRepositoryFirestoreTest {
 
   @Test
   fun getFilteredEvents_allFilters_combinesCorrectly() = runTest {
-    firebaseAuthMock = mockStatic(FirebaseAuth::class.java)
-    try {
-      val mockAuth = mock<FirebaseAuth>()
-      val mockUser = mock<FirebaseUser>()
-      whenever(mockUser.uid).thenReturn("currentUser")
-      whenever(mockAuth.currentUser).thenReturn(mockUser)
-      firebaseAuthMock.`when`<FirebaseAuth> { FirebaseAuth.getInstance() }.thenReturn(mockAuth)
+    val filters =
+        Filters(
+            friendsOnly = true,
+            tags = setOf("music"),
+            popularOnly = true,
+            maxPrice = 50,
+            startDate = LocalDate.now(),
+            endDate = LocalDate.now().plusDays(7))
 
-      val filters =
-          Filters(
-              friendsOnly = true,
-              tags = setOf("music"),
-              popularOnly = true,
-              maxPrice = 50,
-              startDate = LocalDate.now(),
-              endDate = LocalDate.now().plusDays(7))
+    val friend1 =
+        FriendWithProfile(
+            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+            friendshipStatus = FriendshipStatus.ACCEPTED)
+    whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
-      val friend1 =
-          FriendWithProfile(
-              userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-              friendshipStatus = FriendshipStatus.ACCEPTED)
-      whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
+    val validEvent =
+        createEvent(
+            uid = "E1",
+            title = "Valid Event",
+            ownerId = "friend1",
+            tags = listOf("music"),
+            participantIds = List(35) { "user$it" },
+            price = 30.0)
 
-      val validEvent =
-          createEvent(
-              uid = "E1",
-              title = "Valid Event",
-              ownerId = "friend1",
-              tags = listOf("music"),
-              participantIds = List(35) { "user$it" },
-              price = 30.0)
+    val invalidEvent1 =
+        createEvent(
+            uid = "E2",
+            title = "Wrong Tag",
+            ownerId = "friend1",
+            tags = listOf("sport"),
+            participantIds = List(35) { "user$it" },
+            price = 30.0)
 
-      val invalidEvent1 =
-          createEvent(
-              uid = "E2",
-              title = "Wrong Tag",
-              ownerId = "friend1",
-              tags = listOf("sport"),
-              participantIds = List(35) { "user$it" },
-              price = 30.0)
+    val invalidEvent2 =
+        createEvent(
+            uid = "E3",
+            title = "Not Popular",
+            ownerId = "friend1",
+            tags = listOf("music"),
+            participantIds = listOf("user1"),
+            price = 30.0)
 
-      val invalidEvent2 =
-          createEvent(
-              uid = "E3",
-              title = "Not Popular",
-              ownerId = "friend1",
-              tags = listOf("music"),
-              participantIds = listOf("user1"),
-              price = 30.0)
+    val doc1 = doc("E1", validEvent)
+    val doc2 = doc("E2", invalidEvent1)
+    val doc3 = doc("E3", invalidEvent2)
+    val snap = qs(doc1, doc2, doc3)
 
-      val doc1 = doc("E1", validEvent)
-      val doc2 = doc("E2", invalidEvent1)
-      val doc3 = doc("E3", invalidEvent2)
-      val snap = qs(doc1, doc2, doc3)
+    val queryMock = mock<Query>()
+    whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
+        .thenReturn(queryMock)
+    whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+    whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
+    whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
+    whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
+    whenever(queryMock.get()).thenReturn(taskOf(snap))
 
-      val queryMock = mock<Query>()
-      whenever(collection.whereGreaterThanOrEqualTo(any<String>(), any<Timestamp>()))
-          .thenReturn(queryMock)
-      whenever(queryMock.whereLessThanOrEqualTo(eq("date"), any<Timestamp>())).thenReturn(queryMock)
-      whenever(queryMock.whereLessThan(eq("date"), any<Timestamp>())).thenReturn(queryMock)
-      whenever(queryMock.whereLessThanOrEqualTo(eq("price"), any())).thenReturn(queryMock)
-      whenever(queryMock.whereIn(eq("ownerId"), any<List<String>>())).thenReturn(queryMock)
-      whenever(queryMock.get()).thenReturn(taskOf(snap))
+    val result = repo.getFilteredEvents(filters, "currentUser")
 
-      val result = repo.getFilteredEvents(filters, mockUser.uid)
-
-      // Only validEvent should pass all filters
-      assertEquals(1, result.size)
-      assertEquals("Valid Event", result.first().title)
-    } finally {
-      firebaseAuthMock.close()
-    }
+    // Only validEvent should pass all filters
+    assertEquals(1, result.size)
+    assertEquals("Valid Event", result.first().title)
   }
 
   // ========== LISTEN TO FILTERED EVENTS TESTS ==========
@@ -1428,5 +1424,356 @@ class EventRepositoryFirestoreTest {
             organizerName = "Someone you follow",
             eventId = "E123",
             eventTitle = "New Event")
+  }
+
+  // ========== LISTEN TO FILTERED EVENTS TESTS (continue) ==========
+
+  @Test
+  fun editEventAsUser_join_alreadyParticipant_noChanges() = runTest {
+    val event =
+        createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1", "user2"))
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsUser("E1", "user1", join = true)
+
+    // Should not update since user is already a participant
+    verify(transaction, never()).update(any<DocumentReference>(), any<String>(), any())
+  }
+
+  @Test
+  fun editEventAsUser_leave_notParticipant_noChanges() = runTest {
+    val event = createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1"))
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsUser("E1", "user2", join = false)
+
+    // Should not update since user is not a participant
+    verify(transaction, never()).update(any<DocumentReference>(), any<String>(), any())
+  }
+
+  @Test
+  fun editEventAsUser_join_withNullCapacity_success() = runTest {
+    val event =
+        createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1"), capacity = 100)
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+    val userRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(any())).thenReturn(userRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      whenever(transaction.update(any<DocumentReference>(), any<String>(), any()))
+          .thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsUser("E1", "user2", join = true)
+
+    // Should update successfully (no capacity limit)
+    verify(transaction, times(2)).update(any<DocumentReference>(), any<String>(), any())
+    verify(badgeRepo).getBadgeContext("user2")
+    verify(badgeRepo).saveBadgeContext(eq("user2"), any())
+    verify(badgeRepo).updateBadgesAfterContextChange("user2")
+  }
+
+  @Test
+  fun editEventAsUser_join_updatesBadgeContext_earlyMorning() = runTest {
+    val event = createEvent(uid = "E1", ownerId = "owner", participantIds = emptyList())
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+    val userRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(any())).thenReturn(userRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      whenever(transaction.update(any<DocumentReference>(), any<String>(), any()))
+          .thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    // Create a mock Calendar that returns a specific hour
+    val mockCalendar = mock<Calendar>()
+    whenever(mockCalendar[Calendar.HOUR_OF_DAY]).thenReturn(6)
+
+    // Mock Calendar.getInstance() to return our mock calendar
+    val calendarMock = mockStatic(Calendar::class.java)
+    try {
+      calendarMock.`when`<Calendar> { Calendar.getInstance() }.thenReturn(mockCalendar)
+
+      val initialBadgeContext = BadgeContext(joinedEvents = 5, earlyJoin = 2)
+      whenever(badgeRepo.getBadgeContext(eq("user1"))).thenReturn(initialBadgeContext)
+
+      repo.editEventAsUser("E1", "user1", join = true)
+
+      val badgeContextCaptor = argumentCaptor<BadgeContext>()
+      verify(badgeRepo).saveBadgeContext(eq("user1"), badgeContextCaptor.capture())
+
+      val capturedContext = badgeContextCaptor.firstValue
+      assertEquals(6, capturedContext.joinedEvents)
+      assertEquals(3, capturedContext.earlyJoin)
+    } finally {
+      calendarMock.close()
+    }
+  }
+
+  @Test
+  fun editEventAsUser_join_updatesBadgeContext_lateNight() = runTest {
+    val event = createEvent(uid = "E1", ownerId = "owner", participantIds = emptyList())
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+    val userRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(any())).thenReturn(userRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      whenever(transaction.update(any<DocumentReference>(), any<String>(), any()))
+          .thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    // Create a mock Calendar that returns a specific hour
+    val mockCalendar = mock<Calendar>()
+    whenever(mockCalendar[Calendar.HOUR_OF_DAY]).thenReturn(1)
+
+    // Mock Calendar.getInstance() to return our mock calendar
+    val calendarMock = mockStatic(Calendar::class.java)
+    try {
+      calendarMock.`when`<Calendar> { Calendar.getInstance() }.thenReturn(mockCalendar)
+
+      val initialBadgeContext = BadgeContext(joinedEvents = 10, lateJoin = 3)
+      whenever(badgeRepo.getBadgeContext(eq("user1"))).thenReturn(initialBadgeContext)
+
+      repo.editEventAsUser("E1", "user1", join = true)
+
+      val badgeContextCaptor = argumentCaptor<BadgeContext>()
+      verify(badgeRepo).saveBadgeContext(eq("user1"), badgeContextCaptor.capture())
+
+      val capturedContext = badgeContextCaptor.firstValue
+      assertEquals(11, capturedContext.joinedEvents)
+      assertEquals(4, capturedContext.lateJoin)
+    } finally {
+      calendarMock.close()
+    }
+  }
+
+  @Test
+  fun editEventAsUser_join_updatesBadgeContext_regularTime() = runTest {
+    val event = createEvent(uid = "E1", ownerId = "owner", participantIds = emptyList())
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+    val userRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(any())).thenReturn(userRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      whenever(transaction.update(any<DocumentReference>(), any<String>(), any()))
+          .thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    // Create a mock Calendar that returns a specific hour
+    val mockCalendar = mock<Calendar>()
+    whenever(mockCalendar[Calendar.HOUR_OF_DAY]).thenReturn(15)
+
+    // Mock Calendar.getInstance() to return our mock calendar
+    val calendarMock = mockStatic(Calendar::class.java)
+    try {
+      calendarMock.`when`<Calendar> { Calendar.getInstance() }.thenReturn(mockCalendar)
+
+      val initialBadgeContext = BadgeContext(joinedEvents = 7, earlyJoin = 2, lateJoin = 1)
+      whenever(badgeRepo.getBadgeContext(eq("user1"))).thenReturn(initialBadgeContext)
+
+      repo.editEventAsUser("E1", "user1", join = true)
+
+      val badgeContextCaptor = argumentCaptor<BadgeContext>()
+      verify(badgeRepo).saveBadgeContext(eq("user1"), badgeContextCaptor.capture())
+
+      val capturedContext = badgeContextCaptor.firstValue
+      assertEquals(8, capturedContext.joinedEvents)
+      assertEquals(2, capturedContext.earlyJoin) // Should not change
+      assertEquals(1, capturedContext.lateJoin) // Should not change
+    } finally {
+      calendarMock.close()
+    }
+  }
+
+  @Test
+  fun editEventAsUser_leave_doesNotUpdateBadgeContext() = runTest {
+    val event =
+        createEvent(uid = "E1", ownerId = "owner", participantIds = listOf("user1", "user2"))
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+    val userRef = mock<DocumentReference>()
+
+    whenever(usersCollection.document(any())).thenReturn(userRef)
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsUser("E1", "user1", join = false)
+
+    // Badge context should NOT be updated when leaving
+    verify(badgeRepo, never()).getBadgeContext(any())
+    verify(badgeRepo, never()).saveBadgeContext(any(), any())
+    verify(badgeRepo, never()).updateBadgesAfterContextChange(any())
+  }
+
+  @Test
+  fun editEventAsUser_throwsException_whenEventNotFound() = runTest {
+    val eventDocRef = mock<DocumentReference>()
+    val missingSnapshot = mock<DocumentSnapshot>()
+    whenever(missingSnapshot.exists()).thenReturn(false)
+
+    whenever(collection.document("E404")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(missingSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    val exception =
+        assertFailsWith<Exception> { repo.editEventAsUser("E404", "user1", join = true) }
+    assertTrue(exception.message!!.contains("Event not found"))
+  }
+
+  @Test
+  fun editEventAsUser_join_atExactCapacity_throwsException() = runTest {
+    val event =
+        createEvent(
+            uid = "E1", ownerId = "owner", participantIds = listOf("u1", "u2", "u3"), capacity = 3)
+    val docSnapshot = doc("E1", event)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction.get(eventDocRef)).thenReturn(docSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    val exception = assertFailsWith<Exception> { repo.editEventAsUser("E1", "user4", join = true) }
+    assertTrue(exception.message!!.contains("Event is full"))
+  }
+
+  @Test
+  fun editEventAsOwner_withValidUpdates_usesIndexedAccessor() = runTest {
+    val existing =
+        createEvent(uid = "E1", title = "Old", ownerId = "owner", participantIds = emptyList())
+    val updated = existing.copy(title = "Updated Title", description = "Updated Description")
+    val docSnapshot = doc("E1", existing)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction[eventDocRef]).thenReturn(docSnapshot)
+      whenever(transaction.set(any<DocumentReference>(), any<Event>())).thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsOwner("E1", updated)
+
+    verify(transaction).set(any<DocumentReference>(), any<Event>())
+  }
+
+  @Test
+  fun editEventAsOwner_changePublicToPrivate_throwsException() = runTest {
+    val existing =
+        createEvent(uid = "E1", ownerId = "owner", public = true, participantIds = emptyList())
+    val updated = existing.copy(public = false)
+    val docSnapshot = doc("E1", existing)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction[eventDocRef]).thenReturn(docSnapshot)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    val exception = assertFailsWith<Exception> { repo.editEventAsOwner("E1", updated) }
+    assertTrue(exception.message!!.contains("Owner cannot change from public to private"))
+  }
+
+  @Test
+  fun editEventAsOwner_keepPublicTrue_success() = runTest {
+    val existing =
+        createEvent(uid = "E1", ownerId = "owner", public = true, participantIds = emptyList())
+    val updated = existing.copy(title = "Updated", public = true)
+    val docSnapshot = doc("E1", existing)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction[eventDocRef]).thenReturn(docSnapshot)
+      whenever(transaction.set(any<DocumentReference>(), any<Event>())).thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsOwner("E1", updated)
+
+    verify(transaction).set(any<DocumentReference>(), any<Event>())
+  }
+
+  @Test
+  fun editEventAsOwner_changePrivateToPublic_success() = runTest {
+    val existing =
+        createEvent(uid = "E1", ownerId = "owner", public = false, participantIds = emptyList())
+    val updated = existing.copy(title = "Updated", public = true)
+    val docSnapshot = doc("E1", existing)
+    val eventDocRef = mock<DocumentReference>()
+
+    whenever(collection.document("E1")).thenReturn(eventDocRef)
+    whenever(db.runTransaction(any<Transaction.Function<Void>>())).thenAnswer { invocation ->
+      val txFunction = invocation.getArgument<Transaction.Function<Void>>(0)
+      whenever(transaction[eventDocRef]).thenReturn(docSnapshot)
+      whenever(transaction.set(any<DocumentReference>(), any<Event>())).thenReturn(transaction)
+      txFunction.apply(transaction)
+      voidTask()
+    }
+
+    repo.editEventAsOwner("E1", updated)
+
+    verify(transaction).set(any<DocumentReference>(), any<Event>())
   }
 }

@@ -1,9 +1,19 @@
 package com.swent.mapin.model.badge
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.swent.mapin.model.UserProfile
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.tasks.await
 
+data class BadgeContext(
+    val friendsCount: Int = 0,
+    val createdEvents: Int = 0,
+    val joinedEvents: Int = 0,
+    val earlyJoin: Int = 0, // user joined an event in the morning
+    val lateJoin: Int = 0, // user joined an event in the evening
+    val earlyCreate: Int = 0, // user created an event in the morning
+    val lateCreate: Int = 0, // user created an event in the evening
+)
 /**
  * Firestore implementation of BadgeRepository.
  *
@@ -23,11 +33,75 @@ class BadgeRepositoryFirestore(
   companion object {
     private const val COLLECTION_USERS = "users"
     private const val FIELD_BADGES = "badges"
+    private const val FIELD_BADGE_CONTEXT = "badgeContext"
     private const val MAX_RETRIES = 3
   }
 
   // Simple in-memory cache to minimize Firestore reads
   private val badgeCache = ConcurrentHashMap<String, List<Badge>>()
+  private val badgeContextCache = ConcurrentHashMap<String, BadgeContext>()
+
+  /** Save badge context for a user to Firestore */
+  override suspend fun saveBadgeContext(userId: String, context: BadgeContext): Boolean {
+    return executeWithRetry {
+      try {
+        firestore
+            .collection(COLLECTION_USERS)
+            .document(userId)
+            .update(FIELD_BADGE_CONTEXT, context)
+            .await()
+        badgeContextCache[userId] = context
+        println("Saved BadgeContext for user $userId: $context")
+        true
+      } catch (e: Exception) {
+        println("Error saving BadgeContext: ${e.message}")
+        e.printStackTrace()
+        false
+      }
+    } ?: false
+  }
+
+  override suspend fun getBadgeContext(userId: String): BadgeContext {
+
+    // Return from cache if available
+    badgeContextCache[userId]?.let {
+      return it
+    }
+
+    val result = executeWithRetry {
+      val doc = firestore.collection(COLLECTION_USERS).document(userId).get().await()
+
+      val context =
+          if (doc.exists()) {
+            val existing = doc.toObject(BadgeContext::class.java)
+            if (existing != null) {
+              badgeContextCache[userId] = existing
+              existing
+            } else {
+              val defaultCtx = BadgeContext()
+              saveBadgeContext(userId, defaultCtx)
+              badgeContextCache[userId] = defaultCtx
+              println("Created missing BadgeContext for legacy user $userId")
+              defaultCtx
+            }
+          } else {
+            val defaultCtx = BadgeContext()
+            println("User document missing for $userId — returning default BadgeContext")
+            defaultCtx
+          }
+
+      context
+    }
+
+    return result ?: BadgeContext()
+  }
+
+  override suspend fun updateBadgesAfterContextChange(userId: String) {
+    val ctx = getBadgeContext(userId)
+    val profileBadges = getUserBadges(userId) ?: emptyList()
+    val updatedBadges = BadgeManager.calculateBadges(UserProfile(badges = profileBadges), ctx)
+    saveBadgeProgress(userId, updatedBadges)
+  }
 
   /**
    * Save badge progress for a user to Firestore.

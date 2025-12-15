@@ -1,27 +1,31 @@
 package com.swent.mapin.model.event
 
 import android.util.Log
+import com.firebase.geofire.GeoFireUtils
+import com.firebase.geofire.GeoLocation
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeContext
+import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
 import com.swent.mapin.ui.filters.Filters
-import com.swent.mapin.util.EventUtils.calculateHaversineDistance
 import com.swent.mapin.util.TimeUtils
 import java.time.ZoneOffset
+import java.util.Calendar
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
@@ -64,8 +68,16 @@ class EventRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val friendRequestRepository: FriendRequestRepository,
     private val notificationService: NotificationService,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val badgeRepository: BadgeRepository
 ) : EventRepository {
+
+  companion object {
+    private const val EARLY_MORNING_START = 5
+    private const val EARLY_MORNING_END = 8
+    private const val LATE_NIGHT_START = 0
+    private const val LATE_NIGHT_END = 2
+  }
 
   /**
    * Generates and returns a new unique identifier for an Event item.
@@ -98,6 +110,26 @@ class EventRepositoryFirestore(
                 FieldValue.arrayUnion(id))
           }
           .await()
+
+      // Increment the user's number of events created
+      val userId = Firebase.auth.currentUser?.uid
+      val ctx =
+          if (userId == null) {
+            BadgeContext()
+          } else {
+            badgeRepository.getBadgeContext(userId)
+          }
+      var newCtx = ctx.copy(createdEvents = ctx.createdEvents + 1)
+      val hour = Calendar.getInstance()[Calendar.HOUR_OF_DAY]
+      if (hour in EARLY_MORNING_START..EARLY_MORNING_END) {
+        newCtx = newCtx.copy(earlyCreate = newCtx.earlyCreate + 1)
+      } else if (hour in LATE_NIGHT_START..LATE_NIGHT_END) {
+        newCtx = newCtx.copy(lateCreate = newCtx.lateCreate + 1)
+      }
+      if (userId != null) {
+        badgeRepository.saveBadgeContext(userId, newCtx)
+        badgeRepository.updateBadgesAfterContextChange(userId)
+      }
 
       // Send notifications to followers of the event creator
       notifyFollowersOfNewEvent(eventToSave)
@@ -164,31 +196,34 @@ class EventRepositoryFirestore(
     try {
       db.runTransaction { transaction ->
             val docRef = db.collection(EVENTS_COLLECTION_PATH).document(eventId)
-            val snapshot = transaction.get(docRef)
+            val snapshot = transaction[docRef]
 
             if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
 
             val oldEvent = snapshot.toEvent()!!
-            if (oldEvent.ownerId != newValue.ownerId)
-                throw IllegalArgumentException("Only the owner can call editEventAsOwner")
+            require(oldEvent.ownerId == newValue.ownerId) {
+              "Only the owner can call editEventAsOwner"
+            }
 
             // Owner cannot change participants
-            if (newValue.participantIds != oldEvent.participantIds)
-                throw IllegalArgumentException("Owner cannot change participants list")
+            require(newValue.participantIds == oldEvent.participantIds) {
+              "Owner cannot change participants list"
+            }
 
             // Owner cannot change 'public'
-            if (newValue.public != oldEvent.public && !newValue.public)
-                throw IllegalArgumentException("Owner cannot change from public to private")
+            require(oldEvent.public == newValue.public || newValue.public) {
+              "Owner cannot change from public to private"
+            }
 
             // Capacity cannot go below existing participant count
             val currentParticipants = oldEvent.participantIds.size
-            if (newValue.capacity != null && newValue.capacity < currentParticipants)
-                throw IllegalArgumentException(
-                    "Capacity cannot be lower than current participants ($currentParticipants)")
+            require(newValue.capacity == null || newValue.capacity >= currentParticipants) {
+              "Capacity cannot be lower than current participants ($currentParticipants)"
+            }
 
             // Save validated event
             val eventToSave = newValue.copy(uid = eventId)
-            transaction.set(docRef, eventToSave)
+            transaction[docRef] = eventToSave
           }
           .await()
     } catch (e: Exception) {
@@ -202,24 +237,13 @@ class EventRepositoryFirestore(
     try {
       db.runTransaction { transaction ->
             val docRef = db.collection(EVENTS_COLLECTION_PATH).document(eventId)
-            val snapshot = transaction.get(docRef)
+            val snapshot = transaction[docRef]
 
             if (!snapshot.exists()) throw NoSuchElementException("Event not found (id=$eventId)")
             val oldEvent = snapshot.toEvent()!!
 
-            val isParticipant = userId in oldEvent.participantIds
-
             val updatedParticipants =
-                if (join) {
-                  if (isParticipant) return@runTransaction // no changes
-                  if (oldEvent.capacity != null &&
-                      oldEvent.participantIds.size >= oldEvent.capacity)
-                      throw IllegalStateException("Event is full")
-                  oldEvent.participantIds + userId
-                } else {
-                  if (!isParticipant) return@runTransaction // no changes
-                  oldEvent.participantIds - userId
-                }
+                calculateUpdatedParticipants(oldEvent, userId, join) ?: return@runTransaction
 
             // Update event
             transaction.update(docRef, "participantIds", updatedParticipants)
@@ -232,10 +256,69 @@ class EventRepositoryFirestore(
                 if (join) FieldValue.arrayUnion(eventId) else FieldValue.arrayRemove(eventId))
           }
           .await()
+
+      // Update badge context only when joining an event
+      if (join) {
+        updateBadgeContextForJoin(userId)
+      }
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed editEventAsUser(id=$eventId): ${e.message}", e)
       throw Exception("Failed to edit event (id=$eventId) as user: ${e.message}", e)
     }
+  }
+
+  /**
+   * Calculates the updated participants list for an event.
+   *
+   * @param event The event to update.
+   * @param userId The user joining or leaving.
+   * @param join True if joining, false if leaving.
+   * @return Updated participants list, or null if no changes needed.
+   * @throws IllegalStateException if event is full when trying to join.
+   */
+  private fun calculateUpdatedParticipants(
+      event: Event,
+      userId: String,
+      join: Boolean
+  ): List<String>? {
+    val isParticipant = userId in event.participantIds
+
+    return if (join) {
+      // Return null if user is already a participant (no changes needed)
+      if (isParticipant) return null // no changes
+      // Check if event has reached capacity before allowing join
+      require(event.capacity == null || event.participantIds.size < event.capacity) {
+        "Event is full"
+      }
+      event.participantIds + userId
+    } else {
+      // Return null if user is not a participant (no changes needed)
+      if (!isParticipant) return null // no changes
+      event.participantIds - userId
+    }
+  }
+
+  /**
+   * Updates the badge context when a user joins an event.
+   *
+   * @param userId The user who joined the event.
+   */
+  private suspend fun updateBadgeContextForJoin(userId: String) {
+    val ctx = badgeRepository.getBadgeContext(userId)
+    val hour = Calendar.getInstance()[Calendar.HOUR_OF_DAY]
+    var newCtx = ctx.copy(joinedEvents = ctx.joinedEvents + 1)
+
+    when (hour) {
+      in EARLY_MORNING_START..EARLY_MORNING_END -> {
+        newCtx = newCtx.copy(earlyJoin = newCtx.earlyJoin + 1)
+      }
+      in LATE_NIGHT_START..LATE_NIGHT_END -> {
+        newCtx = newCtx.copy(lateJoin = newCtx.lateJoin + 1)
+      }
+    }
+
+    badgeRepository.saveBadgeContext(userId, newCtx)
+    badgeRepository.updateBadgesAfterContextChange(userId)
   }
 
   /**
@@ -471,6 +554,20 @@ class EventRepositoryFirestore(
       query = query.whereLessThan("date", endOfDayExclusive)
     }
 
+    // Apply location filter if provided
+    if (filters.place.isDefined()) {
+      val radiusInM = filters.radiusKm * 1000
+
+      val bounds =
+          GeoFireUtils.getGeoHashQueryBounds(
+                  GeoLocation(filters.place.latitude!!, filters.place.longitude!!),
+                  radiusInM.toDouble())
+              .toList()
+
+      val bound = bounds[0]
+      query = query.orderBy("location.geohash").startAt(bound.startHash).endAt(bound.endHash)
+    }
+
     // Add price to query if present
     if (filters.maxPrice != null) {
       query = query.whereLessThanOrEqualTo("price", filters.maxPrice.toDouble())
@@ -486,17 +583,6 @@ class EventRepositoryFirestore(
     // Apply popularOnly filter (requires counting participants)
     if (filters.popularOnly) {
       filtered = filtered.filter { it.participantIds.size > POPULAR_EVENT_PARTICIPANT_THRESHOLD }
-    }
-
-    // Apply location/radius filter (requires haversine distance calculation)
-    if (filters.place != null) {
-      val placeGeoPoint = parsePlaceToGeoPoint(filters.place) ?: return emptyList()
-      filtered =
-          filtered.filter { event ->
-            val eventGeoPoint = GeoPoint(event.location.latitude, event.location.longitude)
-            val distance = calculateHaversineDistance(eventGeoPoint, placeGeoPoint)
-            distance <= filters.radiusKm
-          }
     }
 
     return filtered.sortedByDescending { it.date }
@@ -672,7 +758,7 @@ class EventRepositoryFirestore(
           val currentEventIds =
               try {
                 @Suppress("UNCHECKED_CAST")
-                (snapshot.get(source.fieldName) as? List<*>)?.filterIsInstance<String>()?.toSet()
+                (snapshot[source.fieldName] as? List<*>)?.filterIsInstance<String>()?.toSet()
                     ?: emptySet()
               } catch (e: Exception) {
                 Log.e("EventRepository", "Error parsing event IDs", e)
@@ -772,7 +858,7 @@ class EventRepositoryFirestore(
         throw Exception("User $userId not found")
       } else {
         @Suppress("UNCHECKED_CAST")
-        (snap.get(source.fieldName) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        (snap[source.fieldName] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
       }
     } catch (e: Exception) {
       Log.e("EventRepositoryFirestore", "Failed to fetch event IDs for $source", e)
@@ -842,19 +928,4 @@ class EventRepositoryFirestore(
         Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${this.id})", e)
         throw e
       }
-
-  /**
-   * Parse Location to GeoPoint.
-   *
-   * @param place The location.
-   * @return GeoPoint or null if invalid.
-   */
-  private fun parsePlaceToGeoPoint(place: Location?): GeoPoint? {
-    return try {
-      if (place == null) null else GeoPoint(place.latitude, place.longitude)
-    } catch (e: Exception) {
-      Log.w("EventRepositoryFirestore", "Invalid location coordinates: $place", e)
-      null
-    }
-  }
 }

@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
+/** Global provider for OkHttpClient instance. Used throughout the app for network operations. */
 object HttpClientProvider {
   var client: OkHttpClient = OkHttpClient()
 }
@@ -51,25 +52,60 @@ private enum class BiometricLockState {
 }
 
 /**
- * Main activity of the app. Role: - Android entry point that hosts the Jetpack Compose UI. -
- * Applies the Material 3 theme and shows the map screen.
+ * Main activity of the Map-In application.
+ *
+ * This is the Android entry point that hosts the Jetpack Compose UI. It handles:
+ * - Application initialization (repositories, FCM tokens)
+ * - Deep link processing from push notifications and external sources
+ * - Biometric authentication lock screen when enabled
+ * - Theme configuration (light/dark/system)
+ * - Edge-to-edge display support
+ *
+ * The activity maintains biometric authentication state to prevent unauthorized access when the
+ * feature is enabled in settings.
  */
 class MainActivity : FragmentActivity() {
-  // Simple deep link state instead of queue
+  /**
+   * Deep link extracted from the initial Intent (onCreate) or subsequent Intents (onNewIntent).
+   *
+   * **Lifecycle:**
+   * - Set in onCreate() from the launching intent
+   * - Updated in onNewIntent() when app receives new deep links while running
+   * - Consumed by AppNavHost to trigger navigation when biometric lock is not active
+   * - Cleared automatically after navigation processes it
+   *
+   * **Interaction with pendingDeepLink:** When biometric authentication is required, this value is
+   * stored in pendingDeepLink and delivered only after successful authentication. If no biometric
+   * lock is active, this is passed directly to AppNavHost.
+   */
   private var deepLink by mutableStateOf<String?>(null)
-  // Pending deep link to be delivered after biometric unlock
+
+  /**
+   * Deep link awaiting delivery after biometric authentication completes.
+   *
+   * **Lifecycle:**
+   * - Set in onNewIntent() when a new deep link arrives while the app is locked
+   * - Replaces deepLink as the effective navigation target after unlock
+   * - Cleared in a LaunchedEffect after being consumed by AppNavHost
+   * - Remains null if no deep link arrives during locked state
+   *
+   * **Interaction with deepLink:** Takes precedence over deepLink when both are set. This ensures
+   * that deep links received while the user is authenticating are not lost. Once authentication
+   * succeeds, pendingDeepLink becomes the effectiveDeepLink passed to navigation.
+   */
   private var pendingDeepLink by mutableStateOf<String?>(null)
 
-  // Atomic guard to prevent concurrent biometric authentication attempts
+  /** Atomic guard to prevent concurrent biometric authentication attempts */
   private val isAuthenticationInProgress = AtomicBoolean(false)
 
-  // Reference to active BiometricPrompt for lifecycle-aware cancellation
+  /** Reference to active BiometricPrompt for lifecycle-aware cancellation */
   private var activeBiometricPrompt: BiometricPrompt? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
-    MemoryRepositoryProvider.setRepository(MemoryRepositoryProvider.createLocalRepository())
+    //  Initialize MemoryRepositoryFirestore
+    MemoryRepositoryProvider.getRepository()
 
     // Initialize EventRepositoryFirestore (uncomment to use Firestore backend)
     EventRepositoryProvider.init(this)

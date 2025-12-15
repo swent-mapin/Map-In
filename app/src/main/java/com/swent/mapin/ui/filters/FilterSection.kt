@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -472,7 +472,7 @@ class FiltersSection {
 
   /**
    * Location search with autocomplete using LocationViewModel. Shows up to 5 results. Powered by
-   * Nominatim/OpenStreetMap.
+   * **Mapbox Geocoding API**.
    */
   @Composable
   fun SearchPlacePicker(
@@ -482,6 +482,8 @@ class FiltersSection {
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val results by locationViewModel.locations.collectAsStateWithLifecycle()
+
+    val displayResults = results.filter { it.isDefined() && !it.name.isNullOrBlank() }
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
       OutlinedTextField(
@@ -502,17 +504,19 @@ class FiltersSection {
                 tint = MaterialTheme.colorScheme.primary)
           },
           shape = RoundedCornerShape(12.dp))
-      AnimatedVisibility(visible = expanded && results.isNotEmpty()) {
+      AnimatedVisibility(visible = expanded && displayResults.isNotEmpty()) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
               Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                results.take(5).forEachIndexed { index, loc ->
+                displayResults.take(5).forEachIndexed { index, loc ->
                   Column {
                     Text(
-                        text = loc.name,
+                        text = loc.name!!, // loc.name cannot be null as we already filtered it but
+                        // still
+                        // need to check for null or it gives a warning
                         modifier =
                             Modifier.fillMaxWidth()
                                 .clickable {

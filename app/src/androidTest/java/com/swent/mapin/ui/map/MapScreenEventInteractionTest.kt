@@ -10,9 +10,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.event.LocalEventList
+import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
+import com.swent.mapin.ui.memory.MemoriesViewModel
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -28,13 +30,16 @@ class MapScreenEventInteractionTest {
 
   @get:Rule val rule = createComposeRule()
 
+  val testMemoryVM = MemoriesViewModel(MemoryRepositoryProvider.getRepository())
+
   @Composable
   private fun MapScreenWithTestableCallbacks(onCenterCameraCalled: (Event) -> Unit = {}) {
     MaterialTheme {
       MapScreen(
           renderMap = false,
           autoRequestPermissions = false,
-          onEventClick = { event -> onCenterCameraCalled(event) })
+          onEventClick = { event -> onCenterCameraCalled(event) },
+          memoryVM = testMemoryVM)
     }
   }
 
@@ -49,11 +54,13 @@ class MapScreenEventInteractionTest {
 
   @Test
   fun mapScreen_withSelectedEvent_rendersWithoutCrashing() {
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       var selectedEvent by remember { mutableStateOf<Event?>(testEvent) }
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 
@@ -63,7 +70,7 @@ class MapScreenEventInteractionTest {
   // CAMERA CENTERING CALLBACK TESTS
   @Test
   fun onCenterCamera_receivesCorrectEventData() {
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
     var receivedEvent: Event? = null
 
     rule.setContent {
@@ -73,14 +80,14 @@ class MapScreenEventInteractionTest {
 
     // Verify the event data structure is accessible
     // (The actual centering would be triggered by event click in real usage)
-    assertNotNull(testEvent.location)
-    assertEquals(testEvent.location.longitude, testEvent.location.longitude, 0.0001)
-    assertEquals(testEvent.location.latitude, testEvent.location.latitude, 0.0001)
+    assertTrue(testEvent.location.isDefined())
+    assertEquals(testEvent.location.longitude!!, testEvent.location.longitude, 0.0001)
+    assertEquals(testEvent.location.latitude!!, testEvent.location.latitude, 0.0001)
   }
 
   @Test
   fun onCenterCamera_canAccessEventLocation() {
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
     var eventReceived = false
     var longitudeValid = false
     var latitudeValid = false
@@ -90,24 +97,26 @@ class MapScreenEventInteractionTest {
           onCenterCameraCalled = { event ->
             eventReceived = true
             // Verify we can access location data
-            longitudeValid = event.location.longitude >= -180.0 && event.location.longitude <= 180.0
-            latitudeValid = event.location.latitude >= -90.0 && event.location.latitude <= 90.0
+            longitudeValid = event.location.longitude?.let { it in -180.0..180.0 } ?: false
+            latitudeValid = event.location.latitude?.let { it in -90.0..90.0 } ?: false
           })
     }
     rule.waitForIdle()
 
-    // These assertions verify the structure is correct for when callbacks are triggered
-    assertTrue(testEvent.location.longitude >= -180.0 && testEvent.location.longitude <= 180.0)
-    assertTrue(testEvent.location.latitude >= -90.0 && testEvent.location.latitude <= 90.0)
+    // Verify the test event has valid coordinates
+    assertTrue(testEvent.location.longitude?.let { it in -180.0..180.0 } ?: false)
+    assertTrue(testEvent.location.latitude?.let { it in -90.0..90.0 } ?: false)
   }
 
   // INTEGRATION SMOKE TESTS
   @Test
   fun mapScreen_withMultipleEvents_rendersWithoutCrashing() {
-    val testEvents = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents().take(3)
+    val testEvents = LocalEventList.defaultSampleEvents().take(3)
 
     rule.setContent {
-      MaterialTheme { MapScreen(renderMap = false, autoRequestPermissions = false) }
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
     }
     rule.waitForIdle()
 

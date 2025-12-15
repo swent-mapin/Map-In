@@ -116,34 +116,39 @@ class EventBasedOfflineRegionManager(
         continue
       }
 
-      // Calculate 2km radius bounds
-      val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
+      if (!event.location.isDefined()) {
+        Log.i(TAG, "Event ${event.uid} has no location, skipping")
+        continue
+      } else {
+        // Calculate 2km radius bounds
+        val bounds = calculateBoundsForRadius(event.location.latitude!!, event.location.longitude!!)
 
-      Log.i(
-          TAG,
-          "Downloading region for event: ${event.title} " +
-              "(${event.location.latitude}, ${event.location.longitude})")
+        Log.i(
+            TAG,
+            "Downloading region for event: ${event.title} " +
+                "(${event.location.latitude}, ${event.location.longitude})")
 
-      // Notify UI that download is starting
-      onDownloadStart(event)
-      notificationManager?.showDownloadProgress(event, 0f)
+        // Notify UI that download is starting
+        onDownloadStart(event)
+        notificationManager?.showDownloadProgress(event, 0f)
 
-      // Download and wait for completion before starting next one
-      val result = downloadRegionSuspend(event, bounds)
-      result
-          .onSuccess {
-            downloadedEventIds.add(event.uid)
-            // Store location for future deletion
-            eventLocations[event.uid] = Pair(event.location.latitude, event.location.longitude)
-            Log.i(TAG, "Successfully downloaded region for event: ${event.title}")
-            notificationManager?.showDownloadComplete(event)
-            onDownloadComplete(event, Result.success(Unit))
-          }
-          .onFailure { error ->
-            Log.e(TAG, "Failed to download region for event ${event.title}: $error")
-            notificationManager?.showDownloadFailed(event)
-            onDownloadComplete(event, Result.failure(error))
-          }
+        // Download and wait for completion before starting next one
+        val result = downloadRegionSuspend(event, bounds)
+        result
+            .onSuccess {
+              downloadedEventIds.add(event.uid)
+              // Store location for future deletion
+              eventLocations[event.uid] = Pair(event.location.latitude, event.location.longitude)
+              Log.i(TAG, "Successfully downloaded region for event: ${event.title}")
+              notificationManager?.showDownloadComplete(event)
+              onDownloadComplete(event, Result.success(Unit))
+            }
+            .onFailure { error ->
+              Log.e(TAG, "Failed to download region for event ${event.title}: $error")
+              notificationManager?.showDownloadFailed(event)
+              onDownloadComplete(event, Result.failure(error))
+            }
+      }
     }
   }
 
@@ -299,7 +304,12 @@ class EventBasedOfflineRegionManager(
    */
   fun deleteRegionForEvent(event: Event) {
     scope.launch {
-      val bounds = calculateBoundsForRadius(event.location.latitude, event.location.longitude)
+      if (!event.location.isDefined()) {
+        Log.w(TAG, "Event ${event.uid} has no defined location. Skipping region deletion.")
+        return@launch
+      }
+
+      val bounds = calculateBoundsForRadius(event.location.latitude!!, event.location.longitude!!)
 
       Log.i(TAG, "Deleting region for event: ${event.title}")
 

@@ -100,36 +100,73 @@ internal fun computeAnnotationVisualParameters(isSelected: Boolean): AnnotationV
  * Each annotation includes position, icon, label, and custom styling. The index is stored as data
  * for later retrieval. Selected event pins are enlarged.
  *
+ * Uses event-specific pins based on the event's first tag and capacity state when eventBitmaps is
+ * provided. Falls back to the default marker in the style otherwise.
+ *
  * @param events List of events to convert
  * @param style Styling to apply to annotations
  * @param selectedEventId UID of the currently selected event (if any)
+ * @param eventBitmaps Optional map of event UID to its specific pin bitmap
  * @return List of configured PointAnnotationOptions
  */
 @VisibleForTesting
 internal fun createEventAnnotations(
     events: List<Event>,
     style: AnnotationStyle,
-    selectedEventId: String? = null
+    selectedEventId: String? = null,
+    eventBitmaps: Map<String, Bitmap>? = null
 ): List<PointAnnotationOptions> {
-  return events.mapIndexed { index, event ->
-    val isSelected = event.uid == selectedEventId
-    val visual = computeAnnotationVisualParameters(isSelected)
+  return events
+      .filter { it.location.isDefined() }
+      .mapIndexed { index, event ->
+        val isSelected = event.uid == selectedEventId
+        val visual = computeAnnotationVisualParameters(isSelected)
 
-    PointAnnotationOptions()
-        .withPoint(Point.fromLngLat(event.location.longitude, event.location.latitude))
-        .apply { style.markerBitmap?.let { withIconImage(it) } }
-        .withIconSize(visual.iconSize)
-        .withIconAnchor(IconAnchor.BOTTOM)
-        .withTextAnchor(TextAnchor.TOP)
-        .withTextOffset(visual.textOffset)
-        .withTextSize(visual.textSize)
-        .withTextColor(style.textColorInt)
-        .withTextHaloColor(style.haloColorInt)
-        .withTextHaloWidth(visual.textHaloWidth)
-        .withTextField(event.title)
-        .withData(JsonPrimitive(index))
-        .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
-  }
+        // Use event-specific bitmap if available, otherwise fall back to default
+        val iconBitmap = eventBitmaps?.get(event.uid) ?: style.markerBitmap
+
+        PointAnnotationOptions()
+            .withPoint(Point.fromLngLat(event.location.longitude!!, event.location.latitude!!))
+            .apply { iconBitmap?.let { withIconImage(it) } }
+            .withIconSize(visual.iconSize)
+            .withIconAnchor(IconAnchor.BOTTOM)
+            .withTextAnchor(TextAnchor.TOP)
+            .withTextOffset(visual.textOffset)
+            .withTextSize(visual.textSize)
+            .withTextColor(style.textColorInt)
+            .withTextHaloColor(style.haloColorInt)
+            .withTextHaloWidth(visual.textHaloWidth)
+            .withTextField(event.title)
+            .withData(JsonPrimitive(index))
+            .withSymbolSortKey(visual.sortKey) // Ensures selected pin is prioritized for visibility
+      }
+}
+
+/**
+ * Creates a map of event UIDs to their corresponding pin bitmaps.
+ *
+ * Each event gets a pin based on its first tag (determines shape/icon) and its capacity state
+ * (determines color: green, orange, or red).
+ *
+ * Bitmaps are cached by drawable resource ID to avoid duplicate allocations when multiple events
+ * share the same icon.
+ *
+ * @param context The context to load drawable resources
+ * @param events List of events to create bitmaps for
+ * @return Map of event UID to Bitmap, events with failed bitmap loading are omitted
+ */
+fun createEventBitmaps(context: Context, events: List<Event>): Map<String, Bitmap> {
+  val bitmapCache = mutableMapOf<Int, Bitmap>()
+  return events
+      .mapNotNull { event ->
+        val drawableRes = getEventPinDrawableRes(event)
+        val bitmap =
+            bitmapCache.getOrPut(drawableRes) {
+              context.drawableToBitmap(drawableRes) ?: return@mapNotNull null
+            }
+        event.uid to bitmap
+      }
+      .toMap()
 }
 
 /**

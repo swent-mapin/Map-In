@@ -65,7 +65,18 @@ private val MEDIA_THUMBNAIL_SIZE = 100.dp
 private val DESCRIPTION_MIN_HEIGHT = 120.dp
 private val USER_AVATAR_SIZE = 56.dp
 
-/** Data class to hold memory form input */
+/**
+ * Data class to hold memory form input data.
+ *
+ * This represents the complete state of the memory creation form before it's submitted.
+ *
+ * @property title The title/headline of the memory
+ * @property description Detailed description of what happened
+ * @property eventId Optional ID of the event this memory is associated with
+ * @property isPublic Whether the memory should be visible to others
+ * @property mediaUris List of URIs for photos/videos to attach
+ * @property taggedUserIds List of user IDs tagged in this memory
+ */
 data class MemoryFormData(
     val title: String,
     val description: String,
@@ -115,7 +126,7 @@ private fun EventSelectionSection(
                 val dateStr =
                     remember(selectedEvent?.date) {
                       selectedEvent?.date?.toDate()?.let {
-                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it)
+                        SimpleDateFormat("MMM dd, yyyy", Locale.US).format(it)
                       } ?: "No date"
                     }
                 Text(
@@ -377,8 +388,8 @@ fun MemoryFormScreen(
       rememberLauncherForActivityResult(
           contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = MAX_MEDIA_COUNT)) {
               uris ->
-            selectedMediaUris.clear()
-            selectedMediaUris.addAll(uris)
+            val existingUris = selectedMediaUris.toSet()
+            selectedMediaUris.addAll(uris.filterNot { it in existingUris })
           }
 
   val isFormValid = description.isNotBlank()
@@ -410,7 +421,7 @@ fun MemoryFormScreen(
                         eventId = selectedEvent?.uid,
                         isPublic = isPublic,
                         mediaUris = selectedMediaUris.toList(),
-                        taggedUserIds = taggedUserIds.toList()))
+                        taggedUserIds = taggedUserIds))
               },
               enabled = isFormValid,
               modifier =
@@ -470,7 +481,7 @@ fun MemoryFormScreen(
       Spacer(modifier = Modifier.height(24.dp))
 
       MediaSelectionSection(
-          selectedMediaUris = selectedMediaUris.toList(),
+          selectedMediaUris = selectedMediaUris,
           onLaunchMediaPicker = {
             mediaPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))

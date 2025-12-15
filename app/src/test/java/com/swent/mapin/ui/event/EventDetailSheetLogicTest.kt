@@ -1,7 +1,7 @@
 package com.swent.mapin.ui.event
 
-import com.swent.mapin.model.Location
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,7 +16,7 @@ class EventDetailSheetLogicTest {
     return Event(
         uid = "event",
         title = "Title",
-        location = Location(name = "Paris", latitude = 0.0, longitude = 0.0),
+        location = Location.from(name = "Paris", lat = 0.0, lng = 0.0),
         capacity = capacity,
         participantIds = participants)
   }
