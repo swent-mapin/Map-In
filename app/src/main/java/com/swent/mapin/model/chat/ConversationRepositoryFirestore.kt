@@ -21,14 +21,15 @@ class ConversationRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ConversationRepository {
-  /** Generates a new unique identifier for a conversation.
-   * Returns a new random ID if the list given is empty,
-   * or a Hashed ID if the list isn't empty
+  /**
+   * Generates a new unique identifier for a conversation. Returns a new random ID if the list given
+   * is empty, or a Hashed ID if the list isn't empty
+   *
    * @param participantIds The list of participant IDs
-   * */
+   */
   override fun getNewUid(participantIds: List<String>): String {
-    if(participantIds.isEmpty()){
-        return db.collection("conversations").document().id
+    if (participantIds.isEmpty()) {
+      return db.collection("conversations").document().id
     }
     return hashUserIds(participantIds)
   }
@@ -106,25 +107,21 @@ class ConversationRepositoryFirestore(
   /**
    * Checks whether a conversation with the given ID exists in Firestore.
    *
-   * This function performs a single read on the "conversations" collection
-   * and returns whether a document with the specified [conversationId] exists.
+   * This function performs a single read on the "conversations" collection and returns whether a
+   * document with the specified [conversationId] exists.
    *
    * @param conversationId The ID of the conversation to check.
    * @return `true` if the conversation exists in Firestore, `false` otherwise.
    */
   override suspend fun conversationExists(conversationId: String): Boolean {
-        return try {
-            val docSnapshot =
-                db.collection("conversations")
-                    .document(conversationId)
-                    .get()
-                    .await()
+    return try {
+      val docSnapshot = db.collection("conversations").document(conversationId).get().await()
 
-            docSnapshot.exists()
-        } catch (e: Exception) {
-            Log.e("ConversationRepo", "Failed to check if conversation exists", e)
-            false
-        }
+      docSnapshot.exists()
+    } catch (e: Exception) {
+      Log.e("ConversationRepo", "Failed to check if conversation exists", e)
+      false
+    }
   }
 
   /**

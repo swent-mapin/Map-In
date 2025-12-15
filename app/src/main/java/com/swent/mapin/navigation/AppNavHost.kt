@@ -189,9 +189,9 @@ fun AppNavHost(
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
             val encodedName = Uri.encode(conversation.name)
-            navController.navigate("conversation/${conversation.id}/${encodedName}"){
-                popUpTo(Route.Chat.route) { inclusive = true }
-                launchSingleTop = true
+            navController.navigate("conversation/${conversation.id}/${encodedName}") {
+              popUpTo(Route.Chat.route) { inclusive = true }
+              launchSingleTop = true
             }
           },
           onTabSelected = { chatTab -> navController.navigate(chatTab.destination) })
@@ -207,13 +207,12 @@ fun AppNavHost(
             }
           },
           onCreateExistingConversation = { conversation ->
-              val encodedName = Uri.encode(conversation.name)
-              navController.navigate("conversation/${conversation.id}/${encodedName}"){
-                  popUpTo(Route.Chat.route) { inclusive = true }
-                  launchSingleTop = true
-              }
-          }
-      )
+            val encodedName = Uri.encode(conversation.name)
+            navController.navigate("conversation/${conversation.id}/${encodedName}") {
+              popUpTo(Route.Chat.route) { inclusive = true }
+              launchSingleTop = true
+            }
+          })
     }
 
     composable("conversation/{conversationId}/{name}") { backStackEntry ->

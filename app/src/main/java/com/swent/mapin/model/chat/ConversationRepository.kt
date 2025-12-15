@@ -7,6 +7,7 @@ interface ConversationRepository {
 
   /**
    * Generates and returns a new unique identifier for a Conversation item.
+   *
    * @param participantIds The list of participant ids
    * @return A unique string identifier.
    */
@@ -14,6 +15,7 @@ interface ConversationRepository {
 
   /**
    * Checks whether a given conversationId exists in the database
+   *
    * @param conversationId The ID of the conversation
    * @return True if the conversation already exists, False if not
    */
