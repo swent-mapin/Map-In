@@ -196,31 +196,7 @@ private fun EmailPasswordSection(
       enabled = !isLoading,
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
       singleLine = true)
-
   Spacer(modifier = Modifier.height(12.dp))
-
-  PasswordTextField(
-      password = password,
-      onPasswordChange = onPasswordChange,
-      passwordVisible = passwordVisible,
-      onPasswordVisibilityChange = onPasswordVisibilityChange,
-      isLoading = isLoading)
-
-  if (isRegistering) {
-    Spacer(modifier = Modifier.height(16.dp))
-    val passwordValidation by remember(password) { derivedStateOf { validatePassword(password) } }
-    PasswordRequirementsCard(password = password, passwordValidation = passwordValidation)
-  }
-}
-
-@Composable
-private fun PasswordTextField(
-    password: String,
-    onPasswordChange: (String) -> Unit,
-    passwordVisible: Boolean,
-    onPasswordVisibilityChange: (Boolean) -> Unit,
-    isLoading: Boolean
-) {
   OutlinedTextField(
       value = password,
       onValueChange = onPasswordChange,
@@ -239,6 +215,11 @@ private fun PasswordTextField(
         }
       },
       singleLine = true)
+  if (isRegistering) {
+    Spacer(modifier = Modifier.height(16.dp))
+    val passwordValidation by remember(password) { derivedStateOf { validatePassword(password) } }
+    PasswordRequirementsCard(password = password, passwordValidation = passwordValidation)
+  }
 }
 
 @Composable
@@ -267,14 +248,12 @@ private fun SignInButton(
       },
       modifier = Modifier.fillMaxWidth().height(50.dp).testTag("emailPasswordButton"),
       enabled = !isLoading && email.isNotBlank() && password.isNotBlank()) {
-        if (isLoading) {
-          CircularProgressIndicator(
-              modifier = Modifier.size(24.dp),
-              strokeWidth = 2.dp,
-              color = MaterialTheme.colorScheme.onPrimary)
-        } else {
-          Text(if (isRegistering) "Register" else "Sign In")
-        }
+        if (isLoading)
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary)
+        else Text(if (isRegistering) "Register" else "Sign In")
       }
 }
 
@@ -289,10 +268,12 @@ private fun AuthModeToggle(
       horizontalArrangement = Arrangement.Center,
       verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "Sign In",
+            "Sign In",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.testTag("signInLabel"),
-            color = toggleTextColor(isActive = !isRegistering))
+            color =
+                if (!isRegistering) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(12.dp))
         Switch(
             checked = isRegistering,
@@ -301,23 +282,21 @@ private fun AuthModeToggle(
             enabled = !isLoading)
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Register",
+            "Register",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.testTag("registerLabel"),
-            color = toggleTextColor(isActive = isRegistering))
+            color =
+                if (isRegistering) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant)
       }
 }
-
-@Composable
-private fun toggleTextColor(isActive: Boolean) =
-    if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
 private fun OrDivider() {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     HorizontalDivider(modifier = Modifier.weight(1f))
     Text(
-        text = "  OR  ",
+        "  OR  ",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
     HorizontalDivider(modifier = Modifier.weight(1f))
@@ -332,20 +311,22 @@ private fun SocialSignInButtons(
     context: Context
 ) {
   SocialSignInButton(
-      onClick = { viewModel.signInWithGoogle(credentialManager) {} },
-      isLoading = isLoading,
-      iconRes = R.drawable.google_sign_in,
-      iconDescription = "Google logo",
-      text = "Continue with Google")
-
+      { viewModel.signInWithGoogle(credentialManager) {} },
+      isLoading,
+      R.drawable.google_sign_in,
+      "Google logo",
+      "Continue with Google")
   Spacer(modifier = Modifier.height(24.dp))
-
   SocialSignInButton(
-      onClick = { handleMicrosoftSignIn(context, viewModel) },
-      isLoading = isLoading,
-      iconRes = R.drawable.microsoft_sign_in,
-      iconDescription = "Microsoft logo",
-      text = "Continue with Microsoft")
+      {
+        (context as? Activity)?.let { viewModel.signInWithMicrosoft(it) }
+            ?: Toast.makeText(context, "Unable to start Microsoft sign-in", Toast.LENGTH_SHORT)
+                .show()
+      },
+      isLoading,
+      R.drawable.microsoft_sign_in,
+      "Microsoft logo",
+      "Continue with Microsoft")
 }
 
 @Composable
@@ -358,28 +339,18 @@ private fun SocialSignInButton(
 ) {
   OutlinedButton(
       onClick = onClick, modifier = Modifier.fillMaxWidth().height(65.dp), enabled = !isLoading) {
-        if (isLoading) {
-          CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
-        } else {
-          Row(
-              horizontalArrangement = Arrangement.Center,
-              verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = iconDescription,
-                    modifier = Modifier.size(28.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(text = text, style = MaterialTheme.typography.titleMedium)
-              }
-        }
+        if (isLoading)
+            CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+        else
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically) {
+                  Image(
+                      painter = painterResource(id = iconRes),
+                      contentDescription = iconDescription,
+                      modifier = Modifier.size(28.dp))
+                  Spacer(modifier = Modifier.width(12.dp))
+                  Text(text = text, style = MaterialTheme.typography.titleMedium)
+                }
       }
-}
-
-private fun handleMicrosoftSignIn(context: Context, viewModel: SignInViewModel) {
-  val activity = context as? Activity
-  if (activity != null) {
-    viewModel.signInWithMicrosoft(activity)
-  } else {
-    Toast.makeText(context, "Unable to start Microsoft sign-in", Toast.LENGTH_SHORT).show()
-  }
 }
