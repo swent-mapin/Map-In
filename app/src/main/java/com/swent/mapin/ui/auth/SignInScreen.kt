@@ -203,16 +203,15 @@ private fun EmailPasswordSection(
       label = { Text("Password") },
       modifier = Modifier.fillMaxWidth().testTag("passwordField"),
       enabled = !isLoading,
+      singleLine = true,
       visualTransformation =
           if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-      singleLine = true,
       trailingIcon = {
         IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
           Icon(
-              imageVector =
-                  if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-              contentDescription = if (passwordVisible) "Hide password" else "Show password")
+              if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+              if (passwordVisible) "Hide password" else "Show password")
         }
       })
   if (isRegistering) {
