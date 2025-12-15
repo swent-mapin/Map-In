@@ -64,36 +64,27 @@ object NewConversationScreenTestTags {
   const val GROUP_NAME_DIALOG_TEXT = "groupText"
 }
 
-/** Creates a new 1-to-1 conversation with the selected friend. */
-private fun createSingleConversation(
-    friend: FriendWithProfile,
-    conversationViewModel: ConversationViewModel
-): Conversation {
-  return Conversation(
-      id = conversationViewModel.getNewUID(),
-      name = friend.userProfile.name,
-      participantIds = listOf(Firebase.auth.currentUser?.uid ?: "", friend.userProfile.userId),
-      participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
-      profilePictureUrl = friend.userProfile.profilePictureUrl)
-}
+private fun createSingleConversation(friend: FriendWithProfile, vm: ConversationViewModel) =
+    Conversation(
+        id = vm.getNewUID(),
+        name = friend.userProfile.name,
+        participantIds = listOf(Firebase.auth.currentUser?.uid ?: "", friend.userProfile.userId),
+        participants = listOf(vm.currentUserProfile, friend.userProfile),
+        profilePictureUrl = friend.userProfile.profilePictureUrl)
 
-/** Creates a new group conversation with the selected friends. */
 private fun createGroupConversation(
     groupName: String,
-    selectedFriends: List<FriendWithProfile>,
-    conversationViewModel: ConversationViewModel
-): Conversation {
-  val ids = selectedFriends.map { it.userProfile.userId }
-  val profiles = selectedFriends.map { it.userProfile }
-  return Conversation(
-      id = conversationViewModel.getNewUID(),
-      name = groupName,
-      participantIds = ids + listOf(Firebase.auth.currentUser?.uid ?: ""),
-      participants = profiles + listOf(conversationViewModel.currentUserProfile),
-      profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl)
-}
+    friends: List<FriendWithProfile>,
+    vm: ConversationViewModel
+) =
+    Conversation(
+        id = vm.getNewUID(),
+        name = groupName,
+        participantIds =
+            friends.map { it.userProfile.userId } + listOf(Firebase.auth.currentUser?.uid ?: ""),
+        participants = friends.map { it.userProfile } + listOf(vm.currentUserProfile),
+        profilePictureUrl = friends.first().userProfile.profilePictureUrl)
 
-/** Top bar for the new conversation screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NewConversationTopBar(
@@ -111,13 +102,12 @@ private fun NewConversationTopBar(
             }
       },
       actions = {
-        if (selectedFriends.isNotEmpty()) {
-          IconButton(
-              onClick = onConfirmClick,
-              modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
-                Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
-              }
-        }
+        if (selectedFriends.isNotEmpty())
+            IconButton(
+                onClick = onConfirmClick,
+                modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
+                  Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
+                }
       },
       colors =
           TopAppBarDefaults.topAppBarColors(
@@ -127,7 +117,6 @@ private fun NewConversationTopBar(
               actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer))
 }
 
-/** Empty state when user has no friends. */
 @Composable
 private fun EmptyFriendsContent(modifier: Modifier = Modifier) {
   Column(
@@ -140,70 +129,48 @@ private fun EmptyFriendsContent(modifier: Modifier = Modifier) {
       }
 }
 
-/** Profile picture for a friend item, showing selection state. */
-@Composable
-private fun FriendProfilePicture(profilePictureUrl: String?, isSelected: Boolean) {
-  val selectedColor = MaterialTheme.colorScheme.primary
-
-  if (profilePictureUrl.isNullOrBlank()) {
-    Icon(
-        imageVector = Icons.Default.AccountCircle,
-        contentDescription = null,
-        tint = if (isSelected) selectedColor else Color.Gray,
-        modifier = Modifier.size(48.dp).clip(CircleShape))
-  } else {
-    Image(
-        painter = rememberAsyncImagePainter(profilePictureUrl),
-        contentDescription = null,
-        modifier =
-            Modifier.size(48.dp)
-                .clip(CircleShape)
-                .border(
-                    width = if (isSelected) 2.dp else 0.dp,
-                    color = if (isSelected) selectedColor else Color.Transparent,
-                    shape = CircleShape))
-  }
-}
-
-/** A single friend item row. */
 @Composable
 private fun FriendItem(
     friend: FriendWithProfile,
     isSelected: Boolean,
     onToggleSelection: () -> Unit
 ) {
-  val backgroundColor =
-      if (isSelected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-      } else {
-        Color.Transparent
-      }
-  val textColor =
-      if (isSelected) {
-        MaterialTheme.colorScheme.primary
-      } else {
-        MaterialTheme.colorScheme.onSurface
-      }
-
+  val primary = MaterialTheme.colorScheme.primary
   Row(
       modifier =
           Modifier.fillMaxWidth()
               .clickable(onClick = onToggleSelection)
-              .background(backgroundColor)
+              .background(if (isSelected) primary.copy(alpha = 0.1f) else Color.Transparent)
               .padding(12.dp)
               .testTag("${NewConversationScreenTestTags.FRIEND_ITEM}_${friend.userProfile.name}"),
       verticalAlignment = Alignment.CenterVertically) {
-        FriendProfilePicture(friend.userProfile.profilePictureUrl, isSelected)
+        val url = friend.userProfile.profilePictureUrl
+        if (url.isNullOrBlank())
+            Icon(
+                Icons.Default.AccountCircle,
+                null,
+                tint = if (isSelected) primary else Color.Gray,
+                modifier = Modifier.size(48.dp).clip(CircleShape))
+        else
+            Image(
+                rememberAsyncImagePainter(url),
+                null,
+                modifier =
+                    Modifier.size(48.dp)
+                        .clip(CircleShape)
+                        .border(
+                            if (isSelected) 2.dp else 0.dp,
+                            if (isSelected) primary else Color.Transparent,
+                            CircleShape))
         Spacer(Modifier.width(12.dp))
         Text(
             friend.userProfile.name,
             style = MaterialTheme.typography.titleMedium,
-            color = textColor)
+            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface)
       }
   HorizontalDivider()
 }
 
-/** List of friends to select from. */
 @Composable
 private fun FriendsListContent(
     friends: List<FriendWithProfile>,
@@ -212,18 +179,14 @@ private fun FriendsListContent(
 ) {
   LazyColumn(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
     items(friends) { friend ->
-      val isSelected = selectedFriends.contains(friend)
-      FriendItem(
-          friend = friend,
-          isSelected = isSelected,
-          onToggleSelection = {
-            if (isSelected) selectedFriends.remove(friend) else selectedFriends.add(friend)
-          })
+      FriendItem(friend, selectedFriends.contains(friend)) {
+        if (selectedFriends.contains(friend)) selectedFriends.remove(friend)
+        else selectedFriends.add(friend)
+      }
     }
   }
 }
 
-/** Dialog for entering group name. */
 @Composable
 private fun GroupNameDialog(
     groupName: String,
