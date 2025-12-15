@@ -14,7 +14,7 @@ import java.util.TimeZone
  * The input is considered valid if:
  * - It is empty or contains only whitespace (tags are optional).
  * - It consists of one or more tags, where each tag is a non-empty word made exclusively of letters
- *   (a-z, A-Z).
+ *   (a-z, A-Z), numbers (0-9) and the 2 symbols '-' and '_'.
  * - Tags are separated by one or more spaces and/or commas (with optional surrounding whitespace).
  *
  * @param input The string entered by the user for the tags field
@@ -23,7 +23,7 @@ import java.util.TimeZone
 fun isValidTagInput(input: String): Boolean {
   if (input.isBlank()) return true
 
-  val tagRegex = Regex("""^\s*[a-zA-Z]+(?:[\s,]+[a-zA-Z]+)*\s*$""")
+  val tagRegex = Regex("""^\s*[a-zA-Z0-9_-]+(?:[\s,]+[a-zA-Z0-9_-]+)*\s*$""")
 
   return input.matches(tagRegex)
 }

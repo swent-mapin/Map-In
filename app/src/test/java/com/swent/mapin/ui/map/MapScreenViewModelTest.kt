@@ -506,6 +506,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())
@@ -527,6 +528,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())
@@ -542,7 +544,7 @@ class MapScreenViewModelTest {
   fun clearError_clearsErrorMessage() {
     runBlocking {
       whenever(mockAuth.currentUser).thenReturn(null)
-      val formData = MemoryFormData("", "desc", null, false, emptyList(), emptyList())
+      val formData = MemoryFormData("", "desc", null, location = Location.UNDEFINED, false, emptyList(), emptyList())
       viewModel.onMemorySave(formData)
       testDispatcher.scheduler.advanceUntilIdle()
     }
@@ -565,6 +567,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())

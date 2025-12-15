@@ -18,25 +18,25 @@ class AddEventUtilsTest {
 
   @Test
   fun `returns true for single valid tag`() {
-    assertTrue(isValidTagInput("#food"))
-    assertTrue(isValidTagInput("#fun_2025"))
+    assertTrue(isValidTagInput("food"))
+    assertTrue(isValidTagInput("fun_2025"))
   }
 
   @Test
   fun `returns true for multiple valid tags separated by commas`() {
-    assertTrue(isValidTagInput("#food,#travel"))
-    assertTrue(isValidTagInput("#food ,#travel"))
-    assertTrue(isValidTagInput("#food , #travel , #music"))
+    assertTrue(isValidTagInput("food,travel"))
+    assertTrue(isValidTagInput("food ,travel"))
+    assertTrue(isValidTagInput("food , travel , music"))
   }
 
   @Test
   fun `returns false for tags missing hash or invalid format`() {
-    TestCase.assertFalse(isValidTagInput("food")) // missing #
-    TestCase.assertFalse(isValidTagInput("#food travel")) // second missing #
-    TestCase.assertFalse(isValidTagInput("#food,travel")) // invalid second
+    TestCase.assertFalse(isValidTagInput("#food")) // shouldn't have #
+    TestCase.assertFalse(isValidTagInput("food #travel")) // second shouldn't have #
+    TestCase.assertFalse(isValidTagInput("food,#travel")) // invalid second
     TestCase.assertFalse(isValidTagInput("#")) // incomplete tag
-    TestCase.assertFalse(isValidTagInput("#food,,")) // trailing commas
-    TestCase.assertFalse(isValidTagInput("#food, #")) // dangling #
+    TestCase.assertFalse(isValidTagInput("food,,")) // trailing commas
+    TestCase.assertFalse(isValidTagInput("food, ")) // dangling #
   }
 
   // ---------- Tests for extractTags ----------
