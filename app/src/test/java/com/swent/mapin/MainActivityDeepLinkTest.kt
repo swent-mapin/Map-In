@@ -2,8 +2,7 @@ package com.swent.mapin
 
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -177,5 +176,25 @@ class MainActivityDeepLinkTest {
           putExtra("actionUrl", 12345) // wrong type - int instead of string
         }
     assertNull(getDeepLinkUrlFromIntent(intent))
+  }
+
+  // ==================== HttpClientProvider Tests ====================
+
+  @Test
+  fun `HttpClientProvider has default OkHttpClient instance`() {
+    val client = HttpClientProvider.client
+    assertNotNull(client)
+  }
+
+  @Test
+  fun `HttpClientProvider allows setting custom OkHttpClient`() {
+    val originalClient = HttpClientProvider.client
+    val customClient = okhttp3.OkHttpClient.Builder().build()
+
+    HttpClientProvider.client = customClient
+    assertEquals(customClient, HttpClientProvider.client)
+
+    // Restore original
+    HttpClientProvider.client = originalClient
   }
 }
