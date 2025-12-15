@@ -52,25 +52,36 @@ private enum class BiometricLockState {
 
 /** Holds biometric authentication state to reduce parameter passing complexity. */
 private class BiometricAuthState {
-  var lockState by mutableStateOf(BiometricLockState.LOCKED)
-  var errorMessage by mutableStateOf<String?>(null)
+  private var _lockState by mutableStateOf(BiometricLockState.LOCKED)
+  val lockState: BiometricLockState
+    get() = _lockState
+
+  private var _errorMessage by mutableStateOf<String?>(null)
+  val errorMessage: String?
+    get() = _errorMessage
+
   var failedAttempts by mutableIntStateOf(0)
+    private set
 
   fun onAuthSuccess() {
-    lockState = BiometricLockState.UNLOCKED
+    _lockState = BiometricLockState.UNLOCKED
     failedAttempts = 0
   }
 
   fun onAuthError(error: String?) {
-    errorMessage = error
+    _errorMessage = error
     if (error != null) {
-      lockState = BiometricLockState.LOCKED
+      _lockState = BiometricLockState.LOCKED
     }
   }
 
   fun startUnlocking() {
-    lockState = BiometricLockState.UNLOCKING
-    errorMessage = null
+    _lockState = BiometricLockState.UNLOCKING
+    _errorMessage = null
+  }
+
+  fun incrementFailedAttempts() {
+    failedAttempts++
   }
 }
 
@@ -149,7 +160,7 @@ class MainActivity : FragmentActivity() {
 
     DisposableEffect(shouldShowBiometricLock) {
       if (shouldShowBiometricLock && authState.lockState == BiometricLockState.LOCKED) {
-        authState.lockState = BiometricLockState.UNLOCKING
+        authState.startUnlocking()
         triggerBiometricAuth(biometricAuthManager, currentFailedAttempts, authState)
       }
       onDispose { cancelBiometricAuthentication() }
@@ -166,7 +177,7 @@ class MainActivity : FragmentActivity() {
           biometricAuthManager,
           failedAttempts,
           { success -> if (success) authState.onAuthSuccess() },
-          { authState.failedAttempts = it },
+          { authState.incrementFailedAttempts() },
           { authState.onAuthError(it) })
     } catch (e: Exception) {
       Log.e("MainActivity", "Biometric authentication failed unexpectedly", e)
