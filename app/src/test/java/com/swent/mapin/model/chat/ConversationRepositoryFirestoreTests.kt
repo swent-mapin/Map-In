@@ -2,12 +2,14 @@ package com.swent.mapin.model.chat
 
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.TaskCompletionSource
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import io.mockk.*
+import junit.framework.TestCase.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -667,4 +669,49 @@ class ConversationRepositoryFirestoreTest {
           })
     }
   }
+    @Test
+    fun `conversationExists returns true when document exists`() = runTest {
+        // Arrange
+        val conversationId = "conv123"
+
+        val mockSnapshot = mockk<DocumentSnapshot>()
+        every { mockSnapshot.exists() } returns true
+
+        val realTask = Tasks.forResult(mockSnapshot)
+
+        val mockDocRef = mockk<DocumentReference>()
+        every { mockDocRef.get() } returns realTask
+
+        val mockCollection = mockk<CollectionReference>()
+        every { mockCollection.document(conversationId) } returns mockDocRef
+
+        every { mockDb.collection("conversations") } returns mockCollection
+
+        // Act
+        val result = repo.conversationExists(conversationId)
+
+        // Assert
+        assertTrue(result)
+    }
+    @Test
+    fun `conversationExists returns false when document does not exist`() = runTest {
+        val conversationId = "conv123"
+
+        val mockSnapshot = mockk<DocumentSnapshot>()
+        every { mockSnapshot.exists() } returns false
+
+        val realTask = Tasks.forResult(mockSnapshot)
+
+        val mockDocRef = mockk<DocumentReference>()
+        every { mockDocRef.get() } returns realTask
+
+        val mockCollection = mockk<CollectionReference>()
+        every { mockCollection.document(conversationId) } returns mockDocRef
+
+        every { mockDb.collection("conversations") } returns mockCollection
+
+        val result = repo.conversationExists(conversationId)
+
+        assertFalse(result)
+    }
 }
