@@ -78,7 +78,7 @@ class MemoryRepositoryFirestoreTest {
             description = "Fun at the beach",
             ownerId = "user1",
             eventId = "event1",
-            public = true,
+            isPublic = true,
             createdAt = Timestamp.now(),
             mediaUrls = listOf("url1"),
             taggedUserIds = listOf("user2"))
@@ -169,7 +169,7 @@ class MemoryRepositoryFirestoreTest {
             description = "Description",
             ownerId = "user1",
             eventId = "event1",
-            public = true,
+            isPublic = true,
             createdAt = Timestamp.now())
 
     val snap = qs(doc("1", m1))
@@ -181,7 +181,7 @@ class MemoryRepositoryFirestoreTest {
 
     val result = repo.getPublicMemoriesByEvent("event1")
     assertEquals(1, result.size)
-    assertTrue(result[0].public)
+    assertTrue(result[0].isPublic)
   }
 
   @Test
@@ -312,7 +312,7 @@ class MemoryRepositoryFirestoreTest {
             description = "Updated description",
             ownerId = "user1",
             eventId = "event1",
-            public = false,
+            isPublic = false,
             createdAt = Timestamp.now())
 
     repo.editMemory("M1", updated)
@@ -321,7 +321,7 @@ class MemoryRepositoryFirestoreTest {
       verify(document).set(capture())
       assertEquals("M1", firstValue.uid)
       assertEquals("Updated Title", firstValue.title)
-      assertEquals(false, firstValue.public)
+      assertEquals(false, firstValue.isPublic)
     }
   }
 

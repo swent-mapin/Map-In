@@ -21,7 +21,7 @@ class LocalMemoryRepository : MemoryRepository {
                 description = "Had an incredible time playing volleyball with friends!",
                 eventId = "2",
                 ownerId = "user1",
-                public = true,
+                isPublic = true,
                 createdAt = Timestamp.now(),
                 mediaUrls = listOf("https://example.com/photo1.jpg"),
                 taggedUserIds = listOf("user2", "user3")),
@@ -32,7 +32,7 @@ class LocalMemoryRepository : MemoryRepository {
                     "The festival was packed with amazing food and music. Best summer ever!",
                 eventId = "1", // Summer Festival 2024
                 ownerId = "user2",
-                public = true,
+                isPublic = true,
                 createdAt = Timestamp.now(),
                 mediaUrls =
                     listOf("https://example.com/photo2.jpg", "https://example.com/photo3.jpg"),
@@ -43,7 +43,7 @@ class LocalMemoryRepository : MemoryRepository {
                 description = "Just enjoying the sunset alone. Sometimes peace is all you need.",
                 eventId = null, // Not linked to any event
                 ownerId = "user1",
-                public = false,
+                isPublic = false,
                 createdAt = Timestamp.now(),
                 mediaUrls = emptyList(),
                 taggedUserIds = emptyList()),
@@ -54,7 +54,7 @@ class LocalMemoryRepository : MemoryRepository {
                     "Reached the summit after 6 hours of hiking. The view was worth every step!",
                 eventId = "3", // Mountain Hiking Adventure
                 ownerId = "user3",
-                public = true,
+                isPublic = true,
                 createdAt = Timestamp.now(),
                 mediaUrls = listOf("https://example.com/photo4.jpg"),
                 taggedUserIds = listOf("user1")),
@@ -65,7 +65,7 @@ class LocalMemoryRepository : MemoryRepository {
                     "Concert was absolutely mind-blowing! Best live performance I've seen.",
                 eventId = "4", // Concert at Park
                 ownerId = "user2",
-                public = true,
+                isPublic = true,
                 createdAt = Timestamp.now(),
                 mediaUrls =
                     listOf("https://example.com/video1.mp4", "https://example.com/photo5.jpg"),
@@ -93,7 +93,7 @@ class LocalMemoryRepository : MemoryRepository {
 
   override suspend fun getPublicMemoriesByEvent(eventId: String): List<Memory> {
     return memories.values
-        .filter { it.eventId == eventId && it.public }
+        .filter { it.eventId == eventId && it.isPublic }
         .sortedByDescending { it.createdAt }
   }
 

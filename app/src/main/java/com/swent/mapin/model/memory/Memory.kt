@@ -10,7 +10,7 @@ import com.google.firebase.Timestamp
  * @property description Description of what happened (mandatory field)
  * @property eventId Optional reference to an event this memory is linked to
  * @property ownerId User ID of the memory creator
- * @property public Whether this memory is visible to others (on event page if linked)
+ * @property isPublic Whether this memory is visible to others (on event page if linked)
  * @property createdAt Timestamp when the memory was created
  * @property mediaUrls List of photo/video URLs associated with this memory
  * @property taggedUserIds List of user IDs tagged in this memory
@@ -21,7 +21,7 @@ data class Memory(
     val description: String = "",
     val eventId: String? = null,
     val ownerId: String = "",
-    val public: Boolean = false,
+    val isPublic: Boolean = false,
     val createdAt: Timestamp? = null,
     val mediaUrls: List<String> = emptyList(),
     val taggedUserIds: List<String> = emptyList()

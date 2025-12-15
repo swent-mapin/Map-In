@@ -218,7 +218,7 @@ private fun MemoryMetadata(memory: Memory, ownerName: String) {
     }
     Spacer(Modifier.height(4.dp))
 
-    if (memory.public) {
+    if (memory.isPublic) {
       Text(
           "Public memory",
           color = MaterialTheme.colorScheme.primary,
