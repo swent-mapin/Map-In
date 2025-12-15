@@ -53,7 +53,8 @@ class EventDetailSheetTest {
       onShare: () -> Unit = {},
       hasLocationPermission: Boolean = false,
       showDirections: Boolean = false,
-      onGetDirections: () -> Unit = {}
+      onGetDirections: () -> Unit = {},
+      onOrganizerClick: (String) -> Unit = {}
   ) {
     composeTestRule.setContent {
       EventDetailSheet(
@@ -70,7 +71,8 @@ class EventDetailSheetTest {
           onShare = onShare,
           hasLocationPermission = hasLocationPermission,
           showDirections = showDirections,
-          onGetDirections = onGetDirections)
+          onGetDirections = onGetDirections,
+          onOrganizerClick = onOrganizerClick)
     }
   }
 
@@ -369,15 +371,24 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun mediumState_directionsButton_callback_works() {
+  fun fullState_directionsButton_callback_works() {
     var directionsCalled = false
     setEventDetailSheet(
-        sheetState = BottomSheetState.MEDIUM,
+        sheetState = BottomSheetState.FULL,
         onGetDirections = { directionsCalled = true },
         hasLocationPermission = true)
 
     composeTestRule.onNodeWithTag("getDirectionsButton").performClick()
     assertTrue(directionsCalled)
+  }
+
+  @Test
+  fun fullState_directionsButton_withoutPermission_butShowingDirections_isEnabled() {
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL, showDirections = true, hasLocationPermission = false)
+
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
   }
 
   // --- SAVE / UNSAVE in FULL state ---
@@ -575,5 +586,88 @@ class EventDetailSheetTest {
 
     composeTestRule.onNodeWithTag("priceSection").assertIsDisplayed()
     composeTestRule.onNodeWithText("10.00 CHF").assertIsDisplayed()
+  }
+
+  // --- Organizer Click Tests ---
+
+  @Test
+  fun fullState_organizerClickable_whenUserIdNotEmpty() {
+    var clickedUserId: String? = null
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        organizerState = OrganizerState.Loaded("owner123", "John Doe"),
+        onOrganizerClick = { clickedUserId = it })
+
+    composeTestRule.onNodeWithTag("organizerName").performScrollTo().performClick()
+    assertTrue(clickedUserId == "owner123")
+  }
+
+  @Test
+  fun fullState_organizerNotClickable_whenUserIdEmpty() {
+    var clickedUserId: String? = null
+    setEventDetailSheet(
+        sheetState = BottomSheetState.FULL,
+        organizerState = OrganizerState.Loaded("", "Anonymous Organizer"),
+        onOrganizerClick = { clickedUserId = it })
+
+    composeTestRule.onNodeWithTag("organizerName").performScrollTo().performClick()
+    assertTrue(clickedUserId == null)
+  }
+
+  // --- Date Range Format Tests ---
+
+  @Test
+  fun formatEventDateRangeMedium_differentDays_sameYear() {
+    val calStart =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 15)
+          set(Calendar.HOUR_OF_DAY, 14)
+          set(Calendar.MINUTE, 0)
+        }
+    val calEnd =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 20)
+          set(Calendar.HOUR_OF_DAY, 18)
+          set(Calendar.MINUTE, 0)
+        }
+    val startTimestamp = Timestamp(calStart.time)
+    val endTimestamp = Timestamp(calEnd.time)
+
+    val result = formatEventDateRangeMedium(startTimestamp, endTimestamp)
+    assertTrue(result.contains("Jun"))
+    assertTrue(result.contains("15"))
+    assertTrue(result.contains("20"))
+  }
+
+  @Test
+  fun formatEventDateRangeMedium_sameDay_differentTimes() {
+    val calStart =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 15)
+          set(Calendar.HOUR_OF_DAY, 10)
+          set(Calendar.MINUTE, 0)
+        }
+    val calEnd =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 15)
+          set(Calendar.HOUR_OF_DAY, 18)
+          set(Calendar.MINUTE, 30)
+        }
+    val startTimestamp = Timestamp(calStart.time)
+    val endTimestamp = Timestamp(calEnd.time)
+
+    val result = formatEventDateRangeMedium(startTimestamp, endTimestamp)
+    assertTrue(result.contains("Jun"))
+    assertTrue(result.contains("15"))
+    assertTrue(result.contains("10:00"))
+    assertTrue(result.contains("18:30"))
   }
 }
