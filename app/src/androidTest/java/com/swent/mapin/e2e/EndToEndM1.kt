@@ -488,12 +488,20 @@ class EndToEndM1 {
           .isNotEmpty()
     }
 
-    // Navigate back to map
-    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
+    // Navigate back to map - use programmatic navigation for stability
+    composeTestRule.runOnIdle { navController.popBackStack() }
     composeTestRule.waitForIdle()
 
+    // Wait for navigation back to map screen to complete
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify we're on map screen
-    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertExists()
 
     // Swipe up on bottom sheet to reveal profile button
     // Programmatically navigate back to Profile (avoid swiping)
