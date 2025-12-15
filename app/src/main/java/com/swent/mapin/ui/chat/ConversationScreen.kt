@@ -137,6 +137,7 @@ fun ConversationTopBar(
 ) {
   var showMenu by remember { mutableStateOf(false) }
   var showLeaveConfirmation by remember { mutableStateOf(false) }
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   TopAppBar(
       title = {
@@ -165,7 +166,12 @@ fun ConversationTopBar(
       navigationIcon = {
         if (onNavigateBack != null) {
           IconButton(
-              onClick = onNavigateBack,
+              onClick = {
+                if (!hasNavigatedBack) {
+                  hasNavigatedBack = true
+                  onNavigateBack()
+                }
+              },
               modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }

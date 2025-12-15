@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -97,6 +98,7 @@ fun ChangePasswordScreen(
   var confirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
   val isDarkTheme = isSystemInDarkTheme()
   val focusManager = LocalFocusManager.current
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("changePasswordScreen"),
@@ -110,12 +112,19 @@ fun ChangePasswordScreen(
                   color = MaterialTheme.colorScheme.onSurface)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
+              IconButton(
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
+                  modifier = Modifier.testTag("backButton")) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface)
+                  }
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(

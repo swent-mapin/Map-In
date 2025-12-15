@@ -126,6 +126,7 @@ fun SettingsScreen(
   val canUseBiometric =
       remember(activity) { activity?.let { biometricAuthManager.canUseBiometric(it) } ?: false }
   val coroutineScope = rememberCoroutineScope()
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   // Display error messages in Snackbar
   LaunchedEffect(errorMessage) {
@@ -155,12 +156,19 @@ fun SettingsScreen(
                   color = MaterialTheme.colorScheme.onSurface)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface)
-              }
+              IconButton(
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
+                  modifier = Modifier.testTag("backButton")) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface)
+                  }
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(

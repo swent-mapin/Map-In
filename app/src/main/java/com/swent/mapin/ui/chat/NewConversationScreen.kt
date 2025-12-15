@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,6 +87,7 @@ fun NewConversationScreen(
   val friends by friendsViewModel.friends.collectAsState()
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       topBar = {
@@ -93,7 +95,12 @@ fun NewConversationScreen(
             title = { Text("New Conversation") },
             navigationIcon = {
               IconButton(
-                  onClick = onNavigateBack,
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
                   modifier = Modifier.testTag(NewConversationScreenTestTags.BACK_BUTTON)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                   }

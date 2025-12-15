@@ -23,8 +23,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -55,6 +57,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,12 +88,16 @@ import com.swent.mapin.model.badge.SampleBadges
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSignIn: () -> Unit,
-    onNavigateToFriends: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
+    @Suppress("UNUSED_PARAMETER") onNavigateToSignIn: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onNavigateToFriends: () -> Unit = {},
+    @Suppress("UNUSED_PARAMETER") onNavigateToSettings: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
   val userProfile by viewModel.userProfile.collectAsState()
+  val scrollState = rememberScrollState()
+
+  // Track if navigation has been triggered to prevent multiple rapid back presses
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("profileScreen"),
@@ -101,9 +110,20 @@ fun ProfileScreen(
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
+              IconButton(
+                  onClick = {
+                    if (viewModel.isEditMode) {
+                      viewModel.cancelEditing()
+                    } else if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
+                  modifier = Modifier.testTag("backButton")) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back")
+                  }
             },
             actions = {
               if (!viewModel.isEditMode) {
@@ -135,6 +155,7 @@ fun ProfileScreen(
                         .padding(paddingValues)
                         .padding(horizontal = 20.dp)
                         .padding(top = 74.dp)
+                        .verticalScroll(scrollState)
                         .animateContentSize(
                             animationSpec =
                                 spring(
@@ -230,7 +251,7 @@ internal fun ProfilePicture(avatarUrl: String?, isEditMode: Boolean, onAvatarCli
 @Composable
 internal fun ViewProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
   // Name
-  Spacer(modifier = Modifier.height(42.dp))
+  Spacer(modifier = Modifier.height(100.dp))
 
   Text(
       text = userProfile.name,
@@ -344,6 +365,9 @@ internal fun ProfileInfoCard(
 /** Edit mode: displays editable text fields for profile information. */
 @Composable
 internal fun EditProfileContent(viewModel: ProfileViewModel) {
+  // Add space for the profile picture
+  Spacer(modifier = Modifier.height(100.dp))
+
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(20.dp),
@@ -525,7 +549,7 @@ internal fun EditProfileContent(viewModel: ProfileViewModel) {
 
           Spacer(modifier = Modifier.height(12.dp))
 
-          Spacer(modifier = Modifier.height(32.dp))
+          Spacer(modifier = Modifier.height(16.dp))
 
           // Action buttons with gradient backgrounds
           Row(

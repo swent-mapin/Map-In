@@ -40,6 +40,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,17 +76,27 @@ fun ProfileSheet(
 ) {
   LaunchedEffect(userId) { viewModel.loadProfile(userId) }
 
+  // Track if close action has been triggered to prevent multiple clicks
+  var hasTriggeredClose by remember(userId) { mutableStateOf(false) }
+
   Column(modifier = Modifier.fillMaxWidth().testTag("profileSheet")) {
     // Header with close button
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.End) {
-          IconButton(onClick = onClose, modifier = Modifier.testTag("profileSheetCloseButton")) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close",
-                tint = MaterialTheme.colorScheme.onSurface)
-          }
+          IconButton(
+              onClick = {
+                if (!hasTriggeredClose) {
+                  hasTriggeredClose = true
+                  onClose()
+                }
+              },
+              modifier = Modifier.testTag("profileSheetCloseButton")) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface)
+              }
         }
 
     when (val state = viewModel.state) {
