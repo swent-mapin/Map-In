@@ -47,9 +47,21 @@ class ConversationViewModel(
   val leaveGroupState: StateFlow<LeaveGroupState> = _leaveGroupState.asStateFlow()
 
   var currentUserProfile: UserProfile = UserProfile()
-  /** Get a new unique identifier for a conversation. */
-  fun getNewUID(): String {
-    return conversationRepository.getNewUid()
+
+  /** Get a new unique identifier for a conversation.
+   * @param participantIds The list of participants IDs
+   * @return The generated ID
+   */
+  fun getNewUID(participantIds: List<String>): String {
+    return conversationRepository.getNewUid(participantIds)
+  }
+  private val _convoExists = MutableStateFlow<Boolean>(false)
+  val convoExists: StateFlow<Boolean> = _convoExists.asStateFlow()
+
+  fun conversationExists(conversationId: String){
+    viewModelScope.launch {
+      _convoExists.value = conversationRepository.conversationExists(conversationId)
+    }
   }
 
   /** Fetches the current user's profile from the repository. */

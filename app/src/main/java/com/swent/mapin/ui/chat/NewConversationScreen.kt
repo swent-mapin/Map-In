@@ -52,6 +52,7 @@ import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
+import com.swent.mapin.util.HashUtils.hashUserIds
 
 object NewConversationScreenTestTags {
   const val NEW_CONVERSATION_SCREEN = "newConversationScreen"
@@ -72,6 +73,8 @@ object NewConversationScreenTestTags {
  * @param friendsViewModel ViewModel for user's friends
  * @param onNavigateBack Callback invoked when the back button is pressed.
  * @param onConfirm Callback invoked when the user confirms selection.
+ * @param onCreateExistingConversation Callback invoked when the user tries
+ * to create an existing 1 on 1 conversation
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,13 +82,16 @@ fun NewConversationScreen(
     conversationViewModel: ConversationViewModel = viewModel(),
     friendsViewModel: FriendsViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onConfirm: () -> Unit = {}
+    onConfirm: () -> Unit = {},
+    onCreateExistingConversation: (Conversation) -> Unit = {}
 ) {
   LaunchedEffect(Unit) { friendsViewModel.loadFriends() }
   val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
   val friends by friendsViewModel.friends.collectAsState()
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
+  val convoExists = remember { mutableStateOf(false) }
+  val gotConversation = remember { mutableStateOf<Conversation?>(null) }
 
   Scaffold(
       topBar = {
@@ -106,21 +112,31 @@ fun NewConversationScreen(
                         showGroupNameDialog.value = true
                       } else {
                         val friend = selectedFriends.first()
-                        val newConvo =
-                            Conversation(
-                                id = conversationViewModel.getNewUID(),
-                                name = friend.userProfile.name,
-                                participantIds =
-                                    listOf(
-                                        Firebase.auth.currentUser?.uid ?: "",
-                                        friend.userProfile.userId),
-                                participants =
-                                    listOf(
-                                        conversationViewModel.currentUserProfile,
-                                        friend.userProfile),
-                                profilePictureUrl = friend.userProfile.profilePictureUrl)
-                        conversationViewModel.createConversation(newConvo)
-                        onConfirm()
+                        val currentUserId = Firebase.auth.currentUser?.uid ?: ""
+                        val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
+                        conversationViewModel.conversationExists(convoId)
+                        if(convoExists.value){ //If the 1 on 1 conversation with this ID already exists, then navigate to the screen
+                            conversationViewModel.getConversationById(convoId)
+                            if (gotConversation.value != null){
+                                onCreateExistingConversation(gotConversation.value!!)
+                            }
+                        } else { // Else create a new Conversation
+                            val newConvo =
+                                Conversation(
+                                    id = convoId,
+                                    name = friend.userProfile.name,
+                                    participantIds =
+                                        listOf(
+                                            currentUserId,
+                                            friend.userProfile.userId),
+                                    participants =
+                                        listOf(
+                                            conversationViewModel.currentUserProfile,
+                                            friend.userProfile),
+                                    profilePictureUrl = friend.userProfile.profilePictureUrl)
+                            conversationViewModel.createConversation(newConvo)
+                            onConfirm()
+                        }
                       }
                     },
                     modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
@@ -232,9 +248,14 @@ fun NewConversationScreen(
                 if (groupName.value.isNotBlank()) {
                   val ids = selectedFriends.map { friends -> friends.userProfile.userId }
                   val profiles = selectedFriends.map { friends -> friends.userProfile }
+                  var convoId = conversationViewModel.getNewUID(ids + listOf((Firebase.auth.currentUser?.uid ?: "")))
+                  conversationViewModel.conversationExists(convoId)
+                  if(convoExists.value){ //Generates a random UID since group conversations can have duplicates
+                    convoId = conversationViewModel.getNewUID(emptyList())
+                  }
                   val newConvo =
                       Conversation(
-                          id = conversationViewModel.getNewUID(),
+                          id = convoId,
                           name = groupName.value,
                           participantIds = ids + listOf((Firebase.auth.currentUser?.uid ?: "")),
                           participants =
