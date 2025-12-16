@@ -36,6 +36,15 @@ sealed class OfflineAction {
   data class UnsaveEvent(val eventId: String, val userId: String) : OfflineAction()
 }
 
+/** Enum for the different types of event lists. */
+enum class EventLists {
+  ALL,
+  JOINED,
+  SAVED,
+  OWNED,
+  PAST
+}
+
 /** Anti spam debounce */
 const val ANTI_SPAM_DEBOUNCE: Long = 500
 
@@ -429,8 +438,24 @@ class MapEventStateController(
    * @param eventId The ID of the event to refresh.
    * @return The refreshed [Event] if found, otherwise null.
    */
-  fun refreshSelectedEvent(eventId: String): Event? {
-    return allEvents.find { it.uid == eventId }
+  fun refreshSelectedEvent(eventId: String, listType: EventLists): Event? {
+    return when (listType) {
+      EventLists.ALL -> {
+        allEvents.find { it.uid == eventId }
+      }
+      EventLists.JOINED -> {
+        joinedEvents.find { it.uid == eventId }
+      }
+      EventLists.SAVED -> {
+        savedEvents.find { it.uid == eventId }
+      }
+      EventLists.OWNED -> {
+        ownedEvents.find { it.uid == eventId }
+      }
+      EventLists.PAST -> {
+        attendedEvents.find { it.uid == eventId }
+      }
+    }
   }
 
   /**
