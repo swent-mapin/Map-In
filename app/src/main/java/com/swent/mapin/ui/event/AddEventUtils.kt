@@ -8,6 +8,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
+private const val MAX_CAPACITY = 10_000
+
 /**
  * With help of GPT: Helper function which checks if the user's input string for tags are of valid
  * format. The regex means: “A string that starts with #, followed by letters/numbers/underscores,
@@ -47,7 +49,8 @@ fun isValidCapacityInput(input: String): Boolean {
   val trimmed = input.trim()
   val regex = Regex("^\\d+$")
   if (!regex.matches(trimmed)) return false
-  return trimmed.toIntOrNull()?.let { it > 0 } ?: false
+  val asNumber = trimmed.toLongOrNull() ?: return false
+  return asNumber in 1..MAX_CAPACITY
 }
 
 /**

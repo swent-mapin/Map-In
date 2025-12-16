@@ -136,20 +136,28 @@ class AddEventUtilsTest {
     val invalidCapacity2 = "-1"
     val invalidCapacity3 = "0"
     val invalidCapacity4 = "10.5"
+    val invalidCapacity5 = "999999999"
     TestCase.assertFalse(isValidCapacityInput(invalidCapacity))
     TestCase.assertFalse(isValidCapacityInput(invalidCapacity2))
     TestCase.assertFalse(isValidCapacityInput(invalidCapacity3))
     TestCase.assertFalse(isValidCapacityInput(invalidCapacity4))
+    TestCase.assertFalse(isValidCapacityInput(invalidCapacity5))
   }
 
   @Test
   fun `returns true for valid capacity`() {
     val validCapacity = "1"
     val validCapacity2 = "200"
-    val validCapacity3 = "9999"
+    val validCapacity3 = "10000"
     TestCase.assertTrue(isValidCapacityInput(validCapacity))
     TestCase.assertTrue(isValidCapacityInput(validCapacity2))
     TestCase.assertTrue(isValidCapacityInput(validCapacity3))
+  }
+
+  @Test
+  fun `returns true for blank capacity`() {
+    TestCase.assertTrue(isValidCapacityInput(""))
+    TestCase.assertTrue(isValidCapacityInput("   "))
   }
 
   @Test

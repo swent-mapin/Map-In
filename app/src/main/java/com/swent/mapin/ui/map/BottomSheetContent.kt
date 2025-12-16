@@ -472,13 +472,14 @@ fun BottomSheetContent(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                // Always render filters - clipToBounds handles visibility during
-                                // drag
-                                filterSection.Render(
-                                    Modifier.fillMaxWidth(),
-                                    filterViewModel,
-                                    locationViewModel,
-                                    userProfile)
+                                if (isFull) {
+                                  // Avoid running filter side effects when sheet is not fully shown
+                                  filterSection.Render(
+                                      Modifier.fillMaxWidth(),
+                                      filterViewModel,
+                                      locationViewModel,
+                                      userProfile)
+                                }
 
                                 Spacer(modifier = Modifier.height(16.dp))
 

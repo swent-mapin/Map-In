@@ -65,6 +65,8 @@ object AddEventScreenTestTags : EventScreenTestTag {
   const val SCREEN = "AddEventScreen"
 }
 
+private data class FieldValidation(val hasError: () -> Boolean, val label: String)
+
 /**
  * A reusable text field composable used in the Add Event dialog.
  *
@@ -167,45 +169,28 @@ fun AddEventScreen(
   }
   val locations by locationViewModel.locations.collectAsState()
 
-  // Show missing/incorrect fields either when the user requested validation (clicked Save)
-  // or when a per-field error flag is set, or when a required field is empty.
-  val error =
-      titleError.value ||
-          title.value.isBlank() ||
-          descriptionError.value ||
-          description.value.isBlank() ||
-          locationError.value ||
-          location.value.isBlank() ||
-          timeError.value ||
-          time.value.isBlank() ||
-          dateError.value ||
-          date.value.isBlank() ||
-          tagError.value ||
-          endDateError.value ||
-          endDate.value.isBlank() ||
-          endTimeError.value ||
-          endTime.value.isBlank() ||
-          priceError.value ||
-          capacityError.value
+  val fieldValidations =
+      listOf(
+          FieldValidation(
+              { titleError.value || title.value.isBlank() }, stringResource(R.string.title_field)),
+          FieldValidation(
+              { dateError.value || date.value.isBlank() }, stringResource(R.string.date_field)),
+          FieldValidation(
+              { timeError.value || time.value.isBlank() }, stringResource(R.string.time)),
+          FieldValidation({ endDateError.value || endDate.value.isBlank() }, "End date"),
+          FieldValidation({ endTimeError.value || endTime.value.isBlank() }, "End time"),
+          FieldValidation(
+              { locationError.value || location.value.isBlank() },
+              stringResource(R.string.location_field)),
+          FieldValidation(
+              { descriptionError.value || description.value.isBlank() },
+              stringResource(R.string.description_field)),
+          FieldValidation({ tagError.value }, stringResource(R.string.tag_field)),
+          FieldValidation({ priceError.value }, stringResource(R.string.price_field)),
+          FieldValidation({ capacityError.value }, stringResource(R.string.capacity_field)))
 
-  val errorFields =
-      listOfNotNull(
-          if (titleError.value || title.value.isBlank()) stringResource(R.string.title_field)
-          else null,
-          if (dateError.value || date.value.isBlank()) stringResource(R.string.date_field)
-          else null,
-          if (timeError.value || time.value.isBlank()) stringResource(R.string.time) else null,
-          if (endDateError.value || endDate.value.isBlank()) "End date" else null,
-          if (endTimeError.value || endTime.value.isBlank()) "End time" else null,
-          if (locationError.value || location.value.isBlank())
-              stringResource(R.string.location_field)
-          else null,
-          if (descriptionError.value || description.value.isBlank())
-              stringResource(R.string.description_field)
-          else null,
-          if (tagError.value) stringResource(R.string.tag_field) else null,
-          if (priceError.value) stringResource(R.string.price_field) else null,
-          if (capacityError.value) stringResource(R.string.capacity_field) else null)
+  val error = fieldValidations.any { it.hasError() }
+  val errorFields = fieldValidations.mapNotNull { if (it.hasError()) it.label else null }
 
   val isEventValid = !error && isLoggedIn.value
   val showValidation = remember { mutableStateOf(false) }
@@ -247,18 +232,7 @@ fun AddEventScreen(
                 validateStartEndLogic(
                     date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
-                // compute validity based on flags (fresh values)
-                val nowValid =
-                    !(titleError.value ||
-                        descriptionError.value ||
-                        locationError.value ||
-                        dateError.value ||
-                        timeError.value ||
-                        endDateError.value ||
-                        endTimeError.value ||
-                        tagError.value ||
-                        priceError.value ||
-                        capacityError.value) && isLoggedIn.value
+                val nowValid = fieldValidations.none { it.hasError() } && isLoggedIn.value
                 if (!nowValid) return@EventTopBar
 
                 val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
