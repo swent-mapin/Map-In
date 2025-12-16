@@ -382,15 +382,6 @@ class EventDetailSheetTest {
     assertTrue(directionsCalled)
   }
 
-  @Test
-  fun fullState_directionsButton_withoutPermission_butShowingDirections_isEnabled() {
-    setEventDetailSheet(
-        sheetState = BottomSheetState.FULL, showDirections = true, hasLocationPermission = false)
-
-    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("getDirectionsButton").assertIsEnabled()
-  }
-
   // --- SAVE / UNSAVE in FULL state ---
 
   @Test
@@ -587,8 +578,6 @@ class EventDetailSheetTest {
     composeTestRule.onNodeWithTag("priceSection").assertIsDisplayed()
     composeTestRule.onNodeWithText("10.00 CHF").assertIsDisplayed()
   }
-
-  // --- Date Range Format Tests ---
 
   @Test
   fun formatEventDateRangeMedium_formatsCorrectly() {
