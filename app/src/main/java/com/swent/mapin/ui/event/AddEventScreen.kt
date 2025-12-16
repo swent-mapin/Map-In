@@ -1,20 +1,28 @@
 package com.swent.mapin.ui.event
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -22,18 +30,35 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.mapbox.geojson.Point
+import com.mapbox.maps.MapboxDelicateApi
+import com.mapbox.maps.extension.compose.MapEffect
+import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
+import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
+import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
+import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.gestures.OnMapClickListener
+import com.mapbox.maps.plugin.gestures.gestures
 import com.swent.mapin.R
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.ui.map.MapConstants
+import com.swent.mapin.ui.map.components.drawableToBitmap
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -85,6 +110,8 @@ fun AddEventTextField(
     isLocation: Boolean = false,
     isPrice: Boolean = false,
     isTag: Boolean = false,
+    locationValidator: ((String) -> Boolean)? = null,
+    locationSuggestions: List<Location> = emptyList(),
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
 ) {
@@ -96,6 +123,10 @@ fun AddEventTextField(
         textField.value = it
         if (isLocation) {
           locationQuery()
+          val isValid =
+              locationValidator?.invoke(textField.value)
+                  ?: isValidLocation(textField.value, locationSuggestions)
+          error.value = !isValid
         } else if (isTag) {
           error.value = !isValidTagInput(it)
         } else if (isPrice) {
@@ -153,7 +184,24 @@ fun AddEventScreen(
 
   val locationExpanded = remember { mutableStateOf(false) }
   val gotLocation = remember { mutableStateOf(Location.UNDEFINED) }
+  val manualLocation = remember { mutableStateOf<Location?>(null) }
+  val showLocationPicker = remember { mutableStateOf(false) }
   val locations by locationViewModel.locations.collectAsState()
+
+  if (showLocationPicker.value) {
+    ManualLocationPickerDialog(
+        initialLocation = manualLocation.value ?: gotLocation.value,
+        onDismiss = { showLocationPicker.value = false },
+        onLocationPicked = { picked ->
+          manualLocation.value = picked
+          gotLocation.value = picked
+          val label = formatPinnedLocationLabel(picked.latitude!!, picked.longitude!!)
+          location.value = label
+          locationError.value = false
+          locationExpanded.value = false
+          showLocationPicker.value = false
+        })
+  }
 
   // Show missing/incorrect fields either when the user requested validation (clicked Save)
   // or when a per-field error flag is set, or when a required field is empty.
@@ -313,6 +361,8 @@ fun AddEventScreen(
               gotLocation = gotLocation,
               locationExpanded = locationExpanded,
               locationViewModel = locationViewModel,
+              manualLocation = manualLocation,
+              onPickLocationOnMap = { showLocationPicker.value = true },
               description = description,
               descriptionError = descriptionError,
               tag = tag,
@@ -364,4 +414,100 @@ fun AddEventScreen(
           }
         }
   }
+}
+
+private fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
+  return "Pinned location (${String.format(Locale.getDefault(), "%.5f, %.5f", lat, lng)})"
+}
+
+@OptIn(MapboxDelicateApi::class)
+@Composable
+private fun ManualLocationPickerDialog(
+    initialLocation: Location?,
+    onDismiss: () -> Unit,
+    onLocationPicked: (Location) -> Unit
+) {
+  val context = androidx.compose.ui.platform.LocalContext.current
+  val startPoint =
+      initialLocation?.let { loc ->
+        if (loc.latitude != null && loc.longitude != null) {
+          Point.fromLngLat(loc.longitude, loc.latitude)
+        } else null
+      } ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+
+  val initialPickedPoint =
+      initialLocation?.let { loc ->
+        if (loc.latitude != null && loc.longitude != null) {
+          Point.fromLngLat(loc.longitude, loc.latitude)
+        } else null
+      }
+  var pickedPoint by remember(startPoint) { mutableStateOf<Point?>(initialPickedPoint) }
+  val mapViewportState = rememberMapViewportState {
+    setCameraOptions {
+      center(startPoint)
+      zoom(MapConstants.DEFAULT_ZOOM.toDouble())
+    }
+  }
+  val standardStyleState = rememberStandardStyleState()
+  val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 6.dp) {
+          Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(text = "Select location on map", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
+              val annotations =
+                  remember(pickedPoint, markerBitmap) {
+                    pickedPoint?.let { point ->
+                      val opts = PointAnnotationOptions().withPoint(point)
+                      markerBitmap?.let { opts.withIconImage(it) }
+                      listOf(opts)
+                    } ?: emptyList()
+                  }
+              MapboxMap(
+                  modifier = Modifier.fillMaxWidth().height(360.dp),
+                  mapViewportState = mapViewportState,
+                  style = { MapboxStandardStyle(standardStyleState = standardStyleState) }) {
+                    MapEffect(Unit) { mapView ->
+                      val listener = OnMapClickListener { point ->
+                        pickedPoint = point
+                        true
+                      }
+                      mapView.gestures.addOnMapClickListener(listener)
+                    }
+
+                    if (annotations.isNotEmpty()) {
+                      PointAnnotationGroup(annotations = annotations) {
+                        iconAnchor = IconAnchor.BOTTOM
+                      }
+                    }
+                  }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically) {
+                  TextButton(onClick = onDismiss) { Text(text = "Cancel") }
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Button(
+                      onClick = {
+                        pickedPoint?.let { point ->
+                          val lat = point.latitude()
+                          val lng = point.longitude()
+                          val label = formatPinnedLocationLabel(lat, lng)
+                          val loc = Location.from(label, lat, lng)
+                          onLocationPicked(loc)
+                        }
+                      },
+                      enabled = pickedPoint != null) {
+                        Text(text = "Use this location")
+                      }
+                }
+          }
+        }
+      }
 }

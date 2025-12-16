@@ -17,6 +17,7 @@
     <string name="price_field">Price</string>
     <string name="price_text">Price (optional)</string>
     <string name="price_place_holder">Entry price:</string>
+    <string name="pick_location_on_map">Pick location on map</string>
     <string name="currency_switzerland">CHF</string>
     <string name="title_place_holder">Enter the name of your event:</string>
     <string name="day_place_holder">DD</string>
