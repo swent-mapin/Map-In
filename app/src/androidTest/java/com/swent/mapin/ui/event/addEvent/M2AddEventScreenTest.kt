@@ -191,13 +191,20 @@ class M2AddEventScreenTest {
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
     compose.waitForIdle()
 
+    // Close the keyboard to ensure save button is visible and clickable on CI
+    runCatching {
+      compose.activity.currentFocus?.clearFocus()
+      compose.activity.window.decorView.clearFocus()
+    }
+    compose.waitForIdle()
+
     // Don't interact with location field to avoid opening dialogs that might interfere with save
     // The test's goal is to verify missing date/time triggers error banner, not location
 
-    // Ensure the save button exists before clicking (avoid flaky click on CI)
+    // Ensure the save button is visible and clickable before clicking
     compose.waitUntil(timeoutMillis = 10000) {
       runCatching {
-            compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertExists()
+            compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
             true
           }
           .getOrDefault(false)
