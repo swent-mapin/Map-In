@@ -238,21 +238,20 @@ private fun ConversationTopBarContent(
     onLeaveGroup: () -> Unit
 ) {
   val participantCount = conversation?.participantIds?.size ?: return
-
-  if (participantCount > 2) {
-    ConversationTopBar(
-        conversationName,
-        participantNames,
-        onNavigateBack,
-        conversation.profilePictureUrl,
-        isGroupChat = true,
-        onLeaveGroup = onLeaveGroup)
-  } else {
-    val otherParticipant =
-        conversation.participants.firstOrNull { it.userId != currentUserProfile.userId }
-    ConversationTopBar(
-        conversationName, emptyList(), onNavigateBack, otherParticipant?.profilePictureUrl)
-  }
+  val isGroup = participantCount > 2
+  val profileUrl =
+      if (isGroup) conversation.profilePictureUrl
+      else
+          conversation.participants
+              .firstOrNull { it.userId != currentUserProfile.userId }
+              ?.profilePictureUrl
+  ConversationTopBar(
+      conversationName,
+      if (isGroup) participantNames else emptyList(),
+      onNavigateBack,
+      profileUrl,
+      isGroupChat = isGroup,
+      onLeaveGroup = if (isGroup) onLeaveGroup else null)
 }
 
 /**
