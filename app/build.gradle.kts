@@ -236,7 +236,7 @@ dependencies {
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-messaging") // For push notifications
     implementation("com.google.firebase:firebase-functions") // For Cloud Functions
-    implementation(libs.geofire.android.common)
+    implementation("com.firebase:geofire-android-common:3.2.0")
 
     // ------------- Google Maps ------------------
     implementation(libs.maps.compose)

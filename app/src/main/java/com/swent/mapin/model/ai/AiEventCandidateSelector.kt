@@ -62,7 +62,7 @@ class AiEventCandidateSelector(
     }
 
     val eventDistances =
-        if (userLocation?.isDefined() == true && distanceCalculator != null) {
+        if (userLocation != null && distanceCalculator != null) {
           candidates.associateWith { event ->
             distanceCalculator.distanceKm(userLocation, event.location)
           }
@@ -91,7 +91,7 @@ class AiEventCandidateSelector(
       event.toAiEventSummary(
           distanceKm = eventDistances[event],
           locationDescription =
-              event.location.name.takeIf { !it.isNullOrBlank() } ?: "Location not specified")
+              event.location.name?.takeIf { it.isNotBlank() } ?: "Location not specified")
     }
   }
 
