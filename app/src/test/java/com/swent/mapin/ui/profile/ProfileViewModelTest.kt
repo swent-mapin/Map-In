@@ -2,12 +2,19 @@ package com.swent.mapin.ui.profile
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.FriendshipStatus
 import com.swent.mapin.model.ImageUploadHelper
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.badge.BadgeContext
+import com.swent.mapin.model.badge.BadgeRepository
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
@@ -15,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -459,5 +467,179 @@ class ProfileViewModelTest {
     val resetProfile = viewModel.userProfile.first()
     assertEquals(UserProfile(), resetProfile)
     assertFalse(viewModel.isEditMode)
+  }
+
+  // ==================== Badge Context Sync Tests ====================
+
+  @Test
+  fun `fetchBadgeContext clears cache before fetching`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 0)
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns emptyList()
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify clearCache was called
+    coVerify { mockBadgeRepository.clearCache(testUserId) }
+  }
+
+  @Test
+  fun `fetchBadgeContext syncs friendsCount when mismatched`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 0, createdEvents = 5, joinedEvents = 3)
+    val friends =
+        listOf(
+            FriendWithProfile(
+                UserProfile(userId = "friend1", name = "Friend 1"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend2", name = "Friend 2"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend3", name = "Friend 3"), FriendshipStatus.ACCEPTED))
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns friends
+    coEvery { mockBadgeRepository.saveBadgeContext(testUserId, any()) } returns true
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify that saveBadgeContext was called with corrected friendsCount
+    coVerify {
+      mockBadgeRepository.saveBadgeContext(
+          testUserId,
+          match { it.friendsCount == 3 && it.createdEvents == 5 && it.joinedEvents == 3 })
+    }
+  }
+
+  @Test
+  fun `fetchBadgeContext does not update when friendsCount matches`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 3)
+    val friends =
+        listOf(
+            FriendWithProfile(
+                UserProfile(userId = "friend1", name = "Friend 1"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend2", name = "Friend 2"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend3", name = "Friend 3"), FriendshipStatus.ACCEPTED))
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns friends
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify that saveBadgeContext was NOT called since counts match
+    coVerify(exactly = 0) { mockBadgeRepository.saveBadgeContext(any(), any()) }
+  }
+
+  @Test
+  fun `fetchBadgeContext handles getFriends error gracefully`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 0)
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } throws Exception("Network error")
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act - should not throw
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify updateBadgeContext was not called due to error
+    coVerify(exactly = 0) { mockBadgeRepository.saveBadgeContext(any(), any()) }
+  }
+
+  @Test
+  fun `fetchBadgeContext handles getBadgeContext exception gracefully`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } throws Exception("Firestore error")
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act - should not throw, should use default BadgeContext
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - badgeContext should have default value
+    assertEquals(BadgeContext(), viewModel.badgeContext.first())
+  }
+
+  @Test
+  fun `fetchBadgeContext updates badge context state`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 5, createdEvents = 10, joinedEvents = 15)
+    val friends =
+        listOf(
+            FriendWithProfile(UserProfile(userId = "friend1"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(UserProfile(userId = "friend2"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(UserProfile(userId = "friend3"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(UserProfile(userId = "friend4"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(UserProfile(userId = "friend5"), FriendshipStatus.ACCEPTED))
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns friends
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - badge context state should be updated
+    val context = viewModel.badgeContext.first()
+    assertEquals(5, context.friendsCount)
+    assertEquals(10, context.createdEvents)
+    assertEquals(15, context.joinedEvents)
   }
 }

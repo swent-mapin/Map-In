@@ -39,9 +39,11 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
     private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
+    badgeRepo: BadgeRepository? = null,
+    friendRepo: FriendRequestRepository? = null,
 ) : ViewModel() {
-  private var badgeRepository: BadgeRepository? = null
-  private var friendRequestRepository: FriendRequestRepository? = null
+  private var badgeRepository: BadgeRepository? = badgeRepo
+  private var friendRequestRepository: FriendRequestRepository? = friendRepo
 
   // Current user profile from Firestore
   private val _userProfile = MutableStateFlow(UserProfile())
@@ -112,8 +114,14 @@ class ProfileViewModel(
 
   init {
     try {
-      badgeRepository = BadgeRepositoryFirestore()
-      friendRequestRepository = FriendRequestRepository(notificationService = NotificationService())
+      // Only initialize repositories if they weren't injected via constructor
+      if (badgeRepository == null) {
+        badgeRepository = BadgeRepositoryFirestore()
+      }
+      if (friendRequestRepository == null) {
+        friendRequestRepository =
+            FriendRequestRepository(notificationService = NotificationService())
+      }
     } catch (e: Exception) {
       Log.e(
           "BadgeRepoInitialization",

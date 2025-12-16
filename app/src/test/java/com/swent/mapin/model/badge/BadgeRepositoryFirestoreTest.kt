@@ -192,4 +192,99 @@ class BadgeRepositoryFirestoreTest {
     val result = repository.updateBadgeUnlockStatus(testUserId, "profile_pro", true, 123456L)
     assertTrue("Update should succeed", result)
   }
+
+  // ==================== clearCache Tests ====================
+
+  @Test
+  fun `clearCache removes cached badges for user`() = runTest {
+    // Arrange - First populate the cache by fetching badges
+    val badgesData =
+        listOf(
+            mapOf(
+                "id" to "friendly",
+                "title" to "Friendly",
+                "description" to "Make your first friend",
+                "iconName" to "face",
+                "rarity" to "COMMON",
+                "isUnlocked" to true,
+                "progress" to 1.0))
+
+    coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
+    every { mockDocumentSnapshot.exists() } returns true
+    every { mockDocumentSnapshot.get("badges") } returns badgesData
+
+    // Fetch to populate cache
+    repository.getUserBadges(testUserId)
+
+    // Clear cache
+    repository.clearCache(testUserId)
+
+    // Fetch again - should query Firestore, not return cached value
+    repository.getUserBadges(testUserId)
+
+    // Verify Firestore was called twice (once before clear, once after)
+    coVerify(exactly = 2) { mockDocumentReference.get() }
+  }
+
+  @Test
+  fun `clearCache removes cached badge context for user`() = runTest {
+    // Arrange
+    val contextData = mapOf("friendsCount" to 5, "createdEvents" to 3, "joinedEvents" to 2)
+
+    coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
+    every { mockDocumentSnapshot.exists() } returns true
+    every { mockDocumentSnapshot.get("badgeContext") } returns contextData
+
+    // Fetch to populate cache
+    repository.getBadgeContext(testUserId)
+
+    // Clear cache
+    repository.clearCache(testUserId)
+
+    // Fetch again - should query Firestore, not return cached value
+    repository.getBadgeContext(testUserId)
+
+    // Verify Firestore was called twice
+    coVerify(exactly = 2) { mockDocumentReference.get() }
+  }
+
+  @Test
+  fun `clearCache does nothing for non-existent user cache`() = runTest {
+    // Should not throw when clearing cache for user that was never cached
+    repository.clearCache("nonExistentUser")
+    // No exception means success - cache operations should be safe for non-existent entries
+  }
+
+  @Test
+  fun `clearCache only affects specified user cache`() = runTest {
+    // Arrange - populate cache for two users
+    val badgesData =
+        listOf(
+            mapOf(
+                "id" to "friendly",
+                "title" to "Friendly",
+                "description" to "Make your first friend",
+                "iconName" to "face",
+                "rarity" to "COMMON",
+                "isUnlocked" to true,
+                "progress" to 1.0))
+
+    coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
+    every { mockDocumentSnapshot.exists() } returns true
+    every { mockDocumentSnapshot.get("badges") } returns badgesData
+
+    // Fetch for two users to populate cache
+    repository.getUserBadges("user1")
+    repository.getUserBadges("user2")
+
+    // Clear cache only for user1
+    repository.clearCache("user1")
+
+    // Fetch again for both users
+    repository.getUserBadges("user1") // Should hit Firestore
+    repository.getUserBadges("user2") // Should hit cache
+
+    // user1: 2 calls (initial + after clear), user2: 1 call (cache hit on second)
+    coVerify(exactly = 3) { mockDocumentReference.get() }
+  }
 }
