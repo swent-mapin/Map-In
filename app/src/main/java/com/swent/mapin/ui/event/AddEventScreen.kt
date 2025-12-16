@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -25,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -200,7 +204,28 @@ fun AddEventScreen(
           locationError.value = false
           locationExpanded.value = false
           showLocationPicker.value = false
-        })
+        },
+        searchResults = locations,
+        onSearchQuery = { query -> locationViewModel.onQueryChanged(query) },
+        onSearchResultSelect = { loc ->
+          manualLocation.value = loc
+          gotLocation.value = loc
+          location.value = loc.name ?: formatPinnedLocationLabel(loc.latitude!!, loc.longitude!!)
+          locationError.value = false
+          locationExpanded.value = false
+        },
+        recenterPoint =
+            manualLocation.value?.let { loc ->
+              if (loc.latitude != null && loc.longitude != null) {
+                Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+              } else null
+            }
+                ?: gotLocation.value.let { loc ->
+                  if (loc.latitude != null && loc.longitude != null) {
+                    Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                  } else null
+                },
+        locationExpanded = locationExpanded)
   }
 
   // Show missing/incorrect fields either when the user requested validation (clicked Save)
@@ -362,7 +387,10 @@ fun AddEventScreen(
               locationExpanded = locationExpanded,
               locationViewModel = locationViewModel,
               manualLocation = manualLocation,
-              onPickLocationOnMap = { showLocationPicker.value = true },
+              onPickLocationOnMap = {
+                locationExpanded.value = false
+                showLocationPicker.value = true
+              },
               description = description,
               descriptionError = descriptionError,
               tag = tag,
@@ -425,15 +453,27 @@ private fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
 private fun ManualLocationPickerDialog(
     initialLocation: Location?,
     onDismiss: () -> Unit,
-    onLocationPicked: (Location) -> Unit
+    onLocationPicked: (Location) -> Unit,
+    searchResults: List<Location>,
+    onSearchQuery: (String) -> Unit,
+    onSearchResultSelect: (Location) -> Unit,
+    recenterPoint: Point? = null,
+    locationExpanded: MutableState<Boolean>? = null
 ) {
   val context = androidx.compose.ui.platform.LocalContext.current
+  val focusManager = LocalFocusManager.current
   val startPoint =
       initialLocation?.let { loc ->
         if (loc.latitude != null && loc.longitude != null) {
           Point.fromLngLat(loc.longitude, loc.latitude)
         } else null
-      } ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+      }
+          ?: searchResults.firstOrNull()?.let { loc ->
+            if (loc.latitude != null && loc.longitude != null) {
+              Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+            } else null
+          }
+          ?: Point.fromLngLat(0.0, 0.0)
 
   val initialPickedPoint =
       initialLocation?.let { loc ->
@@ -450,6 +490,19 @@ private fun ManualLocationPickerDialog(
   }
   val standardStyleState = rememberStandardStyleState()
   val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
+  val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+  val dialogMapHeight = (screenHeight * 0.7f).coerceAtLeast(360.dp)
+  var searchQuery by remember { mutableStateOf("") }
+  var showResults by remember { mutableStateOf(false) }
+  LaunchedEffect(Unit) {
+    locationExpanded?.value = false
+    if (initialPickedPoint == null) {
+      mapViewportState.setCameraOptions {
+        center(startPoint)
+        zoom(14.0)
+      }
+    }
+  }
 
   Dialog(
       onDismissRequest = onDismiss,
@@ -457,8 +510,37 @@ private fun ManualLocationPickerDialog(
         Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 6.dp) {
           Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Text(text = "Select location on map", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(12.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                  OutlinedTextField(
+                      value = searchQuery,
+                      onValueChange = {
+                        searchQuery = it
+                        onSearchQuery(it)
+                        showResults = it.isNotBlank()
+                      },
+                      modifier = Modifier.weight(1f),
+                      placeholder = { Text("Search place or address") },
+                      singleLine = true)
+                  OutlinedButton(
+                      onClick = {
+                        recenterPoint?.let { pt ->
+                          pickedPoint = pt
+                          mapViewportState.setCameraOptions {
+                            center(pt)
+                            zoom(16.0)
+                          }
+                        }
+                      },
+                      enabled = recenterPoint != null) {
+                        Text("My location")
+                      }
+                }
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(dialogMapHeight)) {
               val annotations =
                   remember(pickedPoint, markerBitmap) {
                     pickedPoint?.let { point ->
@@ -468,7 +550,7 @@ private fun ManualLocationPickerDialog(
                     } ?: emptyList()
                   }
               MapboxMap(
-                  modifier = Modifier.fillMaxWidth().height(360.dp),
+                  modifier = Modifier.fillMaxWidth().height(dialogMapHeight),
                   mapViewportState = mapViewportState,
                   style = { MapboxStandardStyle(standardStyleState = standardStyleState) }) {
                     MapEffect(Unit) { mapView ->
@@ -485,6 +567,35 @@ private fun ManualLocationPickerDialog(
                       }
                     }
                   }
+              if (showResults && searchResults.isNotEmpty()) {
+                Column(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+                  Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                      searchResults.forEachIndexed { idx, loc ->
+                        TextButton(
+                            onClick = {
+                              if (loc.latitude != null && loc.longitude != null) {
+                                val point = Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                                pickedPoint = point
+                                mapViewportState.setCameraOptions {
+                                  center(point)
+                                  zoom(16.0)
+                                }
+                              }
+                              onSearchResultSelect(loc)
+                              searchQuery = ""
+                              onSearchQuery("")
+                              focusManager.clearFocus()
+                              showResults = false
+                            },
+                            modifier = Modifier.fillMaxWidth()) {
+                              Text(loc.name ?: "Result ${idx + 1}")
+                            }
+                      }
+                    }
+                  }
+                }
+              }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
