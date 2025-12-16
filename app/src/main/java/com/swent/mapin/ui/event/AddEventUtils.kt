@@ -1,12 +1,19 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.MutableState
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import com.google.firebase.storage.FirebaseStorage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.Location
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 private const val MAX_CAPACITY = 10_000
 
@@ -113,25 +120,52 @@ fun saveEvent(
     onDone: () -> Unit,
     price: Double = 0.0,
     capacity: Int? = null,
+    mediaUri: Uri? = null
 ) {
   val uid = currentUserId ?: return
-  val newEvent =
-      Event(
-          uid = viewModel.getNewUid(),
-          title = title,
-          url = null,
-          description = description,
-          location = location,
-          date = startDate,
-          endDate = endDate,
-          tags = tags,
-          public = isPublic,
-          ownerId = uid,
-          imageUrl = null,
-          capacity = capacity,
-          price = price)
-  viewModel.addEvent(newEvent)
-  onDone()
+
+  // Launch coroutine using the ViewModel's scope
+  viewModel.viewModelScope.launch {
+    try {
+      // Upload media if provided
+      val mediaUrl = mediaUri?.let { uploadEventMedia(it, uid) }
+
+      // Create the event
+      val newEvent =
+          Event(
+              uid = viewModel.getNewUid(),
+              title = title,
+              url = null,
+              description = description,
+              location = location,
+              date = startDate,
+              endDate = endDate,
+              tags = tags,
+              public = isPublic,
+              ownerId = uid,
+              imageUrl = mediaUrl, // save uploaded URL here
+              capacity = capacity,
+              price = price)
+      viewModel.addEvent(newEvent)
+      onDone()
+    } catch (e: Exception) {
+      Log.e("SaveEvent", "Failed to save event", e)
+    }
+  }
+}
+
+suspend fun uploadEventMedia(uri: Uri, userId: String): String? {
+  return try {
+    val storageRef = FirebaseStorage.getInstance().reference
+    val extension = uri.toString().substringAfterLast('.', "jpg")
+    val filename = "events/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
+    val fileRef = storageRef.child(filename)
+    fileRef.putFile(uri).await()
+    fileRef.downloadUrl.await().toString()
+  } catch (e: Exception) {
+    Log.e("EventMediaUpload", "Failed to upload media", e)
+    null
+  }
 }
 
 sealed class ParseResult {
