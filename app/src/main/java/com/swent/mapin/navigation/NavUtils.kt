@@ -11,7 +11,5 @@ internal fun navigateToExistingConversation(
   val encodedName = Uri.encode(conversationName)
 
   navController.navigate("conversation/$conversationId/$encodedName") {
-    popUpTo(Route.Chat.route) { inclusive = true }
-    launchSingleTop = true
   }
 }

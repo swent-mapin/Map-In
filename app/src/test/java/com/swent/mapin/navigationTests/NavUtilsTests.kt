@@ -17,8 +17,6 @@ class NavUtilsTests {
     val navController = mockk<NavHostController>(relaxed = true)
     val lambdaSlot = slot<NavOptionsBuilder.() -> Unit>()
 
-    every { navController.navigate(any<String>(), capture(lambdaSlot)) } just Runs
-
     val conversationId = "123"
     val conversationName = "My Conversation"
     val encodedName = Uri.encode(conversationName)
@@ -29,11 +27,8 @@ class NavUtilsTests {
     // Assert route
     verify {
       navController.navigate(
-          "conversation/$conversationId/$encodedName", any<NavOptionsBuilder.() -> Unit>())
+        "conversation/$conversationId/$encodedName", any<NavOptionsBuilder.() -> Unit>()
+      )
     }
-
-    // 🔑 Execute lambda for line coverage
-    val navOptionsBuilder = NavOptionsBuilder()
-    lambdaSlot.captured.invoke(navOptionsBuilder)
   }
 }
