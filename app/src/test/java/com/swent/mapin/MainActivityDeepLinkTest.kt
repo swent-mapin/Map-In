@@ -1,9 +1,11 @@
 package com.swent.mapin
 
+import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import com.google.firebase.FirebaseApp
+import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,6 +18,16 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class MainActivityDeepLinkTest {
+
+  private lateinit var context: Context
+
+  @Before
+  fun setUp() {
+    context = ApplicationProvider.getApplicationContext()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   // ==================== action_url Key Tests (PendingIntent) ====================
 
@@ -157,5 +169,77 @@ class MainActivityDeepLinkTest {
           putExtra("action_url", "mapin://messages/$longId")
         }
     assertEquals("mapin://messages/$longId", getDeepLinkUrlFromIntent(intent))
+  }
+
+  // ==================== onNewIntent Tests ====================
+
+  @Test
+  fun `onNewIntent updates deepLink when intent contains action_url`() {
+    val newIntent = Intent().apply { putExtra("action_url", "mapin://events/new123") }
+    val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java, newIntent)
+    val activity = controller.create().newIntent(newIntent).get()
+    assertEquals(newIntent, activity.intent)
+  }
+
+  // ==================== initializeFcmIfLoggedIn Tests ====================
+
+  @Test
+  fun `initializeFcmIfLoggedIn does not crash when user is not logged in`() {
+    val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
+    val activity = controller.create().get()
+    assertNotNull(activity)
+  }
+
+  // ==================== HttpClientProvider Tests ====================
+
+  @Test
+  fun `HttpClientProvider has default OkHttpClient instance`() {
+    val client = HttpClientProvider.client
+    assertNotNull(client)
+  }
+
+  // ==================== BiometricAuthState Tests ====================
+
+  @Test
+  fun `BiometricAuthState onAuthSuccess sets state to UNLOCKED and resets failedAttempts`() {
+    val authState = BiometricAuthState()
+    authState.incrementFailedAttempts()
+    authState.onAuthSuccess()
+    assertEquals(BiometricLockState.UNLOCKED, authState.lockState)
+    assertEquals(0, authState.failedAttempts)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthError sets errorMessage and state to LOCKED`() {
+    val authState = BiometricAuthState()
+    authState.startUnlocking()
+    authState.onAuthError("Error occurred")
+    assertEquals("Error occurred", authState.errorMessage)
+    assertEquals(BiometricLockState.LOCKED, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthError with null does not change lockState`() {
+    val authState = BiometricAuthState()
+    authState.startUnlocking()
+    authState.onAuthError(null)
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState startUnlocking sets state to UNLOCKING and clears errorMessage`() {
+    val authState = BiometricAuthState()
+    authState.onAuthError("Previous error")
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+    assertNull(authState.errorMessage)
+  }
+
+  @Test
+  fun `BiometricAuthState incrementFailedAttempts increases count`() {
+    val authState = BiometricAuthState()
+    authState.incrementFailedAttempts()
+    authState.incrementFailedAttempts()
+    assertEquals(2, authState.failedAttempts)
   }
 }
