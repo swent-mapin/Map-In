@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
@@ -209,7 +210,7 @@ class M2AddEventScreenTest {
     }
 
     // Click Save and wait explicitly for the validation banner to appear to avoid timing flakes
-    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
+    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo().performClick()
     compose.waitForIdle()
 
     // Wait until the error banner exists (up to a longer timeout) before asserting it's displayed

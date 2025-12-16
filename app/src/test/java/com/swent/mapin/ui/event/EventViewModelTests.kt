@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -143,6 +144,7 @@ class EventViewModelTests {
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"
+    val media = Uri.parse("content://media/external/images/media/1")
 
     var successCalled = false
     viewModel.saveEditedEvent(
@@ -153,7 +155,8 @@ class EventViewModelTests {
         startTs = startTs,
         endTs = endTs,
         tagsString = tagsString,
-        onSuccess = { successCalled = true })
+        onSuccess = { successCalled = true },
+        mediaUri = media)
     advanceUntilIdle()
 
     Mockito.verify(repository).editEventAsOwner(eq(event.uid), any())
@@ -169,6 +172,7 @@ class EventViewModelTests {
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"
+    val media = null
 
     var successCalled = false
     viewModel.saveEditedEvent(
@@ -179,7 +183,8 @@ class EventViewModelTests {
         startTs = startTs,
         endTs = endTs,
         tagsString = tagsString,
-        onSuccess = { successCalled = true })
+        onSuccess = { successCalled = true },
+        mediaUri = media)
     advanceUntilIdle()
 
     Mockito.verify(repository, Mockito.never()).editEventAsOwner(eq(event.uid), any())

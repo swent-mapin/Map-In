@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -190,9 +191,12 @@ class EventViewModel(
       endTs: Timestamp,
       tagsString: String,
       onSuccess: () -> Unit,
+      mediaUri: Uri?,
   ) {
     viewModelScope.launch {
       try {
+        val mediaUrl = mediaUri?.let { uploadEventMedia(it, originalEvent.ownerId) }
+
         val editedEvent =
             originalEvent.copy(
                 title = title,
@@ -200,7 +204,8 @@ class EventViewModel(
                 location = location,
                 date = startTs,
                 endDate = endTs,
-                tags = extractTags(tagsString))
+                tags = extractTags(tagsString),
+                imageUrl = mediaUrl)
 
         val currentUser = firebaseAuth.currentUser
         if (currentUser?.uid == originalEvent.ownerId) {
