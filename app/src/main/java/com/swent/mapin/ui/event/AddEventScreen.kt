@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
+import android.location.LocationManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -43,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -191,6 +196,8 @@ fun AddEventScreen(
   val manualLocation = remember { mutableStateOf<Location?>(null) }
   val showLocationPicker = remember { mutableStateOf(false) }
   val locations by locationViewModel.locations.collectAsState()
+  val context = LocalContext.current
+  val lastKnownPoint = getLastKnownUserPoint(context)
 
   if (showLocationPicker.value) {
     ManualLocationPickerDialog(
@@ -224,7 +231,8 @@ fun AddEventScreen(
                   if (loc.latitude != null && loc.longitude != null) {
                     Point.fromLngLat(loc.longitude!!, loc.latitude!!)
                   } else null
-                },
+                }
+                ?: lastKnownPoint,
         locationExpanded = locationExpanded)
   }
 
@@ -448,6 +456,26 @@ private fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
   return "Pinned location (${String.format(Locale.getDefault(), "%.5f, %.5f", lat, lng)})"
 }
 
+private fun getLastKnownUserPoint(context: Context): Point? {
+  val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+  val hasPermission =
+      ContextCompat.checkSelfPermission(
+          context, android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+          PermissionChecker.PERMISSION_GRANTED ||
+          ContextCompat.checkSelfPermission(
+              context, android.Manifest.permission.ACCESS_COARSE_LOCATION) ==
+              PermissionChecker.PERMISSION_GRANTED
+  if (!hasPermission) return null
+
+  val providers =
+      listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).mapNotNull { provider
+        ->
+        runCatching { lm.getLastKnownLocation(provider) }.getOrNull()
+      }
+  val loc = providers.maxByOrNull { it.time } ?: return null
+  return Point.fromLngLat(loc.longitude, loc.latitude)
+}
+
 @OptIn(MapboxDelicateApi::class)
 @Composable
 private fun ManualLocationPickerDialog(
@@ -473,7 +501,8 @@ private fun ManualLocationPickerDialog(
               Point.fromLngLat(loc.longitude!!, loc.latitude!!)
             } else null
           }
-          ?: Point.fromLngLat(0.0, 0.0)
+          ?: recenterPoint
+          ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
 
   val initialPickedPoint =
       initialLocation?.let { loc ->
@@ -556,6 +585,10 @@ private fun ManualLocationPickerDialog(
                     MapEffect(Unit) { mapView ->
                       val listener = OnMapClickListener { point ->
                         pickedPoint = point
+                        showResults = false
+                        searchQuery = ""
+                        onSearchQuery("")
+                        focusManager.clearFocus()
                         true
                       }
                       mapView.gestures.addOnMapClickListener(listener)
