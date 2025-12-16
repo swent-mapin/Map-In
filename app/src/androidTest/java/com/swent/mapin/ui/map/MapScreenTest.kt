@@ -788,9 +788,11 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    // Trigger delete dialog
+    // Trigger delete dialog on the main thread
     rule.runOnIdle { viewModel.requestDeleteEvent(testEvent) }
-    rule.waitForIdle()
+
+    // Wait until the dialog state is true (max 5 seconds)
+    rule.waitUntil(5000) { viewModel.showDeleteDialog }
 
     // Assert dialog is shown
     rule.onNodeWithText("Delete Event").assertIsDisplayed()
