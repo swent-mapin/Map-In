@@ -53,7 +53,8 @@ class EventDetailSheetTest {
       onShare: () -> Unit = {},
       hasLocationPermission: Boolean = false,
       showDirections: Boolean = false,
-      onGetDirections: () -> Unit = {}
+      onGetDirections: () -> Unit = {},
+      onOrganizerClick: (String) -> Unit = {}
   ) {
     composeTestRule.setContent {
       EventDetailSheet(
@@ -70,7 +71,8 @@ class EventDetailSheetTest {
           onShare = onShare,
           hasLocationPermission = hasLocationPermission,
           showDirections = showDirections,
-          onGetDirections = onGetDirections)
+          onGetDirections = onGetDirections,
+          onOrganizerClick = onOrganizerClick)
     }
   }
 
@@ -369,10 +371,10 @@ class EventDetailSheetTest {
   }
 
   @Test
-  fun mediumState_directionsButton_callback_works() {
+  fun fullState_directionsButton_callback_works() {
     var directionsCalled = false
     setEventDetailSheet(
-        sheetState = BottomSheetState.MEDIUM,
+        sheetState = BottomSheetState.FULL,
         onGetDirections = { directionsCalled = true },
         hasLocationPermission = true)
 
@@ -575,5 +577,40 @@ class EventDetailSheetTest {
 
     composeTestRule.onNodeWithTag("priceSection").assertIsDisplayed()
     composeTestRule.onNodeWithText("10.00 CHF").assertIsDisplayed()
+  }
+
+  @Test
+  fun formatEventDateRangeMedium_formatsCorrectly() {
+    // Same day, different times
+    val calStart =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 15)
+          set(Calendar.HOUR_OF_DAY, 10)
+          set(Calendar.MINUTE, 0)
+        }
+    val calEnd =
+        Calendar.getInstance().apply {
+          set(Calendar.YEAR, 2025)
+          set(Calendar.MONTH, 5)
+          set(Calendar.DAY_OF_MONTH, 15)
+          set(Calendar.HOUR_OF_DAY, 18)
+          set(Calendar.MINUTE, 30)
+        }
+
+    val result = formatEventDateRangeMedium(Timestamp(calStart.time), Timestamp(calEnd.time))
+    assertTrue(result.contains("Jun"))
+    assertTrue(result.contains("15"))
+    assertTrue(result.contains("10:00"))
+    assertTrue(result.contains("18:30"))
+
+    // Different days
+    calEnd.set(Calendar.DAY_OF_MONTH, 20)
+    val resultDifferentDays =
+        formatEventDateRangeMedium(Timestamp(calStart.time), Timestamp(calEnd.time))
+    assertTrue(resultDifferentDays.contains("Jun"))
+    assertTrue(resultDifferentDays.contains("15"))
+    assertTrue(resultDifferentDays.contains("20"))
   }
 }
