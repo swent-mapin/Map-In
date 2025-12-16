@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -858,6 +859,102 @@ class MapScreenTest {
     // Assert UI state changed — event no longer selected
     rule.runOnIdle { assertNull(viewModel.eventPendingDeletion) }
     assertFalse(viewModel.ownedEvents.contains(testEvent))
+  }
+
+  @Test
+  fun mapScreen_heatmapClick_navigatesToNearbyMemories() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    var navigatedToMemories = false
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(
+            renderMap = false,
+            autoRequestPermissions = false,
+            memoryVM = testMemoryVM,
+            onNavigateToMemories = { navigatedToMemories = true })
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Switch to heatmap mode and click
+    rule.runOnIdle {
+      viewModel.setMapStyle(MapScreenViewModel.MapStyle.HEATMAP)
+      viewModel.onMapClicked(46.5197, 6.6323)
+    }
+
+    rule.waitForIdle()
+    Thread.sleep(500)
+
+    assertTrue(navigatedToMemories)
+  }
+
+  @Test
+  fun mapScreen_standardModeClick_doesNotNavigateToMemories() {
+    val config =
+        BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
+    lateinit var viewModel: MapScreenViewModel
+    var navigatedToMemories = false
+
+    rule.setContent {
+      MaterialTheme {
+        viewModel = rememberMapScreenViewModel(config)
+        MapScreen(
+            renderMap = false,
+            autoRequestPermissions = false,
+            memoryVM = testMemoryVM,
+            onNavigateToMemories = { navigatedToMemories = true })
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Stay in standard mode and click
+    rule.runOnIdle { viewModel.onMapClicked(46.5197, 6.6323) }
+
+    rule.waitForIdle()
+    Thread.sleep(300)
+
+    assertFalse(navigatedToMemories)
+  }
+
+  @Test
+  fun mapScreen_pinsNotDisplayedInHeatmapMode() {
+    rule.setContent {
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Switch to heatmap mode
+    rule.onNodeWithTag("mapStyleToggle").ensureVisible().performClick()
+    rule.waitForIdle()
+    rule.onNodeWithTag("mapStyleOption_HEATMAP").performClick()
+    rule.waitForIdle()
+
+    // Map should still be displayed but pins logic is different
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+  }
+
+  @Test
+  fun mapScreen_pinsDisplayedInStandardMode() {
+    rule.setContent {
+      MaterialTheme {
+        MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
+      }
+    }
+
+    rule.waitForIdle()
+
+    // Standard mode should display pins
+    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
+    rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
 }
 

@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,9 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -137,5 +141,75 @@ class MemoriesViewModelTest {
     viewModel.clearError()
 
     assertEquals(null, viewModel.error.value)
+  }
+
+  @Test
+  fun loadMemoriesNearLocation_setsNearbyMode() = runTest {
+    val location = Location.from("Test", 46.5197, 6.6323)
+    val nearbyMemory =
+        Memory(
+            uid = "nearby1",
+            title = "Nearby Memory",
+            description = "Close by",
+            ownerId = "user1",
+            location = location)
+
+    whenever(mockMemoryRepository.getMemoriesByLocation(any(), any()))
+        .thenReturn(listOf(nearbyMemory))
+
+    viewModel.loadMemoriesNearLocation(location, 2.0)
+    advanceUntilIdle()
+
+    assertEquals(MemoryDisplayMode.NEARBY_MEMORIES, viewModel.displayMode.value)
+    assertEquals(1, viewModel.memories.value.size)
+    assertEquals("nearby1", viewModel.memories.value[0].uid)
+  }
+
+  @Test
+  fun returnToOwnerMemories_switchesBackToOwnerMode() = runTest {
+    val location = Location.from("Test", 46.5197, 6.6323)
+
+    whenever(mockMemoryRepository.getMemoriesByLocation(any(), any())).thenReturn(emptyList())
+
+    viewModel.loadMemoriesNearLocation(location, 2.0)
+    advanceUntilIdle()
+    assertEquals(MemoryDisplayMode.NEARBY_MEMORIES, viewModel.displayMode.value)
+
+    viewModel.returnToOwnerMemories()
+
+    assertEquals(MemoryDisplayMode.OWNER_MEMORIES, viewModel.displayMode.value)
+  }
+
+  @Test
+  fun refresh_inNearbyMode_reloadsNearbyMemories() = runTest {
+    val location = Location.from("Test", 46.5197, 6.6323)
+    val nearbyMemory =
+        Memory(
+            uid = "nearby1",
+            title = "Nearby Memory",
+            description = "Close by",
+            ownerId = "user1",
+            location = location)
+
+    whenever(mockMemoryRepository.getMemoriesByLocation(any(), any()))
+        .thenReturn(listOf(nearbyMemory))
+
+    viewModel.loadMemoriesNearLocation(location, 2.0)
+    advanceUntilIdle()
+
+    viewModel.refresh()
+    advanceUntilIdle()
+
+    assertEquals(MemoryDisplayMode.NEARBY_MEMORIES, viewModel.displayMode.value)
+    verify(mockMemoryRepository, times(2)).getMemoriesByLocation(any(), any())
+  }
+
+  @Test
+  fun refresh_inOwnerMode_reloadsOwnerMemories() = runTest {
+    viewModel.refresh()
+    advanceUntilIdle()
+
+    assertEquals(MemoryDisplayMode.OWNER_MEMORIES, viewModel.displayMode.value)
+    verify(mockMemoryRepository, atLeast(2)).getMemoriesByOwner(any())
   }
 }
