@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import java.util.Locale
 
 /**
@@ -27,6 +28,14 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
   private var listening = false
   private var currentOnResult: ((String) -> Unit)? = null
   private var currentOnError: ((String) -> Unit)? = null
+
+  private fun safeInvokeCallback(callback: () -> Unit) {
+    try {
+      callback()
+    } catch (e: Exception) {
+      Log.e("AndroidSTT", "Error in client callback", e)
+    }
+  }
 
   override fun startListening(onResult: (String) -> Unit, onError: (String) -> Unit) {
     if (listening) {
@@ -107,16 +116,18 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
                 else -> "Unknown error: $error"
               }
-          currentOnError?.invoke(errorMessage)
+          currentOnError?.let { callback -> safeInvokeCallback { callback(errorMessage) } }
         }
 
         override fun onResults(results: Bundle?) {
           listening = false
           val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
           if (matches != null && matches.isNotEmpty()) {
-            currentOnResult?.invoke(matches[0])
+            currentOnResult?.let { callback -> safeInvokeCallback { callback(matches[0]) } }
           } else {
-            currentOnError?.invoke("No speech recognized")
+            currentOnError?.let { callback ->
+              safeInvokeCallback { callback("No speech recognized") }
+            }
           }
         }
 

@@ -71,17 +71,14 @@ class AiAssistantOrchestrator(
       timeWindowStart: Timestamp? = null,
       timeWindowEnd: Timestamp? = null,
       maxDistanceKm: Double? = null,
-      userId: String = "",
+      userId: String? = null,
       conversationId: String? = null
   ): AiAssistantResult {
-    // Use provided conversationId or continue last conversation
     val currentConversationId = conversationId ?: lastConversationId
 
-    // Step 1: Fetch all events
-    // We use a basic filter with no specific constraints to get all public events
     val allEvents =
         eventRepository.getFilteredEvents(
-            filters = com.swent.mapin.ui.filters.Filters(), userId = userId)
+            filters = com.swent.mapin.ui.filters.Filters(), userId = userId ?: "")
 
     // Step 2: Select candidate events based on user context
     val timeWindow =
@@ -159,12 +156,11 @@ class AiAssistantOrchestrator(
     eventRepository.editEventAsUser(eventId, userId, join = true)
   }
 
-  /** Reset the conversation state to start a new conversation. */
   fun resetConversation() {
     lastResult = null
     lastConversationId = null
   }
 
-  /** Get the last query result (useful for UI or debugging). */
-  fun getLastResult(): AiAssistantResult? = lastResult
+  val lastQueryResult: AiAssistantResult?
+    get() = lastResult
 }

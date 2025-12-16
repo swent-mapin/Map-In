@@ -5,8 +5,11 @@ package com.swent.mapin.model.ai
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
+import com.google.gson.JsonSyntaxException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,10 +25,12 @@ import okhttp3.RequestBody.Companion.toRequestBody
  *
  * @property client OkHttpClient instance for making HTTP requests
  * @property gson Gson instance for JSON serialization/deserialization
+ * @property ioDispatcher Coroutine dispatcher for IO operations
  */
 class DirectOpenRouterRepository(
     private val client: OkHttpClient = OkHttpClient(),
-    private val gson: Gson = Gson()
+    private val gson: Gson = Gson(),
+    private val ioDispatcher: CoroutineContext = Dispatchers.IO
 ) : AiAssistantRepository {
 
   companion object {
@@ -46,7 +51,7 @@ class DirectOpenRouterRepository(
       conversationId: String?,
       request: AiRecommendationRequest
   ): AiRecommendationResponse =
-      withContext(Dispatchers.IO) {
+      withContext(ioDispatcher) {
         try {
           Log.d(TAG, "Processing recommendation request with ${request.events.size} events")
 
@@ -229,13 +234,13 @@ Recommend 2-3 relevant events with selling reasons.
             throw Exception("API returned no choices")
           }
 
-          val messageObj = choicesArray.get(0)?.asJsonObject?.getAsJsonObject("message")
+          val messageObj = choicesArray[0]?.asJsonObject?.getAsJsonObject("message")
           if (messageObj == null) {
             Log.e(TAG, "No message object in first choice")
             throw Exception("API returned no message")
           }
 
-          val aiResponseText = messageObj.get("content")?.asString
+          val aiResponseText = messageObj["content"]?.asString
 
           if (aiResponseText.isNullOrEmpty()) {
             Log.e(TAG, "Content is null or empty")
@@ -263,8 +268,19 @@ Recommend 2-3 relevant events with selling reasons.
                 Log.d(
                     TAG, "Successfully parsed ${parsed.recommendedEvents.size} recommended events")
                 parsed
-              } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse AI response: ${e.message}")
+              } catch (e: JsonParseException) {
+                Log.e(TAG, "Failed to parse AI response JSON", e)
+
+                AiRecommendationResponse(
+                    assistantMessage =
+                        "Sorry, I couldn't properly analyze the available events. Can you rephrase your request?",
+                    recommendedEvents = emptyList(),
+                    followupQuestions =
+                        listOf(
+                            "Would you like to see all available events?",
+                            "Can you specify your preferences?"))
+              } catch (e: JsonSyntaxException) {
+                Log.e(TAG, "Invalid JSON syntax in AI response", e)
 
                 AiRecommendationResponse(
                     assistantMessage =
