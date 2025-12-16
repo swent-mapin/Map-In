@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,12 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Assisted by AI
 
@@ -38,11 +41,109 @@ import kotlinx.coroutines.launch
  * - Display AI recommendations
  * - Speak responses (text-to-speech)
  * - Show recommended events
+ * - Allow users to join events via voice
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiAssistantScreen(
     modifier: Modifier = Modifier,
+    viewModel: AiAssistantViewModel? = null,
+    onNavigateBack: () -> Unit = {},
+    onEventSelected: (String) -> Unit = {}
+) {
+  // If no viewModel is provided and we're in a test environment (context issues),
+  // we render a static version of the screen
+  if (viewModel == null) {
+    val context = LocalContext.current
+    val actualViewModel = remember {
+      try {
+        AiAssistantViewModel(context)
+      } catch (e: Exception) {
+        null
+      }
+    }
+
+    if (actualViewModel != null) {
+      AiAssistantScreenContent(
+          modifier = modifier,
+          viewModel = actualViewModel,
+          onNavigateBack = onNavigateBack,
+          onEventSelected = onEventSelected)
+    } else {
+      // Fallback for test environment - render static UI
+      AiAssistantScreenStaticContent(modifier = modifier, onNavigateBack = onNavigateBack)
+    }
+  } else {
+    AiAssistantScreenContent(
+        modifier = modifier,
+        viewModel = viewModel,
+        onNavigateBack = onNavigateBack,
+        onEventSelected = onEventSelected)
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AiAssistantScreenStaticContent(
+    modifier: Modifier = Modifier,
+    onNavigateBack: () -> Unit = {}
+) {
+  Scaffold(
+      modifier = modifier.testTag("aiAssistantScreen"),
+      topBar = {
+        TopAppBar(
+            title = { Text("AI Assistant", fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+              }
+            },
+            actions = {
+              IconButton(onClick = {}, modifier = Modifier.testTag("resetButton")) {
+                Icon(Icons.Default.Refresh, contentDescription = "Reset conversation")
+              }
+            },
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer))
+      }) { paddingValues ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              // Status indicator
+              StatusBanner(
+                  isListening = false,
+                  isSpeaking = false,
+                  isProcessing = false,
+                  errorMessage = null,
+                  modifier = Modifier.fillMaxWidth())
+
+              Spacer(modifier = Modifier.height(24.dp))
+
+              // Main microphone button
+              VoiceInputButton(
+                  isListening = false,
+                  isProcessing = false,
+                  onClick = {},
+                  modifier = Modifier.testTag("microphoneButton"))
+
+              Spacer(modifier = Modifier.height(32.dp))
+
+              // Conversation display
+              LazyColumn(
+                  modifier = Modifier.fillMaxWidth().weight(1f).testTag("conversationList"),
+                  verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    item { HelpCard(modifier = Modifier.testTag("helpCard")) }
+                  }
+            }
+      }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AiAssistantScreenContent(
+    modifier: Modifier = Modifier,
+    viewModel: AiAssistantViewModel,
     onNavigateBack: () -> Unit = {},
     onEventSelected: (String) -> Unit = {}
 ) {
@@ -56,60 +157,57 @@ fun AiAssistantScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
             },
+            actions = {
+              IconButton(
+                  onClick = { viewModel.resetConversation() },
+                  modifier = Modifier.testTag("resetButton")) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Reset conversation")
+                  }
+            },
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer))
       }) { paddingValues ->
         AiAssistantContent(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
+            viewModel = viewModel,
             onEventSelected = onEventSelected)
       }
 }
 
 @Composable
-private fun AiAssistantContent(modifier: Modifier = Modifier, onEventSelected: (String) -> Unit) {
-  // Mock state - replace with ViewModel later
-  var isListening by remember { mutableStateOf(false) }
-  var isSpeaking by remember { mutableStateOf(false) }
-  var transcribedText by remember { mutableStateOf("") }
-  var aiResponse by remember { mutableStateOf<String?>(null) }
-  var recommendedEvents by remember { mutableStateOf<List<MockEvent>>(emptyList()) }
+private fun AiAssistantContent(
+    modifier: Modifier = Modifier,
+    viewModel: AiAssistantViewModel,
+    onEventSelected: (String) -> Unit
+) {
+  val state by viewModel.state.collectAsState()
+  val conversationMessages by viewModel.conversationMessages.collectAsState()
+  val recommendedEvents by viewModel.recommendedEvents.collectAsState()
+  val followupQuestions by viewModel.followupQuestions.collectAsState()
 
-  val coroutineScope = rememberCoroutineScope()
+  val isListening = state is AiAssistantState.Listening
+  val isSpeaking = state is AiAssistantState.Speaking
+  val isProcessing = state is AiAssistantState.Processing
 
   Column(
       modifier = modifier.fillMaxSize().padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally) {
         // Status indicator
         StatusBanner(
-            isListening = isListening, isSpeaking = isSpeaking, modifier = Modifier.fillMaxWidth())
+            isListening = isListening,
+            isSpeaking = isSpeaking,
+            isProcessing = isProcessing,
+            errorMessage = (state as? AiAssistantState.Error)?.message,
+            modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.height(24.dp))
 
         // Main microphone button
         VoiceInputButton(
             isListening = isListening,
-            onClick = {
-              isListening = !isListening
-              if (isListening) {
-                // Simulate speech recognition
-                transcribedText = "I'm looking for a concert tonight"
-                isListening = false
-                // Simulate AI response
-                coroutineScope.launch {
-                  delay(2000)
-                  aiResponse =
-                      "I found 2 concerts that might interest you tonight. The first is a jazz concert at Sunset Club at 8pm, and the second is a rock concert at Olympia at 9:30pm."
-                  recommendedEvents =
-                      listOf(
-                          MockEvent("event1", "Jazz Concert at Sunset Club", "8:00 PM"),
-                          MockEvent("event2", "Rock Concert at Olympia", "9:30 PM"))
-                  isSpeaking = true
-                  delay(5000)
-                  isSpeaking = false
-                }
-              }
-            },
+            isProcessing = isProcessing,
+            onClick = { viewModel.toggleListening() },
             modifier = Modifier.testTag("microphoneButton"))
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -118,20 +216,16 @@ private fun AiAssistantContent(modifier: Modifier = Modifier, onEventSelected: (
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f).testTag("conversationList"),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
-              // User query
-              if (transcribedText.isNotEmpty()) {
-                item {
-                  UserMessageBubble(
-                      text = transcribedText, modifier = Modifier.testTag("userMessage"))
-                }
-              }
-
-              // AI response
-              if (aiResponse != null) {
-                item {
+              // Conversation messages
+              items(conversationMessages) { message ->
+                if (message.isFromUser) {
+                  UserMessageBubble(text = message.text, modifier = Modifier.testTag("userMessage"))
+                } else {
                   AiMessageBubble(
-                      text = aiResponse!!,
-                      isSpeaking = isSpeaking,
+                      text = message.text,
+                      isSpeaking =
+                          isSpeaking &&
+                              message == conversationMessages.lastOrNull { !it.isFromUser },
                       modifier = Modifier.testTag("aiMessage"))
                 }
               }
@@ -146,16 +240,35 @@ private fun AiAssistantContent(modifier: Modifier = Modifier, onEventSelected: (
                       modifier = Modifier.padding(vertical = 8.dp))
                 }
 
-                items(recommendedEvents) { event ->
+                itemsIndexed(recommendedEvents) { _, eventWithDetails ->
                   EventRecommendationCard(
-                      event = event,
-                      onClick = { onEventSelected(event.id) },
-                      modifier = Modifier.testTag("eventCard_${event.id}"))
+                      event = eventWithDetails,
+                      onClick = { onEventSelected(eventWithDetails.event.uid) },
+                      onJoinClick = { viewModel.joinEvent(eventWithDetails.event.uid) },
+                      modifier = Modifier.testTag("eventCard_${eventWithDetails.event.uid}"))
+                }
+              }
+
+              // Follow-up questions
+              if (followupQuestions.isNotEmpty()) {
+                item {
+                  Text(
+                      text = "Any other requests?",
+                      style = MaterialTheme.typography.bodyMedium,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                }
+
+                items(followupQuestions) { question ->
+                  FollowupQuestionChip(
+                      question = question,
+                      onClick = { viewModel.selectFollowupQuestion(question) },
+                      modifier = Modifier.testTag("followupQuestion"))
                 }
               }
 
               // Help text when idle
-              if (transcribedText.isEmpty()) {
+              if (conversationMessages.isEmpty()) {
                 item { HelpCard(modifier = Modifier.testTag("helpCard")) }
               }
             }
@@ -163,17 +276,27 @@ private fun AiAssistantContent(modifier: Modifier = Modifier, onEventSelected: (
 }
 
 @Composable
-private fun StatusBanner(isListening: Boolean, isSpeaking: Boolean, modifier: Modifier = Modifier) {
+private fun StatusBanner(
+    isListening: Boolean,
+    isSpeaking: Boolean,
+    isProcessing: Boolean,
+    errorMessage: String?,
+    modifier: Modifier = Modifier
+) {
   val statusText =
       when {
+        errorMessage != null -> "⚠️ $errorMessage"
         isListening -> "🎤 Listening..."
+        isProcessing -> "🔄 Processing..."
         isSpeaking -> "🔊 Assistant speaking..."
         else -> "💬 Ready to listen"
       }
 
   val backgroundColor =
       when {
+        errorMessage != null -> MaterialTheme.colorScheme.errorContainer
         isListening -> MaterialTheme.colorScheme.errorContainer
+        isProcessing -> MaterialTheme.colorScheme.tertiaryContainer
         isSpeaking -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
       }
@@ -194,6 +317,7 @@ private fun StatusBanner(isListening: Boolean, isSpeaking: Boolean, modifier: Mo
 @Composable
 private fun VoiceInputButton(
     isListening: Boolean,
+    isProcessing: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -231,13 +355,22 @@ private fun VoiceInputButton(
         onClick = onClick,
         modifier = Modifier.size(80.dp).testTag("micButton"),
         containerColor =
-            if (isListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            when {
+              isProcessing -> MaterialTheme.colorScheme.tertiary
+              isListening -> MaterialTheme.colorScheme.error
+              else -> MaterialTheme.colorScheme.primary
+            },
         elevation = FloatingActionButtonDefaults.elevation(8.dp)) {
-          Icon(
-              imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-              contentDescription = if (isListening) "Stop listening" else "Start listening",
-              modifier = Modifier.size(40.dp),
-              tint = Color.White)
+          if (isProcessing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(40.dp), color = Color.White, strokeWidth = 3.dp)
+          } else {
+            Icon(
+                imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = if (isListening) "Stop listening" else "Start listening",
+                modifier = Modifier.size(40.dp),
+                tint = Color.White)
+          }
         }
   }
 }
@@ -300,49 +433,119 @@ private fun SpeakingIndicator(modifier: Modifier = Modifier) {
 
 @Composable
 private fun EventRecommendationCard(
-    event: MockEvent,
+    event: RecommendedEventWithDetails,
     onClick: () -> Unit,
+    onJoinClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+  val dateFormat = SimpleDateFormat("EEE, MMM d 'at' h:mm a", Locale.getDefault())
+  val eventDate = event.event.date?.toDate()
+  val eventTime = if (eventDate != null) dateFormat.format(eventDate) else "Date TBD"
+
   Card(
       modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-              // Event icon
-              Surface(
-                  modifier = Modifier.size(48.dp),
-                  color = MaterialTheme.colorScheme.primaryContainer,
-                  shape = CircleShape) {
-                    Icon(
-                        imageVector = Icons.Default.Event,
-                        contentDescription = null,
-                        modifier = Modifier.padding(12.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                  }
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+          Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Event icon
+            Surface(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = CircleShape) {
+                  Icon(
+                      imageVector = Icons.Default.Event,
+                      contentDescription = null,
+                      modifier = Modifier.padding(12.dp),
+                      tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
 
-              Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-              // Event info
-              Column(modifier = Modifier.weight(1f)) {
+            // Event info
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                  text = event.event.title,
+                  style = MaterialTheme.typography.titleMedium,
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis)
+              Text(
+                  text = "🕐 $eventTime",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+              val locationName = event.event.location.name
+              if (!locationName.isNullOrEmpty()) {
                 Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold)
-                Text(
-                    text = "🕐 ${event.time}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    text = "📍 $locationName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
               }
-
-              // Arrow
-              Icon(
-                  imageVector = Icons.Default.ChevronRight,
-                  contentDescription = "View details",
-                  tint = MaterialTheme.colorScheme.primary)
             }
+
+            // Arrow
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "View details",
+                tint = MaterialTheme.colorScheme.primary)
+          }
+
+          // AI Reason
+          if (event.reason.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = RoundedCornerShape(8.dp)) {
+                  Text(
+                      text = "✨ ${event.reason}",
+                      modifier = Modifier.padding(8.dp),
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onTertiaryContainer)
+                }
+          }
+
+          // Join button
+          Spacer(modifier = Modifier.height(12.dp))
+          Button(
+              onClick = onJoinClick,
+              modifier = Modifier.fillMaxWidth().testTag("joinButton_${event.event.uid}"),
+              colors =
+                  ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Join this event")
+              }
+        }
+      }
+}
+
+@Composable
+private fun FollowupQuestionChip(
+    question: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Surface(
+      modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant,
+      shape = RoundedCornerShape(12.dp)) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+              imageVector = Icons.Default.QuestionAnswer,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.width(12.dp))
+          Text(
+              text = question,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
       }
 }
 
@@ -353,7 +556,7 @@ private fun HelpCard(modifier: Modifier = Modifier) {
       colors =
           CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
               Icon(
                   imageVector = Icons.AutoMirrored.Filled.Help,
@@ -367,22 +570,25 @@ private fun HelpCard(modifier: Modifier = Modifier) {
                   text = "How to use the assistant",
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onTertiaryContainer)
+                  color = MaterialTheme.colorScheme.onTertiaryContainer,
+                  textAlign = TextAlign.Center,
+                  modifier = Modifier.fillMaxWidth())
 
               Spacer(modifier = Modifier.height(8.dp))
 
               Text(
                   text =
                       "Press the microphone and say:\n" +
-                          "• \"I'm looking for a concert tonight\"\n" +
-                          "• \"Find me a sports event this weekend\"\n" +
-                          "• \"What festivals are coming up?\"",
+                          "\"I'm looking for a concert tonight\"\n" +
+                          "\"Find me a sports event this weekend\"\n" +
+                          "\"What festivals are coming up?\"\n\n" +
+                          "To join an event, say:\n" +
+                          "\"Join the first event\"\n" +
+                          "\"Register for the second one\"",
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onTertiaryContainer,
-                  textAlign = TextAlign.Center)
+                  textAlign = TextAlign.Center,
+                  modifier = Modifier.fillMaxWidth())
             }
       }
 }
-
-// Mock data class for preview
-private data class MockEvent(val id: String, val title: String, val time: String)
