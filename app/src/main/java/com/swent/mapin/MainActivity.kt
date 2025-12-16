@@ -44,14 +44,14 @@ object HttpClientProvider {
  * Represents the state of biometric authentication lock screen. Used as an explicit state machine
  * to avoid UI flicker during transitions.
  */
-private enum class BiometricLockState {
+internal enum class BiometricLockState {
   LOCKED,
   UNLOCKING,
   UNLOCKED
 }
 
 /** Holds biometric authentication state to reduce parameter passing complexity. */
-private class BiometricAuthState {
+internal class BiometricAuthState {
   private var _lockState by mutableStateOf(BiometricLockState.LOCKED)
   val lockState: BiometricLockState
     get() = _lockState
