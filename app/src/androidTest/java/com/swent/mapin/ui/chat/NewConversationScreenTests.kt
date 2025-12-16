@@ -204,4 +204,38 @@ class NewConversationScreenTest {
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.BACK_BUTTON).performClick()
     assert(backCalled)
   }
+
+  @Test
+  fun groupNameDialog_requiresNonBlankName_toConfirm() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+
+    var confirmed = false
+
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onConfirm = { confirmed = true })
+    }
+
+    // Select Alice and Bob (group chat)
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+    composeTestRule.onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob").performClick()
+
+    // Confirm → should open dialog
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    // Try to confirm with empty name (should not work)
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    // Should still show dialog (not confirmed because name is blank)
+    composeTestRule
+        .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
+        .assertIsDisplayed()
+  }
 }

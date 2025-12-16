@@ -8,6 +8,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
+private const val MAX_CAPACITY = 10_000
+
 /**
  * With help of GPT: Helper function which checks if the user's input string for tags are of valid
  * format. The regex means: “A string that starts with #, followed by letters/numbers/underscores,
@@ -36,6 +38,19 @@ fun isValidPriceInput(input: String): Boolean {
   if (input.isBlank()) return true
   val regex = """^\d+(\.\d+)?$""".toRegex()
   return regex.matches(input.trim())
+}
+
+/**
+ * Helper that validates optional capacity input. Accepts blank, otherwise requires a positive
+ * integer.
+ */
+fun isValidCapacityInput(input: String): Boolean {
+  if (input.isBlank()) return true
+  val trimmed = input.trim()
+  val regex = Regex("^\\d+$")
+  if (!regex.matches(trimmed)) return false
+  val asNumber = trimmed.toLongOrNull() ?: return false
+  return asNumber in 1..MAX_CAPACITY
 }
 
 /**
@@ -96,7 +111,8 @@ fun saveEvent(
     tags: List<String>,
     isPublic: Boolean,
     onDone: () -> Unit,
-    price: Double = 0.0
+    price: Double = 0.0,
+    capacity: Int? = null,
 ) {
   val uid = currentUserId ?: return
   val newEvent =
@@ -112,7 +128,7 @@ fun saveEvent(
           public = isPublic,
           ownerId = uid,
           imageUrl = null,
-          capacity = null,
+          capacity = capacity,
           price = price)
   viewModel.addEvent(newEvent)
   onDone()

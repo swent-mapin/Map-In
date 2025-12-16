@@ -20,12 +20,14 @@ open class DistanceCalculator {
    * @return The distance in kilometers, or null if coordinates are invalid
    */
   open fun distanceKm(from: Location, to: Location): Double? {
-    if (from.isDefined() && to.isDefined()) {
-      val fromGeoPoint = GeoPoint(from.latitude!!, from.longitude!!)
-      val toGeoPoint = GeoPoint(to.latitude!!, to.longitude!!)
+    val fromLat = from.latitude ?: return null
+    val fromLng = from.longitude ?: return null
+    val toLat = to.latitude ?: return null
+    val toLng = to.longitude ?: return null
 
-      return EventUtils.calculateHaversineDistance(fromGeoPoint, toGeoPoint)
-    }
-    return null
+    val fromGeoPoint = GeoPoint(fromLat, fromLng)
+    val toGeoPoint = GeoPoint(toLat, toLng)
+
+    return EventUtils.calculateHaversineDistance(fromGeoPoint, toGeoPoint)
   }
 }

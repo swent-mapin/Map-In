@@ -5,8 +5,6 @@ package com.swent.mapin.model.ai
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -30,7 +28,14 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
   private var listening = false
   private var currentOnResult: ((String) -> Unit)? = null
   private var currentOnError: ((String) -> Unit)? = null
-  private val mainHandler = Handler(Looper.getMainLooper())
+
+  private fun safeInvokeCallback(callback: () -> Unit) {
+    try {
+      callback()
+    } catch (e: Exception) {
+      Log.e("AndroidSTT", "Error in client callback", e)
+    }
+  }
 
   override fun startListening(onResult: (String) -> Unit, onError: (String) -> Unit) {
     if (listening) {
@@ -111,21 +116,18 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
                 else -> "Unknown error: $error"
               }
-          Log.e("AndroidSTT", "Recognition error: $errorMessage")
-          val callback = currentOnError
-          mainHandler.post { callback?.invoke(errorMessage) }
+          currentOnError?.let { callback -> safeInvokeCallback { callback(errorMessage) } }
         }
 
         override fun onResults(results: Bundle?) {
           listening = false
           val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
           if (matches != null && matches.isNotEmpty()) {
-            val result = matches[0]
-            val callback = currentOnResult
-            mainHandler.post { callback?.invoke(result) }
+            currentOnResult?.let { callback -> safeInvokeCallback { callback(matches[0]) } }
           } else {
-            val callback = currentOnError
-            mainHandler.post { callback?.invoke("No speech recognized") }
+            currentOnError?.let { callback ->
+              safeInvokeCallback { callback("No speech recognized") }
+            }
           }
         }
 
