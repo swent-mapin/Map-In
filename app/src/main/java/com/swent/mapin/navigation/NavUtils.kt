@@ -10,6 +10,5 @@ internal fun navigateToExistingConversation(
 ) {
   val encodedName = Uri.encode(conversationName)
 
-  navController.navigate("conversation/$conversationId/$encodedName") {
-  }
+  navController.navigate("conversation/$conversationId/$encodedName") {}
 }

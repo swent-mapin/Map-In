@@ -27,8 +27,7 @@ class NavUtilsTests {
     // Assert route
     verify {
       navController.navigate(
-        "conversation/$conversationId/$encodedName", any<NavOptionsBuilder.() -> Unit>()
-      )
+          "conversation/$conversationId/$encodedName", any<NavOptionsBuilder.() -> Unit>())
     }
   }
 }
