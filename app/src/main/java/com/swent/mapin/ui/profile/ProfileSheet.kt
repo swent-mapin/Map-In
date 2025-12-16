@@ -77,7 +77,7 @@ fun ProfileSheet(
   LaunchedEffect(userId) { viewModel.loadProfile(userId) }
 
   // Track if close action has been triggered to prevent multiple clicks
-  var hasTriggeredClose by remember(userId) { mutableStateOf(false) }
+  var hasNavigatedBack by remember(userId) { mutableStateOf(false) }
 
   Column(modifier = Modifier.fillMaxWidth().testTag("profileSheet")) {
     // Header with close button
@@ -86,8 +86,8 @@ fun ProfileSheet(
         horizontalArrangement = Arrangement.End) {
           IconButton(
               onClick = {
-                if (!hasTriggeredClose) {
-                  hasTriggeredClose = true
+                if (!hasNavigatedBack) {
+                  hasNavigatedBack = true
                   onClose()
                 }
               },

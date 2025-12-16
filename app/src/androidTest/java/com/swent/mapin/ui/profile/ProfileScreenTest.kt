@@ -52,9 +52,7 @@ class ProfileScreenTest {
     every { mockViewModel.showBannerSelector } returns false
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithTag("profileScreen").assertIsDisplayed()
@@ -73,9 +71,7 @@ class ProfileScreenTest {
     every { mockViewModel.showBannerSelector } returns false
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithTag("editButton").assertIsDisplayed()
@@ -92,9 +88,7 @@ class ProfileScreenTest {
     every { mockViewModel.showBannerSelector } returns false
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithTag("editButton").performClick()
@@ -114,10 +108,7 @@ class ProfileScreenTest {
 
     composeTestRule.setContent {
       MaterialTheme {
-        ProfileScreen(
-            onNavigateBack = { navigatedBack = true },
-            onNavigateToSignIn = {},
-            viewModel = mockViewModel)
+        ProfileScreen(onNavigateBack = { navigatedBack = true }, viewModel = mockViewModel)
       }
     }
 
@@ -137,9 +128,7 @@ class ProfileScreenTest {
     every { mockViewModel.selectedAvatar } returns ""
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithText("Choose Your Avatar").assertIsDisplayed()
@@ -157,9 +146,7 @@ class ProfileScreenTest {
     every { mockViewModel.selectedBanner } returns ""
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithText("Choose Your Banner").assertIsDisplayed()
@@ -185,9 +172,7 @@ class ProfileScreenTest {
     every { mockViewModel.selectedAvatar } returns ""
 
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfileScreen(onNavigateBack = {}, onNavigateToSignIn = {}, viewModel = mockViewModel)
-      }
+      MaterialTheme { ProfileScreen(onNavigateBack = {}, viewModel = mockViewModel) }
     }
 
     composeTestRule.onNodeWithTag("editNameField").performScrollTo().assertIsDisplayed()
@@ -254,11 +239,8 @@ class ProfileScreenTest {
 
   @Test
   fun profilePicture_isNotClickable_whenNotInEditMode() {
-    var clicked = false
     composeTestRule.setContent {
-      MaterialTheme {
-        ProfilePicture(avatarUrl = null, isEditMode = false, onAvatarClick = { clicked = true })
-      }
+      MaterialTheme { ProfilePicture(avatarUrl = null, isEditMode = false, onAvatarClick = {}) }
     }
 
     // Should not crash when trying to click

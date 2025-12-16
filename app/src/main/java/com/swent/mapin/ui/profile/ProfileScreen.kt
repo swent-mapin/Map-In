@@ -84,13 +84,7 @@ import com.swent.mapin.model.badge.SampleBadges
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
-    onNavigateBack: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onNavigateToSignIn: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onNavigateToFriends: () -> Unit = {},
-    @Suppress("UNUSED_PARAMETER") onNavigateToSettings: () -> Unit = {},
-    viewModel: ProfileViewModel = viewModel()
-) {
+fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = viewModel()) {
   val userProfile by viewModel.userProfile.collectAsState()
   val scrollState = rememberScrollState()
 
