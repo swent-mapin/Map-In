@@ -7,7 +7,6 @@
     <string name="time_text">Pick a time</string>
     <string name="location_text">Location *</string>
     <string name="description_text">Description *</string>
-    <string name="media_text">Photo or Video (optional)</string>
     <string name="title_field">Title</string>
     <string name="date_field">Date</string>
     <string name="time_field">Pick a time</string>

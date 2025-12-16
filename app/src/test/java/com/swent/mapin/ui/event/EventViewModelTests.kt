@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
 import android.net.Uri
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -32,6 +33,8 @@ class EventViewModelTests {
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var repository: EventRepository
   private lateinit var viewModel: EventViewModel
+
+  val context: Context = mockk(relaxed = true)
   private val stateController: MapEventStateController =
       Mockito.mock(MapEventStateController::class.java)
 
@@ -149,6 +152,7 @@ class EventViewModelTests {
     var successCalled = false
     viewModel.saveEditedEvent(
         originalEvent = event,
+        context = context,
         title = editedTitle,
         description = editedDesc,
         location = location,
@@ -177,6 +181,7 @@ class EventViewModelTests {
     var successCalled = false
     viewModel.saveEditedEvent(
         originalEvent = event,
+        context = context,
         title = editedTitle,
         description = editedDesc,
         location = location,
