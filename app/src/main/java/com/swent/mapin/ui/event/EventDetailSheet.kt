@@ -361,14 +361,14 @@ private fun EventImageCard(imageUrl: String?) {
               containerColor =
                   if (imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.surface)) {
-        if (imageUrl != null)
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Event image",
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop)
-        else
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        imageUrl?.let {
+          AsyncImage(
+              model = it,
+              contentDescription = "Event image",
+              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+              contentScale = ContentScale.Crop)
+        }
+            ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               Text(
                   "No image available",
                   style = MaterialTheme.typography.bodyMedium,
