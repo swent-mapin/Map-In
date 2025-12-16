@@ -4,6 +4,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.swent.mapin.model.UserProfileRepository
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -21,6 +22,7 @@ class BadgeRepositoryFirestoreTest {
   private lateinit var mockFirestore: FirebaseFirestore
   private lateinit var mockDocumentReference: DocumentReference
   private lateinit var mockDocumentSnapshot: DocumentSnapshot
+  private lateinit var mockUserProfileRepository: UserProfileRepository
   private lateinit var repository: BadgeRepositoryFirestore
 
   private val testUserId = "testUser123"
@@ -48,7 +50,8 @@ class BadgeRepositoryFirestoreTest {
     mockFirestore = mockk(relaxed = true)
     mockDocumentReference = mockk(relaxed = true)
     mockDocumentSnapshot = mockk(relaxed = true)
-    repository = BadgeRepositoryFirestore(mockFirestore)
+    mockUserProfileRepository = mockk(relaxed = true)
+    repository = BadgeRepositoryFirestore(mockFirestore, mockUserProfileRepository)
 
     // Setup default mock chain
     every { mockFirestore.collection("users") } returns

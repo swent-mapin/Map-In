@@ -174,7 +174,11 @@ class ProfileViewModel(
                 return@launch
               }
 
-      val context =
+      // Clear cache to ensure we get fresh data from Firestore
+      // Badge context may have been modified by other components (e.g., FriendRequestRepository)
+      repo.clearCache(currentUser.uid)
+
+      var context =
           try {
             repo.getBadgeContext(currentUser.uid)
           } catch (e: Exception) {
@@ -183,6 +187,23 @@ class ProfileViewModel(
                 "ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
             BadgeContext()
           }
+
+      // Sync friend count with actual friends list to handle legacy data
+      // or cases where the count got out of sync
+      try {
+        val actualFriends = friendRequestRepository?.getFriends(currentUser.uid) ?: emptyList()
+        val actualFriendCount = actualFriends.size
+        if (context.friendsCount != actualFriendCount) {
+          Log.d(
+              "BadgeContextSync",
+              "Syncing friendsCount: stored=${context.friendsCount}, actual=$actualFriendCount")
+          context = context.copy(friendsCount = actualFriendCount)
+          // Save the corrected context to Firestore
+          repo.saveBadgeContext(currentUser.uid, context)
+        }
+      } catch (e: Exception) {
+        Log.e("BadgeContextSync", "Failed to sync friend count: ${e.message}")
+      }
 
       // Update safely
       _badgeContext.value = context
