@@ -102,7 +102,7 @@ android {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs. getByName("release")  // ADD THIS LINE
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -190,11 +190,11 @@ fun DependencyHandlerScope.globalTestImplementation(dep: Any) {
 
 dependencies {
 
-    implementation("org.shredzone.commons:commons-suncalc:3.11")
+    implementation(libs.suncalc)
 
     // ------------- Protobuf (fix for Firebase conflict) ------------------
-    implementation("com.google.protobuf:protobuf-javalite:3.21.12")
-    androidTestImplementation("com.google.protobuf:protobuf-javalite:3.21.12")
+    implementation(libs.protobuf.javalite)
+    androidTestImplementation(libs.protobuf.javalite)
 
     // ------------- Mapbox ------------------
     implementation(libs.android.ndk27)
@@ -213,7 +213,7 @@ dependencies {
     implementation(libs.compose.viewmodel)
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation(libs.coil.compose)
 
     // Material Icons Extended - for additional icons
     implementation("androidx.compose.material:material-icons-extended")
@@ -225,12 +225,12 @@ dependencies {
     // ------------- AndroidX ------------------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation(libs.navigation.compose)
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ------------- Firebase ------------------
-    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+    implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
@@ -239,28 +239,28 @@ dependencies {
     implementation(libs.geofire.android.common)
 
     // ------------- Google Maps ------------------
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.maps.android:android-maps-utils:3.8.2")
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.utils)
+    implementation(libs.play.services.location)
 
     // ------------- Networking ------------------
     implementation(libs.okhttp)
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.gson)
 
     // ------------- Google Identity & Auth ------------------
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
-    implementation("androidx.credentials:credentials:1.2.2")
-    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
-    implementation("androidx.browser:browser:1.7.0")
+    implementation(libs.google.id)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.browser)
 
     // ------------- Coroutines ------------------
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation(libs.coroutines.play.services)
 
     // ------------- Room (local cache for saved events) ------------------
-    implementation("androidx.room:room-runtime:2.8.3")
-    implementation("androidx.room:room-ktx:2.8.3")
-    kapt("androidx.room:room-compiler:2.8.3")
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
 
     // ------------- DataStore (for settings persistence) ------------------
     implementation(libs.androidx.datastore.preferences)
@@ -269,27 +269,27 @@ dependencies {
     implementation(libs.androidx.biometric)
 
     // ------------- Media ------------------
-    implementation("androidx.compose.foundation:foundation:1.7.0")
-    implementation("androidx.compose.material3:material3:1.2.0")
-    implementation("androidx.media3:media3-exoplayer:1.3.1")
-    implementation("androidx.media3:media3-ui:1.3.1")
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material3.standalone)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
 
     // ------------- Unit Tests (JVM) ------------------
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
-    testImplementation("org.mockito:mockito-core:5.12.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("org.mockito:mockito-inline:5.2.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    testImplementation("org.robolectric:robolectric:4.12.2")
-    testImplementation("org.json:json:20250517")
+    testImplementation(libs.test.junit)
+    testImplementation(libs.test.androidx.core)
+    testImplementation(libs.test.androidx.junit)
+    testImplementation(libs.test.mockito.core)
+    testImplementation(libs.test.mockito.kotlin)
+    testImplementation(libs.test.mockito.inline)
+    testImplementation(libs.test.coroutines)
+    testImplementation(libs.test.robolectric)
+    testImplementation(libs.test.json)
     testImplementation(libs.mockk)
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation(libs.test.mockwebserver)
 
     // ------------- Instrumented Tests (androidTest) ------------------
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(libs.androidtest.junit)
+    androidTestImplementation(libs.androidtest.espresso.core)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.kaspresso)
     androidTestImplementation(libs.kaspresso.compose)
