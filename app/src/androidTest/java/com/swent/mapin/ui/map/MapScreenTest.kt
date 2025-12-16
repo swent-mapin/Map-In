@@ -555,7 +555,8 @@ class MapScreenTest {
       }
     }
 
-    rule.waitForIdle()
+    // Wait until viewModel and callback are set
+    rule.waitUntil(timeoutMillis = 5000) { viewModel?.onCenterOnUserLocation != null }
 
     // Verify the onCenterOnUserLocation callback was set
     val vm = viewModel
