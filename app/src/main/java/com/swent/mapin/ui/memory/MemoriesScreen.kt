@@ -17,6 +17,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,6 +51,7 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
 
   val memories by viewModel.memories.collectAsState()
   val error by viewModel.error.collectAsState()
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       modifier = Modifier.fillMaxSize(),
@@ -61,9 +65,17 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
+              IconButton(
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back")
+                  }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent))
       }) { paddingValues ->

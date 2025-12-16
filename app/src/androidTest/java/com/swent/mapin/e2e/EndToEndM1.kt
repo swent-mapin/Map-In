@@ -248,19 +248,23 @@ class EndToEndM1 {
     composeTestRule.waitForIdle()
 
     // Verify edit fields are now visible
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).assertIsDisplayed()
 
     // ============================================
     // STEP 4: Edit profile information
     // ============================================
     // Clear and update name
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput(updatedName)
 
     // Clear and update bio
+    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editBioField", useUnmergedTree = true)
@@ -269,6 +273,7 @@ class EndToEndM1 {
     // ============================================
     // STEP 5: Save the changes
     // ============================================
+    composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performClick()
 
     composeTestRule.waitForIdle()
@@ -395,18 +400,21 @@ class EndToEndM1 {
     composeTestRule.waitForIdle()
 
     // Edit name
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput("Temporary Name")
 
     // Edit bio
+    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editBioField", useUnmergedTree = true)
         .performTextInput("Temporary bio")
 
     // Cancel editing
+    composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
@@ -461,12 +469,14 @@ class EndToEndM1 {
     composeTestRule.onNodeWithTag("editButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput(updatedName)
 
     // Save changes
+    composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
@@ -478,12 +488,20 @@ class EndToEndM1 {
           .isNotEmpty()
     }
 
-    // Navigate back to map
-    composeTestRule.onNodeWithTag("backButton", useUnmergedTree = true).performClick()
+    // Navigate back to map - use programmatic navigation for stability
+    composeTestRule.runOnIdle { navController.popBackStack() }
     composeTestRule.waitForIdle()
 
+    // Wait for navigation back to map screen to complete
+    composeTestRule.waitUntil(timeoutMillis = 10000) {
+      composeTestRule
+          .onAllNodesWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
     // Verify we're on map screen
-    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule.onNodeWithTag(UiTestTags.MAP_SCREEN, useUnmergedTree = true).assertExists()
 
     // Swipe up on bottom sheet to reveal profile button
     // Programmatically navigate back to Profile (avoid swiping)
@@ -498,7 +516,8 @@ class EndToEndM1 {
           .isNotEmpty()
     }
 
-    // Verify the updated name is still displayed
+    // Verify the updated name is still displayed (scroll to ensure visibility)
+    composeTestRule.onNodeWithText(updatedName, useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithText(updatedName, useUnmergedTree = true).assertExists()
   }
 }

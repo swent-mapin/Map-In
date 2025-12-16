@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,6 +93,8 @@ private fun NewConversationTopBar(
     selectedFriends: SnapshotStateList<FriendWithProfile>,
     onConfirmClick: () -> Unit
 ) {
+  var hasNavigatedBack by remember { mutableStateOf(false) }
+
   val colors =
       TopAppBarDefaults.topAppBarColors(
           containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -102,7 +105,12 @@ private fun NewConversationTopBar(
       title = { Text("New Conversation") },
       navigationIcon = {
         IconButton(
-            onClick = onNavigateBack,
+            onClick = {
+              if (!hasNavigatedBack) {
+                hasNavigatedBack = true
+                onNavigateBack()
+              }
+            },
             modifier = Modifier.testTag(NewConversationScreenTestTags.BACK_BUTTON)) {
               Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
@@ -238,6 +246,7 @@ fun NewConversationScreen(
   val friends by friendsViewModel.friends.collectAsState()
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   val onConfirmSelection: () -> Unit = {
     if (selectedFriends.size >= 2) {

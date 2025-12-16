@@ -67,6 +67,7 @@ fun FriendsScreen(
   val pendingList = pendingRequests ?: viewModel.pendingRequests.collectAsState().value
   val searchList = searchResults ?: viewModel.searchResults.collectAsState().value
   val searchQ = searchQuery ?: viewModel.searchQuery.collectAsState().value
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   Scaffold(
       modifier = modifier.fillMaxSize().testTag("friendsScreen"),
@@ -79,9 +80,16 @@ fun FriendsScreen(
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-              }
+              IconButton(
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
+                  modifier = Modifier.testTag("backButton")) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                  }
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(
