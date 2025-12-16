@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +60,8 @@ object AddEventScreenTestTags : EventScreenTestTag {
   const val PUBLIC_TEXT = "publicText"
 
   const val SCREEN = "AddEventScreen"
+
+  override val PICK_MEDIA = "mediaPicker"
 }
 
 private data class FieldValidation(val hasError: () -> Boolean, val label: String)
@@ -146,6 +149,7 @@ fun AddEventScreen(
   val price = remember { mutableStateOf("") }
   val capacity = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
+  val mediaUri = remember { mutableStateOf<Uri?>(null) }
 
   val dateError = remember { mutableStateOf(false) }
   val endDateError = remember { mutableStateOf(false) }
@@ -272,7 +276,8 @@ fun AddEventScreen(
                     isPublic.value,
                     onDone,
                     price.value.toDoubleOrNull() ?: 0.0,
-                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull())
+                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
+                    mediaUri.value)
               })
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
@@ -302,7 +307,8 @@ fun AddEventScreen(
               descriptionError = descriptionError,
               tag = tag,
               tagError = tagError,
-              testTags = AddEventScreenTestTags)
+              testTags = AddEventScreenTestTags,
+              mediaUri = mediaUri)
 
           Spacer(modifier = Modifier.padding(bottom = 10.dp))
           // Price field
