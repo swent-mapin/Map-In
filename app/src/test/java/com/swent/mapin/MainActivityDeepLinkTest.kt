@@ -168,6 +168,15 @@ class MainActivityDeepLinkTest {
     assertEquals(newIntent, activity.intent)
   }
 
+  // ==================== initializeFcmIfLoggedIn Tests ====================
+
+  @Test
+  fun `initializeFcmIfLoggedIn does not crash when user is not logged in`() {
+    val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
+    val activity = controller.create().get()
+    assertNotNull(activity)
+  }
+
   // ==================== HttpClientProvider Tests ====================
 
   @Test
