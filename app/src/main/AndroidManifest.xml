@@ -9,6 +9,9 @@
 
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
+    <!-- Permission for audio recording (Speech-to-Text) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Permission for push notifications on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
