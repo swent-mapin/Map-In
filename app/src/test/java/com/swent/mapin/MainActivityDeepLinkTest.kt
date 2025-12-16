@@ -158,6 +158,16 @@ class MainActivityDeepLinkTest {
     assertEquals("mapin://messages/$longId", getDeepLinkUrlFromIntent(intent))
   }
 
+  // ==================== onNewIntent Tests ====================
+
+  @Test
+  fun `onNewIntent updates deepLink when intent contains action_url`() {
+    val newIntent = Intent().apply { putExtra("action_url", "mapin://events/new123") }
+    val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java, newIntent)
+    val activity = controller.create().newIntent(newIntent).get()
+    assertEquals(newIntent, activity.intent)
+  }
+
   // ==================== HttpClientProvider Tests ====================
 
   @Test
