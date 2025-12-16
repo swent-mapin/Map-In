@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,6 +72,8 @@ fun EditEventScreen(
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {
+
+    val context = LocalContext.current
 
   val title = remember { mutableStateOf(event.title) }
   val description = remember { mutableStateOf(event.description) }
@@ -242,6 +245,7 @@ fun EditEventScreen(
                 }
                 eventViewModel.saveEditedEvent(
                     originalEvent = event,
+                    context = context,
                     title = title.value,
                     description = description.value,
                     location = gotLocation.value,

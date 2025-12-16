@@ -184,6 +184,7 @@ class EventViewModel(
    */
   fun saveEditedEvent(
       originalEvent: Event,
+      context: android.content.Context,
       title: String,
       description: String,
       location: Location,
@@ -195,7 +196,7 @@ class EventViewModel(
   ) {
     viewModelScope.launch {
       try {
-        val mediaUrl = mediaUri?.let { uploadEventMedia(it, originalEvent.ownerId) }
+        val mediaUrl = mediaUri?.let { uploadEventMedia(context, it, originalEvent.ownerId) }
 
         val editedEvent =
             originalEvent.copy(

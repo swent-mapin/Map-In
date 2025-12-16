@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -138,6 +139,8 @@ fun AddEventScreen(
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+
   val title = remember { mutableStateOf("") }
   val description = remember { mutableStateOf("") }
   val location = remember { mutableStateOf("") }
@@ -266,6 +269,7 @@ fun AddEventScreen(
 
                 saveEvent(
                     eventViewModel,
+                    context,
                     title.value,
                     description.value,
                     gotLocation.value,

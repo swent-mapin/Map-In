@@ -247,7 +247,7 @@ private fun TaggedUsersSection(names: List<String>) {
 
 // ----- Video Player -----
 @Composable
-private fun MemoryVideoPlayer(url: String) {
+fun MemoryVideoPlayer(url: String) {
   val context = LocalContext.current
   val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
