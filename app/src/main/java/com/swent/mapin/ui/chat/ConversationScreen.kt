@@ -359,14 +359,16 @@ fun ConversationScreen(
                   MessageBubble(message, sender)
                 }
               }
-          // Button to scroll down to the newest message
-          IconButton(
-              onClick = {
-                coroutineScope.launch { listState.animateScrollToItem(messages.lastIndex) }
-              },
-              modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-                Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
-              }
+          // Button to scroll down to the newest message (only if there are messages)
+          if (messages.isNotEmpty()) {
+            IconButton(
+                onClick = {
+                  coroutineScope.launch { listState.animateScrollToItem(messages.lastIndex) }
+                },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+                  Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
+                }
+          }
         }
       }
 
