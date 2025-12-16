@@ -94,10 +94,10 @@ private fun NewConversationTopBar(
     onConfirmClick: () -> Unit
 ) {
   var hasNavigatedBack by remember { mutableStateOf(false) }
-  
+
   val colors =
       TopAppBarDefaults.topAppBarColors(
-          containerColor = MaterialTheme. colorScheme.primaryContainer,
+          containerColor = MaterialTheme.colorScheme.primaryContainer,
           titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
           navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
           actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -106,7 +106,7 @@ private fun NewConversationTopBar(
       navigationIcon = {
         IconButton(
             onClick = {
-              if (! hasNavigatedBack) {
+              if (!hasNavigatedBack) {
                 hasNavigatedBack = true
                 onNavigateBack()
               }
@@ -119,7 +119,7 @@ private fun NewConversationTopBar(
         if (selectedFriends.isNotEmpty())
             IconButton(
                 onClick = onConfirmClick,
-                modifier = Modifier.testTag(NewConversationScreenTestTags. CONFIRM_BUTTON)) {
+                modifier = Modifier.testTag(NewConversationScreenTestTags.CONFIRM_BUTTON)) {
                   Icon(Icons.Default.Check, contentDescription = "Confirm Selection")
                 }
       },
