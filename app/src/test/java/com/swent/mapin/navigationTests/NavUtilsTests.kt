@@ -15,7 +15,6 @@ class NavUtilsTests {
   fun `navigateToExistingConversation builds correct route and nav options`() {
     // Arrange
     val navController = mockk<NavHostController>(relaxed = true)
-    val lambdaSlot = slot<NavOptionsBuilder.() -> Unit>()
 
     val conversationId = "123"
     val conversationName = "My Conversation"
