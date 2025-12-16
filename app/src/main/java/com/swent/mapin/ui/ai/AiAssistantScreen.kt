@@ -321,7 +321,19 @@ private fun VoiceInputButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-  // Pulse animation when listening
+  val scale = rememberPulseScale(isListening)
+
+  Box(modifier = modifier.size(120.dp), contentAlignment = Alignment.Center) {
+    if (isListening) {
+      PulseRing(scale = scale)
+    }
+
+    MicrophoneFab(isListening = isListening, isProcessing = isProcessing, onClick = onClick)
+  }
+}
+
+@Composable
+private fun rememberPulseScale(isListening: Boolean): Float {
   val infiniteTransition = rememberInfiniteTransition(label = "pulse")
   val scale by
       infiniteTransition.animateFloat(
@@ -332,46 +344,54 @@ private fun VoiceInputButton(
                   animation = tween(1000, easing = FastOutSlowInEasing),
                   repeatMode = RepeatMode.Reverse),
           label = "scale")
+  return scale
+}
 
-  Box(modifier = modifier.size(120.dp), contentAlignment = Alignment.Center) {
-    // Outer ring animation
-    if (isListening) {
-      Box(
-          modifier =
-              Modifier.size(120.dp)
-                  .scale(scale)
-                  .background(
-                      brush =
-                          Brush.radialGradient(
-                              colors =
-                                  listOf(
-                                      MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                      Color.Transparent)),
-                      shape = CircleShape))
-    }
+@Composable
+private fun PulseRing(scale: Float) {
+  Box(
+      modifier =
+          Modifier.size(120.dp)
+              .scale(scale)
+              .background(
+                  brush =
+                      Brush.radialGradient(
+                          colors =
+                              listOf(
+                                  MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                  Color.Transparent)),
+                  shape = CircleShape))
+}
 
-    // Main button
-    FloatingActionButton(
-        onClick = onClick,
-        modifier = Modifier.size(80.dp).testTag("micButton"),
-        containerColor =
-            when {
-              isProcessing -> MaterialTheme.colorScheme.tertiary
-              isListening -> MaterialTheme.colorScheme.error
-              else -> MaterialTheme.colorScheme.primary
-            },
-        elevation = FloatingActionButtonDefaults.elevation(8.dp)) {
-          if (isProcessing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(40.dp), color = Color.White, strokeWidth = 3.dp)
-          } else {
-            Icon(
-                imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-                contentDescription = if (isListening) "Stop listening" else "Start listening",
-                modifier = Modifier.size(40.dp),
-                tint = Color.White)
-          }
-        }
+@Composable
+private fun MicrophoneFab(isListening: Boolean, isProcessing: Boolean, onClick: () -> Unit) {
+  val containerColor =
+      when {
+        isProcessing -> MaterialTheme.colorScheme.tertiary
+        isListening -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+      }
+
+  FloatingActionButton(
+      onClick = onClick,
+      modifier = Modifier.size(80.dp).testTag("micButton"),
+      containerColor = containerColor,
+      elevation = FloatingActionButtonDefaults.elevation(8.dp)) {
+        MicrophoneFabContent(isProcessing = isProcessing, isListening = isListening)
+      }
+}
+
+@Composable
+private fun MicrophoneFabContent(isProcessing: Boolean, isListening: Boolean) {
+  if (isProcessing) {
+    CircularProgressIndicator(
+        modifier = Modifier.size(40.dp), color = Color.White, strokeWidth = 3.dp)
+  } else {
+    Icon(
+        imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+        contentDescription = if (isListening) "Stop listening" else "Start listening",
+        modifier = Modifier.size(40.dp),
+        tint = Color.White)
   }
 }
 
