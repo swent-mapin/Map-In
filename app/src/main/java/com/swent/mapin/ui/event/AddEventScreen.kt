@@ -139,7 +139,7 @@ fun AddEventScreen(
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {
-    val context = LocalContext.current
+  val context = LocalContext.current
 
   val title = remember { mutableStateOf("") }
   val description = remember { mutableStateOf("") }

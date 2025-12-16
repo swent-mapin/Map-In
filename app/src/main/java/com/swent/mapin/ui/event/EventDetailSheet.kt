@@ -364,32 +364,31 @@ private fun EventImageCard(imageUrl: String?) {
               containerColor =
                   if (imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.surface)) {
-      if (imageUrl == null){
+        if (imageUrl == null) {
           Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-              Text(
-                  "No image available",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "No image available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
-      } else {
+        } else {
           val media = parseMediaItems(listOf(imageUrl))
           when (val mediaUrl = media.first()) {
-              is MediaItem.Image -> {
-                  AsyncImage(
-                      model = mediaUrl.url,
-                      contentDescription = "Event image",
-                      modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-                      contentScale = ContentScale.Crop)
+            is MediaItem.Image -> {
+              AsyncImage(
+                  model = mediaUrl.url,
+                  contentDescription = "Event image",
+                  modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                  contentScale = ContentScale.Crop)
+            }
+            is MediaItem.Video -> {
+              Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
+                MemoryVideoPlayer(mediaUrl.url)
               }
-              is MediaItem.Video -> {
-                  Box( modifier = Modifier.fillMaxSize()
-                              .clip(RoundedCornerShape(8.dp))) {
-                      MemoryVideoPlayer(mediaUrl.url)
-                  }
-              }
+            }
           }
+        }
       }
-  }
 }
 
 /** Organizer name text based on state */

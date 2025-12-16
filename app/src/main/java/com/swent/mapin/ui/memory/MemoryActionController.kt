@@ -74,32 +74,40 @@ class MemoryActionController(
     }
   }
 
-    private suspend fun uploadMediaFiles(context: Context, uris: List<Uri>, userId: String): List<String> {
-        if (uris.isEmpty()) return emptyList()
-        val downloadUrls = mutableListOf<String>()
-        val storageRef = FirebaseStorage.getInstance().reference
+  private suspend fun uploadMediaFiles(
+      context: Context,
+      uris: List<Uri>,
+      userId: String
+  ): List<String> {
+    if (uris.isEmpty()) return emptyList()
+    val downloadUrls = mutableListOf<String>()
+    val storageRef = FirebaseStorage.getInstance().reference
 
-        for (uri in uris) {
-            try {
-                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-                val isVideo = mimeType.startsWith("video/")
-                val folder = if (isVideo) "videos" else "images"
-                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: if (isVideo) "mp4" else "jpg"
+    for (uri in uris) {
+      try {
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val isVideo = mimeType.startsWith("video/")
+        val folder = if (isVideo) "videos" else "images"
+        val extension =
+            MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+                ?: if (isVideo) "mp4" else "jpg"
 
-                val fileRef = storageRef.child("memories/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
-                val metadata = storageMetadata { contentType = mimeType }
-                fileRef.putFile(uri, metadata).await()
-                downloadUrls.add(fileRef.downloadUrl.await().toString())
-                Log.i(TAG, "Uploaded media file successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to upload media file", e)
-            }
-        }
-
-        return downloadUrls
+        val fileRef =
+            storageRef.child(
+                "memories/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
+        val metadata = storageMetadata { contentType = mimeType }
+        fileRef.putFile(uri, metadata).await()
+        downloadUrls.add(fileRef.downloadUrl.await().toString())
+        Log.i(TAG, "Uploaded media file successfully")
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to upload media file", e)
+      }
     }
 
-    companion object {
+    return downloadUrls
+  }
+
+  companion object {
     private const val TAG = "MemoryActionController"
   }
 }

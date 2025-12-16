@@ -73,7 +73,7 @@ fun EditEventScreen(
     onDone: () -> Unit = {},
 ) {
 
-    val context = LocalContext.current
+  val context = LocalContext.current
 
   val title = remember { mutableStateOf(event.title) }
   val description = remember { mutableStateOf(event.description) }

@@ -132,7 +132,7 @@ fun saveEvent(
   viewModel.viewModelScope.launch {
     try {
       // Upload media if provided
-      val mediaUrl = mediaUri?.let { uploadEventMedia(context,it, uid) }
+      val mediaUrl = mediaUri?.let { uploadEventMedia(context, it, uid) }
 
       // Create the event
       val newEvent =
@@ -158,28 +158,29 @@ fun saveEvent(
   }
 }
 
-/**
- * Uploads the media file to Firebase Storage and returns the download URL.
- */
+/** Uploads the media file to Firebase Storage and returns the download URL. */
 suspend fun uploadEventMedia(context: Context, uri: Uri, userId: String): String? {
-    return try {
-        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-        val isVideo = mimeType.startsWith("video/")
-        val folder = if (isVideo) "videos" else "images"
-        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+  return try {
+    val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+    val isVideo = mimeType.startsWith("video/")
+    val folder = if (isVideo) "videos" else "images"
+    val extension =
+        MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
             ?: if (isVideo) "mp4" else "jpg"
 
-        val storageRef = FirebaseStorage.getInstance().reference
-        val fileRef = storageRef.child("events/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
+    val storageRef = FirebaseStorage.getInstance().reference
+    val fileRef =
+        storageRef.child(
+            "events/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
 
-        val metadata = storageMetadata { contentType = mimeType }
-        fileRef.putFile(uri, metadata).await()
+    val metadata = storageMetadata { contentType = mimeType }
+    fileRef.putFile(uri, metadata).await()
 
-        fileRef.downloadUrl.await().toString()
-    } catch (e: Exception) {
-        Log.e("EventMediaUpload", "Failed to upload media", e)
-        null
-    }
+    fileRef.downloadUrl.await().toString()
+  } catch (e: Exception) {
+    Log.e("EventMediaUpload", "Failed to upload media", e)
+    null
+  }
 }
 
 sealed class ParseResult {
