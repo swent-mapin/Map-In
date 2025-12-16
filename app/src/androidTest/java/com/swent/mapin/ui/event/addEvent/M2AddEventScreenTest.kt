@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.AddEventScreen
@@ -191,17 +192,14 @@ class M2AddEventScreenTest {
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
     compose.waitForIdle()
 
-    // Close the keyboard to ensure save button is visible and clickable on CI
-    runCatching {
-      compose.activity.currentFocus?.clearFocus()
-      compose.activity.window.decorView.clearFocus()
-    }
+    // Close the keyboard to ensure save button is visible on smaller CI screens
+    Espresso.closeSoftKeyboard()
     compose.waitForIdle()
 
-    // Don't interact with location field to avoid opening dialogs that might interfere with save
-    // The test's goal is to verify missing date/time triggers error banner, not location
+    // Don't interact with location field - it opens a dropdown that interferes with save button
+    // This test validates date/time missing fields, not location behavior
 
-    // Ensure the save button is visible and clickable before clicking
+    // Ensure the save button is visible before clicking
     compose.waitUntil(timeoutMillis = 10000) {
       runCatching {
             compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
@@ -212,11 +210,11 @@ class M2AddEventScreenTest {
 
     compose.waitForIdle()
 
-    // Click Save and wait explicitly for the validation banner to appear to avoid timing flakes
+    // Click Save - missing date/time should trigger error banner
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     compose.waitForIdle()
 
-    // Wait until the error banner exists (up to a longer timeout) before asserting it's displayed
+    // Wait for error banner to appear
     compose.waitUntil(timeoutMillis = 10000) {
       runCatching {
             compose.onNodeWithTag(AddEventScreenTestTags.ERROR_MESSAGE).assertExists()
