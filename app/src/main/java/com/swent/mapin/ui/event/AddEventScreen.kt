@@ -222,17 +222,17 @@ fun AddEventScreen(
           locationExpanded.value = false
         },
         recenterPoint =
-            manualLocation.value?.let { loc ->
-              if (loc.latitude != null && loc.longitude != null) {
-                Point.fromLngLat(loc.longitude!!, loc.latitude!!)
-              } else null
-            }
-                ?: gotLocation.value.let { loc ->
+            lastKnownPoint
+                ?: manualLocation.value?.let { loc ->
                   if (loc.latitude != null && loc.longitude != null) {
                     Point.fromLngLat(loc.longitude!!, loc.latitude!!)
                   } else null
                 }
-                ?: lastKnownPoint,
+                ?: gotLocation.value.let { loc ->
+                  if (loc.latitude != null && loc.longitude != null) {
+                    Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                  } else null
+                },
         locationExpanded = locationExpanded)
   }
 
@@ -491,17 +491,17 @@ private fun ManualLocationPickerDialog(
   val context = androidx.compose.ui.platform.LocalContext.current
   val focusManager = LocalFocusManager.current
   val startPoint =
-      initialLocation?.let { loc ->
-        if (loc.latitude != null && loc.longitude != null) {
-          Point.fromLngLat(loc.longitude, loc.latitude)
-        } else null
-      }
+      recenterPoint
+          ?: initialLocation?.let { loc ->
+            if (loc.latitude != null && loc.longitude != null) {
+              Point.fromLngLat(loc.longitude, loc.latitude)
+            } else null
+          }
           ?: searchResults.firstOrNull()?.let { loc ->
             if (loc.latitude != null && loc.longitude != null) {
               Point.fromLngLat(loc.longitude!!, loc.latitude!!)
             } else null
           }
-          ?: recenterPoint
           ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
 
   val initialPickedPoint =
@@ -585,6 +585,7 @@ private fun ManualLocationPickerDialog(
                     MapEffect(Unit) { mapView ->
                       val listener = OnMapClickListener { point ->
                         pickedPoint = point
+                        mapViewportState.setCameraOptions { center(point) }
                         showResults = false
                         searchQuery = ""
                         onSearchQuery("")
