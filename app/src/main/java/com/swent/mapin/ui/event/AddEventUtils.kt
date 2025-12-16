@@ -1,11 +1,14 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storageMetadata
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.Location
 import java.text.SimpleDateFormat
@@ -109,6 +112,7 @@ fun isValidLocation(input: String, locations: List<Location>): Boolean {
  */
 fun saveEvent(
     viewModel: EventViewModel,
+    context: Context,
     title: String,
     description: String,
     location: Location,
@@ -128,7 +132,7 @@ fun saveEvent(
   viewModel.viewModelScope.launch {
     try {
       // Upload media if provided
-      val mediaUrl = mediaUri?.let { uploadEventMedia(it, uid) }
+      val mediaUrl = mediaUri?.let { uploadEventMedia(context,it, uid) }
 
       // Create the event
       val newEvent =
@@ -154,18 +158,28 @@ fun saveEvent(
   }
 }
 
-suspend fun uploadEventMedia(uri: Uri, userId: String): String? {
-  return try {
-    val storageRef = FirebaseStorage.getInstance().reference
-    val extension = uri.toString().substringAfterLast('.', "jpg")
-    val filename = "events/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
-    val fileRef = storageRef.child(filename)
-    fileRef.putFile(uri).await()
-    fileRef.downloadUrl.await().toString()
-  } catch (e: Exception) {
-    Log.e("EventMediaUpload", "Failed to upload media", e)
-    null
-  }
+/**
+ * Uploads the media file to Firebase Storage and returns the download URL.
+ */
+suspend fun uploadEventMedia(context: Context, uri: Uri, userId: String): String? {
+    return try {
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val isVideo = mimeType.startsWith("video/")
+        val folder = if (isVideo) "videos" else "images"
+        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            ?: if (isVideo) "mp4" else "jpg"
+
+        val storageRef = FirebaseStorage.getInstance().reference
+        val fileRef = storageRef.child("events/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
+
+        val metadata = storageMetadata { contentType = mimeType }
+        fileRef.putFile(uri, metadata).await()
+
+        fileRef.downloadUrl.await().toString()
+    } catch (e: Exception) {
+        Log.e("EventMediaUpload", "Failed to upload media", e)
+        null
+    }
 }
 
 sealed class ParseResult {

@@ -3,12 +3,14 @@ package com.swent.mapin.ui.memory
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storageMetadata
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import java.util.UUID
@@ -47,7 +49,7 @@ class MemoryActionController(
           return@launch
         }
 
-        val mediaUrls = uploadMediaFiles(formData.mediaUris, currentUserId)
+        val mediaUrls = uploadMediaFiles(applicationContext, formData.mediaUris, currentUserId)
         val memory =
             Memory(
                 uid = memoryRepository.getNewUid(),
@@ -72,29 +74,32 @@ class MemoryActionController(
     }
   }
 
-  private suspend fun uploadMediaFiles(uris: List<Uri>, userId: String): List<String> {
-    if (uris.isEmpty()) return emptyList()
-    val downloadUrls = mutableListOf<String>()
-    val storageRef = FirebaseStorage.getInstance().reference
-    for (uri in uris) {
-      try {
-        val extension =
-            applicationContext.contentResolver.getType(uri)?.split("/")?.lastOrNull() ?: "jpg"
-        val filename =
-            "memories/$userId/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension"
-        val fileRef = storageRef.child(filename)
-        fileRef.putFile(uri).await()
-        val downloadUrl = fileRef.downloadUrl.await().toString()
-        downloadUrls.add(downloadUrl)
-        Log.i(TAG, "Uploaded media file successfully")
-      } catch (e: Exception) {
-        Log.e(TAG, "Failed to upload media file", e)
-      }
-    }
-    return downloadUrls
-  }
+    private suspend fun uploadMediaFiles(context: Context, uris: List<Uri>, userId: String): List<String> {
+        if (uris.isEmpty()) return emptyList()
+        val downloadUrls = mutableListOf<String>()
+        val storageRef = FirebaseStorage.getInstance().reference
 
-  companion object {
+        for (uri in uris) {
+            try {
+                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val isVideo = mimeType.startsWith("video/")
+                val folder = if (isVideo) "videos" else "images"
+                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: if (isVideo) "mp4" else "jpg"
+
+                val fileRef = storageRef.child("memories/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
+                val metadata = storageMetadata { contentType = mimeType }
+                fileRef.putFile(uri, metadata).await()
+                downloadUrls.add(fileRef.downloadUrl.await().toString())
+                Log.i(TAG, "Uploaded media file successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to upload media file", e)
+            }
+        }
+
+        return downloadUrls
+    }
+
+    companion object {
     private const val TAG = "MemoryActionController"
   }
 }
