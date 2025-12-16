@@ -2,6 +2,7 @@ package com.swent.mapin.ui.event
 
 import android.content.Context
 import android.location.LocationManager
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotationGroup
+import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
 import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
@@ -63,12 +65,12 @@ internal fun computeStartPoint(
     initialLocation: Location?,
     searchResults: List<Location>
 ): Point {
-  return recenterPoint
-      ?: initialLocation?.let { loc ->
-        if (loc.latitude != null && loc.longitude != null) {
-          Point.fromLngLat(loc.longitude, loc.latitude)
-        } else null
-      }
+  return initialLocation?.let { loc ->
+    if (loc.latitude != null && loc.longitude != null) {
+      Point.fromLngLat(loc.longitude, loc.latitude)
+    } else null
+  }
+      ?: recenterPoint
       ?: searchResults.firstOrNull()?.let { loc ->
         if (loc.latitude != null && loc.longitude != null) {
           Point.fromLngLat(loc.longitude!!, loc.latitude!!)
@@ -111,6 +113,8 @@ internal fun ManualLocationPickerDialog(
 ) {
   val context = LocalContext.current
   val focusManager = LocalFocusManager.current
+  val isDarkTheme = isSystemInDarkTheme()
+  val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
   val startPoint = computeStartPoint(recenterPoint, initialLocation, searchResults)
 
   val initialPickedPoint =
@@ -119,14 +123,16 @@ internal fun ManualLocationPickerDialog(
           Point.fromLngLat(loc.longitude, loc.latitude)
         } else null
       } ?: recenterPoint
-  var pickedPoint by remember(startPoint) { mutableStateOf<Point?>(initialPickedPoint) }
+  var pickedPoint by remember { mutableStateOf<Point?>(initialPickedPoint) }
   val mapViewportState = rememberMapViewportState {
     setCameraOptions {
       center(startPoint)
       zoom(MapConstants.DEFAULT_ZOOM.toDouble())
     }
   }
-  val standardStyleState = rememberStandardStyleState()
+  val standardStyleState = rememberStandardStyleState {
+    configurationsState.apply { this.lightPreset = lightPreset }
+  }
   val markerBitmap = remember(context) { context.drawableToBitmap(R.drawable.ic_map_marker) }
   val screenHeight = LocalConfiguration.current.screenHeightDp.dp
   val dialogMapHeight = (screenHeight * 0.7f).coerceAtLeast(360.dp)

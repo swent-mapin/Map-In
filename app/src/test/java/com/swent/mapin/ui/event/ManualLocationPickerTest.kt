@@ -15,17 +15,18 @@ class ManualLocationPickerTest {
   }
 
   @Test
-  fun `computeStartPoint prefers recenter point`() {
+  fun `computeStartPoint prefers initial location over recenter point`() {
     val recenter = Point.fromLngLat(1.0, 2.0)
-    val start = computeStartPoint(recenter, initialLocation = null, searchResults = emptyList())
-    assertEquals(recenter, start)
+    val initial = Location.from("x", 10.0, 20.0)
+    val start = computeStartPoint(recenter, initialLocation = initial, searchResults = emptyList())
+    assertEquals(Point.fromLngLat(20.0, 10.0), start)
   }
 
   @Test
-  fun `computeStartPoint falls back to initial location`() {
-    val initial = Location.from("x", 10.0, 20.0)
-    val start = computeStartPoint(null, initialLocation = initial, searchResults = emptyList())
-    assertEquals(Point.fromLngLat(20.0, 10.0), start)
+  fun `computeStartPoint falls back to recenter point when no initial location`() {
+    val recenter = Point.fromLngLat(1.0, 2.0)
+    val start = computeStartPoint(recenter, initialLocation = null, searchResults = emptyList())
+    assertEquals(recenter, start)
   }
 
   @Test
