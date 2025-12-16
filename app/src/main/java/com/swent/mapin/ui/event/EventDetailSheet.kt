@@ -45,6 +45,9 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.OrganizerState
+import com.swent.mapin.ui.memory.MediaItem
+import com.swent.mapin.ui.memory.MemoryVideoPlayer
+import com.swent.mapin.ui.memory.parseMediaItems
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -361,20 +364,32 @@ private fun EventImageCard(imageUrl: String?) {
               containerColor =
                   if (imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.surface)) {
-        imageUrl?.let {
-          AsyncImage(
-              model = it,
-              contentDescription = "Event image",
-              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-              contentScale = ContentScale.Crop)
-        }
-            ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      if (imageUrl == null){
+          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               Text(
                   "No image available",
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+          }
+      } else {
+          val media = parseMediaItems(listOf(imageUrl))
+          when (val mediaUrl = media.first()) {
+              is MediaItem.Image -> {
+                  AsyncImage(
+                      model = mediaUrl.url,
+                      contentDescription = "Event image",
+                      modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                      contentScale = ContentScale.Crop)
+              }
+              is MediaItem.Video -> {
+                  Box( modifier = Modifier.fillMaxSize()
+                              .clip(RoundedCornerShape(8.dp))) {
+                      MemoryVideoPlayer(mediaUrl.url)
+                  }
+              }
+          }
       }
+  }
 }
 
 /** Organizer name text based on state */
