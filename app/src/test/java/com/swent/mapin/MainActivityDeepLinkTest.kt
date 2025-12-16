@@ -197,4 +197,157 @@ class MainActivityDeepLinkTest {
     // Restore original
     HttpClientProvider.client = originalClient
   }
+
+  // ==================== BiometricLockState Tests ====================
+
+  @Test
+  fun `BiometricLockState has correct enum values`() {
+    val states = BiometricLockState.values()
+    assertEquals(3, states.size)
+    assertTrue(states.contains(BiometricLockState.LOCKED))
+    assertTrue(states.contains(BiometricLockState.UNLOCKING))
+    assertTrue(states.contains(BiometricLockState.UNLOCKED))
+  }
+
+  // ==================== BiometricAuthState Tests ====================
+
+  @Test
+  fun `BiometricAuthState initial state is LOCKED`() {
+    val authState = BiometricAuthState()
+    assertEquals(BiometricLockState.LOCKED, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState initial errorMessage is null`() {
+    val authState = BiometricAuthState()
+    assertNull(authState.errorMessage)
+  }
+
+  @Test
+  fun `BiometricAuthState initial failedAttempts is zero`() {
+    val authState = BiometricAuthState()
+    assertEquals(0, authState.failedAttempts)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthSuccess sets state to UNLOCKED`() {
+    val authState = BiometricAuthState()
+    authState.onAuthSuccess()
+    assertEquals(BiometricLockState.UNLOCKED, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthSuccess resets failedAttempts to zero`() {
+    val authState = BiometricAuthState()
+    authState.incrementFailedAttempts()
+    authState.incrementFailedAttempts()
+    assertEquals(2, authState.failedAttempts)
+
+    authState.onAuthSuccess()
+    assertEquals(0, authState.failedAttempts)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthError sets errorMessage`() {
+    val authState = BiometricAuthState()
+    authState.onAuthError("Test error message")
+    assertEquals("Test error message", authState.errorMessage)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthError with non-null error sets state to LOCKED`() {
+    val authState = BiometricAuthState()
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+
+    authState.onAuthError("Error occurred")
+    assertEquals(BiometricLockState.LOCKED, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState onAuthError with null error does not change lockState`() {
+    val authState = BiometricAuthState()
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+
+    authState.onAuthError(null)
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+    assertNull(authState.errorMessage)
+  }
+
+  @Test
+  fun `BiometricAuthState startUnlocking sets state to UNLOCKING`() {
+    val authState = BiometricAuthState()
+    assertEquals(BiometricLockState.LOCKED, authState.lockState)
+
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+  }
+
+  @Test
+  fun `BiometricAuthState startUnlocking clears errorMessage`() {
+    val authState = BiometricAuthState()
+    authState.onAuthError("Previous error")
+    assertEquals("Previous error", authState.errorMessage)
+
+    authState.startUnlocking()
+    assertNull(authState.errorMessage)
+  }
+
+  @Test
+  fun `BiometricAuthState incrementFailedAttempts increases count`() {
+    val authState = BiometricAuthState()
+    assertEquals(0, authState.failedAttempts)
+
+    authState.incrementFailedAttempts()
+    assertEquals(1, authState.failedAttempts)
+
+    authState.incrementFailedAttempts()
+    assertEquals(2, authState.failedAttempts)
+
+    authState.incrementFailedAttempts()
+    assertEquals(3, authState.failedAttempts)
+  }
+
+  @Test
+  fun `BiometricAuthState full authentication flow - success after failure`() {
+    val authState = BiometricAuthState()
+
+    // Start unlocking
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+
+    // First failed attempt
+    authState.incrementFailedAttempts()
+    authState.onAuthError("Fingerprint not recognized")
+    assertEquals(BiometricLockState.LOCKED, authState.lockState)
+    assertEquals(1, authState.failedAttempts)
+    assertEquals("Fingerprint not recognized", authState.errorMessage)
+
+    // Retry
+    authState.startUnlocking()
+    assertEquals(BiometricLockState.UNLOCKING, authState.lockState)
+    assertNull(authState.errorMessage)
+
+    // Success
+    authState.onAuthSuccess()
+    assertEquals(BiometricLockState.UNLOCKED, authState.lockState)
+    assertEquals(0, authState.failedAttempts)
+  }
+
+  @Test
+  fun `BiometricAuthState full authentication flow - multiple failures`() {
+    val authState = BiometricAuthState()
+
+    // Multiple failed attempts
+    for (i in 1..3) {
+      authState.startUnlocking()
+      authState.incrementFailedAttempts()
+      authState.onAuthError("Attempt $i failed")
+      assertEquals(i, authState.failedAttempts)
+      assertEquals(BiometricLockState.LOCKED, authState.lockState)
+    }
+
+    assertEquals(3, authState.failedAttempts)
+  }
 }
