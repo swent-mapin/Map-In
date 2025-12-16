@@ -74,7 +74,8 @@ class MemoriesScreenTest {
     every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
     every { memoryViewModelMock.ownerName } returns MutableStateFlow("")
     every { memoryViewModelMock.taggedNames } returns MutableStateFlow(emptyList())
-    every { memoryViewModelMock.displayMode } returns MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
+    every { memoryViewModelMock.displayMode } returns
+        MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
 
     composeTestRule.setContent { MemoriesScreen(viewModel = memoryViewModelMock) }
     // Top app bar title
