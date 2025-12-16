@@ -207,11 +207,7 @@ fun AppNavHost(
           onNavigateBack = { safePopBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
-              navigateToExistingConversation(
-                  navController,
-                  conversation.id,
-                  conversation.name
-              )
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
           },
           onTabSelected = { chatTab -> navController.navigate(chatTab.destination) })
     }
@@ -226,13 +222,8 @@ fun AppNavHost(
             }
           },
           onCreateExistingConversation = { conversation ->
-              navigateToExistingConversation(
-                  navController,
-                  conversation.id,
-                  conversation.name
-              )
-          }
-      )
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
+          })
     }
 
     composable("conversation/{conversationId}/{name}") { backStackEntry ->

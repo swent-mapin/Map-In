@@ -8,10 +8,10 @@ internal fun navigateToExistingConversation(
     conversationId: String,
     conversationName: String
 ) {
-    val encodedName = Uri.encode(conversationName)
+  val encodedName = Uri.encode(conversationName)
 
-    navController.navigate("conversation/$conversationId/$encodedName") {
-        popUpTo(Route.Chat.route) { inclusive = true }
-        launchSingleTop = true
-    }
+  navController.navigate("conversation/$conversationId/$encodedName") {
+    popUpTo(Route.Chat.route) { inclusive = true }
+    launchSingleTop = true
+  }
 }
