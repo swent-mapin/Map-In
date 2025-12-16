@@ -6,6 +6,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.UserProfileRepository
 import io.mockk.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
@@ -222,7 +224,9 @@ class BadgeRepositoryFirestoreTest {
     // Fetch again - should query Firestore, not return cached value
     repository.getUserBadges(testUserId)
 
-    // Verify Firestore was called twice (once before clear, once after)
+    // Verify Firestore was called exactly 2 times:
+    // Call 1: Initial fetch to populate cache
+    // Call 2: Fetch after clearCache (cache was cleared, so must hit Firestore again)
     coVerify(exactly = 2) { mockDocumentReference.get() }
   }
 
@@ -244,7 +248,9 @@ class BadgeRepositoryFirestoreTest {
     // Fetch again - should query Firestore, not return cached value
     repository.getBadgeContext(testUserId)
 
-    // Verify Firestore was called twice
+    // Verify Firestore was called exactly 2 times:
+    // Call 1: Initial fetch to populate cache
+    // Call 2: Fetch after clearCache (cache was cleared, so must hit Firestore again)
     coVerify(exactly = 2) { mockDocumentReference.get() }
   }
 
@@ -257,7 +263,12 @@ class BadgeRepositoryFirestoreTest {
 
   @Test
   fun `clearCache only affects specified user cache`() = runTest {
-    // Arrange - populate cache for two users
+    // Arrange - Setup distinct mocks per user to verify cache isolation
+    val mockDoc1 = mockk<DocumentReference>(relaxed = true)
+    val mockDoc2 = mockk<DocumentReference>(relaxed = true)
+    val mockSnapshot1 = mockk<DocumentSnapshot>(relaxed = true)
+    val mockSnapshot2 = mockk<DocumentSnapshot>(relaxed = true)
+
     val badgesData =
         listOf(
             mapOf(
@@ -269,9 +280,19 @@ class BadgeRepositoryFirestoreTest {
                 "isUnlocked" to true,
                 "progress" to 1.0))
 
-    coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
-    every { mockDocumentSnapshot.exists() } returns true
-    every { mockDocumentSnapshot.get("badges") } returns badgesData
+    // Setup distinct document references for each user
+    val mockCollection = mockk<com.google.firebase.firestore.CollectionReference>(relaxed = true)
+    every { mockFirestore.collection("users") } returns mockCollection
+    every { mockCollection.document("user1") } returns mockDoc1
+    every { mockCollection.document("user2") } returns mockDoc2
+
+    // Setup responses for each user
+    coEvery { mockDoc1.get() } returns Tasks.forResult(mockSnapshot1)
+    coEvery { mockDoc2.get() } returns Tasks.forResult(mockSnapshot2)
+    every { mockSnapshot1.exists() } returns true
+    every { mockSnapshot2.exists() } returns true
+    every { mockSnapshot1.get("badges") } returns badgesData
+    every { mockSnapshot2.get("badges") } returns badgesData
 
     // Fetch for two users to populate cache
     repository.getUserBadges("user1")
@@ -281,10 +302,50 @@ class BadgeRepositoryFirestoreTest {
     repository.clearCache("user1")
 
     // Fetch again for both users
-    repository.getUserBadges("user1") // Should hit Firestore
-    repository.getUserBadges("user2") // Should hit cache
+    repository.getUserBadges("user1") // Should hit Firestore (cache cleared)
+    repository.getUserBadges("user2") // Should hit cache (not cleared)
 
-    // user1: 2 calls (initial + after clear), user2: 1 call (cache hit on second)
-    coVerify(exactly = 3) { mockDocumentReference.get() }
+    // Verify each document reference separately to confirm cache isolation
+    // user1 should be called exactly 2 times:
+    //   Call 1: Initial fetch to populate cache
+    //   Call 2: Fetch after clearCache("user1") - cache cleared, must hit Firestore
+    // user2 should be called exactly 1 time:
+    //   Call 1: Initial fetch to populate cache
+    //   Second fetch hits cache (clearCache only affected user1, not user2)
+    coVerify(exactly = 2) { mockDoc1.get() }
+    coVerify(exactly = 1) { mockDoc2.get() }
+  }
+
+  @Test
+  fun `clearCache is thread-safe with concurrent operations`() = runTest {
+    // Arrange - Setup mocks for concurrent operations
+    val contextData = mapOf("friendsCount" to 1, "createdEvents" to 0, "joinedEvents" to 0)
+
+    coEvery { mockDocumentReference.get() } returns Tasks.forResult(mockDocumentSnapshot)
+    every { mockDocumentSnapshot.exists() } returns true
+    every { mockDocumentSnapshot.get("badgeContext") } returns contextData
+    coEvery { mockDocumentReference.update("badgeContext", any<BadgeContext>()) } returns
+        Tasks.forResult(null)
+
+    // Act - Launch 10 concurrent coroutines performing cache operations
+    // This tests that ConcurrentHashMap handles parallel reads/writes/clears correctly
+    val deferreds =
+        List(10) { index ->
+          async {
+            val userId = "user$index"
+            // Each coroutine performs: fetch (populates cache), clear, fetch again
+            repository.getBadgeContext(userId)
+            repository.clearCache(userId)
+            repository.getBadgeContext(userId)
+          }
+        }
+
+    // Wait for all concurrent operations to complete
+    deferreds.awaitAll()
+
+    // Assert - Verify operations completed without exceptions
+    // Each of 10 users triggers 2 Firestore calls (initial + after clear)
+    // Total expected: 10 users * 2 calls = 20 calls
+    coVerify(atLeast = 20) { mockDocumentReference.get() }
   }
 }

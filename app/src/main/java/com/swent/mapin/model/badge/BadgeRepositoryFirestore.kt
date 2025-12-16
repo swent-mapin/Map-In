@@ -4,6 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 data class BadgeContext(
@@ -44,6 +46,9 @@ class BadgeRepositoryFirestore(
   private val badgeCache = ConcurrentHashMap<String, List<Badge>>()
   private val badgeContextCache = ConcurrentHashMap<String, BadgeContext>()
 
+  // Mutex to ensure atomic cache invalidation and fetch operations
+  private val updateMutex = Mutex()
+
   /** Save badge context for a user to Firestore */
   override suspend fun saveBadgeContext(userId: String, context: BadgeContext): Boolean {
     return executeWithRetry {
@@ -76,7 +81,10 @@ class BadgeRepositoryFirestore(
 
       val context =
           if (doc.exists()) {
-            // Extract the badgeContext field from the document, not the whole document
+            // Extract the badgeContext field explicitly instead of using toObject()
+            // Previous implementation used toObject(BadgeContext::class.java) which attempted
+            // to deserialize the entire document, causing field mapping issues when the document
+            // structure contained additional fields beyond BadgeContext properties
             @Suppress("UNCHECKED_CAST")
             val badgeContextData = doc.get(FIELD_BADGE_CONTEXT) as? Map<String, Any>
 
@@ -112,14 +120,18 @@ class BadgeRepositoryFirestore(
   }
 
   override suspend fun updateBadgesAfterContextChange(userId: String) {
-    // Invalidate cache to ensure we get fresh data from Firestore
-    // This is important when multiple BadgeRepository instances exist
-    badgeContextCache.remove(userId)
-    val ctx = getBadgeContext(userId)
-    // Fetch the actual user profile to get all profile fields for badge calculation
-    val userProfile = userProfileRepository.getUserProfile(userId) ?: UserProfile(userId = userId)
-    val updatedBadges = BadgeManager.calculateBadges(userProfile, ctx)
-    saveBadgeProgress(userId, updatedBadges)
+    // Use mutex to ensure cache invalidation and fetch are atomic
+    // This prevents race conditions when multiple coroutines update badges simultaneously
+    updateMutex.withLock {
+      // Invalidate cache to ensure we get fresh data from Firestore
+      // This is important when multiple BadgeRepository instances exist
+      badgeContextCache.remove(userId)
+      val context = getBadgeContext(userId)
+      // Fetch the actual user profile to get all profile fields for badge calculation
+      val userProfile = userProfileRepository.getUserProfile(userId) ?: UserProfile(userId = userId)
+      val updatedBadges = BadgeManager.calculateBadges(userProfile, context)
+      saveBadgeProgress(userId, updatedBadges)
+    }
   }
 
   /**

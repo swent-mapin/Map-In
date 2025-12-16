@@ -13,6 +13,7 @@ import com.swent.mapin.model.badge.BadgeRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -489,8 +490,12 @@ class ProfileViewModelTest {
             mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
     advanceUntilIdle()
 
-    // Assert - verify clearCache was called
-    coVerify { mockBadgeRepository.clearCache(testUserId) }
+    // Assert - verify clearCache is called before getBadgeContext (order matters for cache
+    // invalidation)
+    coVerifyOrder {
+      mockBadgeRepository.clearCache(testUserId)
+      mockBadgeRepository.getBadgeContext(testUserId)
+    }
   }
 
   @Test
@@ -567,7 +572,7 @@ class ProfileViewModelTest {
     // Arrange
     val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
     val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
-    val storedContext = BadgeContext(friendsCount = 0)
+    val storedContext = BadgeContext(friendsCount = 5, createdEvents = 10, joinedEvents = 3)
 
     coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
     coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
@@ -582,8 +587,19 @@ class ProfileViewModelTest {
             mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
     advanceUntilIdle()
 
-    // Assert - verify updateBadgeContext was not called due to error
+    // Assert - verify complete fallback behavior:
+    // 1. No sync operation attempted (saveBadgeContext not called due to error)
     coVerify(exactly = 0) { mockBadgeRepository.saveBadgeContext(any(), any()) }
+
+    // 2. Badge context state is still updated with the original stored context (fallback)
+    val context = viewModel.badgeContext.first()
+    assertEquals(5, context.friendsCount) // Original stored value preserved
+    assertEquals(10, context.createdEvents)
+    assertEquals(3, context.joinedEvents)
+
+    // 3. Verify that getBadgeContext was still called (operation continued despite getFriends
+    // error)
+    coVerify { mockBadgeRepository.getBadgeContext(testUserId) }
   }
 
   @Test
@@ -641,5 +657,80 @@ class ProfileViewModelTest {
     assertEquals(5, context.friendsCount)
     assertEquals(10, context.createdEvents)
     assertEquals(15, context.joinedEvents)
+  }
+
+  @Test
+  fun `fetchBadgeContext handles negative stored friend count`() = runTest {
+    // Arrange
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    // Stored context has invalid negative friend count
+    val storedContext = BadgeContext(friendsCount = -5, createdEvents = 2, joinedEvents = 1)
+    val friends =
+        listOf(
+            FriendWithProfile(
+                UserProfile(userId = "friend1", name = "Friend 1"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend2", name = "Friend 2"), FriendshipStatus.ACCEPTED),
+            FriendWithProfile(
+                UserProfile(userId = "friend3", name = "Friend 3"), FriendshipStatus.ACCEPTED))
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns friends
+    coEvery { mockBadgeRepository.saveBadgeContext(testUserId, any()) } returns true
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify that negative count is corrected to actual count (3)
+    coVerify {
+      mockBadgeRepository.saveBadgeContext(
+          testUserId,
+          match {
+            it.friendsCount == 3 && // Corrected from -5 to actual count
+                it.createdEvents == 2 && // Other fields preserved
+                it.joinedEvents == 1
+          })
+    }
+
+    // Also verify the state is updated with corrected value
+    val context = viewModel.badgeContext.first()
+    assertEquals(3, context.friendsCount)
+  }
+
+  @Test
+  fun `fetchBadgeContext handles empty friends list with positive stored count`() = runTest {
+    // Arrange - Tests edge case where stored count is positive but actual friends is 0
+    val mockBadgeRepository = mockk<BadgeRepository>(relaxed = true)
+    val mockFriendRequestRepository = mockk<FriendRequestRepository>(relaxed = true)
+    val storedContext = BadgeContext(friendsCount = 10, createdEvents = 5)
+    val friends = emptyList<FriendWithProfile>()
+
+    coEvery { mockRepository.getUserProfile(testUserId) } returns testProfile
+    coEvery { mockBadgeRepository.clearCache(testUserId) } just Runs
+    coEvery { mockBadgeRepository.getBadgeContext(testUserId) } returns storedContext
+    coEvery { mockFriendRequestRepository.getFriends(testUserId) } returns friends
+    coEvery { mockBadgeRepository.saveBadgeContext(testUserId, any()) } returns true
+    coEvery { mockBadgeRepository.getUserBadges(testUserId) } returns emptyList()
+    coEvery { mockBadgeRepository.saveBadgeProgress(testUserId, any()) } returns true
+
+    // Act
+    viewModel =
+        ProfileViewModel(
+            mockRepository, mockImageUploadHelper, mockBadgeRepository, mockFriendRequestRepository)
+    advanceUntilIdle()
+
+    // Assert - verify count is corrected to 0 when no actual friends exist
+    coVerify {
+      mockBadgeRepository.saveBadgeContext(
+          testUserId, match { it.friendsCount == 0 && it.createdEvents == 5 })
+    }
   }
 }
