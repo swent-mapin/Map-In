@@ -1,8 +1,11 @@
 package com.swent.mapin
 
+import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.FirebaseApp
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -15,6 +18,16 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class MainActivityDeepLinkTest {
+
+  private lateinit var context: Context
+
+  @Before
+  fun setUp() {
+    context = ApplicationProvider.getApplicationContext()
+    if (FirebaseApp.getApps(context).isEmpty()) {
+      FirebaseApp.initializeApp(context)
+    }
+  }
 
   // ==================== action_url Key Tests (PendingIntent) ====================
 
