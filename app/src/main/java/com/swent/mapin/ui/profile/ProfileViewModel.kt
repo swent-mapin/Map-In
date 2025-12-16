@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Cached badge context with timestamp for cache expiration. */
+private data class CachedBadgeContext(val context: BadgeContext, val timestamp: Long)
+
 /**
  * ViewModel for managing user profile state and operations.
  *
@@ -39,9 +42,21 @@ import kotlinx.coroutines.launch
 class ProfileViewModel(
     private val repository: UserProfileRepository = UserProfileRepository(),
     private val imageUploadHelper: ImageUploadHelper = ImageUploadHelper(),
+    badgeRepo: BadgeRepository? = null,
+    friendRepo: FriendRequestRepository? = null,
 ) : ViewModel() {
-  private var badgeRepository: BadgeRepository? = null
-  private var friendRequestRepository: FriendRequestRepository? = null
+  private var badgeRepository: BadgeRepository? = badgeRepo
+  private var friendRequestRepository: FriendRequestRepository? = friendRepo
+
+  // Flag to prevent re-entrant badge context synchronization
+  private var isSyncingBadgeContext = false
+
+  // Cache timestamp tracking for badge context (5 minutes validity)
+  private var cachedBadgeContextData: CachedBadgeContext? = null
+
+  companion object {
+    private const val CACHE_VALIDITY_MS = 5 * 60 * 1000L // 5 minutes
+  }
 
   // Current user profile from Firestore
   private val _userProfile = MutableStateFlow(UserProfile())
@@ -112,8 +127,20 @@ class ProfileViewModel(
 
   init {
     try {
-      badgeRepository = BadgeRepositoryFirestore()
-      friendRequestRepository = FriendRequestRepository(notificationService = NotificationService())
+      // Only initialize repositories if they weren't injected via constructor
+      if (badgeRepository == null) {
+        Log.w(
+            "ProfileViewModel",
+            "Creating BadgeRepository locally - consider using DI for singleton behavior")
+        badgeRepository = BadgeRepositoryFirestore()
+      }
+      if (friendRequestRepository == null) {
+        Log.w(
+            "ProfileViewModel",
+            "Creating FriendRequestRepository locally - consider using DI for singleton behavior")
+        friendRequestRepository =
+            FriendRequestRepository(notificationService = NotificationService())
+      }
     } catch (e: Exception) {
       Log.e(
           "BadgeRepoInitialization",
@@ -162,37 +189,103 @@ class ProfileViewModel(
   /** Fetch badge context from Firestore and update StateFlow */
   private fun fetchBadgeContext() {
     viewModelScope.launch {
-      val currentUser = FirebaseAuth.getInstance().currentUser ?: return@launch
+      // Prevent re-entrant calls to avoid circular loops
+      if (isSyncingBadgeContext) {
+        Log.d("BadgeContextSync", "Already syncing badge context, skipping")
+        return@launch
+      }
 
-      // Only proceed if badgeRepository is initialized
-      val repo =
-          badgeRepository
-              ?: run {
-                Log.e(
-                    "badgeRepoInitialization",
-                    "ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
-                return@launch
-              }
+      isSyncingBadgeContext = true
+      try {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return@launch
 
-      val context =
+        // Only proceed if badgeRepository is initialized
+        val repo =
+            badgeRepository
+                ?: run {
+                  Log.e(
+                      "badgeRepoInitialization",
+                      "ProfileViewModel - badgeRepository not initialized, skipping badge fetch")
+                  return@launch
+                }
+
+        // Check if cached data is still valid
+        val currentTime = System.currentTimeMillis()
+        val cachedData = cachedBadgeContextData
+
+        if (cachedData != null && (currentTime - cachedData.timestamp) < CACHE_VALIDITY_MS) {
+          // Cache is still valid, use cached data
+          Log.d(
+              "BadgeContextCache",
+              "Using cached badge context (age: ${currentTime - cachedData.timestamp}ms)")
+          _badgeContext.value = cachedData.context
           try {
-            repo.getBadgeContext(currentUser.uid)
+            calculateAndUpdateBadges()
           } catch (e: Exception) {
             Log.e(
-                "badgeFetchFail",
-                "ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
-            BadgeContext()
+                "badgeCalculationFail",
+                "ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
           }
+          return@launch
+        }
 
-      // Update safely
-      _badgeContext.value = context
+        // Cache is stale or doesn't exist, clear it and fetch fresh data
+        Log.d("BadgeContextCache", "Cache is stale or missing, fetching fresh data from Firestore")
+        repo.clearCache(currentUser.uid)
 
-      try {
-        calculateAndUpdateBadges()
-      } catch (e: Exception) {
-        Log.e(
-            "badgeCalculationFail",
-            "ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
+        var context =
+            try {
+              repo.getBadgeContext(currentUser.uid)
+            } catch (e: Exception) {
+              Log.e(
+                  "badgeFetchFail",
+                  "ProfileViewModel - Failed to fetch BadgeContext, using default: ${e.message}")
+              BadgeContext()
+            }
+
+        // Sync friend count with actual friends list to handle legacy data
+        // or cases where the count got out of sync
+        try {
+          val actualFriends = friendRequestRepository?.getFriends(currentUser.uid) ?: emptyList()
+          val actualFriendCount = actualFriends.size
+          if (context.friendsCount != actualFriendCount) {
+            Log.d(
+                "BadgeContextSync",
+                "Syncing friendsCount: stored=${context.friendsCount}, actual=$actualFriendCount")
+            val correctedContext = context.copy(friendsCount = actualFriendCount)
+            // Save the corrected context to Firestore and check for failure
+            val saveSuccess = repo.saveBadgeContext(currentUser.uid, correctedContext)
+            if (saveSuccess) {
+              context = correctedContext
+              Log.d(
+                  "BadgeContextSync", "Successfully persisted corrected friend count to Firestore")
+            } else {
+              Log.e(
+                  "BadgeContextSync",
+                  "Failed to persist corrected friend count to Firestore - keeping stale value")
+              // Keep the original context to maintain consistency between in-memory and Firestore
+              // state
+            }
+          }
+        } catch (e: Exception) {
+          Log.e("BadgeContextSync", "Failed to sync friend count: ${e.message}")
+        }
+
+        // Update cache with fresh data
+        cachedBadgeContextData = CachedBadgeContext(context, currentTime)
+
+        // Update safely
+        _badgeContext.value = context
+
+        try {
+          calculateAndUpdateBadges()
+        } catch (e: Exception) {
+          Log.e(
+              "badgeCalculationFail",
+              "ProfileViewModel - Failed recalculating badges after context fetch: ${e.message}")
+        }
+      } finally {
+        isSyncingBadgeContext = false
       }
     }
   }

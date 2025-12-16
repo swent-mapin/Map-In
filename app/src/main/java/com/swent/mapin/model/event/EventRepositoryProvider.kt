@@ -48,7 +48,7 @@ object EventRepositoryProvider {
         firestore,
         friendRepository,
         notificationService,
-        badgeRepository = BadgeRepositoryFirestore(),
+        badgeRepository = BadgeRepositoryFirestore(firestore, userProfileRepository),
         userProfileRepository = userProfileRepository)
   }
 }

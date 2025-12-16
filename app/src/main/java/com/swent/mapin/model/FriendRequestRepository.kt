@@ -23,7 +23,8 @@ import kotlinx.coroutines.tasks.await
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
-    private val badgeRepository: BadgeRepository = BadgeRepositoryFirestore(firestore),
+    private val badgeRepository: BadgeRepository =
+        BadgeRepositoryFirestore(firestore, userProfileRepository),
     private val notificationService: NotificationService
 ) {
   companion object {
