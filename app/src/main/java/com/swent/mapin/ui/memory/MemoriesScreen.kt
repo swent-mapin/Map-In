@@ -162,16 +162,6 @@ private fun formatMemoryDate(memory: Memory): String =
     } ?: ""
 
 /**
- * Returns the first image URL from a list of media URLs.
- *
- * @param mediaUrls List of media URLs.
- */
-private fun firstImageUrl(mediaUrls: List<String>): String? =
-    parseMediaItems(mediaUrls)
-        .firstOrNull { it is MediaItem.Image }
-        ?.let { (it as MediaItem.Image).url }
-
-/**
  * Thumbnail for a memory.
  *
  * @param imageUrl URL of the image to display.
@@ -233,7 +223,6 @@ private fun MemoryItem(
     taggedNames: List<String>
 ) {
   val dateText = formatMemoryDate(memory)
-  val imageUrl = firstImageUrl(mediaUrls)
 
   Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -243,7 +232,7 @@ private fun MemoryItem(
         Column(modifier = Modifier.fillMaxWidth()) {
 
           // --- 16:9 thumbnail ---
-          MemoryThumbnail(imageUrl)
+          MemoryThumbnail(mediaUrls.first())
 
           // --- Content ---
           Column(modifier = Modifier.padding(16.dp)) {

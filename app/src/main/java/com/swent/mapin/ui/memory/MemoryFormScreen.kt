@@ -47,21 +47,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.components.UserPickerDialog
+import com.swent.mapin.ui.memory.components.MAX_MEDIA_COUNT
+import com.swent.mapin.ui.memory.components.MediaSelectionSection
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 // Assisted by AI
 
 // Constants
-private const val MAX_MEDIA_COUNT = 5
-private val MEDIA_THUMBNAIL_SIZE = 100.dp
 private val DESCRIPTION_MIN_HEIGHT = 120.dp
 private val USER_AVATAR_SIZE = 56.dp
 
@@ -139,108 +137,6 @@ private fun EventSelectionSection(
 }
 
 /**
- * Media selection section for memory form
- *
- * @param selectedMediaUris List of selected media URIs
- * @param onLaunchMediaPicker Callback to launch media picker
- * @param onRemoveMedia Callback when media is removed
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun MediaSelectionSection(
-    selectedMediaUris: List<Uri>,
-    onLaunchMediaPicker: () -> Unit,
-    onRemoveMedia: (Uri) -> Unit
-) {
-  Text(
-      text = "Photos or videos (up to $MAX_MEDIA_COUNT)",
-      style = MaterialTheme.typography.labelMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      modifier = Modifier.padding(bottom = 8.dp))
-
-  if (selectedMediaUris.isEmpty()) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(120.dp)
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(8.dp))
-                .clickable { onLaunchMediaPicker() }
-                .padding(16.dp)
-                .testTag("addMediaButton"),
-        contentAlignment = Alignment.Center) {
-          Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add media",
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Tap to add photos or videos",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-        }
-  } else {
-    Column(modifier = Modifier.fillMaxWidth()) {
-      FlowRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            selectedMediaUris.forEach { uri ->
-              Box(modifier = Modifier.size(MEDIA_THUMBNAIL_SIZE)) {
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "Selected media",
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outline,
-                                shape = RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop)
-                IconButton(
-                    onClick = { onRemoveMedia(uri) },
-                    modifier =
-                        Modifier.align(Alignment.TopEnd)
-                            .size(24.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                shape = CircleShape)) {
-                      Icon(
-                          imageVector = Icons.Default.Close,
-                          contentDescription = "Remove",
-                          modifier = Modifier.size(16.dp),
-                          tint = MaterialTheme.colorScheme.onSurface)
-                    }
-              }
-            }
-            if (selectedMediaUris.size < MAX_MEDIA_COUNT) {
-              Box(
-                  modifier =
-                      Modifier.size(MEDIA_THUMBNAIL_SIZE)
-                          .border(
-                              width = 1.dp,
-                              color = MaterialTheme.colorScheme.outline,
-                              shape = RoundedCornerShape(8.dp))
-                          .clickable { onLaunchMediaPicker() },
-                  contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add more",
-                        tint = MaterialTheme.colorScheme.primary)
-                  }
-            }
-          }
-    }
-  }
-}
-
-/**
  * User tagging section for memory form
  *
  * @param taggedUserIds List of tagged user IDs
@@ -297,7 +193,7 @@ private fun UserTaggingSection(
                           modifier = Modifier.size(16.dp),
                           tint = MaterialTheme.colorScheme.onPrimaryContainer)
                       Text(
-                          text = userId, // TODO: Show user name instead of ID
+                          text = userId,
                           style = MaterialTheme.typography.bodySmall,
                           color = MaterialTheme.colorScheme.onPrimaryContainer)
                       IconButton(
