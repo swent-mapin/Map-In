@@ -36,6 +36,7 @@ sealed class OfflineAction {
   data class UnsaveEvent(val eventId: String, val userId: String) : OfflineAction()
 }
 
+/** Enum for the different types of event lists. */
 enum class EventLists {
   ALL,
   JOINED,

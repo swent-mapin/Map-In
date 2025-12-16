@@ -239,6 +239,13 @@ class MapEventStateControllerTest {
     assertEquals(pastEvent, result)
   }
 
+  @Test
+  fun `refreshSelectedEvent returns null for unfound event`() {
+    controller.setAllEventsForTest(listOf(testEvent))
+    val result = controller.refreshSelectedEvent("nonexistent", EventLists.ALL)
+    assertNull(result)
+  }
+
   // ========== Search Tests ==========
   @Test
   fun `searchEvents filters events by title`() {
