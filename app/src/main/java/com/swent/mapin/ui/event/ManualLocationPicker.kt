@@ -58,6 +58,25 @@ internal fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
   return "Pinned location (${String.format(Locale.getDefault(), "%.5f, %.5f", lat, lng)})"
 }
 
+internal fun computeStartPoint(
+    recenterPoint: Point?,
+    initialLocation: Location?,
+    searchResults: List<Location>
+): Point {
+  return recenterPoint
+      ?: initialLocation?.let { loc ->
+        if (loc.latitude != null && loc.longitude != null) {
+          Point.fromLngLat(loc.longitude, loc.latitude)
+        } else null
+      }
+      ?: searchResults.firstOrNull()?.let { loc ->
+        if (loc.latitude != null && loc.longitude != null) {
+          Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+        } else null
+      }
+      ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+}
+
 internal fun getLastKnownUserPoint(context: Context): Point? {
   val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
   val hasPermission =
@@ -92,19 +111,7 @@ internal fun ManualLocationPickerDialog(
 ) {
   val context = LocalContext.current
   val focusManager = LocalFocusManager.current
-  val startPoint =
-      recenterPoint
-          ?: initialLocation?.let { loc ->
-            if (loc.latitude != null && loc.longitude != null) {
-              Point.fromLngLat(loc.longitude, loc.latitude)
-            } else null
-          }
-          ?: searchResults.firstOrNull()?.let { loc ->
-            if (loc.latitude != null && loc.longitude != null) {
-              Point.fromLngLat(loc.longitude!!, loc.latitude!!)
-            } else null
-          }
-          ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
+  val startPoint = computeStartPoint(recenterPoint, initialLocation, searchResults)
 
   val initialPickedPoint =
       initialLocation?.let { loc ->
