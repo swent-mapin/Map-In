@@ -190,14 +190,9 @@ class M2AddEventScreenTest {
     compose.waitForIdle()
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
     compose.waitForIdle()
-    runCatching {
-      compose
-          .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
-          .performClick() // open dropdown if any
-      compose.waitForIdle()
-    }
-    // (LocationDropDownMenu behavior may vary; we only assert banner still appears due to
-    // date/time)
+
+    // Don't interact with location field to avoid opening dialogs that might interfere with save
+    // The test's goal is to verify missing date/time triggers error banner, not location
 
     // Ensure the save button exists before clicking (avoid flaky click on CI)
     compose.waitUntil(timeoutMillis = 10000) {
@@ -207,6 +202,8 @@ class M2AddEventScreenTest {
           }
           .getOrDefault(false)
     }
+
+    compose.waitForIdle()
 
     // Click Save and wait explicitly for the validation banner to appear to avoid timing flakes
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
