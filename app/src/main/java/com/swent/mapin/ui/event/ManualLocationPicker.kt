@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -55,6 +56,16 @@ import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.map.MapConstants
 import com.swent.mapin.ui.map.components.drawableToBitmap
 import java.util.Locale
+
+object ManualLocationPickerTestTags {
+  const val DIALOG = "manualLocationPickerDialog"
+  const val SEARCH_FIELD = "manualLocationPickerSearchField"
+  const val MY_LOCATION_BUTTON = "manualLocationPickerMyLocationButton"
+  const val MAP = "manualLocationPickerMap"
+  const val CANCEL_BUTTON = "manualLocationPickerCancelButton"
+  const val USE_LOCATION_BUTTON = "manualLocationPickerUseLocationButton"
+  const val SEARCH_RESULT_PREFIX = "manualLocationPickerSearchResult_"
+}
 
 internal fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
   return "Pinned location (${String.format(Locale.getDefault(), "%.5f, %.5f", lat, lng)})"
@@ -151,123 +162,143 @@ internal fun ManualLocationPickerDialog(
   Dialog(
       onDismissRequest = onDismiss,
       properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 6.dp) {
-          Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(text = "Select location on map", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                  OutlinedTextField(
-                      value = searchQuery,
-                      onValueChange = {
-                        searchQuery = it
-                        onSearchQuery(it)
-                        showResults = it.isNotBlank()
-                      },
-                      modifier = Modifier.weight(1f),
-                      placeholder = { Text("Search place or address") },
-                      singleLine = true)
-                  OutlinedButton(
-                      onClick = {
-                        recenterPoint?.let { pt ->
-                          pickedPoint = pt
-                          mapViewportState.setCameraOptions {
-                            center(pt)
-                            zoom(16.0)
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp,
+            modifier = Modifier.testTag(ManualLocationPickerTestTags.DIALOG)) {
+              Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(text = "Select location on map", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      OutlinedTextField(
+                          value = searchQuery,
+                          onValueChange = {
+                            searchQuery = it
+                            onSearchQuery(it)
+                            showResults = it.isNotBlank()
+                          },
+                          modifier =
+                              Modifier.weight(1f)
+                                  .testTag(ManualLocationPickerTestTags.SEARCH_FIELD),
+                          placeholder = { Text("Search place or address") },
+                          singleLine = true)
+                      OutlinedButton(
+                          onClick = {
+                            recenterPoint?.let { pt ->
+                              pickedPoint = pt
+                              mapViewportState.setCameraOptions {
+                                center(pt)
+                                zoom(16.0)
+                              }
+                            }
+                          },
+                          enabled = recenterPoint != null,
+                          modifier =
+                              Modifier.testTag(ManualLocationPickerTestTags.MY_LOCATION_BUTTON)) {
+                            Text("My location")
+                          }
+                    }
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(dialogMapHeight)) {
+                  val annotations =
+                      remember(pickedPoint, markerBitmap) {
+                        pickedPoint?.let { point ->
+                          val opts = PointAnnotationOptions().withPoint(point)
+                          markerBitmap?.let { opts.withIconImage(it) }
+                          listOf(opts)
+                        } ?: emptyList()
+                      }
+                  MapboxMap(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .height(dialogMapHeight)
+                              .testTag(ManualLocationPickerTestTags.MAP),
+                      mapViewportState = mapViewportState,
+                      style = { MapboxStandardStyle(standardStyleState = standardStyleState) }) {
+                        MapEffect(Unit) { mapView ->
+                          val listener = OnMapClickListener { point ->
+                            pickedPoint = point
+                            mapViewportState.setCameraOptions { center(point) }
+                            showResults = false
+                            searchQuery = ""
+                            onSearchQuery("")
+                            focusManager.clearFocus()
+                            true
+                          }
+                          mapView.gestures.addOnMapClickListener(listener)
+                        }
+
+                        if (annotations.isNotEmpty()) {
+                          PointAnnotationGroup(annotations = annotations) {
+                            iconAnchor = IconAnchor.BOTTOM
                           }
                         }
-                      },
-                      enabled = recenterPoint != null) {
-                        Text("My location")
                       }
-                }
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(dialogMapHeight)) {
-              val annotations =
-                  remember(pickedPoint, markerBitmap) {
-                    pickedPoint?.let { point ->
-                      val opts = PointAnnotationOptions().withPoint(point)
-                      markerBitmap?.let { opts.withIconImage(it) }
-                      listOf(opts)
-                    } ?: emptyList()
-                  }
-              MapboxMap(
-                  modifier = Modifier.fillMaxWidth().height(dialogMapHeight),
-                  mapViewportState = mapViewportState,
-                  style = { MapboxStandardStyle(standardStyleState = standardStyleState) }) {
-                    MapEffect(Unit) { mapView ->
-                      val listener = OnMapClickListener { point ->
-                        pickedPoint = point
-                        mapViewportState.setCameraOptions { center(point) }
-                        showResults = false
-                        searchQuery = ""
-                        onSearchQuery("")
-                        focusManager.clearFocus()
-                        true
-                      }
-                      mapView.gestures.addOnMapClickListener(listener)
-                    }
-
-                    if (annotations.isNotEmpty()) {
-                      PointAnnotationGroup(annotations = annotations) {
-                        iconAnchor = IconAnchor.BOTTOM
-                      }
-                    }
-                  }
-              if (showResults && searchResults.isNotEmpty()) {
-                Column(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
-                  Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                      searchResults.forEachIndexed { idx, loc ->
-                        TextButton(
-                            onClick = {
-                              if (loc.latitude != null && loc.longitude != null) {
-                                val point = Point.fromLngLat(loc.longitude!!, loc.latitude!!)
-                                pickedPoint = point
-                                mapViewportState.setCameraOptions {
-                                  center(point)
-                                  zoom(16.0)
+                  if (showResults && searchResults.isNotEmpty()) {
+                    Column(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+                      Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                          searchResults.forEachIndexed { idx, loc ->
+                            TextButton(
+                                onClick = {
+                                  if (loc.latitude != null && loc.longitude != null) {
+                                    val point = Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                                    pickedPoint = point
+                                    mapViewportState.setCameraOptions {
+                                      center(point)
+                                      zoom(16.0)
+                                    }
+                                  }
+                                  onSearchResultSelect(loc)
+                                  searchQuery = ""
+                                  onSearchQuery("")
+                                  focusManager.clearFocus()
+                                  showResults = false
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .testTag(
+                                            ManualLocationPickerTestTags.SEARCH_RESULT_PREFIX +
+                                                idx)) {
+                                  Text(loc.name ?: "Result ${idx + 1}")
                                 }
-                              }
-                              onSearchResultSelect(loc)
-                              searchQuery = ""
-                              onSearchQuery("")
-                              focusManager.clearFocus()
-                              showResults = false
-                            },
-                            modifier = Modifier.fillMaxWidth()) {
-                              Text(loc.name ?: "Result ${idx + 1}")
-                            }
+                          }
+                        }
                       }
                     }
                   }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically) {
+                      TextButton(
+                          onClick = onDismiss,
+                          modifier = Modifier.testTag(ManualLocationPickerTestTags.CANCEL_BUTTON)) {
+                            Text(text = "Cancel")
+                          }
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Button(
+                          onClick = {
+                            pickedPoint?.let { point ->
+                              val lat = point.latitude()
+                              val lng = point.longitude()
+                              val label = formatPinnedLocationLabel(lat, lng)
+                              val loc = Location.from(label, lat, lng)
+                              onLocationPicked(loc)
+                            }
+                          },
+                          enabled = pickedPoint != null,
+                          modifier =
+                              Modifier.testTag(ManualLocationPickerTestTags.USE_LOCATION_BUTTON)) {
+                            Text(text = "Use this location")
+                          }
+                    }
               }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically) {
-                  TextButton(onClick = onDismiss) { Text(text = "Cancel") }
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Button(
-                      onClick = {
-                        pickedPoint?.let { point ->
-                          val lat = point.latitude()
-                          val lng = point.longitude()
-                          val label = formatPinnedLocationLabel(lat, lng)
-                          val loc = Location.from(label, lat, lng)
-                          onLocationPicked(loc)
-                        }
-                      },
-                      enabled = pickedPoint != null) {
-                        Text(text = "Use this location")
-                      }
-                }
-          }
-        }
       }
 }
