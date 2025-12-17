@@ -366,17 +366,20 @@ class EndToEndM2 {
     composeTestRule.waitForIdle()
 
     // Edit profile
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput(updatedName)
 
+    composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editBioField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editBioField", useUnmergedTree = true)
         .performTextInput(updatedBio)
 
     // Save changes
+    composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("saveButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 
@@ -461,12 +464,14 @@ class EndToEndM2 {
     composeTestRule.waitForIdle()
 
     // Edit fields
+    composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("editNameField", useUnmergedTree = true).performTextClearance()
     composeTestRule
         .onNodeWithTag("editNameField", useUnmergedTree = true)
         .performTextInput("Temporary Name")
 
     // Cancel
+    composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performScrollTo()
     composeTestRule.onNodeWithTag("cancelButton", useUnmergedTree = true).performClick()
     composeTestRule.waitForIdle()
 

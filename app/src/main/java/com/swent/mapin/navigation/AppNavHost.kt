@@ -141,18 +141,7 @@ fun AppNavHost(
           memoryVM = memoryVM)
     }
 
-    composable(Route.Profile.route) {
-      ProfileScreen(
-          onNavigateBack = { safePopBackStack() },
-          onNavigateToSettings = { navController.navigate(Route.Settings.route) },
-          onNavigateToSignIn = {
-            navController.navigate(Route.Auth.route) {
-              popUpTo(navController.graph.startDestinationId) { inclusive = true }
-              launchSingleTop = true
-            }
-          },
-          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
-    }
+    composable(Route.Profile.route) { ProfileScreen(onNavigateBack = { safePopBackStack() }) }
 
     composable(Route.Settings.route) {
       val passwordChangeResult =

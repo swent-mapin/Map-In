@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +74,8 @@ private fun NewConversationTopBar(
     selectedFriends: SnapshotStateList<FriendWithProfile>,
     onConfirmClick: () -> Unit
 ) {
+  var hasNavigatedBack by remember { mutableStateOf(false) }
+
   val colors =
       TopAppBarDefaults.topAppBarColors(
           containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -83,7 +86,12 @@ private fun NewConversationTopBar(
       title = { Text("New Conversation") },
       navigationIcon = {
         IconButton(
-            onClick = onNavigateBack,
+            onClick = {
+              if (!hasNavigatedBack) {
+                hasNavigatedBack = true
+                onNavigateBack()
+              }
+            },
             modifier = Modifier.testTag(NewConversationScreenTestTags.BACK_BUTTON)) {
               Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
@@ -285,6 +293,7 @@ fun NewConversationScreen(
   val groupName = remember { mutableStateOf("") }
   val scope = rememberCoroutineScope()
   val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   fun onSingleFriendConfirm(friend: FriendWithProfile) {
     scope.launch {

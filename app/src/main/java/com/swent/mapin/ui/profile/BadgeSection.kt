@@ -122,9 +122,10 @@ fun BadgesSection(badges: List<Badge>, modifier: Modifier = Modifier) {
           val gridHeight = (itemHeight * rows) + (spacing * (rows - 1).coerceAtLeast(0))
 
           LazyVerticalGrid(
-              columns = GridCells.Adaptive(minSize = 80.dp),
+              columns = GridCells.Fixed(columns),
               horizontalArrangement = Arrangement.spacedBy(12.dp),
               verticalArrangement = Arrangement.spacedBy(12.dp),
+              userScrollEnabled = false,
               modifier = Modifier.fillMaxWidth().height(gridHeight)) {
                 items(badges) { badge -> BadgeItem(badge) { selected = badge } }
               }

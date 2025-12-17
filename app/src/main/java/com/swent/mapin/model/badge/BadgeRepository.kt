@@ -51,6 +51,16 @@ interface BadgeRepository {
   suspend fun updateBadgesAfterContextChange(userId: String)
 
   /**
+   * Clears the cache for a specific user.
+   *
+   * This is useful when the badge context may have been modified by another component (e.g.,
+   * another repository instance) and we need to ensure fresh data is fetched.
+   *
+   * @param userId The unique identifier of the user whose cache should be cleared
+   */
+  fun clearCache(userId: String)
+
+  /**
    * Update the unlock status of a specific badge.
    *
    * Updates a single badge's unlock status and timestamp without affecting other badges. Useful for
