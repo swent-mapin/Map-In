@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -165,7 +166,8 @@ private fun EmptyEventState(searchQuery: String) {
   }
 }
 
-private fun filterEvents(events: List<Event>, query: String): List<Event> {
+@VisibleForTesting
+internal fun filterEvents(events: List<Event>, query: String): List<Event> {
   if (query.isBlank()) return events
   return events.filter {
     it.title.contains(query, ignoreCase = true) ||
@@ -174,6 +176,7 @@ private fun filterEvents(events: List<Event>, query: String): List<Event> {
   }
 }
 
-private fun formatEventDate(timestamp: com.google.firebase.Timestamp): String {
+@VisibleForTesting
+internal fun formatEventDate(timestamp: com.google.firebase.Timestamp): String {
   return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(timestamp.toDate())
 }
