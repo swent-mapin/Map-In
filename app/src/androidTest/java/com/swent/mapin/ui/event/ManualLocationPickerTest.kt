@@ -1,6 +1,8 @@
 package com.swent.mapin.ui.event
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.mapbox.geojson.Point
@@ -95,6 +97,7 @@ class ManualLocationPickerTest {
   @Test
   fun manualLocationPickerDialog_my_location_button_state_reflects_recenterPoint() {
     val testRecenterPoint = Point.fromLngLat(6.566, 46.519)
+    val recenterPoint = mutableStateOf<Point?>(testRecenterPoint)
 
     composeTestRule.setContent {
       ManualLocationPickerDialog(
@@ -104,20 +107,11 @@ class ManualLocationPickerTest {
           searchResults = emptyList(),
           onSearchQuery = {},
           onSearchResultSelect = {},
-          recenterPoint = testRecenterPoint)
+          recenterPoint = recenterPoint.value)
     }
     composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.MY_LOCATION_BUTTON).assertIsEnabled()
 
-    composeTestRule.setContent {
-      ManualLocationPickerDialog(
-          initialLocation = null,
-          onDismiss = {},
-          onLocationPicked = {},
-          searchResults = emptyList(),
-          onSearchQuery = {},
-          onSearchResultSelect = {},
-          recenterPoint = null)
-    }
+    composeTestRule.runOnUiThread { recenterPoint.value = null }
     composeTestRule
         .onNodeWithTag(ManualLocationPickerTestTags.MY_LOCATION_BUTTON)
         .assertIsNotEnabled()
@@ -125,14 +119,18 @@ class ManualLocationPickerTest {
 
   @Test
   fun manualLocationPickerDialog_use_location_button_state_reflects_initialLocation() {
+    val initialLocation = mutableStateOf<Location?>(null)
+
     composeTestRule.setContent {
-      ManualLocationPickerDialog(
-          initialLocation = null,
-          onDismiss = {},
-          onLocationPicked = {},
-          searchResults = emptyList(),
-          onSearchQuery = {},
-          onSearchResultSelect = {})
+      key(initialLocation.value) {
+        ManualLocationPickerDialog(
+            initialLocation = initialLocation.value,
+            onDismiss = {},
+            onLocationPicked = {},
+            searchResults = emptyList(),
+            onSearchQuery = {},
+            onSearchResultSelect = {})
+      }
     }
 
     // Initially no point is picked, so button should be disabled
@@ -142,15 +140,8 @@ class ManualLocationPickerTest {
 
     val testLocation = Location.from("Test", 46.519, 6.566)
 
-    composeTestRule.setContent {
-      ManualLocationPickerDialog(
-          initialLocation = testLocation,
-          onDismiss = {},
-          onLocationPicked = {},
-          searchResults = emptyList(),
-          onSearchQuery = {},
-          onSearchResultSelect = {})
-    }
+    composeTestRule.runOnUiThread { initialLocation.value = testLocation }
+    composeTestRule.waitForIdle()
 
     // When initialLocation is provided, a point is picked, so button should be enabled
     composeTestRule
