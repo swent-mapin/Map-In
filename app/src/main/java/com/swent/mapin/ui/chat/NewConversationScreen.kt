@@ -192,7 +192,72 @@ private fun GroupNameDialog(
       confirmButton = { TextButton(onClick = onConfirm) { Text("OK") } },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
+suspend fun handleSingleFriendConfirm(
+    conversationViewModel: ConversationViewModel,
+    friend: FriendWithProfile,
+    currentUserId: String,
+    onConfirm: () -> Unit,
+    onCreateExistingConversation: (Conversation) -> Unit
+) {
+    val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
 
+    val existing = conversationViewModel.getExistingConversation(convoId)
+
+    if (existing != null) {
+        if (currentUserId !in existing.participantIds) {
+            conversationViewModel.joinConversation(
+                conversationId = existing.id,
+                userId = currentUserId,
+                userProfile = conversationViewModel.currentUserProfile
+            )
+        }
+        onCreateExistingConversation(existing)
+    } else {
+        conversationViewModel.createConversation(
+            Conversation(
+                id = convoId,
+                name = friend.userProfile.name,
+                participantIds = listOf(currentUserId, friend.userProfile.userId),
+                participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
+                profilePictureUrl = friend.userProfile.profilePictureUrl
+            )
+        )
+        onConfirm()
+    }
+}
+
+suspend fun handleGroupConfirm(
+    conversationViewModel: ConversationViewModel,
+    selectedFriends: List<FriendWithProfile>,
+    groupName: String,
+    currentUserId: String,
+    onConfirm: () -> Unit
+) {
+    if (groupName.isBlank()) return
+
+    val ids = selectedFriends.map { it.userProfile.userId }
+    val profiles = selectedFriends.map { it.userProfile }
+
+    var convoId = conversationViewModel.getNewUID(ids + currentUserId)
+
+    val existing = conversationViewModel.getExistingConversation(convoId)
+
+    if (existing != null) {
+        convoId = conversationViewModel.getNewUID(emptyList())
+    }
+
+    conversationViewModel.createConversation(
+        Conversation(
+            id = convoId,
+            name = groupName,
+            participantIds = ids + currentUserId,
+            participants = profiles + conversationViewModel.currentUserProfile,
+            profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl
+        )
+    )
+
+    onConfirm()
+}
 /**
  * Assisted by AI Screen allowing the user to select one or more friends to start a new
  * conversation.
@@ -223,58 +288,32 @@ fun NewConversationScreen(
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
   val scope = rememberCoroutineScope()
+  val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
 
-  fun handleSingleFriendConfirm(friend: FriendWithProfile) {
-    val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
-    val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
-
-    scope.launch {
-      val existing = conversationViewModel.getExistingConversation(convoId)
-
-      if (existing != null) {
-        onCreateExistingConversation(existing)
-      } else {
-        conversationViewModel.createConversation(
-            Conversation(
-                id = convoId,
-                name = friend.userProfile.name,
-                participantIds = listOf(currentUserId, friend.userProfile.userId),
-                participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
-                profilePictureUrl = friend.userProfile.profilePictureUrl))
-        onConfirm()
-      }
-    }
+  fun onSingleFriendConfirm(friend: FriendWithProfile) {
+        scope.launch {
+            handleSingleFriendConfirm(
+                conversationViewModel = conversationViewModel,
+                friend = friend,
+                currentUserId = currentUserId,
+                onConfirm = onConfirm,
+                onCreateExistingConversation = onCreateExistingConversation
+            )
+        }
   }
 
-  fun handleGroupConfirm() {
-    if (groupName.value.isBlank()) return
-
-    val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
-    val ids = selectedFriends.map { it.userProfile.userId }
-    val profiles = selectedFriends.map { it.userProfile }
-
-    scope.launch {
-      var convoId = conversationViewModel.getNewUID(ids + currentUserId)
-
-      val existing = conversationViewModel.getExistingConversation(convoId)
-
-      if (existing != null) {
-        convoId = conversationViewModel.getNewUID(emptyList())
-      }
-
-      conversationViewModel.createConversation(
-          Conversation(
-              id = convoId,
-              name = groupName.value,
-              participantIds = ids + currentUserId,
-              participants = profiles + conversationViewModel.currentUserProfile,
-              profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl))
-
-      onConfirm()
-    }
-
-    showGroupNameDialog.value = false
-    groupName.value = ""
+  fun onGroupConfirm() {
+        scope.launch {
+            handleGroupConfirm(
+                conversationViewModel = conversationViewModel,
+                selectedFriends = selectedFriends,
+                groupName = groupName.value,
+                currentUserId = currentUserId,
+                onConfirm = onConfirm
+            )
+        }
+        showGroupNameDialog.value = false
+        groupName.value = ""
   }
 
   Scaffold(
@@ -287,7 +326,7 @@ fun NewConversationScreen(
               if (selectedFriends.size >= 2) {
                 showGroupNameDialog.value = true
               } else {
-                handleSingleFriendConfirm(selectedFriends.first())
+                  onSingleFriendConfirm(selectedFriends.first())
               }
             })
       }) { paddingValues ->
@@ -309,6 +348,7 @@ fun NewConversationScreen(
           showGroupNameDialog.value = false
           groupName.value = ""
         },
-        onConfirm = ::handleGroupConfirm)
+        onConfirm = { onGroupConfirm() }
+    )
   }
 }

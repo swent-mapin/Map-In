@@ -1,5 +1,6 @@
 package com.swent.mapin.model.chat
 
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,8 @@ interface ConversationRepository {
    * @return True if the conversation already exists, False if not
    */
   suspend fun conversationExists(conversationId: String): Boolean
+
+  suspend fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile)
 
   /** Observes all conversations of the current logged in user */
   fun observeConversationsForCurrentUser(): Flow<List<Conversation>>

@@ -2,8 +2,10 @@ package com.swent.mapin.model.chat
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import com.swent.mapin.util.HashUtils.hashUserIds
 import kotlinx.coroutines.channels.awaitClose
@@ -101,7 +103,21 @@ class ConversationRepositoryFirestore(
             participantIds = updatedParticipantIds,
         )
 
-    conversationRef.set(conversationToSave).await()
+    db.runTransaction { tx ->
+        val snapshot = tx.get(conversationRef)
+        if (!snapshot.exists()) {
+            tx.set(conversationRef, conversationToSave)
+        }
+    }.await()
+  }
+
+  override suspend fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile) {
+      db.collection("conversations").document(conversationId).update(
+            mapOf(
+                "participantIds" to FieldValue.arrayUnion(userId),
+                "participants" to FieldValue.arrayUnion(userProfile)
+            )
+        )
   }
 
   /**

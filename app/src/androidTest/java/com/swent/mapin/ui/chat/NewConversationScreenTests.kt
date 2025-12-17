@@ -238,4 +238,55 @@ class NewConversationScreenTest {
         .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
         .assertIsDisplayed()
   }
+  @Test
+  fun confirmSingleFriend_withExistingConversation_navigatesToExisting_andDoesNotCreate() {
+        val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+        val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+
+        every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+
+        // Fake existing conversation
+        val existingConversation =
+            Conversation(
+                id = "existing-convo-id",
+                name = "Alice",
+                participantIds = listOf("currentUser", "1"),
+                participants = emptyList(),
+                profilePictureUrl = null
+            )
+
+        // Mock UID + existing conversation lookup
+        every { mockConversationViewModel.getNewUID(any()) } returns "existing-convo-id"
+        coEvery {
+            mockConversationViewModel.getExistingConversation("existing-convo-id")
+        } returns existingConversation
+
+        var navigatedToExisting: Conversation? = null
+
+        composeTestRule.setContent {
+            NewConversationScreen(
+                friendsViewModel = mockFriendsViewModel,
+                conversationViewModel = mockConversationViewModel,
+                onCreateExistingConversation = { convo ->
+                    navigatedToExisting = convo
+                }
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Select Alice
+        composeTestRule
+            .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+            .performClick()
+
+        // Confirm
+        composeTestRule
+            .onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON)
+            .performClick()
+
+        composeTestRule.waitForIdle()
+        Assert.assertEquals(existingConversation, navigatedToExisting)
+        coVerify(exactly = 0) { mockConversationViewModel.createConversation(any()) }
+  }
 }

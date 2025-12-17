@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
+import com.swent.mapin.util.HashUtils
 import io.mockk.*
 import junit.framework.TestCase.assertFalse
 import kotlin.test.assertEquals
@@ -715,5 +716,13 @@ class ConversationRepositoryFirestoreTest {
     val result = repo.conversationExists(conversationId)
 
     assertFalse(result)
+  }
+
+  @Test
+  fun `getNewUid returns hashed id when participants provided`() {
+        val participants = listOf("userA", "userB")
+        val id = repo.getNewUid(participants)
+        // Assert it matches expected hash
+        assertEquals(HashUtils.hashUserIds(participants), id)
   }
 }
