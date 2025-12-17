@@ -36,7 +36,7 @@ class AndroidTextToSpeechService(
             // Make the voice friendlier: slightly higher pitch and slightly slower
             if (isInitialized) {
               tts?.setPitch(1.3f) // Slightly higher pitch (1.0 = normal)
-              tts?.setSpeechRate(1f) // Slightly slower (1.0 = normal)
+              tts?.setSpeechRate(1f)
             }
             // Process any pending speeches
             if (isInitialized) {
