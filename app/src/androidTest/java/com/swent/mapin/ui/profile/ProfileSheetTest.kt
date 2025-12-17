@@ -9,7 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeRarity
 import io.mockk.every

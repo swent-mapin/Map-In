@@ -3,8 +3,8 @@ package com.swent.mapin.ui.map.eventstate
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.ListenerRegistration
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.location.Location

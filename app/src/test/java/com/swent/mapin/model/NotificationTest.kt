@@ -1,6 +1,9 @@
 package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.notification.Notification
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationType
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -29,18 +32,19 @@ class NotificationTest {
     val timestamp = Timestamp.now()
 
     val notification =
-        Notification(
-            notificationId = "notif123",
-            title = "Test Title",
-            message = "Test Message",
-            type = NotificationType.ALERT,
-            recipientId = "user123",
-            senderId = "user456",
-            readStatus = true,
-            timestamp = timestamp,
-            metadata = metadata,
-            actionUrl = "mapin://test",
-            priority = 2)
+      Notification(
+        notificationId = "notif123",
+        title = "Test Title",
+        message = "Test Message",
+        type = NotificationType.ALERT,
+        recipientId = "user123",
+        senderId = "user456",
+        readStatus = true,
+        timestamp = timestamp,
+        metadata = metadata,
+        actionUrl = "mapin://test",
+        priority = 2
+      )
 
     assertEquals("notif123", notification.notificationId)
     assertEquals("Test Title", notification.title)
@@ -156,8 +160,9 @@ class NotificationTest {
   @Test
   fun `notification can be copied with modifications`() {
     val original =
-        Notification(
-            notificationId = "notif123", title = "Original Title", message = "Original Message")
+      Notification(
+        notificationId = "notif123", title = "Original Title", message = "Original Message"
+      )
 
     val modified = original.copy(title = "Modified Title")
 

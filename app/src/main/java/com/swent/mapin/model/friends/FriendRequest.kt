@@ -1,6 +1,7 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.friends
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.userprofile.UserProfile
 
 /** Represents the status of a friendship or friend request. */
 enum class FriendshipStatus {
@@ -35,9 +36,9 @@ data class FriendRequest(
  * @property requestId ID of the friend request (if applicable).
  */
 data class FriendWithProfile(
-    val userProfile: UserProfile,
-    val friendshipStatus: FriendshipStatus = FriendshipStatus.PENDING,
-    val requestId: String = ""
+  val userProfile: UserProfile,
+  val friendshipStatus: FriendshipStatus = FriendshipStatus.PENDING,
+  val requestId: String = ""
 )
 
 /**
@@ -47,6 +48,6 @@ data class FriendWithProfile(
  * @property hasPendingRequest Whether there's a pending outgoing request to this user.
  */
 data class SearchResultWithStatus(
-    val userProfile: UserProfile,
-    val hasPendingRequest: Boolean = false
+  val userProfile: UserProfile,
+  val hasPendingRequest: Boolean = false
 )

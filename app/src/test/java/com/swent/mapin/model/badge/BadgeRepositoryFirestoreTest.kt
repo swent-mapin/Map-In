@@ -4,7 +4,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import io.mockk.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

@@ -27,7 +27,15 @@ import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
 import com.swent.mapin.model.location.Location
+import com.swent.mapin.model.notification.Notification
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
 import java.util.Calendar
@@ -183,8 +191,8 @@ class EventRepositoryFirestoreTest {
   private fun voidTask(): Task<Void> = Tasks.forResult(null)
 
   private fun createRepoWithNotifications(
-      notificationService: NotificationService = mock(),
-      userProfileRepo: UserProfileRepository = mock()
+    notificationService: NotificationService = mock(),
+    userProfileRepo: UserProfileRepository = mock()
   ) =
       EventRepositoryFirestore(
           db,
@@ -692,9 +700,10 @@ class EventRepositoryFirestoreTest {
     val filters = Filters(friendsOnly = true, tags = setOf("music"))
 
     val friend1 =
-        FriendWithProfile(
-            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-            friendshipStatus = FriendshipStatus.ACCEPTED)
+      FriendWithProfile(
+        userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+        friendshipStatus = FriendshipStatus.ACCEPTED
+      )
     whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
     val musicEvent = createEvent("E1", "Concert", ownerId = "friend1", tags = listOf("music"))
@@ -744,9 +753,10 @@ class EventRepositoryFirestoreTest {
             endDate = LocalDate.now().plusDays(7))
 
     val friend1 =
-        FriendWithProfile(
-            userProfile = UserProfile(userId = "friend1", name = "Friend1"),
-            friendshipStatus = FriendshipStatus.ACCEPTED)
+      FriendWithProfile(
+        userProfile = UserProfile(userId = "friend1", name = "Friend1"),
+        friendshipStatus = FriendshipStatus.ACCEPTED
+      )
     whenever(friendRepo.getFriends("currentUser")).thenReturn(listOf(friend1))
 
     val validEvent =
@@ -1276,10 +1286,11 @@ class EventRepositoryFirestoreTest {
         createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     val ownerProfile =
-        UserProfile(
-            userId = "owner123",
-            name = "Event Creator",
-            followerIds = listOf("follower1", "follower2", "follower3"))
+      UserProfile(
+        userId = "owner123",
+        name = "Event Creator",
+        followerIds = listOf("follower1", "follower2", "follower3")
+      )
 
     whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
     whenever(
@@ -1334,7 +1345,7 @@ class EventRepositoryFirestoreTest {
         createRepoWithNotifications(mockNotificationService, mockUserProfileRepo)
 
     val ownerProfile =
-        UserProfile(userId = "owner123", name = "Event Creator", followerIds = emptyList())
+      UserProfile(userId = "owner123", name = "Event Creator", followerIds = emptyList())
 
     whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
 
@@ -1397,7 +1408,7 @@ class EventRepositoryFirestoreTest {
 
     // Owner profile with blank name
     val ownerProfile =
-        UserProfile(userId = "owner123", name = "", followerIds = listOf("follower1"))
+      UserProfile(userId = "owner123", name = "", followerIds = listOf("follower1"))
 
     whenever(mockUserProfileRepo.getUserProfile("owner123")).thenReturn(ownerProfile)
     whenever(

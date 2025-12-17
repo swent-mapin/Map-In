@@ -2,8 +2,8 @@ package com.swent.mapin.ui.memory
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository

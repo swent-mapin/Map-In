@@ -3,7 +3,7 @@ package com.swent.mapin.ui.filters
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel

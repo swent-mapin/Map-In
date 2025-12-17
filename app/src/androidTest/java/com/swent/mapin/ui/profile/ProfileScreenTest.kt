@@ -11,7 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeRarity
 import io.mockk.Runs

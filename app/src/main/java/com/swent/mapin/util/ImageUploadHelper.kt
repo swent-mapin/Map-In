@@ -1,10 +1,10 @@
-package com.swent.mapin.model
+package com.swent.mapin.util
 
 import android.net.Uri
 import android.util.Log
 import com.google.firebase.storage.FirebaseStorage
-import java.util.UUID
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 /** Helper class for uploading images to Firebase Storage */
 class ImageUploadHelper(private val storage: FirebaseStorage = FirebaseStorage.getInstance()) {

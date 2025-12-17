@@ -87,7 +87,7 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.swent.mapin.HttpClientProvider
 import com.swent.mapin.R
-import com.swent.mapin.model.PreferencesRepositoryProvider
+import com.swent.mapin.model.preferences.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.location.Location

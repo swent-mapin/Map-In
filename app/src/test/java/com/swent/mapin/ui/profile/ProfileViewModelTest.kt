@@ -2,12 +2,12 @@ package com.swent.mapin.ui.profile
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.ImageUploadHelper
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.util.ImageUploadHelper
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeContext
 import com.swent.mapin.model.badge.BadgeRepository
 import io.mockk.Runs
