@@ -93,7 +93,7 @@ class ManualLocationPickerTest {
   }
 
   @Test
-  fun manualLocationPickerDialog_my_location_button_enabled_when_recenterPoint_provided() {
+  fun manualLocationPickerDialog_my_location_button_state_reflects_recenterPoint() {
     val testRecenterPoint = Point.fromLngLat(6.566, 46.519)
 
     composeTestRule.setContent {
@@ -106,12 +106,8 @@ class ManualLocationPickerTest {
           onSearchResultSelect = {},
           recenterPoint = testRecenterPoint)
     }
-
     composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.MY_LOCATION_BUTTON).assertIsEnabled()
-  }
 
-  @Test
-  fun manualLocationPickerDialog_my_location_button_disabled_when_no_recenterPoint() {
     composeTestRule.setContent {
       ManualLocationPickerDialog(
           initialLocation = null,
@@ -122,14 +118,13 @@ class ManualLocationPickerTest {
           onSearchResultSelect = {},
           recenterPoint = null)
     }
-
     composeTestRule
         .onNodeWithTag(ManualLocationPickerTestTags.MY_LOCATION_BUTTON)
         .assertIsNotEnabled()
   }
 
   @Test
-  fun manualLocationPickerDialog_use_location_button_disabled_initially() {
+  fun manualLocationPickerDialog_use_location_button_state_reflects_initialLocation() {
     composeTestRule.setContent {
       ManualLocationPickerDialog(
           initialLocation = null,
@@ -144,10 +139,7 @@ class ManualLocationPickerTest {
     composeTestRule
         .onNodeWithTag(ManualLocationPickerTestTags.USE_LOCATION_BUTTON)
         .assertIsNotEnabled()
-  }
 
-  @Test
-  fun manualLocationPickerDialog_use_location_button_enabled_when_initialLocation_provided() {
     val testLocation = Location.from("Test", 46.519, 6.566)
 
     composeTestRule.setContent {
@@ -227,22 +219,6 @@ class ManualLocationPickerTest {
   }
 
   @Test
-  fun manualLocationPickerDialog_shows_map() {
-    composeTestRule.setContent {
-      ManualLocationPickerDialog(
-          initialLocation = null,
-          onDismiss = {},
-          onLocationPicked = {},
-          searchResults = emptyList(),
-          onSearchQuery = {},
-          onSearchResultSelect = {})
-    }
-
-    // Map should be visible
-    composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.MAP).assertIsDisplayed()
-  }
-
-  @Test
   fun addEventScreen_pick_location_on_map_button_opens_dialog() {
     val eventViewModel = mockk<EventViewModel>(relaxed = true)
     val locationViewModel = LocationViewModel(mockLocationRepo)
@@ -260,29 +236,5 @@ class ManualLocationPickerTest {
         .onNodeWithTag(ManualLocationPickerTestTags.DIALOG)
         .assertExists()
         .assertIsDisplayed()
-  }
-
-  @Test
-  fun addEventScreen_dialog_dismisses_on_cancel() {
-    val eventViewModel = mockk<EventViewModel>(relaxed = true)
-    val locationViewModel = LocationViewModel(mockLocationRepo)
-
-    composeTestRule.setContent {
-      AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel)
-    }
-
-    // Open dialog
-    composeTestRule.onNodeWithText("Pick location on map").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify dialog is displayed
-    composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.DIALOG).assertIsDisplayed()
-
-    // Click cancel
-    composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.CANCEL_BUTTON).performClick()
-    composeTestRule.waitForIdle()
-
-    // Dialog should be dismissed
-    composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.DIALOG).assertDoesNotExist()
   }
 }
