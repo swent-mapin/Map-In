@@ -2,7 +2,10 @@ package com.swent.mapin.model.badge
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.UserProfileRepository
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 data class BadgeContext(
@@ -24,10 +27,12 @@ data class BadgeContext(
  * ```
  * users/{userId}
  *   - badges: List<Badge>
+ *   - badgeContext: BadgeContext
  * ```
  */
 class BadgeRepositoryFirestore(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore)
 ) : BadgeRepository {
 
   companion object {
@@ -40,6 +45,9 @@ class BadgeRepositoryFirestore(
   // Simple in-memory cache to minimize Firestore reads
   private val badgeCache = ConcurrentHashMap<String, List<Badge>>()
   private val badgeContextCache = ConcurrentHashMap<String, BadgeContext>()
+
+  // Mutex to ensure atomic cache invalidation and fetch operations
+  private val updateMutex = Mutex()
 
   /** Save badge context for a user to Firestore */
   override suspend fun saveBadgeContext(userId: String, context: BadgeContext): Boolean {
@@ -73,8 +81,23 @@ class BadgeRepositoryFirestore(
 
       val context =
           if (doc.exists()) {
-            val existing = doc.toObject(BadgeContext::class.java)
-            if (existing != null) {
+            // Extract the badgeContext field explicitly instead of using toObject()
+            // Previous implementation used toObject(BadgeContext::class.java) which attempted
+            // to deserialize the entire document, causing field mapping issues when the document
+            // structure contained additional fields beyond BadgeContext properties
+            @Suppress("UNCHECKED_CAST")
+            val badgeContextData = doc.get(FIELD_BADGE_CONTEXT) as? Map<String, Any>
+
+            if (badgeContextData != null) {
+              val existing =
+                  BadgeContext(
+                      friendsCount = (badgeContextData["friendsCount"] as? Number)?.toInt() ?: 0,
+                      createdEvents = (badgeContextData["createdEvents"] as? Number)?.toInt() ?: 0,
+                      joinedEvents = (badgeContextData["joinedEvents"] as? Number)?.toInt() ?: 0,
+                      earlyJoin = (badgeContextData["earlyJoin"] as? Number)?.toInt() ?: 0,
+                      lateJoin = (badgeContextData["lateJoin"] as? Number)?.toInt() ?: 0,
+                      earlyCreate = (badgeContextData["earlyCreate"] as? Number)?.toInt() ?: 0,
+                      lateCreate = (badgeContextData["lateCreate"] as? Number)?.toInt() ?: 0)
               badgeContextCache[userId] = existing
               existing
             } else {
@@ -97,10 +120,27 @@ class BadgeRepositoryFirestore(
   }
 
   override suspend fun updateBadgesAfterContextChange(userId: String) {
-    val ctx = getBadgeContext(userId)
-    val profileBadges = getUserBadges(userId) ?: emptyList()
-    val updatedBadges = BadgeManager.calculateBadges(UserProfile(badges = profileBadges), ctx)
-    saveBadgeProgress(userId, updatedBadges)
+    // Use mutex to ensure cache invalidation and fetch are atomic
+    // This prevents race conditions when multiple coroutines update badges simultaneously
+    updateMutex.withLock {
+      // Invalidate cache to ensure we get fresh data from Firestore
+      // This is important when multiple BadgeRepository instances exist
+      badgeContextCache.remove(userId)
+      val context = getBadgeContext(userId)
+      // Fetch the actual user profile to get all profile fields for badge calculation
+      val userProfile = userProfileRepository.getUserProfile(userId) ?: UserProfile(userId = userId)
+      val updatedBadges = BadgeManager.calculateBadges(userProfile, context)
+      saveBadgeProgress(userId, updatedBadges)
+    }
+  }
+
+  /**
+   * Clears both badge and badge context caches for a specific user. This ensures fresh data is
+   * fetched from Firestore on the next read.
+   */
+  override fun clearCache(userId: String) {
+    badgeCache.remove(userId)
+    badgeContextCache.remove(userId)
   }
 
   /**

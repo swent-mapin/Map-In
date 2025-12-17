@@ -6,10 +6,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 
@@ -80,26 +82,31 @@ class NewConversationScreenTest {
 
     every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
 
+    // 🔑 IMPORTANT: stub suspend call
+    coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
+
     var confirmed = false
 
     composeTestRule.setContent {
       NewConversationScreen(
           friendsViewModel = mockFriendsViewModel,
-          conversationViewModel = mockConversationViewModel, // inject mock
+          conversationViewModel = mockConversationViewModel,
           onConfirm = { confirmed = true })
     }
 
     composeTestRule.waitForIdle()
 
-    // Select Alice and confirm
     composeTestRule
         .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
         .performClick()
+
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
 
-    // Verify callback and repository call
-    assert(confirmed)
-    verify { mockConversationViewModel.createConversation(any()) }
+    // ⏳ wait for coroutine
+    composeTestRule.waitForIdle()
+
+    Assert.assertTrue(confirmed)
+    coVerify { mockConversationViewModel.createConversation(any()) }
   }
 
   @Test
@@ -139,13 +146,18 @@ class NewConversationScreenTest {
   @Test
   fun confirmMultipleFriends_entersGroupName_andCreatesGroup() {
     val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+
     every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+    coEvery { mockConversationViewModel.getExistingConversation(any()) } returns null
 
     var confirmed = false
 
     composeTestRule.setContent {
       NewConversationScreen(
-          friendsViewModel = mockFriendsViewModel, onConfirm = { confirmed = true })
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onConfirm = { confirmed = true })
     }
 
     // Select Alice, Bob, Charlie
@@ -159,7 +171,10 @@ class NewConversationScreenTest {
 
     // Confirm → open dialog
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
-    composeTestRule.onNodeWithText("Enter Group Name").assertIsDisplayed()
+
+    composeTestRule
+        .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
+        .assertIsDisplayed()
 
     // Enter group name
     composeTestRule.onNode(hasSetTextAction()).performTextInput("MyGroup")
@@ -167,8 +182,11 @@ class NewConversationScreenTest {
     // Press OK
     composeTestRule.onNodeWithText("OK").performClick()
 
-    // Confirm callback triggered
-    assert(confirmed)
+    // ⏳ wait for coroutine
+    composeTestRule.waitForIdle()
+
+    Assert.assertTrue(confirmed)
+    coVerify { mockConversationViewModel.createConversation(any()) }
   }
 
   @Test
@@ -185,5 +203,84 @@ class NewConversationScreenTest {
 
     composeTestRule.onNodeWithTag(NewConversationScreenTestTags.BACK_BUTTON).performClick()
     assert(backCalled)
+  }
+
+  @Test
+  fun groupNameDialog_requiresNonBlankName_toConfirm() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+
+    var confirmed = false
+
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onConfirm = { confirmed = true })
+    }
+
+    // Select Alice and Bob (group chat)
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+    composeTestRule.onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Bob").performClick()
+
+    // Confirm → should open dialog
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    // Try to confirm with empty name (should not work)
+    composeTestRule.onNodeWithText("OK").performClick()
+
+    // Should still show dialog (not confirmed because name is blank)
+    composeTestRule
+        .onNodeWithTag(NewConversationScreenTestTags.GROUP_NAME_DIALOG_TEXT)
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun confirmSingleFriend_withExistingConversation_navigatesToExisting_andDoesNotCreate() {
+    val mockFriendsViewModel = mockk<FriendsViewModel>(relaxed = true)
+    val mockConversationViewModel = mockk<ConversationViewModel>(relaxed = true)
+
+    every { mockFriendsViewModel.friends } returns MutableStateFlow(sampleFriends())
+
+    // Fake existing conversation
+    val existingConversation =
+        Conversation(
+            id = "existing-convo-id",
+            name = "Alice",
+            participantIds = listOf("currentUser", "1"),
+            participants = emptyList(),
+            profilePictureUrl = null)
+
+    // Mock UID + existing conversation lookup
+    every { mockConversationViewModel.getNewUID(any()) } returns "existing-convo-id"
+    coEvery { mockConversationViewModel.getExistingConversation("existing-convo-id") } returns
+        existingConversation
+
+    var navigatedToExisting: Conversation? = null
+
+    composeTestRule.setContent {
+      NewConversationScreen(
+          friendsViewModel = mockFriendsViewModel,
+          conversationViewModel = mockConversationViewModel,
+          onCreateExistingConversation = { convo -> navigatedToExisting = convo })
+    }
+
+    composeTestRule.waitForIdle()
+
+    // Select Alice
+    composeTestRule
+        .onNodeWithTag("${NewConversationScreenTestTags.FRIEND_ITEM}_Alice")
+        .performClick()
+
+    // Confirm
+    composeTestRule.onNodeWithTag(NewConversationScreenTestTags.CONFIRM_BUTTON).performClick()
+
+    composeTestRule.waitForIdle()
+    Assert.assertEquals(existingConversation, navigatedToExisting)
+    coVerify(exactly = 0) { mockConversationViewModel.createConversation(any()) }
   }
 }

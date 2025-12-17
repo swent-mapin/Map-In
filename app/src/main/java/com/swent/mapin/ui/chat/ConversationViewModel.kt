@@ -129,12 +129,33 @@ class ConversationViewModel(
   var currentUserProfile: UserProfile = UserProfile()
 
   /**
-   * Generates a new unique identifier for a conversation.
+   * Get a new unique identifier for a conversation.
    *
-   * @return A unique conversation ID string
+   * @param participantIds The list of participants IDs
+   * @return The generated ID
    */
-  fun getNewUID(): String {
-    return conversationRepository.getNewUid()
+  fun getNewUID(participantIds: List<String>): String {
+    return conversationRepository.getNewUid(participantIds)
+  }
+
+  fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile) {
+    viewModelScope.launch {
+      conversationRepository.joinConversation(conversationId, userId, userProfile)
+    }
+  }
+
+  /**
+   * Checks if a conversation exists and returns it if it does.
+   *
+   * @param conversationId The ID of the conversation.
+   * @return The existing [Conversation] if found, or null otherwise.
+   */
+  suspend fun getExistingConversation(conversationId: String): Conversation? {
+    return if (conversationRepository.conversationExists(conversationId)) {
+      conversationRepository.getConversationById(conversationId)
+    } else {
+      null
+    }
   }
 
   /**

@@ -137,6 +137,7 @@ fun ConversationTopBar(
 ) {
   var showMenu by remember { mutableStateOf(false) }
   var showLeaveConfirmation by remember { mutableStateOf(false) }
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
   TopAppBar(
       title = {
@@ -165,7 +166,12 @@ fun ConversationTopBar(
       navigationIcon = {
         if (onNavigateBack != null) {
           IconButton(
-              onClick = onNavigateBack,
+              onClick = {
+                if (!hasNavigatedBack) {
+                  hasNavigatedBack = true
+                  onNavigateBack()
+                }
+              },
               modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }
@@ -226,6 +232,34 @@ fun ConversationTopBar(
         })
   }
 }
+
+/** Helper composable to render the appropriate conversation top bar based on conversation type. */
+@Composable
+private fun ConversationTopBarContent(
+    conversation: Conversation?,
+    conversationName: String,
+    participantNames: List<String>?,
+    currentUserProfile: UserProfile,
+    onNavigateBack: () -> Unit,
+    onLeaveGroup: () -> Unit
+) {
+  val participantCount = conversation?.participantIds?.size ?: return
+  val isGroup = participantCount > 2
+  val profileUrl =
+      if (isGroup) conversation.profilePictureUrl
+      else
+          conversation.participants
+              .firstOrNull { it.userId != currentUserProfile.userId }
+              ?.profilePictureUrl
+  ConversationTopBar(
+      conversationName,
+      if (isGroup) participantNames else emptyList(),
+      onNavigateBack,
+      profileUrl,
+      isGroupChat = isGroup,
+      onLeaveGroup = if (isGroup) onLeaveGroup else null)
+}
+
 /**
  * Assisted by AI Functions representing the UI for conversations between users
  *
@@ -267,12 +301,9 @@ fun ConversationScreen(
 
   // Handle leave group state changes
   LaunchedEffect(leaveGroupState) {
-    when (leaveGroupState) {
-      is LeaveGroupState.Success -> {
-        conversationViewModel.resetLeaveGroupState()
-        onNavigateBack()
-      }
-      else -> {}
+    if (leaveGroupState is LeaveGroupState.Success) {
+      conversationViewModel.resetLeaveGroupState()
+      onNavigateBack()
     }
   }
 
@@ -296,26 +327,13 @@ fun ConversationScreen(
   }
   Scaffold(
       topBar = {
-        conversation?.participantIds?.size?.let {
-          // If it is a group, then use group profile picture, if not then use the other user's
-          if (it > 2) {
-            ConversationTopBar(
-                conversationName,
-                participantNames,
-                onNavigateBack,
-                conversation?.profilePictureUrl,
-                isGroupChat = true,
-                onLeaveGroup = { conversationViewModel.leaveConversation(conversationId) })
-          } else {
-            val otherParticipant =
-                conversation?.participants?.firstOrNull { it ->
-                  it.userId != currentUserProfile.userId
-                }
-            // For 1-to-1 chats, don't show participant names list at all
-            ConversationTopBar(
-                conversationName, emptyList(), onNavigateBack, otherParticipant?.profilePictureUrl)
-          }
-        }
+        ConversationTopBarContent(
+            conversation = conversation,
+            conversationName = conversationName,
+            participantNames = participantNames,
+            currentUserProfile = currentUserProfile,
+            onNavigateBack = onNavigateBack,
+            onLeaveGroup = { conversationViewModel.leaveConversation(conversationId) })
       },
       bottomBar = {
         Row(
@@ -359,14 +377,16 @@ fun ConversationScreen(
                   MessageBubble(message, sender)
                 }
               }
-          // Button to scroll down to the newest message
-          IconButton(
-              onClick = {
-                coroutineScope.launch { listState.animateScrollToItem(messages.lastIndex) }
-              },
-              modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-                Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
-              }
+          // Button to scroll down to the newest message (only if there are messages)
+          if (messages.isNotEmpty()) {
+            IconButton(
+                onClick = {
+                  coroutineScope.launch { listState.animateScrollToItem(messages.lastIndex) }
+                },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+                  Icon(Icons.Filled.ArrowDownward, contentDescription = "Scroll to bottom")
+                }
+          }
         }
       }
 
