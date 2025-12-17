@@ -36,14 +36,14 @@ Map'In transforms how students discover, attend, and remember events. Instead of
 
 ## Screenshots
 
-<!-- Add screenshots here -->
-| Home Map | Event Details | Memories | AI Assistant |
-|----------|---------------|----------|--------------|
-| *screenshot* | *screenshot* | *screenshot* | *screenshot* |
+| Event Details | Directions | Social & Badges |
+|---------------|------------|-----------------|
+| <img src="assets/sheet_details.png" width="250"/> | <img src="assets/directions.png" width="250"/> | <img src="assets/social_badge.png" width="250"/> |
+| View a variety of events | Find your way to get there | Connect with people and see their progress |
 
 ## Architecture
 
-<img src="ARCH.png" width="100%" />
+<img src="assets/ARCH.png" width="100%" />
 
 [View on Excalidraw](https://excalidraw.com/#json=eQsc-cu0dPSd0cFuJvPTc,wAq2zUT_4USJ6sP1JcGehw)
 
