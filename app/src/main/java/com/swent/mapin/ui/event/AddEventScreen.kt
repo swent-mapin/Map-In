@@ -22,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -202,12 +201,12 @@ fun AddEventScreen(
             lastKnownPoint
                 ?: manualLocation.value?.let { loc ->
                   if (loc.latitude != null && loc.longitude != null) {
-                    Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                    Point.fromLngLat(loc.longitude, loc.latitude)
                   } else null
                 }
                 ?: gotLocation.value.let { loc ->
                   if (loc.latitude != null && loc.longitude != null) {
-                    Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                    Point.fromLngLat(loc.longitude, loc.latitude)
                   } else null
                 },
         locationExpanded = locationExpanded)

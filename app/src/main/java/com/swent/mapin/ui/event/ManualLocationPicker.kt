@@ -84,7 +84,7 @@ internal fun computeStartPoint(
       ?: recenterPoint
       ?: searchResults.firstOrNull()?.let { loc ->
         if (loc.latitude != null && loc.longitude != null) {
-          Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+          Point.fromLngLat(loc.longitude, loc.latitude)
         } else null
       }
       ?: Point.fromLngLat(MapConstants.DEFAULT_LONGITUDE, MapConstants.DEFAULT_LATITUDE)
@@ -134,7 +134,7 @@ internal fun ManualLocationPickerDialog(
           Point.fromLngLat(loc.longitude, loc.latitude)
         } else null
       } ?: recenterPoint
-  var pickedPoint by remember { mutableStateOf<Point?>(initialPickedPoint) }
+  var pickedPoint by remember { mutableStateOf(initialPickedPoint) }
   val mapViewportState = rememberMapViewportState {
     setCameraOptions {
       center(startPoint)
@@ -245,7 +245,7 @@ internal fun ManualLocationPickerDialog(
                             TextButton(
                                 onClick = {
                                   if (loc.latitude != null && loc.longitude != null) {
-                                    val point = Point.fromLngLat(loc.longitude!!, loc.latitude!!)
+                                    val point = Point.fromLngLat(loc.longitude, loc.latitude)
                                     pickedPoint = point
                                     mapViewportState.setCameraOptions {
                                       center(point)
