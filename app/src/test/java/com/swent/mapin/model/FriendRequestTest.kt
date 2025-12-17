@@ -67,13 +67,12 @@ class FriendRequestTest {
   fun friendRequest_withParameters_setsCorrectValues() {
     val timestamp = Timestamp.now()
     val request =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = "user1",
-        toUserId = "user2",
-        status = FriendshipStatus.ACCEPTED,
-        timestamp = timestamp
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.ACCEPTED,
+            timestamp = timestamp)
 
     assertEquals("req123", request.requestId)
     assertEquals("user1", request.fromUserId)
@@ -85,12 +84,11 @@ class FriendRequestTest {
   @Test
   fun friendRequest_copy_createsNewInstance() {
     val original =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = "user1",
-        toUserId = "user2",
-        status = FriendshipStatus.PENDING
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING)
 
     val copy = original.copy(status = FriendshipStatus.ACCEPTED)
 
@@ -105,22 +103,20 @@ class FriendRequestTest {
   fun friendRequest_equality_worksCorrectly() {
     val timestamp = Timestamp.now()
     val request1 =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = "user1",
-        toUserId = "user2",
-        status = FriendshipStatus.PENDING,
-        timestamp = timestamp
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING,
+            timestamp = timestamp)
 
     val request2 =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = "user1",
-        toUserId = "user2",
-        status = FriendshipStatus.PENDING,
-        timestamp = timestamp
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING,
+            timestamp = timestamp)
 
     assertEquals(request1, request2)
     assertEquals(request1.hashCode(), request2.hashCode())
@@ -163,14 +159,13 @@ class FriendRequestTest {
   @Test
   fun friendWithProfile_withParameters_setsCorrectValues() {
     val userProfile =
-      UserProfile(userId = "user1", name = "Alice", bio = "Hello", location = "Paris")
+        UserProfile(userId = "user1", name = "Alice", bio = "Hello", location = "Paris")
 
     val friendWithProfile =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.ACCEPTED,
+            requestId = "req123")
 
     assertEquals(userProfile, friendWithProfile.userProfile)
     assertEquals(FriendshipStatus.ACCEPTED, friendWithProfile.friendshipStatus)
@@ -183,11 +178,10 @@ class FriendRequestTest {
   fun friendWithProfile_copy_createsNewInstance() {
     val userProfile = UserProfile(userId = "user1", name = "Alice")
     val original =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.PENDING,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.PENDING,
+            requestId = "req123")
 
     val copy = original.copy(friendshipStatus = FriendshipStatus.ACCEPTED)
 
@@ -201,18 +195,16 @@ class FriendRequestTest {
   fun friendWithProfile_equality_worksCorrectly() {
     val userProfile = UserProfile(userId = "user1", name = "Alice")
     val friend1 =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.ACCEPTED,
+            requestId = "req123")
 
     val friend2 =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.ACCEPTED,
+            requestId = "req123")
 
     assertEquals(friend1, friend2)
     assertEquals(friend1.hashCode(), friend2.hashCode())
@@ -247,21 +239,19 @@ class FriendRequestTest {
   @Test
   fun friendWithProfile_userProfileIntegration() {
     val userProfile =
-      UserProfile(
-        userId = "user1",
-        name = "Alice",
-        bio = "Developer",
-        location = "Paris",
-        hobbies = listOf("Reading", "Coding"),
-        hobbiesVisible = true
-      )
+        UserProfile(
+            userId = "user1",
+            name = "Alice",
+            bio = "Developer",
+            location = "Paris",
+            hobbies = listOf("Reading", "Coding"),
+            hobbiesVisible = true)
 
     val friendWithProfile =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.ACCEPTED,
+            requestId = "req123")
 
     assertEquals("user1", friendWithProfile.userProfile.userId)
     assertEquals("Alice", friendWithProfile.userProfile.name)
@@ -275,11 +265,10 @@ class FriendRequestTest {
   fun friendWithProfile_toString_containsAllFields() {
     val userProfile = UserProfile(userId = "user1", name = "Alice")
     val friendWithProfile =
-      FriendWithProfile(
-        userProfile = userProfile,
-        friendshipStatus = FriendshipStatus.ACCEPTED,
-        requestId = "req123"
-      )
+        FriendWithProfile(
+            userProfile = userProfile,
+            friendshipStatus = FriendshipStatus.ACCEPTED,
+            requestId = "req123")
 
     val string = friendWithProfile.toString()
     assertTrue(string.contains("userProfile"))
@@ -297,20 +286,18 @@ class FriendRequestTest {
 
     // Create initial friend request
     val request =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = fromUser.userId,
-        toUserId = toUser.userId,
-        status = FriendshipStatus.PENDING
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = fromUser.userId,
+            toUserId = toUser.userId,
+            status = FriendshipStatus.PENDING)
 
     // Create FriendWithProfile for display
     val friendWithProfile =
-      FriendWithProfile(
-        userProfile = fromUser,
-        friendshipStatus = request.status,
-        requestId = request.requestId
-      )
+        FriendWithProfile(
+            userProfile = fromUser,
+            friendshipStatus = request.status,
+            requestId = request.requestId)
 
     assertEquals(request.requestId, friendWithProfile.requestId)
     assertEquals(request.status, friendWithProfile.friendshipStatus)
@@ -320,12 +307,11 @@ class FriendRequestTest {
   @Test
   fun friendRequest_statusTransitions() {
     val request =
-      FriendRequest(
-        requestId = "req123",
-        fromUserId = "user1",
-        toUserId = "user2",
-        status = FriendshipStatus.PENDING
-      )
+        FriendRequest(
+            requestId = "req123",
+            fromUserId = "user1",
+            toUserId = "user2",
+            status = FriendshipStatus.PENDING)
 
     // Accept the request
     val accepted = request.copy(status = FriendshipStatus.ACCEPTED)
@@ -345,9 +331,8 @@ class FriendRequestTest {
   fun friendWithProfile_emptyRequestId() {
     val userProfile = UserProfile(userId = "user1", name = "Alice")
     val friendWithProfile =
-      FriendWithProfile(
-        userProfile = userProfile, friendshipStatus = FriendshipStatus.ACCEPTED, requestId = ""
-      )
+        FriendWithProfile(
+            userProfile = userProfile, friendshipStatus = FriendshipStatus.ACCEPTED, requestId = "")
 
     assertEquals("", friendWithProfile.requestId)
     assertEquals(FriendshipStatus.ACCEPTED, friendWithProfile.friendshipStatus)
@@ -356,9 +341,8 @@ class FriendRequestTest {
   @Test
   fun friendRequest_emptyUserIds() {
     val request =
-      FriendRequest(
-        requestId = "req123", fromUserId = "", toUserId = "", status = FriendshipStatus.PENDING
-      )
+        FriendRequest(
+            requestId = "req123", fromUserId = "", toUserId = "", status = FriendshipStatus.PENDING)
 
     assertEquals("", request.fromUserId)
     assertEquals("", request.toUserId)

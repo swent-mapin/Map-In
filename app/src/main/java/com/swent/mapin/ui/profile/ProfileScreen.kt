@@ -70,8 +70,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.badge.SampleBadges
+import com.swent.mapin.model.userprofile.UserProfile
 
 // Assisted by AI
 

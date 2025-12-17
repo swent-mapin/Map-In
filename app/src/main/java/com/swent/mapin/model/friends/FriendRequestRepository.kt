@@ -4,12 +4,12 @@ import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.swent.mapin.model.badge.BadgeRepository
+import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import com.swent.mapin.model.notification.NotificationResult
 import com.swent.mapin.model.notification.NotificationService
 import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.userprofile.UserProfileRepository
-import com.swent.mapin.model.badge.BadgeRepository
-import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -27,11 +27,11 @@ import kotlinx.coroutines.tasks.await
  * @property notificationService Service for sending push notifications.
  */
 class FriendRequestRepository(
-  private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-  private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
-  private val badgeRepository: BadgeRepository =
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val userProfileRepository: UserProfileRepository = UserProfileRepository(firestore),
+    private val badgeRepository: BadgeRepository =
         BadgeRepositoryFirestore(firestore, userProfileRepository),
-  private val notificationService: NotificationService
+    private val notificationService: NotificationService
 ) {
   companion object {
     private const val COLLECTION = "friendRequests"
@@ -57,9 +57,7 @@ class FriendRequestRepository(
               .collection(COLLECTION)
               .document(existingRequest.requestId)
               .update(
-                  mapOf(
-                      "status" to FriendshipStatus.PENDING.name,
-                      "timestamp" to Timestamp.now()))
+                  mapOf("status" to FriendshipStatus.PENDING.name, "timestamp" to Timestamp.now()))
               .await()
 
           // Send notification for re-requested friend request

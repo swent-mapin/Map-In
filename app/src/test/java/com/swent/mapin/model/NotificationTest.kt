@@ -32,19 +32,18 @@ class NotificationTest {
     val timestamp = Timestamp.now()
 
     val notification =
-      Notification(
-        notificationId = "notif123",
-        title = "Test Title",
-        message = "Test Message",
-        type = NotificationType.ALERT,
-        recipientId = "user123",
-        senderId = "user456",
-        readStatus = true,
-        timestamp = timestamp,
-        metadata = metadata,
-        actionUrl = "mapin://test",
-        priority = 2
-      )
+        Notification(
+            notificationId = "notif123",
+            title = "Test Title",
+            message = "Test Message",
+            type = NotificationType.ALERT,
+            recipientId = "user123",
+            senderId = "user456",
+            readStatus = true,
+            timestamp = timestamp,
+            metadata = metadata,
+            actionUrl = "mapin://test",
+            priority = 2)
 
     assertEquals("notif123", notification.notificationId)
     assertEquals("Test Title", notification.title)
@@ -160,9 +159,8 @@ class NotificationTest {
   @Test
   fun `notification can be copied with modifications`() {
     val original =
-      Notification(
-        notificationId = "notif123", title = "Original Title", message = "Original Message"
-      )
+        Notification(
+            notificationId = "notif123", title = "Original Title", message = "Original Message")
 
     val modified = original.copy(title = "Modified Title")
 

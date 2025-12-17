@@ -13,17 +13,16 @@ class UserProfileTest {
   @Test
   fun `UserProfile can be created with all parameters`() {
     val profile =
-      UserProfile(
-        userId = "user-123",
-        name = "John Doe",
-        bio = "Software developer",
-        hobbies = listOf("Reading", "Gaming", "Coding"),
-        location = "New York",
-        profilePictureUrl = "https://example.com/profile.jpg",
-        avatarUrl = "https://example.com/avatar.jpg",
-        bannerUrl = "https://example.com/banner.jpg",
-        hobbiesVisible = true
-      )
+        UserProfile(
+            userId = "user-123",
+            name = "John Doe",
+            bio = "Software developer",
+            hobbies = listOf("Reading", "Gaming", "Coding"),
+            location = "New York",
+            profilePictureUrl = "https://example.com/profile.jpg",
+            avatarUrl = "https://example.com/avatar.jpg",
+            bannerUrl = "https://example.com/banner.jpg",
+            hobbiesVisible = true)
 
     assertEquals("user-123", profile.userId)
     assertEquals("John Doe", profile.name)
@@ -69,9 +68,8 @@ class UserProfileTest {
   @Test
   fun `UserProfile copy creates new instance with modified fields`() {
     val original =
-      UserProfile(
-        userId = "user-789", name = "Original Name", bio = "Original bio", location = "London"
-      )
+        UserProfile(
+            userId = "user-789", name = "Original Name", bio = "Original bio", location = "London")
 
     val modified = original.copy(name = "Modified Name", bio = "Modified bio")
 
@@ -110,12 +108,11 @@ class UserProfileTest {
   @Test
   fun `UserProfile hobbiesVisible can be set to false`() {
     val profile =
-      UserProfile(
-        userId = "user-103",
-        name = "Private User",
-        hobbies = listOf("Secret Hobby"),
-        hobbiesVisible = false
-      )
+        UserProfile(
+            userId = "user-103",
+            name = "Private User",
+            hobbies = listOf("Secret Hobby"),
+            hobbiesVisible = false)
 
     assertFalse(profile.hobbiesVisible)
     assertEquals(listOf("Secret Hobby"), profile.hobbies)
@@ -124,13 +121,12 @@ class UserProfileTest {
   @Test
   fun `UserProfile with null optional URLs`() {
     val profile =
-      UserProfile(
-        userId = "user-104",
-        name = "User Without Images",
-        profilePictureUrl = null,
-        avatarUrl = null,
-        bannerUrl = null
-      )
+        UserProfile(
+            userId = "user-104",
+            name = "User Without Images",
+            profilePictureUrl = null,
+            avatarUrl = null,
+            bannerUrl = null)
 
     assertNull(profile.profilePictureUrl)
     assertNull(profile.avatarUrl)
@@ -140,13 +136,12 @@ class UserProfileTest {
   @Test
   fun `UserProfile with all image URLs set`() {
     val profile =
-      UserProfile(
-        userId = "user-105",
-        name = "User With Images",
-        profilePictureUrl = "https://example.com/profile.jpg",
-        avatarUrl = "https://example.com/avatar.jpg",
-        bannerUrl = "https://example.com/banner.jpg"
-      )
+        UserProfile(
+            userId = "user-105",
+            name = "User With Images",
+            profilePictureUrl = "https://example.com/profile.jpg",
+            avatarUrl = "https://example.com/avatar.jpg",
+            bannerUrl = "https://example.com/banner.jpg")
 
     assertNotNull(profile.profilePictureUrl)
     assertNotNull(profile.avatarUrl)
@@ -159,14 +154,12 @@ class UserProfileTest {
   @Test
   fun `UserProfile equality check with same data`() {
     val profile1 =
-      UserProfile(
-        userId = "user-106", name = "Test User", bio = "Test bio", location = "Test Location"
-      )
+        UserProfile(
+            userId = "user-106", name = "Test User", bio = "Test bio", location = "Test Location")
 
     val profile2 =
-      UserProfile(
-        userId = "user-106", name = "Test User", bio = "Test bio", location = "Test Location"
-      )
+        UserProfile(
+            userId = "user-106", name = "Test User", bio = "Test bio", location = "Test Location")
 
     assertEquals(profile1, profile2)
   }
@@ -174,13 +167,12 @@ class UserProfileTest {
   @Test
   fun `UserProfile toString contains all fields`() {
     val profile =
-      UserProfile(
-        userId = "user-107",
-        name = "String Test User",
-        bio = "String test bio",
-        hobbies = listOf("Hobby1"),
-        location = "Test City"
-      )
+        UserProfile(
+            userId = "user-107",
+            name = "String Test User",
+            bio = "String test bio",
+            hobbies = listOf("Hobby1"),
+            location = "Test City")
 
     val profileString = profile.toString()
 
@@ -202,13 +194,12 @@ class UserProfileTest {
   @Test
   fun `UserProfile can have special characters in fields`() {
     val profile =
-      UserProfile(
-        userId = "user-109",
-        name = "José María O'Brien-Smith",
-        bio = "Developer & Designer! @Company #Tech",
-        location = "São Paulo, Brazil 🇧🇷",
-        hobbies = listOf("Rock & Roll", "Coffee ☕", "Code++")
-      )
+        UserProfile(
+            userId = "user-109",
+            name = "José María O'Brien-Smith",
+            bio = "Developer & Designer! @Company #Tech",
+            location = "São Paulo, Brazil 🇧🇷",
+            hobbies = listOf("Rock & Roll", "Coffee ☕", "Code++"))
 
     assertEquals("José María O'Brien-Smith", profile.name)
     assertTrue(profile.bio.contains("&"))
@@ -221,17 +212,16 @@ class UserProfileTest {
   @Test
   fun `UserProfile copy preserves all unchanged fields`() {
     val original =
-      UserProfile(
-        userId = "user-110",
-        name = "Original",
-        bio = "Original bio",
-        hobbies = listOf("Hobby1", "Hobby2"),
-        location = "Original Location",
-        profilePictureUrl = "url1",
-        avatarUrl = "url2",
-        bannerUrl = "url3",
-        hobbiesVisible = false
-      )
+        UserProfile(
+            userId = "user-110",
+            name = "Original",
+            bio = "Original bio",
+            hobbies = listOf("Hobby1", "Hobby2"),
+            location = "Original Location",
+            profilePictureUrl = "url1",
+            avatarUrl = "url2",
+            bannerUrl = "url3",
+            hobbiesVisible = false)
 
     val modified = original.copy(name = "Modified")
 
@@ -248,12 +238,11 @@ class UserProfileTest {
   @Test
   fun `UserProfile can update hobbies visibility without changing hobbies`() {
     val profile =
-      UserProfile(
-        userId = "user-111",
-        name = "Visibility Test",
-        hobbies = listOf("Hobby1", "Hobby2"),
-        hobbiesVisible = true
-      )
+        UserProfile(
+            userId = "user-111",
+            name = "Visibility Test",
+            hobbies = listOf("Hobby1", "Hobby2"),
+            hobbiesVisible = true)
 
     val updated = profile.copy(hobbiesVisible = false)
 
@@ -265,7 +254,7 @@ class UserProfileTest {
   @Test
   fun `UserProfile handles empty strings correctly`() {
     val profile =
-      UserProfile(userId = "", name = "", bio = "", location = "", hobbies = emptyList())
+        UserProfile(userId = "", name = "", bio = "", location = "", hobbies = emptyList())
 
     assertEquals("", profile.userId)
     assertEquals("", profile.name)

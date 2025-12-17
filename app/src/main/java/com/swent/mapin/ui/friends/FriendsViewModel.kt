@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.friends.FriendRequestRepository
 import com.swent.mapin.model.friends.FriendWithProfile
-import com.swent.mapin.model.notification.NotificationService
 import com.swent.mapin.model.friends.SearchResultWithStatus
+import com.swent.mapin.model.notification.NotificationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

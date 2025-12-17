@@ -44,7 +44,7 @@ class NotificationRepositoryTest {
   @Test
   fun `send notification with generated ID succeeds`() = runTest {
     val notification =
-      Notification(title = "Test", message = "Test message", recipientId = "user123")
+        Notification(title = "Test", message = "Test message", recipientId = "user123")
 
     whenever(mockDocumentReference.set(any())).thenReturn(Tasks.forResult(null))
 
@@ -62,12 +62,11 @@ class NotificationRepositoryTest {
   @Test
   fun `send notification with existing ID succeeds`() = runTest {
     val notification =
-      Notification(
-        notificationId = "existing123",
-        title = "Test",
-        message = "Test message",
-        recipientId = "user123"
-      )
+        Notification(
+            notificationId = "existing123",
+            title = "Test",
+            message = "Test message",
+            recipientId = "user123")
 
     whenever(mockDocumentReference.set(any())).thenReturn(Tasks.forResult(null))
 
@@ -99,9 +98,9 @@ class NotificationRepositoryTest {
   @Test
   fun `getNotificationsForUser returns list of notifications`() = runTest {
     val notification1 =
-      Notification(notificationId = "notif1", title = "Test 1", recipientId = "user123")
+        Notification(notificationId = "notif1", title = "Test 1", recipientId = "user123")
     val notification2 =
-      Notification(notificationId = "notif2", title = "Test 2", recipientId = "user123")
+        Notification(notificationId = "notif2", title = "Test 2", recipientId = "user123")
 
     val mockDoc1 = mock(DocumentSnapshot::class.java)
     val mockDoc2 = mock(DocumentSnapshot::class.java)
@@ -288,7 +287,7 @@ class NotificationRepositoryTest {
   @Test
   fun `getNotificationsByType returns filtered notifications`() = runTest {
     val notification =
-      Notification(notificationId = "notif1", title = "Test", type = NotificationType.ALERT)
+        Notification(notificationId = "notif1", title = "Test", type = NotificationType.ALERT)
 
     val mockDoc = mock(DocumentSnapshot::class.java)
     whenever(mockDoc.toObject(Notification::class.java)).thenReturn(notification)

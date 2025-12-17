@@ -7,11 +7,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
-import com.swent.mapin.model.userprofile.UserProfile
-import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.network.ConnectivityService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import java.util.concurrent.ConcurrentLinkedQueue

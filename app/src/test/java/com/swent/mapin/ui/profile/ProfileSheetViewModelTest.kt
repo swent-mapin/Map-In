@@ -2,11 +2,11 @@ package com.swent.mapin.ui.profile
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.friends.FriendRequestRepository
 import com.swent.mapin.model.friends.FriendshipStatus
 import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.userprofile.UserProfileRepository
-import com.swent.mapin.model.event.EventRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

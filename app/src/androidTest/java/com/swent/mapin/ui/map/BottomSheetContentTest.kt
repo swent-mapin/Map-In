@@ -1433,10 +1433,10 @@ class BottomSheetContentTest {
 
   @Composable
   private fun SearchModeWithUsersContent(
-    query: String = "test",
-    userResults: List<UserProfile> = emptyList(),
-    searchResults: List<Event> = emptyList(),
-    onUserClick: (String, String) -> Unit = { _, _ -> }
+      query: String = "test",
+      userResults: List<UserProfile> = emptyList(),
+      searchResults: List<Event> = emptyList(),
+      onUserClick: (String, String) -> Unit = { _, _ -> }
   ) {
     MaterialTheme {
       BottomSheetContent(
@@ -1465,9 +1465,8 @@ class BottomSheetContentTest {
   fun peopleResultsSection_displaysUsersInFullState() {
     val testUsers =
         listOf(
-          UserProfile(userId = "user1", name = "Alice Smith"),
-          UserProfile(userId = "user2", name = "Bob Jones")
-        )
+            UserProfile(userId = "user1", name = "Alice Smith"),
+            UserProfile(userId = "user2", name = "Bob Jones"))
 
     rule.setContent { SearchModeWithUsersContent(query = "test", userResults = testUsers) }
     rule.waitForIdle()
@@ -1484,8 +1483,7 @@ class BottomSheetContentTest {
   fun userSearchCard_triggersClickCallback() {
     var clickedUserId = ""
     var clickedUserName = ""
-    val testUsers =
-        listOf(UserProfile(userId = "user123", name = "Test User"))
+    val testUsers = listOf(UserProfile(userId = "user123", name = "Test User"))
 
     rule.setContent {
       SearchModeWithUsersContent(

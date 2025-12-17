@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
-import com.swent.mapin.model.userprofile.UserProfile
-import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.model.chat.ConversationRepository
 import com.swent.mapin.model.chat.ConversationRepositoryFirestore
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
