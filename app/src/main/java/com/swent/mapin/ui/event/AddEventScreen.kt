@@ -225,24 +225,25 @@ fun AddEventScreen(
   }
 
   val fieldValidations =
-      listOf(
-          FieldValidation(
-              { titleError.value || title.value.isBlank() }, stringResource(R.string.title_field)),
-          FieldValidation(
-              { dateError.value || date.value.isBlank() }, stringResource(R.string.date_field)),
-          FieldValidation(
-              { timeError.value || time.value.isBlank() }, stringResource(R.string.time)),
-          FieldValidation({ endDateError.value || endDate.value.isBlank() }, "End date"),
-          FieldValidation({ endTimeError.value || endTime.value.isBlank() }, "End time"),
-          FieldValidation(
-              { locationError.value || location.value.isBlank() },
-              stringResource(R.string.location_field)),
-          FieldValidation(
-              { descriptionError.value || description.value.isBlank() },
-              stringResource(R.string.description_field)),
-          FieldValidation({ tagError.value }, stringResource(R.string.tag_field)),
-          FieldValidation({ priceError.value }, stringResource(R.string.price_field)),
-          FieldValidation({ capacityError.value }, stringResource(R.string.capacity_field)))
+      createFieldValidations(
+          title,
+          titleError,
+          date,
+          dateError,
+          time,
+          timeError,
+          endDate,
+          endDateError,
+          endTime,
+          endTimeError,
+          location,
+          locationError,
+          description,
+          descriptionError,
+          tagError,
+          priceError,
+          capacityError,
+          context)
 
   val error = fieldValidations.any { it.hasError() }
   val errorFields = fieldValidations.mapNotNull { if (it.hasError()) it.label else null }
@@ -267,74 +268,36 @@ fun AddEventScreen(
               isEventValid = isEventValid,
               onCancel = onCancel,
               onSave = {
-                // Show validation feedback when user attempts to save
-                showValidation.value = true
-
-                // update per-field error flags from current values so UI shows them
-                // immediately
-                titleError.value = title.value.isBlank()
-                descriptionError.value = description.value.isBlank()
-                locationError.value = location.value.isBlank()
-                dateError.value = date.value.isBlank()
-                timeError.value = time.value.isBlank()
-                endDateError.value = endDate.value.isBlank()
-                endTimeError.value = endTime.value.isBlank()
-                tagError.value = !isValidTagInput(tag.value)
-                priceError.value = !isValidPriceInput(price.value)
-                capacityError.value = !isValidCapacityInput(capacity.value)
-
-                // Run relational validation for start/end (may clear or set end errors)
-                validateStartEndLogic(
-                    date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
-
-                val nowValid = fieldValidations.none { it.hasError() } && isLoggedIn.value
-                if (!nowValid) return@EventTopBar
-
-                val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                sdf.timeZone = java.util.TimeZone.getDefault()
-                val rawTime =
-                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val rawEndTime =
-                    if (endTime.value.contains("h")) endTime.value.replace("h", "")
-                    else endTime.value
-
-                val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
-
-                if (parsedStart == null) {
-                  dateError.value = true
-                  return@EventTopBar
-                }
-                if (parsedEnd == null) {
-                  endDateError.value = true
-                  return@EventTopBar
-                }
-
-                val startTs = Timestamp(parsedStart)
-                val endTs = Timestamp(parsedEnd)
-
-                if (!endTs.toDate().after(startTs.toDate())) {
-                  // end must be strictly after start
-                  // mark end date invalid (don't force changing time)
-                  endDateError.value = true
-                  endTimeError.value = false
-                  return@EventTopBar
-                }
-
-                eventViewModel.saveEvent(
-                    context,
-                    title.value,
-                    description.value,
-                    gotLocation.value,
-                    startTs,
-                    endTs,
-                    Firebase.auth.currentUser?.uid,
-                    extractTags(tag.value),
-                    isPublic.value,
-                    onDone,
-                    price.value.toDoubleOrNull() ?: 0.0,
-                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
-                    mediaUri.value)
+                handleAddEventSave(
+                    showValidation = showValidation,
+                    titleError = titleError,
+                    title = title,
+                    descriptionError = descriptionError,
+                    description = description,
+                    locationError = locationError,
+                    location = location,
+                    dateError = dateError,
+                    date = date,
+                    timeError = timeError,
+                    time = time,
+                    endDateError = endDateError,
+                    endDate = endDate,
+                    endTimeError = endTimeError,
+                    endTime = endTime,
+                    tagError = tagError,
+                    tag = tag,
+                    priceError = priceError,
+                    price = price,
+                    capacityError = capacityError,
+                    capacity = capacity,
+                    fieldValidations = fieldValidations,
+                    isLoggedIn = isLoggedIn,
+                    eventViewModel = eventViewModel,
+                    context = context,
+                    gotLocation = gotLocation,
+                    isPublic = isPublic,
+                    onDone = onDone,
+                    mediaUri = mediaUri)
               })
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
@@ -432,4 +395,183 @@ fun AddEventScreen(
           }
         }
   }
+}
+
+private fun createFieldValidations(
+    title: MutableState<String>,
+    titleError: MutableState<Boolean>,
+    date: MutableState<String>,
+    dateError: MutableState<Boolean>,
+    time: MutableState<String>,
+    timeError: MutableState<Boolean>,
+    endDate: MutableState<String>,
+    endDateError: MutableState<Boolean>,
+    endTime: MutableState<String>,
+    endTimeError: MutableState<Boolean>,
+    location: MutableState<String>,
+    locationError: MutableState<Boolean>,
+    description: MutableState<String>,
+    descriptionError: MutableState<Boolean>,
+    tagError: MutableState<Boolean>,
+    priceError: MutableState<Boolean>,
+    capacityError: MutableState<Boolean>,
+    context: android.content.Context
+): List<FieldValidation> {
+  return listOf(
+      FieldValidation(
+          { titleError.value || title.value.isBlank() },
+          context.getString(R.string.title_field)),
+      FieldValidation(
+          { dateError.value || date.value.isBlank() }, context.getString(R.string.date_field)),
+      FieldValidation({ timeError.value || time.value.isBlank() }, context.getString(R.string.time)),
+      FieldValidation({ endDateError.value || endDate.value.isBlank() }, "End date"),
+      FieldValidation({ endTimeError.value || endTime.value.isBlank() }, "End time"),
+      FieldValidation(
+          { locationError.value || location.value.isBlank() },
+          context.getString(R.string.location_field)),
+      FieldValidation(
+          { descriptionError.value || description.value.isBlank() },
+          context.getString(R.string.description_field)),
+      FieldValidation({ tagError.value }, context.getString(R.string.tag_field)),
+      FieldValidation({ priceError.value }, context.getString(R.string.price_field)),
+      FieldValidation({ capacityError.value }, context.getString(R.string.capacity_field)))
+}
+
+private fun handleAddEventSave(
+    showValidation: MutableState<Boolean>,
+    titleError: MutableState<Boolean>,
+    title: MutableState<String>,
+    descriptionError: MutableState<Boolean>,
+    description: MutableState<String>,
+    locationError: MutableState<Boolean>,
+    location: MutableState<String>,
+    dateError: MutableState<Boolean>,
+    date: MutableState<String>,
+    timeError: MutableState<Boolean>,
+    time: MutableState<String>,
+    endDateError: MutableState<Boolean>,
+    endDate: MutableState<String>,
+    endTimeError: MutableState<Boolean>,
+    endTime: MutableState<String>,
+    tagError: MutableState<Boolean>,
+    tag: MutableState<String>,
+    priceError: MutableState<Boolean>,
+    price: MutableState<String>,
+    capacityError: MutableState<Boolean>,
+    capacity: MutableState<String>,
+    fieldValidations: List<FieldValidation>,
+    isLoggedIn: MutableState<Boolean>,
+    eventViewModel: EventViewModel,
+    context: android.content.Context,
+    gotLocation: MutableState<Location>,
+    isPublic: MutableState<Boolean>,
+    onDone: () -> Unit,
+    mediaUri: MutableState<Uri?>
+) {
+  // Show validation feedback when user attempts to save
+  showValidation.value = true
+
+  // update per-field error flags from current values so UI shows them immediately
+  updateFieldErrors(
+      titleError, title, descriptionError, description, locationError, location,
+      dateError, date, timeError, time, endDateError, endDate, endTimeError, endTime,
+      tagError, tag, priceError, price, capacityError, capacity)
+
+  // Run relational validation for start/end (may clear or set end errors)
+  validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+
+  val nowValid = fieldValidations.none { it.hasError() } && isLoggedIn.value
+  if (!nowValid) return
+
+  val timestamps = parseEventTimestamps(date.value, time.value, endDate.value, endTime.value)
+  if (timestamps == null) {
+    if (timestamps == null) dateError.value = true
+    return
+  }
+
+  val (startTs, endTs) = timestamps
+  
+  if (!validateEndAfterStart(startTs, endTs, endDateError, endTimeError)) return
+
+  eventViewModel.saveEvent(
+      context,
+      title.value,
+      description.value,
+      gotLocation.value,
+      startTs,
+      endTs,
+      Firebase.auth.currentUser?.uid,
+      extractTags(tag.value),
+      isPublic.value,
+      onDone,
+      price.value.toDoubleOrNull() ?: 0.0,
+      capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
+      mediaUri.value)
+}
+
+private fun updateFieldErrors(
+    titleError: MutableState<Boolean>,
+    title: MutableState<String>,
+    descriptionError: MutableState<Boolean>,
+    description: MutableState<String>,
+    locationError: MutableState<Boolean>,
+    location: MutableState<String>,
+    dateError: MutableState<Boolean>,
+    date: MutableState<String>,
+    timeError: MutableState<Boolean>,
+    time: MutableState<String>,
+    endDateError: MutableState<Boolean>,
+    endDate: MutableState<String>,
+    endTimeError: MutableState<Boolean>,
+    endTime: MutableState<String>,
+    tagError: MutableState<Boolean>,
+    tag: MutableState<String>,
+    priceError: MutableState<Boolean>,
+    price: MutableState<String>,
+    capacityError: MutableState<Boolean>,
+    capacity: MutableState<String>
+) {
+  titleError.value = title.value.isBlank()
+  descriptionError.value = description.value.isBlank()
+  locationError.value = location.value.isBlank()
+  dateError.value = date.value.isBlank()
+  timeError.value = time.value.isBlank()
+  endDateError.value = endDate.value.isBlank()
+  endTimeError.value = endTime.value.isBlank()
+  tagError.value = !isValidTagInput(tag.value)
+  priceError.value = !isValidPriceInput(price.value)
+  capacityError.value = !isValidCapacityInput(capacity.value)
+}
+
+private fun parseEventTimestamps(
+    date: String,
+    time: String,
+    endDate: String,
+    endTime: String
+): Pair<Timestamp, Timestamp>? {
+  val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+  sdf.timeZone = java.util.TimeZone.getDefault()
+  
+  val rawTime = if (time.contains("h")) time.replace("h", "") else time
+  val rawEndTime = if (endTime.contains("h")) endTime.replace("h", "") else endTime
+
+  val parsedStart = runCatching { sdf.parse(date + rawTime) }.getOrNull() ?: return null
+  val parsedEnd = runCatching { sdf.parse(endDate + rawEndTime) }.getOrNull() ?: return null
+
+  return Pair(Timestamp(parsedStart), Timestamp(parsedEnd))
+}
+
+private fun validateEndAfterStart(
+    startTs: Timestamp,
+    endTs: Timestamp,
+    endDateError: MutableState<Boolean>,
+    endTimeError: MutableState<Boolean>
+): Boolean {
+  if (!endTs.toDate().after(startTs.toDate())) {
+    // end must be strictly after start
+    endDateError.value = true
+    endTimeError.value = false
+    return false
+  }
+  return true
 }

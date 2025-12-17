@@ -371,242 +371,256 @@ internal fun ProfileInfoCard(
 /** Edit mode: displays editable text fields for profile information. */
 @Composable
 internal fun EditProfileContent(viewModel: ProfileViewModel) {
-
   Card(
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(20.dp),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier =
-                    Modifier.size(28.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center) {
-                  Icon(
-                      imageVector = Icons.Default.Edit,
-                      contentDescription = null,
-                      tint = MaterialTheme.colorScheme.onPrimary,
-                      modifier = Modifier.size(14.dp))
-                }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Edit Profile",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary)
-          }
+          EditProfileHeader()
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          OutlinedTextField(
-              value = viewModel.editName,
-              onValueChange = { viewModel.updateEditName(it) },
-              label = { Text("Name", fontWeight = FontWeight.SemiBold) },
-              leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = Color(0xFF667eea),
-                    modifier = Modifier.size(20.dp))
-              },
-              modifier = Modifier.fillMaxWidth().testTag("editNameField"),
-              singleLine = true,
-              shape = RoundedCornerShape(12.dp),
-              colors =
-                  OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor =
-                          if (viewModel.nameError != null) Color(0xFFef5350) else Color(0xFF667eea),
-                      unfocusedBorderColor =
-                          if (viewModel.nameError != null) Color(0xFFef5350)
-                          else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                      focusedLabelColor =
-                          if (viewModel.nameError != null) Color(0xFFef5350)
-                          else Color(0xFF667eea)),
-              isError = viewModel.nameError != null,
-              supportingText =
-                  if (viewModel.nameError != null) {
-                    {
-                      Text(
-                          text = viewModel.nameError!!,
-                          color = Color(0xFFef5350),
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-                  } else null)
+          EditNameField(viewModel = viewModel)
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          OutlinedTextField(
-              value = viewModel.editBio,
-              onValueChange = { viewModel.updateEditBio(it) },
-              label = { Text("Bio", fontWeight = FontWeight.SemiBold) },
-              leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Face,
-                    contentDescription = null,
-                    tint = Color(0xFFfa709a),
-                    modifier = Modifier.size(20.dp))
-              },
-              modifier = Modifier.fillMaxWidth().height(120.dp).testTag("editBioField"),
-              minLines = 4,
-              maxLines = 4,
-              shape = RoundedCornerShape(12.dp),
-              colors =
-                  OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor =
-                          if (viewModel.bioError != null) Color(0xFFef5350) else Color(0xFFfa709a),
-                      unfocusedBorderColor =
-                          if (viewModel.bioError != null) Color(0xFFef5350)
-                          else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                      focusedLabelColor =
-                          if (viewModel.bioError != null) Color(0xFFef5350) else Color(0xFFfa709a)),
-              isError = viewModel.bioError != null,
-              supportingText =
-                  if (viewModel.bioError != null) {
-                    {
-                      Text(
-                          text = viewModel.bioError!!,
-                          color = Color(0xFFef5350),
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-                  } else null)
+          EditBioField(viewModel = viewModel)
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          OutlinedTextField(
-              value = viewModel.editLocation,
-              onValueChange = { viewModel.updateEditLocation(it) },
-              label = { Text("Location", fontWeight = FontWeight.SemiBold) },
-              leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = null,
-                    tint = Color(0xFF30cfd0),
-                    modifier = Modifier.size(20.dp))
-              },
-              modifier = Modifier.fillMaxWidth().testTag("editLocationField"),
-              singleLine = true,
-              shape = RoundedCornerShape(12.dp),
-              colors =
-                  OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor =
-                          if (viewModel.locationError != null) Color(0xFFef5350)
-                          else Color(0xFF30cfd0),
-                      unfocusedBorderColor =
-                          if (viewModel.locationError != null) Color(0xFFef5350)
-                          else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                      focusedLabelColor =
-                          if (viewModel.locationError != null) Color(0xFFef5350)
-                          else Color(0xFF30cfd0)),
-              isError = viewModel.locationError != null,
-              supportingText =
-                  if (viewModel.locationError != null) {
-                    {
-                      Text(
-                          text = viewModel.locationError!!,
-                          color = Color(0xFFef5350),
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-                  } else null)
+          EditLocationField(viewModel = viewModel)
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          OutlinedTextField(
-              value = viewModel.editHobbies,
-              onValueChange = { viewModel.updateEditHobbies(it) },
-              label = { Text("Hobbies", fontWeight = FontWeight.SemiBold) },
-              leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.FavoriteBorder,
-                    contentDescription = null,
-                    tint = Color(0xFFf5576c),
-                    modifier = Modifier.size(20.dp))
-              },
-              modifier = Modifier.fillMaxWidth().testTag("editHobbiesField"),
-              minLines = 1,
-              maxLines = 1,
-              placeholder = { Text("e.g., Music, Sports") },
-              shape = RoundedCornerShape(12.dp),
-              colors =
-                  OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor =
-                          if (viewModel.hobbiesError != null) Color(0xFFef5350)
-                          else Color(0xFFf5576c),
-                      unfocusedBorderColor =
-                          if (viewModel.hobbiesError != null) Color(0xFFef5350)
-                          else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                      focusedLabelColor =
-                          if (viewModel.hobbiesError != null) Color(0xFFef5350)
-                          else Color(0xFFf5576c)),
-              isError = viewModel.hobbiesError != null,
-              supportingText =
-                  if (viewModel.hobbiesError != null) {
-                    {
-                      Text(
-                          text = viewModel.hobbiesError!!,
-                          color = Color(0xFFef5350),
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-                  } else null)
+          EditHobbiesField(viewModel = viewModel)
 
           Spacer(modifier = Modifier.height(12.dp))
 
           Spacer(modifier = Modifier.height(16.dp))
 
-          // Action buttons with gradient backgrounds
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { viewModel.cancelEditing() },
-                    modifier = Modifier.weight(1f).height(40.dp).testTag("cancelButton"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
-                      Text(
-                          "Cancel",
-                          fontWeight = FontWeight.Bold,
-                          style = MaterialTheme.typography.bodySmall)
-                    }
-
-                // Save button with solid background
-                Box(
-                    modifier =
-                        Modifier.weight(1f)
-                            .height(40.dp)
-                            .shadow(6.dp, RoundedCornerShape(12.dp))
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primary)) {
-                      Button(
-                          onClick = { viewModel.saveProfile() },
-                          modifier = Modifier.fillMaxSize().testTag("saveButton"),
-                          shape = RoundedCornerShape(12.dp),
-                          colors =
-                              ButtonDefaults.buttonColors(
-                                  containerColor = Color.Transparent, contentColor = Color.White)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center) {
-                                  Icon(
-                                      imageVector = Icons.Default.Check,
-                                      contentDescription = null,
-                                      tint = Color.White,
-                                      modifier = Modifier.size(14.dp))
-                                  Spacer(modifier = Modifier.width(4.dp))
-                                  Text(
-                                      "Save",
-                                      fontWeight = FontWeight.Bold,
-                                      style = MaterialTheme.typography.bodySmall,
-                                      color = MaterialTheme.colorScheme.onPrimary)
-                                }
-                          }
-                    }
-              }
+          EditProfileActionButtons(viewModel = viewModel)
         }
       }
 }
+
+@Composable
+private fun EditProfileHeader() {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+        contentAlignment = Alignment.Center) {
+          Icon(
+              imageVector = Icons.Default.Edit,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.onPrimary,
+              modifier = Modifier.size(14.dp))
+        }
+    Spacer(modifier = Modifier.width(8.dp))
+    Text(
+        text = "Edit Profile",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary)
+  }
+}
+
+@Composable
+private fun EditNameField(viewModel: ProfileViewModel) {
+  OutlinedTextField(
+      value = viewModel.editName,
+      onValueChange = { viewModel.updateEditName(it) },
+      label = { Text("Name", fontWeight = FontWeight.SemiBold) },
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Person,
+            contentDescription = null,
+            tint = Color(0xFF667eea),
+            modifier = Modifier.size(20.dp))
+      },
+      modifier = Modifier.fillMaxWidth().testTag("editNameField"),
+      singleLine = true,
+      shape = RoundedCornerShape(12.dp),
+      colors =
+          OutlinedTextFieldDefaults.colors(
+              focusedBorderColor =
+                  if (viewModel.nameError != null) Color(0xFFef5350) else Color(0xFF667eea),
+              unfocusedBorderColor =
+                  if (viewModel.nameError != null) Color(0xFFef5350)
+                  else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+              focusedLabelColor =
+                  if (viewModel.nameError != null) Color(0xFFef5350) else Color(0xFF667eea)),
+      isError = viewModel.nameError != null,
+      supportingText =
+          if (viewModel.nameError != null) {
+            {
+              Text(
+                  text = viewModel.nameError!!,
+                  color = Color(0xFFef5350),
+                  style = MaterialTheme.typography.bodySmall)
+            }
+          } else null)
+}
+
+@Composable
+private fun EditBioField(viewModel: ProfileViewModel) {
+  OutlinedTextField(
+      value = viewModel.editBio,
+      onValueChange = { viewModel.updateEditBio(it) },
+      label = { Text("Bio", fontWeight = FontWeight.SemiBold) },
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Face,
+            contentDescription = null,
+            tint = Color(0xFFfa709a),
+            modifier = Modifier.size(20.dp))
+      },
+      modifier = Modifier.fillMaxWidth().height(120.dp).testTag("editBioField"),
+      minLines = 4,
+      maxLines = 4,
+      shape = RoundedCornerShape(12.dp),
+      colors =
+          OutlinedTextFieldDefaults.colors(
+              focusedBorderColor =
+                  if (viewModel.bioError != null) Color(0xFFef5350) else Color(0xFFfa709a),
+              unfocusedBorderColor =
+                  if (viewModel.bioError != null) Color(0xFFef5350)
+                  else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+              focusedLabelColor =
+                  if (viewModel.bioError != null) Color(0xFFef5350) else Color(0xFFfa709a)),
+      isError = viewModel.bioError != null,
+      supportingText =
+          if (viewModel.bioError != null) {
+            {
+              Text(
+                  text = viewModel.bioError!!,
+                  color = Color(0xFFef5350),
+                  style = MaterialTheme.typography.bodySmall)
+            }
+          } else null)
+}
+
+@Composable
+private fun EditLocationField(viewModel: ProfileViewModel) {
+  OutlinedTextField(
+      value = viewModel.editLocation,
+      onValueChange = { viewModel.updateEditLocation(it) },
+      label = { Text("Location", fontWeight = FontWeight.SemiBold) },
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = null,
+            tint = Color(0xFF30cfd0),
+            modifier = Modifier.size(20.dp))
+      },
+      modifier = Modifier.fillMaxWidth().testTag("editLocationField"),
+      singleLine = true,
+      shape = RoundedCornerShape(12.dp),
+      colors =
+          OutlinedTextFieldDefaults.colors(
+              focusedBorderColor =
+                  if (viewModel.locationError != null) Color(0xFFef5350) else Color(0xFF30cfd0),
+              unfocusedBorderColor =
+                  if (viewModel.locationError != null) Color(0xFFef5350)
+                  else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+              focusedLabelColor =
+                  if (viewModel.locationError != null) Color(0xFFef5350) else Color(0xFF30cfd0)),
+      isError = viewModel.locationError != null,
+      supportingText =
+          if (viewModel.locationError != null) {
+            {
+              Text(
+                  text = viewModel.locationError!!,
+                  color = Color(0xFFef5350),
+                  style = MaterialTheme.typography.bodySmall)
+            }
+          } else null)
+}
+
+@Composable
+private fun EditHobbiesField(viewModel: ProfileViewModel) {
+  OutlinedTextField(
+      value = viewModel.editHobbies,
+      onValueChange = { viewModel.updateEditHobbies(it) },
+      label = { Text("Hobbies", fontWeight = FontWeight.SemiBold) },
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.FavoriteBorder,
+            contentDescription = null,
+            tint = Color(0xFFf5576c),
+            modifier = Modifier.size(20.dp))
+      },
+      modifier = Modifier.fillMaxWidth().testTag("editHobbiesField"),
+      minLines = 1,
+      maxLines = 1,
+      placeholder = { Text("e.g., Music, Sports") },
+      shape = RoundedCornerShape(12.dp),
+      colors =
+          OutlinedTextFieldDefaults.colors(
+              focusedBorderColor =
+                  if (viewModel.hobbiesError != null) Color(0xFFef5350) else Color(0xFFf5576c),
+              unfocusedBorderColor =
+                  if (viewModel.hobbiesError != null) Color(0xFFef5350)
+                  else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+              focusedLabelColor =
+                  if (viewModel.hobbiesError != null) Color(0xFFef5350) else Color(0xFFf5576c)),
+      isError = viewModel.hobbiesError != null,
+      supportingText =
+          if (viewModel.hobbiesError != null) {
+            {
+              Text(
+                  text = viewModel.hobbiesError!!,
+                  color = Color(0xFFef5350),
+                  style = MaterialTheme.typography.bodySmall)
+            }
+          } else null)
+}
+
+@Composable
+private fun EditProfileActionButtons(viewModel: ProfileViewModel) {
+  // Action buttons with gradient backgrounds
+  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    OutlinedButton(
+        onClick = { viewModel.cancelEditing() },
+        modifier = Modifier.weight(1f).height(40.dp).testTag("cancelButton"),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
+          Text(
+              "Cancel",
+              fontWeight = FontWeight.Bold,
+              style = MaterialTheme.typography.bodySmall)
+        }
+
+    // Save button with solid background
+    Box(
+        modifier =
+            Modifier.weight(1f)
+                .height(40.dp)
+                .shadow(6.dp, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary)) {
+          Button(
+              onClick = { viewModel.saveProfile() },
+              modifier = Modifier.fillMaxSize().testTag("saveButton"),
+              shape = RoundedCornerShape(12.dp),
+              colors =
+                  ButtonDefaults.buttonColors(
+                      containerColor = Color.Transparent, contentColor = Color.White)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center) {
+                      Icon(
+                          imageVector = Icons.Default.Check,
+                          contentDescription = null,
+                          tint = Color.White,
+                          modifier = Modifier.size(14.dp))
+                      Spacer(modifier = Modifier.width(4.dp))
+                      Text(
+                          "Save",
+                          fontWeight = FontWeight.Bold,
+
+
 
 /** Data class for avatar options */
 data class AvatarOption(val id: String, val icon: ImageVector)

@@ -182,78 +182,34 @@ fun EditEventScreen(
               isEventValid = isEventValid,
               onCancel = onCancel,
               onSave = {
-                // Show validation feedback when user attempts to save
-                showValidation.value = true
-
-                // update per-field error flags from current values so UI shows them
-                // immediately
-                titleError.value = title.value.isBlank()
-                descriptionError.value = description.value.isBlank()
-                locationError.value = location.value.isBlank()
-                dateError.value = date.value.isBlank()
-                timeError.value = time.value.isBlank()
-                endDateError.value = endDate.value.isBlank()
-                endTimeError.value = endTime.value.isBlank()
-                tagError.value = !isValidTagInput(tag.value)
-                priceError.value = !isValidPriceInput(price.value)
-
-                // Run relational validation for start/end (may clear or set end errors)
-                validateStartEnd()
-
-                // compute validity based on flags (fresh values)
-                val nowValid =
-                    !(titleError.value ||
-                        descriptionError.value ||
-                        locationError.value ||
-                        dateError.value ||
-                        timeError.value ||
-                        endDateError.value ||
-                        endTimeError.value ||
-                        tagError.value ||
-                        priceError.value) && isLoggedIn.value
-                if (!nowValid) return@EventTopBar
-
-                val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
-                sdf.timeZone = TimeZone.getDefault()
-                val rawTime =
-                    if (time.value.contains("h")) time.value.replace("h", "") else time.value
-                val rawEndTime =
-                    if (endTime.value.contains("h")) endTime.value.replace("h", "")
-                    else endTime.value
-
-                val parsedStart = runCatching { sdf.parse(date.value + rawTime) }.getOrNull()
-                val parsedEnd = runCatching { sdf.parse(endDate.value + rawEndTime) }.getOrNull()
-
-                if (parsedStart == null) {
-                  dateError.value = true
-                  return@EventTopBar
-                }
-                if (parsedEnd == null) {
-                  endDateError.value = true
-                  return@EventTopBar
-                }
-
-                val startTs = Timestamp(parsedStart)
-                val endTs = Timestamp(parsedEnd)
-
-                if (!endTs.toDate().after(startTs.toDate())) {
-                  // end must be strictly after start
-                  // mark end date invalid (don't force changing time)
-                  endDateError.value = true
-                  endTimeError.value = false
-                  return@EventTopBar
-                }
-                eventViewModel.saveEditedEvent(
-                    originalEvent = event,
+                handleEditEventSave(
+                    showValidation = showValidation,
+                    titleError = titleError,
+                    title = title,
+                    descriptionError = descriptionError,
+                    description = description,
+                    locationError = locationError,
+                    location = location,
+                    dateError = dateError,
+                    date = date,
+                    timeError = timeError,
+                    time = time,
+                    endDateError = endDateError,
+                    endDate = endDate,
+                    endTimeError = endTimeError,
+                    endTime = endTime,
+                    tagError = tagError,
+                    tag = tag,
+                    priceError = priceError,
+                    price = price,
+                    validateStartEnd = { validateStartEnd() },
+                    isLoggedIn = isLoggedIn,
+                    eventViewModel = eventViewModel,
+                    event = event,
                     context = context,
-                    title = title.value,
-                    description = description.value,
-                    location = gotLocation.value,
-                    startTs = startTs,
-                    endTs = endTs,
-                    tagsString = tag.value,
-                    onSuccess = { onDone() },
-                    mediaUri = mediaUri.value)
+                    gotLocation = gotLocation,
+                    onDone = onDone,
+                    mediaUri = mediaUri)
               })
 
           // Prominent validation banner shown right after the top bar when user attempted to save
@@ -295,4 +251,146 @@ fun EditEventScreen(
               modifier = Modifier.padding(bottom = 8.dp))
         }
   }
+}
+
+private fun handleEditEventSave(
+    showValidation: MutableState<Boolean>,
+    titleError: MutableState<Boolean>,
+    title: MutableState<String>,
+    descriptionError: MutableState<Boolean>,
+    description: MutableState<String>,
+    locationError: MutableState<Boolean>,
+    location: MutableState<String>,
+    dateError: MutableState<Boolean>,
+    date: MutableState<String>,
+    timeError: MutableState<Boolean>,
+    time: MutableState<String>,
+    endDateError: MutableState<Boolean>,
+    endDate: MutableState<String>,
+    endTimeError: MutableState<Boolean>,
+    endTime: MutableState<String>,
+    tagError: MutableState<Boolean>,
+    tag: MutableState<String>,
+    priceError: MutableState<Boolean>,
+    price: MutableState<String>,
+    validateStartEnd: () -> Unit,
+    isLoggedIn: MutableState<Boolean>,
+    eventViewModel: EventViewModel,
+    event: Event,
+    context: android.content.Context,
+    gotLocation: MutableState<Location>,
+    onDone: () -> Unit,
+    mediaUri: MutableState<Uri?>
+) {
+  // Show validation feedback when user attempts to save
+  showValidation.value = true
+
+  // update per-field error flags from current values so UI shows them immediately
+  updateEditFieldErrors(
+      titleError, title, descriptionError, description, locationError, location,
+      dateError, date, timeError, time, endDateError, endDate, endTimeError, endTime,
+      tagError, tag, priceError, price)
+
+  // Run relational validation for start/end (may clear or set end errors)
+  validateStartEnd()
+
+  // compute validity based on flags (fresh values)
+  val nowValid =
+      !(titleError.value ||
+          descriptionError.value ||
+          locationError.value ||
+          dateError.value ||
+          timeError.value ||
+          endDateError.value ||
+          endTimeError.value ||
+          tagError.value ||
+          priceError.value) && isLoggedIn.value
+  if (!nowValid) return
+
+  val timestamps = parseEditTimestamps(date.value, time.value, endDate.value, endTime.value)
+  if (timestamps == null) {
+    if (timestamps == null) dateError.value = true
+    return
+  }
+
+  val (startTs, endTs) = timestamps
+
+  if (!validateEditEndAfterStart(startTs, endTs, endDateError, endTimeError)) return
+
+  eventViewModel.saveEditedEvent(
+      originalEvent = event,
+      context = context,
+      title = title.value,
+      description = description.value,
+      location = gotLocation.value,
+      startTs = startTs,
+      endTs = endTs,
+      tagsString = tag.value,
+      onSuccess = { onDone() },
+      mediaUri = mediaUri.value)
+}
+
+private fun updateEditFieldErrors(
+    titleError: MutableState<Boolean>,
+    title: MutableState<String>,
+    descriptionError: MutableState<Boolean>,
+    description: MutableState<String>,
+    locationError: MutableState<Boolean>,
+    location: MutableState<String>,
+    dateError: MutableState<Boolean>,
+    date: MutableState<String>,
+    timeError: MutableState<Boolean>,
+    time: MutableState<String>,
+    endDateError: MutableState<Boolean>,
+    endDate: MutableState<String>,
+    endTimeError: MutableState<Boolean>,
+    endTime: MutableState<String>,
+    tagError: MutableState<Boolean>,
+    tag: MutableState<String>,
+    priceError: MutableState<Boolean>,
+    price: MutableState<String>
+) {
+  titleError.value = title.value.isBlank()
+  descriptionError.value = description.value.isBlank()
+  locationError.value = location.value.isBlank()
+  dateError.value = date.value.isBlank()
+  timeError.value = time.value.isBlank()
+  endDateError.value = endDate.value.isBlank()
+  endTimeError.value = endTime.value.isBlank()
+  tagError.value = !isValidTagInput(tag.value)
+  priceError.value = !isValidPriceInput(price.value)
+}
+
+private fun parseEditTimestamps(
+    date: String,
+    time: String,
+    endDate: String,
+    endTime: String
+): Pair<Timestamp, Timestamp>? {
+  val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
+  sdf.timeZone = TimeZone.getDefault()
+
+  val rawTime = if (time.contains("h")) time.replace("h", "") else time
+  val rawEndTime = if (endTime.contains("h")) endTime.replace("h", "") else endTime
+
+  val parsedStart = runCatching { sdf.parse(date + rawTime) }.getOrNull() ?: return null
+  val parsedEnd = runCatching { sdf.parse(endDate + rawEndTime) }.getOrNull() ?: return null
+
+  return Pair(Timestamp(parsedStart), Timestamp(parsedEnd))
+}
+
+private fun validateEditEndAfterStart(
+    startTs: Timestamp,
+    endTs: Timestamp,
+    endDateError: MutableState<Boolean>,
+    endTimeError: MutableState<Boolean>
+): Boolean {
+  if (!endTs.toDate().after(startTs.toDate())) {
+    // end must be strictly after start
+    // mark end date invalid (don't force changing time)
+    endDateError.value = true
+    endTimeError.value = false
+    return false
+  }
+  return true
 }
