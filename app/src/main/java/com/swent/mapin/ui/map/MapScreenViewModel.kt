@@ -98,6 +98,11 @@ class MapScreenViewModel(
 
   private var authListener: FirebaseAuth.AuthStateListener? = null
   private var downloadCompleteDismissJob: Job? = null
+
+  companion object {
+    private const val TAG = "MapScreenViewModel"
+    private const val DOWNLOAD_COMPLETE_DISMISS_DELAY_MS = 3000L
+  }
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
@@ -146,7 +151,7 @@ class MapScreenViewModel(
 
   private val eventBasedOfflineRegionManager: EventBasedOfflineRegionManager? by lazy {
     if (!enableEventBasedDownloads) {
-      Log.w("MapScreenViewModel", "Event-based downloads disabled")
+      Log.w(TAG, "Event-based downloads disabled")
       return@lazy null
     }
     try {
@@ -169,13 +174,13 @@ class MapScreenViewModel(
               downloadCompleteDismissJob?.cancel()
               downloadCompleteDismissJob =
                   viewModelScope.launch {
-                    kotlinx.coroutines.delay(3000)
+                    kotlinx.coroutines.delay(DOWNLOAD_COMPLETE_DISMISS_DELAY_MS)
                     _showDownloadComplete = false
                   }
             }
           })
     } catch (e: Exception) {
-      Log.w("MapScreenViewModel", "EventBasedOfflineRegionManager not available", e)
+      Log.w(TAG, "EventBasedOfflineRegionManager not available", e)
       null
     }
   }
@@ -450,10 +455,10 @@ class MapScreenViewModel(
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
         Log.w(
-            "MapScreenViewModel",
+            TAG,
             "Event-based offline downloads and deletions started for user: $userId")
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to start event-based offline downloads", e)
+        Log.e(TAG, "Failed to start event-based offline downloads", e)
       }
     }
   }
@@ -478,7 +483,7 @@ class MapScreenViewModel(
             }
       }
     } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to load map style preference: ${e.message}")
+      Log.e(TAG, "Failed to load map style preference: ${e.message}")
       _mapStyle = MapStyle.STANDARD
     }
   }
@@ -639,7 +644,7 @@ class MapScreenViewModel(
             }
         preferencesRepository.setMapStyle(styleString)
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to save map style preference: ${e.message}")
+        Log.e(TAG, "Failed to save map style preference: ${e.message}")
       }
     }
   }
@@ -665,7 +670,7 @@ class MapScreenViewModel(
         val userProfile = userProfileRepository.getUserProfile(uid)
         _avatarUrl = userProfile?.avatarUrl
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Error loading user profile", e)
+        Log.e(TAG, "Error loading user profile", e)
         _avatarUrl = null
       }
     }
@@ -678,7 +683,7 @@ class MapScreenViewModel(
         TileStoreManagerProvider.getInstance()
         // TileStore is initialized in the provider's getInstance()
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Failed to initialize TileStore", e)
+        Log.e(TAG, "Failed to initialize TileStore", e)
         withContext(mainDispatcher) { _errorMessage = "Failed to initialize offline map storage" }
       }
     }
@@ -759,7 +764,7 @@ class MapScreenViewModel(
       eventBasedOfflineRegionManager?.stopObserving()
       downloadCompleteDismissJob?.cancel()
     } catch (e: Exception) {
-      Log.e("MapScreenViewModel", "Failed to cancel offline download", e)
+      Log.e(TAG, "Failed to cancel offline download", e)
     }
 
     // Remove auth listener to avoid leaks
@@ -842,7 +847,7 @@ class MapScreenViewModel(
               OrganizerState.Error
             }
       } catch (e: Exception) {
-        Log.e("MapScreenViewModel", "Error loading organizer profile", e)
+        Log.e(TAG, "Error loading organizer profile", e)
         _organizerState = OrganizerState.Error
       }
     }
@@ -925,7 +930,7 @@ class MapScreenViewModel(
     deepLinkFetchAttempted = true
     return withContext(ioDispatcher) {
       runCatching { eventRepository.getEvent(eventId) }
-          .onFailure { Log.i("MapScreenViewModel", "Deep link event not found: $eventId", it) }
+          .onFailure { Log.i(TAG, "Deep link event not found: $eventId", it) }
           .getOrNull()
     }
   }
