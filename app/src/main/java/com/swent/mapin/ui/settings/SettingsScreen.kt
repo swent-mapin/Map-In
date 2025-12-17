@@ -70,7 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.PreferencesRepositoryProvider
+import com.swent.mapin.model.preferences.PreferencesRepositoryProvider
 import com.swent.mapin.ui.components.StandardTopAppBar
 import com.swent.mapin.util.BiometricAuthManager
 import kotlinx.coroutines.launch

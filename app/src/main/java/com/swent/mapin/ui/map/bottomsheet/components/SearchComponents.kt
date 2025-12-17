@@ -63,8 +63,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.search.RecentItem
 

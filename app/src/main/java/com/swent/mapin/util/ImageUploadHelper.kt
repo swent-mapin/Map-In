@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.util
 
 import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage

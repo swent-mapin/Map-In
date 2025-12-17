@@ -6,14 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.NotificationService
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.model.notifications.NotificationService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import kotlinx.coroutines.launch
 
 /**

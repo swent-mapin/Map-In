@@ -5,7 +5,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import com.swent.mapin.model.FriendshipStatus
+import com.swent.mapin.model.friends.FriendshipStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,6 +1,7 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.friends
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.userprofile.UserProfile
 
 /** Represents the status of a friendship or friend request. */
 enum class FriendshipStatus {

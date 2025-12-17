@@ -12,9 +12,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.NotificationService
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeContext
 import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.event.FirestoreSchema.EVENTS_COLLECTION_PATH
@@ -22,6 +19,9 @@ import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.notifications.NotificationService
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.util.TimeUtils
 import java.time.ZoneOffset

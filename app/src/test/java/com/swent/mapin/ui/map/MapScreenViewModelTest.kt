@@ -5,8 +5,6 @@ import android.content.SharedPreferences
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.location.Location
@@ -15,6 +13,8 @@ import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.model.network.ConnectivityState
 import com.swent.mapin.model.network.NetworkType
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel

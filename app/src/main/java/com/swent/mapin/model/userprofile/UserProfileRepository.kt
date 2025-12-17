@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.userprofile
 
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow

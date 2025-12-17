@@ -12,7 +12,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.swent.mapin.MainActivity
 import com.swent.mapin.R
-import com.swent.mapin.model.NotificationType
+import com.swent.mapin.model.notifications.NotificationType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

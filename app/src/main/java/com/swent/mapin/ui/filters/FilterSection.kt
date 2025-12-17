@@ -36,9 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.model.userprofile.UserProfile
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.ZoneId

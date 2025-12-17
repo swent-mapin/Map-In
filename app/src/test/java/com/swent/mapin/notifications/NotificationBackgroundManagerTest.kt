@@ -4,7 +4,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import com.google.firebase.messaging.RemoteMessage
-import com.swent.mapin.model.NotificationType
+import com.swent.mapin.model.notifications.NotificationType
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test

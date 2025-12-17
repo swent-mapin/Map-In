@@ -1,8 +1,8 @@
 package com.swent.mapin.model.badge
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

@@ -1,6 +1,9 @@
 package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.notifications.Notification
+import com.swent.mapin.model.notifications.NotificationResult
+import com.swent.mapin.model.notifications.NotificationType
 import org.junit.Assert.*
 import org.junit.Test
 

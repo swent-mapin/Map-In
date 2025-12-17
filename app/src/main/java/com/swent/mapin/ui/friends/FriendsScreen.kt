@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.SearchResultWithStatus
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.SearchResultWithStatus
 
 /**
  * Main Friends screen composable.

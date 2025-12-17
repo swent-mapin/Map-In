@@ -1,7 +1,6 @@
 package com.swent.mapin.model
 
 import com.google.android.gms.tasks.Tasks
-import com.google.firebase.firestore.*
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -10,7 +9,15 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.swent.mapin.model.badge.BadgeRepository
-import io.mockk.*
+import com.swent.mapin.model.friends.FriendRequest
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.model.notifications.Notification
+import com.swent.mapin.model.notifications.NotificationResult
+import com.swent.mapin.model.notifications.NotificationService
+import com.swent.mapin.model.notifications.NotificationType
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

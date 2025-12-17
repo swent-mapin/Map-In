@@ -5,7 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import com.swent.mapin.util.HashUtils.hashUserIds
 import kotlinx.coroutines.channels.awaitClose

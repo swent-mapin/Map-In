@@ -2,11 +2,11 @@ package com.swent.mapin.model.event
 
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.NotificationService
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.BadgeRepositoryFirestore
 import com.swent.mapin.model.event.EventRepositoryProvider.getRepository
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.notifications.NotificationService
+import com.swent.mapin.model.userprofile.UserProfileRepository
 
 /** Provider for [EventRepository] implementations to allow easy swapping between data sources. */
 object EventRepositoryProvider {
