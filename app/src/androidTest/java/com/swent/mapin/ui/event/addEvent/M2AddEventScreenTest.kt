@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
 import com.swent.mapin.model.location.LocationRepository
@@ -192,25 +193,13 @@ class M2AddEventScreenTest {
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
     compose.waitForIdle()
 
-    // Close the keyboard to ensure save button is visible on smaller CI screens
+    // Close keyboard to ensure UI is accessible
     Espresso.closeSoftKeyboard()
     compose.waitForIdle()
 
-    // Don't interact with location field - it opens a dropdown that interferes with save button
-    // This test validates date/time missing fields, not location behavior
-
-    // Ensure the save button is visible before clicking
-    compose.waitUntil(timeoutMillis = 10000) {
-      runCatching {
-            compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).assertIsDisplayed()
-            true
-          }
-          .getOrDefault(false)
-    }
-
+    // Use performScrollTo to ensure save button is accessible regardless of screen size/keyboard
+    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo()
     compose.waitForIdle()
-
-    // Click Save - missing date/time should trigger error banner
     compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
     compose.waitForIdle()
 
