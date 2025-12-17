@@ -112,31 +112,22 @@ class ChangePasswordViewModel(private val repository: ChangePasswordRepository) 
     }
 
     // Validate new password requirements
-    if (newPassword.isBlank()) {
-      validationErrors = validationErrors.copy(newPasswordError = "New password is required")
-      hasErrors = true
-    } else if (newPassword.length < 8) {
-      validationErrors =
-          validationErrors.copy(newPasswordError = "Password must be at least 8 characters long")
-      hasErrors = true
-    } else if (!newPassword.any { it.isUpperCase() }) {
-      validationErrors =
-          validationErrors.copy(
-              newPasswordError = "Password must contain at least one uppercase letter")
-      hasErrors = true
-    } else if (!newPassword.any { it.isLowerCase() }) {
-      validationErrors =
-          validationErrors.copy(
-              newPasswordError = "Password must contain at least one lowercase letter")
-      hasErrors = true
-    } else if (!newPassword.any { it.isDigit() }) {
-      validationErrors =
-          validationErrors.copy(newPasswordError = "Password must contain at least one number")
-      hasErrors = true
-    } else if (!newPassword.any { !it.isLetterOrDigit() }) {
-      validationErrors =
-          validationErrors.copy(
-              newPasswordError = "Password must contain at least one special character")
+    val newPasswordError =
+        when {
+          newPassword.isBlank() -> "New password is required"
+          newPassword.length < 8 -> "Password must be at least 8 characters long"
+          !newPassword.any { it.isUpperCase() } ->
+              "Password must contain at least one uppercase letter"
+          !newPassword.any { it.isLowerCase() } ->
+              "Password must contain at least one lowercase letter"
+          !newPassword.any { it.isDigit() } -> "Password must contain at least one number"
+          !newPassword.any { !it.isLetterOrDigit() } ->
+              "Password must contain at least one special character"
+          else -> null
+        }
+
+    if (newPasswordError != null) {
+      validationErrors = validationErrors.copy(newPasswordError = newPasswordError)
       hasErrors = true
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.mapbox.geojson.Point
 import com.swent.mapin.R
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
@@ -89,6 +91,8 @@ fun AddEventTextField(
     isPrice: Boolean = false,
     isCapacity: Boolean = false,
     isTag: Boolean = false,
+    locationValidator: ((String) -> Boolean)? = null,
+    locationSuggestions: List<Location> = emptyList(),
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
 ) {
@@ -98,17 +102,20 @@ fun AddEventTextField(
       value = textField.value,
       onValueChange = {
         textField.value = it
-        if (isLocation) {
-          locationQuery()
-        } else if (isTag) {
-          error.value = !isValidTagInput(it)
-        } else if (isPrice) {
-          error.value = !isValidPriceInput(it)
-        } else if (isCapacity) {
-          error.value = !isValidCapacityInput(it)
-        } else {
-          error.value = textField.value.isBlank()
-        }
+        error.value =
+            when {
+              isLocation -> {
+                locationQuery()
+                val isValid =
+                    locationValidator?.invoke(textField.value)
+                        ?: isValidLocation(textField.value, locationSuggestions)
+                !isValid
+              }
+              isTag -> !isValidTagInput(it)
+              isPrice -> !isValidPriceInput(it)
+              isCapacity -> !isValidCapacityInput(it)
+              else -> textField.value.isBlank()
+            }
       },
       isError = error.value,
       placeholder = { Text(placeholderString, fontSize = 14.sp) },
@@ -126,6 +133,25 @@ fun AddEventTextField(
  * @param onCancel callback triggered when the user cancels the event creation
  * @param onDone callback triggered when the user is done with the event creation
  */
+private fun computeDialogRecenterPoint(
+    lastKnownPoint: Point?,
+    manualLocation: Location?,
+    fallbackLocation: Location
+): Point? {
+  lastKnownPoint?.let {
+    return it
+  }
+  manualLocation?.let { loc ->
+    if (loc.latitude != null && loc.longitude != null) {
+      return Point.fromLngLat(loc.longitude, loc.latitude)
+    }
+  }
+  if (fallbackLocation.latitude != null && fallbackLocation.longitude != null) {
+    return Point.fromLngLat(fallbackLocation.longitude, fallbackLocation.latitude)
+  }
+  return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -161,7 +187,38 @@ fun AddEventScreen(
 
   val locationExpanded = remember { mutableStateOf(false) }
   val gotLocation = remember { mutableStateOf(Location.UNDEFINED) }
+  val manualLocation = remember { mutableStateOf<Location?>(null) }
+  val showLocationPicker = remember { mutableStateOf(false) }
   val locations by locationViewModel.locations.collectAsState()
+  val context = LocalContext.current
+  val lastKnownPoint = getLastKnownUserPoint(context)
+
+  if (showLocationPicker.value) {
+    ManualLocationPickerDialog(
+        initialLocation = manualLocation.value ?: gotLocation.value,
+        onDismiss = { showLocationPicker.value = false },
+        onLocationPicked = { picked ->
+          manualLocation.value = picked
+          gotLocation.value = picked
+          val label = formatPinnedLocationLabel(picked.latitude!!, picked.longitude!!)
+          location.value = label
+          locationError.value = false
+          locationExpanded.value = false
+          showLocationPicker.value = false
+        },
+        searchResults = locations,
+        onSearchQuery = { query -> locationViewModel.onQueryChanged(query) },
+        onSearchResultSelect = { loc ->
+          manualLocation.value = loc
+          gotLocation.value = loc
+          location.value = loc.name ?: formatPinnedLocationLabel(loc.latitude!!, loc.longitude!!)
+          locationError.value = false
+          locationExpanded.value = false
+        },
+        recenterPoint =
+            computeDialogRecenterPoint(lastKnownPoint, manualLocation.value, gotLocation.value),
+        locationExpanded = locationExpanded)
+  }
 
   val fieldValidations =
       listOf(
@@ -298,6 +355,11 @@ fun AddEventScreen(
               gotLocation = gotLocation,
               locationExpanded = locationExpanded,
               locationViewModel = locationViewModel,
+              manualLocation = manualLocation,
+              onPickLocationOnMap = {
+                locationExpanded.value = false
+                showLocationPicker.value = true
+              },
               description = description,
               descriptionError = descriptionError,
               tag = tag,

@@ -1,5 +1,6 @@
 package com.swent.mapin.model.badge
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.model.userprofile.UserProfileRepository
@@ -36,6 +37,7 @@ class BadgeRepositoryFirestore(
 ) : BadgeRepository {
 
   companion object {
+    private const val TAG = "BadgeRepositoryFirestore"
     private const val COLLECTION_USERS = "users"
     private const val FIELD_BADGES = "badges"
     private const val FIELD_BADGE_CONTEXT = "badgeContext"
@@ -59,11 +61,10 @@ class BadgeRepositoryFirestore(
             .update(FIELD_BADGE_CONTEXT, context)
             .await()
         badgeContextCache[userId] = context
-        println("Saved BadgeContext for user $userId: $context")
+        Log.d(TAG, "Saved BadgeContext for user $userId: $context")
         true
       } catch (e: Exception) {
-        println("Error saving BadgeContext: ${e.message}")
-        e.printStackTrace()
+        Log.e(TAG, "Error saving BadgeContext for user $userId", e)
         false
       }
     } ?: false
@@ -86,7 +87,7 @@ class BadgeRepositoryFirestore(
             // to deserialize the entire document, causing field mapping issues when the document
             // structure contained additional fields beyond BadgeContext properties
             @Suppress("UNCHECKED_CAST")
-            val badgeContextData = doc.get(FIELD_BADGE_CONTEXT) as? Map<String, Any>
+            val badgeContextData = doc[FIELD_BADGE_CONTEXT] as? Map<String, Any>
 
             if (badgeContextData != null) {
               val existing =
@@ -104,12 +105,12 @@ class BadgeRepositoryFirestore(
               val defaultCtx = BadgeContext()
               saveBadgeContext(userId, defaultCtx)
               badgeContextCache[userId] = defaultCtx
-              println("Created missing BadgeContext for legacy user $userId")
+              Log.d(TAG, "Created missing BadgeContext for legacy user $userId")
               defaultCtx
             }
           } else {
             val defaultCtx = BadgeContext()
-            println("User document missing for $userId — returning default BadgeContext")
+            Log.w(TAG, "User document missing for $userId — returning default BadgeContext")
             defaultCtx
           }
 
@@ -161,12 +162,10 @@ class BadgeRepositoryFirestore(
         // Update cache on successful save
         badgeCache[userId] = badges
 
-        println(
-            "BadgeRepositoryFirestore - Successfully saved ${badges.size} badges for user $userId")
+        Log.d(TAG, "Successfully saved ${badges.size} badges for user $userId")
         true
       } catch (e: Exception) {
-        println("BadgeRepositoryFirestore - Error saving badges: ${e.message}")
-        e.printStackTrace()
+        Log.e(TAG, "Error saving badges for user $userId", e)
         false
       }
     } ?: false // Handle null return from executeWithRetry
@@ -184,7 +183,7 @@ class BadgeRepositoryFirestore(
   override suspend fun getUserBadges(userId: String): List<Badge>? {
     // Check cache first
     badgeCache[userId]?.let {
-      println("BadgeRepositoryFirestore - Returning cached badges for user $userId")
+      Log.d(TAG, "Returning cached badges for user $userId")
       return it
     }
 
@@ -194,7 +193,7 @@ class BadgeRepositoryFirestore(
 
         if (document.exists()) {
           @Suppress("UNCHECKED_CAST")
-          val badgesData = document.get(FIELD_BADGES) as? List<Map<String, Any>>
+          val badgesData = document[FIELD_BADGES] as? List<Map<String, Any>>
 
           val badges =
               badgesData?.mapNotNull { badgeMap ->
@@ -208,7 +207,7 @@ class BadgeRepositoryFirestore(
                       isUnlocked = badgeMap["isUnlocked"] as? Boolean ?: false,
                       progress = (badgeMap["progress"] as? Number)?.toFloat() ?: 0f)
                 } catch (e: Exception) {
-                  println("BadgeRepositoryFirestore - Error parsing badge: ${e.message}")
+                  Log.e(TAG, "Error parsing badge from Firestore data", e)
                   null
                 }
               } ?: emptyList()
@@ -218,15 +217,14 @@ class BadgeRepositoryFirestore(
             badgeCache[userId] = badges
           }
 
-          println("BadgeRepositoryFirestore - Retrieved ${badges.size} badges for user $userId")
+          Log.d(TAG, "Retrieved ${badges.size} badges for user $userId")
           badges
         } else {
-          println("BadgeRepositoryFirestore - No document found for user $userId")
+          Log.w(TAG, "No document found for user $userId")
           null
         }
       } catch (e: Exception) {
-        println("BadgeRepositoryFirestore - Error retrieving badges: ${e.message}")
-        e.printStackTrace()
+        Log.e(TAG, "Error retrieving badges for user $userId", e)
         null
       }
     }
@@ -269,8 +267,7 @@ class BadgeRepositoryFirestore(
         // Save back to Firestore
         saveBadgeProgress(userId, updatedBadges)
       } catch (e: Exception) {
-        println("BadgeRepositoryFirestore - Error updating badge unlock status: ${e.message}")
-        e.printStackTrace()
+        Log.e(TAG, "Error updating badge unlock status for user $userId, badge $badgeId", e)
         false
       }
     } ?: false // Handle null return from executeWithRetry
@@ -288,10 +285,10 @@ class BadgeRepositoryFirestore(
     repeat(MAX_RETRIES) { attempt ->
       try {
         return operation()
-      } catch (_: Exception) {
+      } catch (e: Exception) {
         if (attempt == MAX_RETRIES - 1) {
           // Last attempt failed, give up
-          println("BadgeRepositoryFirestore - Operation failed after $MAX_RETRIES attempts")
+          Log.w(TAG, "Operation failed after $MAX_RETRIES attempts", e)
           return null
         }
         // Wait before retrying (exponential backoff: 100ms, 200ms, 400ms)

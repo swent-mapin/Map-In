@@ -122,7 +122,7 @@ class AndroidSpeechToTextService(private val context: Context) : SpeechToTextSer
         override fun onResults(results: Bundle?) {
           listening = false
           val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-          if (matches != null && matches.isNotEmpty()) {
+          if (!matches.isNullOrEmpty()) {
             currentOnResult?.let { callback -> safeInvokeCallback { callback(matches[0]) } }
           } else {
             currentOnError?.let { callback ->

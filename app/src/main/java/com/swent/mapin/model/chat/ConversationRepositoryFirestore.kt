@@ -174,7 +174,7 @@ class ConversationRepositoryFirestore(
       val conversationRef = db.collection("conversations").document(conversationId)
 
       db.runTransaction { transaction ->
-            val docSnapshot = transaction.get(conversationRef)
+            val docSnapshot = transaction[conversationRef]
             val conversation =
                 docSnapshot.toObject(Conversation::class.java) ?: return@runTransaction
 

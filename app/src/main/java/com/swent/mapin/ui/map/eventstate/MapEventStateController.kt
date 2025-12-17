@@ -47,6 +47,7 @@ enum class EventLists {
 
 /** Anti spam debounce */
 const val ANTI_SPAM_DEBOUNCE: Long = 500
+private const val USER_PROFILE_NOT_FOUND = "User profile not found"
 
 typealias TimeProvider = () -> Long
 
@@ -203,66 +204,82 @@ class MapEventStateController(
     try {
       while (offlineActionQueue.isNotEmpty()) {
         val action = offlineActionQueue.first()
-        var success = false
-        var attempts = 0
-        val maxAttempts = 5
+        val success = processActionWithRetry(action)
 
-        while (attempts < maxAttempts && !success) {
-          attempts++
-          try {
-            when (action) {
-              is OfflineAction.LeaveEvent -> {
-                try {
-                  eventRepository.editEventAsUser(action.eventId, action.userId, join = false)
-                  success = true
-                } catch (e: Exception) {
-                  if (e.message?.contains("Event not found") == true) {
-                    success = true
-                  } else {
-                    throw e
-                  }
-                }
-              }
-              is OfflineAction.SaveEvent -> {
-                val userProfile =
-                    userProfileRepository.getUserProfile(action.userId)
-                        ?: throw Exception("User profile not found")
-                val updatedSavedEventIds = userProfile.savedEventIds + action.eventId
-                val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
-                userProfileRepository.saveUserProfile(updatedProfile)
-                success = true
-              }
-              is OfflineAction.UnsaveEvent -> {
-                val userProfile =
-                    userProfileRepository.getUserProfile(action.userId)
-                        ?: throw Exception("User profile not found")
-                val updatedSavedEventIds = userProfile.savedEventIds - action.eventId
-                val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
-                userProfileRepository.saveUserProfile(updatedProfile)
-                success = true
-              }
-            }
-          } catch (_: Exception) {
-            if (attempts >= maxAttempts) {
-              // Max attempts reached - revert optimistic update
-              revertOfflineAction(action)
-              failedActions.add(action)
-            }
-          }
+        if (!success) {
+          revertOfflineAction(action)
+          failedActions.add(action)
         }
 
         // Remove action from queue if successful or max attempts reached
         offlineActionQueue.poll()
       }
 
-      // Refresh lists after processing queue
-      if (failedActions.isEmpty()) {
-        refreshEventsList()
-      } else {
-        setErrorMessage("Some offline actions could not be synced")
-      }
+      handleOfflineResults(failedActions)
     } finally {
       isProcessingQueue = false
+    }
+  }
+
+  private suspend fun processActionWithRetry(action: OfflineAction, maxAttempts: Int = 5): Boolean {
+    repeat(maxAttempts) { attempt ->
+      try {
+        if (runOfflineAction(action)) return true
+      } catch (_: Exception) {
+        if (attempt == maxAttempts - 1) {
+          return false
+        }
+      }
+    }
+    return false
+  }
+
+  private suspend fun runOfflineAction(action: OfflineAction): Boolean {
+    return when (action) {
+      is OfflineAction.LeaveEvent -> handleLeaveEvent(action)
+      is OfflineAction.SaveEvent -> handleSaveEvent(action)
+      is OfflineAction.UnsaveEvent -> handleUnsaveEvent(action)
+    }
+  }
+
+  private suspend fun handleLeaveEvent(action: OfflineAction.LeaveEvent): Boolean {
+    return try {
+      eventRepository.editEventAsUser(action.eventId, action.userId, join = false)
+      true
+    } catch (e: Exception) {
+      if (e.message?.contains("Event not found") == true) {
+        true
+      } else {
+        throw e
+      }
+    }
+  }
+
+  private suspend fun handleSaveEvent(action: OfflineAction.SaveEvent): Boolean {
+    val userProfile =
+        userProfileRepository.getUserProfile(action.userId)
+            ?: throw Exception(USER_PROFILE_NOT_FOUND)
+    val updatedSavedEventIds = userProfile.savedEventIds + action.eventId
+    val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
+    userProfileRepository.saveUserProfile(updatedProfile)
+    return true
+  }
+
+  private suspend fun handleUnsaveEvent(action: OfflineAction.UnsaveEvent): Boolean {
+    val userProfile =
+        userProfileRepository.getUserProfile(action.userId)
+            ?: throw Exception(USER_PROFILE_NOT_FOUND)
+    val updatedSavedEventIds = userProfile.savedEventIds - action.eventId
+    val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
+    userProfileRepository.saveUserProfile(updatedProfile)
+    return true
+  }
+
+  private fun handleOfflineResults(failedActions: List<OfflineAction>) {
+    if (failedActions.isEmpty()) {
+      refreshEventsList()
+    } else {
+      setErrorMessage("Some offline actions could not be synced")
     }
   }
 
@@ -746,7 +763,7 @@ class MapEventStateController(
     try {
       val userProfile =
           userProfileRepository.getUserProfile(currentUserId)
-              ?: throw Exception("User profile not found")
+              ?: throw Exception(USER_PROFILE_NOT_FOUND)
       val updatedSavedEventIds = userProfile.savedEventIds + event.uid
       val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
       userProfileRepository.saveUserProfile(updatedProfile)
@@ -793,7 +810,7 @@ class MapEventStateController(
     try {
       val userProfile =
           userProfileRepository.getUserProfile(currentUserId)
-              ?: throw Exception("User profile not found")
+              ?: throw Exception(USER_PROFILE_NOT_FOUND)
       val updatedSavedEventIds = userProfile.savedEventIds - event.uid
       val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
       userProfileRepository.saveUserProfile(updatedProfile)

@@ -1,12 +1,17 @@
 package com.swent.mapin.util
 
 import android.net.Uri
+import android.util.Log
 import com.google.firebase.storage.FirebaseStorage
 import java.util.UUID
 import kotlinx.coroutines.tasks.await
 
 /** Helper class for uploading images to Firebase Storage */
 class ImageUploadHelper(private val storage: FirebaseStorage = FirebaseStorage.getInstance()) {
+
+  companion object {
+    private const val TAG = "ImageUploadHelper"
+  }
 
   /**
    * Upload an image to Firebase Storage
@@ -28,7 +33,7 @@ class ImageUploadHelper(private val storage: FirebaseStorage = FirebaseStorage.g
       val downloadUrl = storageRef.downloadUrl.await()
       downloadUrl.toString()
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to upload image for user $userId", e)
       null
     }
   }
@@ -50,7 +55,7 @@ class ImageUploadHelper(private val storage: FirebaseStorage = FirebaseStorage.g
         true
       }
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Failed to delete image: $imageUrl", e)
       false
     }
   }

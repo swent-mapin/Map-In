@@ -1,5 +1,6 @@
 package com.swent.mapin.model.userprofile
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -19,6 +20,7 @@ class UserProfileRepository(
 ) {
 
   companion object {
+    private const val TAG = "UserProfileRepository"
     private const val COLLECTION_USERS = "users"
   }
 
@@ -33,7 +35,7 @@ class UserProfileRepository(
         null
       }
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Error fetching user profile for userId: $userId", e)
       null
     }
   }
@@ -44,16 +46,15 @@ class UserProfileRepository(
    */
   suspend fun saveUserProfile(profile: UserProfile): Boolean {
     return try {
-      println("UserProfileRepository - Attempting to save profile for userId: ${profile.userId}")
-      println("UserProfileRepository - Profile data: $profile")
+      Log.d(TAG, "Attempting to save profile for userId: ${profile.userId}")
+      Log.d(TAG, "Profile data: $profile")
 
       firestore.collection(COLLECTION_USERS).document(profile.userId).set(profile).await()
 
-      println("UserProfileRepository - Profile saved successfully")
+      Log.d(TAG, "Profile saved successfully")
       true
     } catch (e: Exception) {
-      println("UserProfileRepository - Error saving profile: ${e.message}")
-      e.printStackTrace()
+      Log.e(TAG, "Error saving profile for userId: ${profile.userId}", e)
       false
     }
   }
@@ -147,7 +148,7 @@ class UserProfileRepository(
           .await()
       true
     } catch (e: Exception) {
-      e.printStackTrace()
+      Log.e(TAG, "Error updating follow status for user $currentUserId to $targetUserId", e)
       false
     }
   }
@@ -190,7 +191,7 @@ class UserProfileRepository(
             emit(users)
           }
           .catch { e ->
-            e.printStackTrace()
+            Log.e(TAG, "Error searching users with query: $query", e)
             emit(emptyList())
           }
 }

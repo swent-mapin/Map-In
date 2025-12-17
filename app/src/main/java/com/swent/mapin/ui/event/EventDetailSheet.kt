@@ -645,56 +645,60 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
 
   val startDate = start.toDate()
   // Treat end equal to start as no end
-  val endDateRaw = end?.toDate()
-  val endDate = if (endDateRaw != null && endDateRaw.time == startDate.time) null else endDateRaw
+  val endDate = end?.toDate()?.takeUnless { it.time == startDate.time }
 
   val calStart = Calendar.getInstance(zone, locale).apply { time = startDate }
-  // Determine if we should show year for single events
-  val currentYear = Calendar.getInstance(zone, locale).get(Calendar.YEAR)
-  val startYear = calStart.get(Calendar.YEAR)
-  val showYearSingle = startYear != currentYear
-
-  // For ranges, when endDate is non-null create a calEnd and compare
-  val sameYearRange: Boolean
-  val sameDayRange: Boolean
-  if (endDate != null) {
-    val calEndLocal = Calendar.getInstance(zone, locale).apply { time = endDate }
-    sameYearRange = calStart.get(Calendar.YEAR) == calEndLocal.get(Calendar.YEAR)
-    sameDayRange =
-        sameYearRange && calStart.get(Calendar.DAY_OF_YEAR) == calEndLocal.get(Calendar.DAY_OF_YEAR)
-  } else {
-    sameYearRange = false
-    sameDayRange = false
-  }
+  val currentYear = Calendar.getInstance(zone, locale)[Calendar.YEAR]
+  val showYearSingle = calStart[Calendar.YEAR] != currentYear
 
   val dateFmtNoYear = SimpleDateFormat("MMM d", locale).apply { timeZone = zone }
   val dateFmtWithYear = SimpleDateFormat("MMM d, yyyy", locale).apply { timeZone = zone }
+  val timeFormatter = timeShortFormatter(zone)
 
-  // 24-hour format always showing minutes (e.g., 13:00 or 13:30)
-  fun timeShort(date: Date, tz: TimeZone = TimeZone.getDefault()): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.ROOT).apply { timeZone = tz }
-    return sdf.format(date)
+  if (endDate == null) {
+    return buildSingleDate(startDate, showYearSingle, dateFmtNoYear, dateFmtWithYear, timeFormatter)
   }
 
-  return if (endDate == null) {
-    // Single time
-    val dateStr =
-        if (showYearSingle) dateFmtWithYear.format(startDate) else dateFmtNoYear.format(startDate)
-    "$dateStr, ${timeShort(startDate)}"
+  val calEnd = Calendar.getInstance(zone, locale).apply { time = endDate }
+  val sameYearRange = calStart[Calendar.YEAR] == calEnd[Calendar.YEAR]
+  val sameDayRange = sameYearRange && calStart.isSameDay(calEnd)
+
+  return if (sameDayRange) {
+    val dateStr = dateFmtNoYear.format(startDate) // same day -> no year needed
+    "$dateStr, ${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}"
   } else {
-    // Range
-    if (sameDayRange) {
-      val dateStr = dateFmtNoYear.format(startDate) // same day -> no year needed
-      "$dateStr, ${timeShort(startDate)} - ${timeShort(endDate)}"
-    } else {
-      // determine if start/end are same year
-      val startStr =
-          if (sameYearRange) dateFmtNoYear.format(startDate) else dateFmtWithYear.format(startDate)
-      val endStr =
-          if (sameYearRange) dateFmtNoYear.format(endDate) else dateFmtWithYear.format(endDate)
-      "$startStr, ${timeShort(startDate)} - $endStr, ${timeShort(endDate)}"
-    }
+    val startStr = formatDateForRange(startDate, sameYearRange, dateFmtNoYear, dateFmtWithYear)
+    val endStr = formatDateForRange(endDate, sameYearRange, dateFmtNoYear, dateFmtWithYear)
+    "$startStr, ${timeFormatter.format(startDate)} - $endStr, ${timeFormatter.format(endDate)}"
   }
+}
+
+private fun formatDateForRange(
+    date: Date,
+    sameYearRange: Boolean,
+    dateFmtNoYear: SimpleDateFormat,
+    dateFmtWithYear: SimpleDateFormat
+): String {
+  return if (sameYearRange) dateFmtNoYear.format(date) else dateFmtWithYear.format(date)
+}
+
+private fun buildSingleDate(
+    startDate: Date,
+    showYear: Boolean,
+    dateFmtNoYear: SimpleDateFormat,
+    dateFmtWithYear: SimpleDateFormat,
+    timeFormatter: SimpleDateFormat
+): String {
+  val dateStr = if (showYear) dateFmtWithYear.format(startDate) else dateFmtNoYear.format(startDate)
+  return "$dateStr, ${timeFormatter.format(startDate)}"
+}
+
+private fun Calendar.isSameDay(other: Calendar): Boolean {
+  return this[Calendar.DAY_OF_YEAR] == other[Calendar.DAY_OF_YEAR]
+}
+
+private fun timeShortFormatter(tz: TimeZone): SimpleDateFormat {
+  return SimpleDateFormat("HH:mm", Locale.ROOT).apply { timeZone = tz }
 }
 
 @VisibleForTesting
@@ -709,11 +713,11 @@ internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String
   val calEnd = endDate?.let { Calendar.getInstance().apply { time = it } }
 
   // For ranges, only compare year/day if calEnd is provided
-  val sameYearRange = calEnd != null && calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR)
+  val sameYearRange = calEnd != null && calStart[Calendar.YEAR] == calEnd[Calendar.YEAR]
   val sameDayRange =
       calEnd != null &&
           sameYearRange &&
-          calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
+          calStart[Calendar.DAY_OF_YEAR] == calEnd[Calendar.DAY_OF_YEAR]
 
   val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.US)
 

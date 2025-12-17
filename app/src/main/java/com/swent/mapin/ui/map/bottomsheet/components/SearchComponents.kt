@@ -58,9 +58,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
@@ -279,121 +282,170 @@ fun SearchBar(
   var isFocused by remember { mutableStateOf(false) }
   val profileVisible = !isFocused && !isSearchMode
   val fieldHeight = TextFieldDefaults.MinHeight
-  var textFieldValueState by remember {
-    mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(value))
-  }
+  var textFieldValueState by remember { mutableStateOf(TextFieldValue(value)) }
 
-  // Update text field value when value changes, preserving cursor at end
-  LaunchedEffect(value) {
-    if (textFieldValueState.text != value) {
-      textFieldValueState =
-          androidx.compose.ui.text.input.TextFieldValue(
-              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
-    }
-  }
-
-  // When focus is gained and there's text, move cursor to end
-  LaunchedEffect(isFocused, value) {
-    if (isFocused && value.isNotEmpty() && textFieldValueState.selection.start == 0) {
-      textFieldValueState =
-          androidx.compose.ui.text.input.TextFieldValue(
-              text = value, selection = androidx.compose.ui.text.TextRange(value.length))
-    }
-  }
+  SyncTextFieldValue(value, textFieldValueState) { textFieldValueState = it }
+  MoveCursorToEndOnFocus(isFocused, value, textFieldValueState) { textFieldValueState = it }
 
   Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-    TextField(
+    SearchInputField(
         value = textFieldValueState,
-        onValueChange = { newValue ->
-          textFieldValueState = newValue
-          onValueChange(newValue.text)
+        onValueChange = {
+          textFieldValueState = it
+          onValueChange(it.text)
         },
-        placeholder = { Text("Search events, people", style = MaterialTheme.typography.bodyLarge) },
-        modifier =
-            Modifier.weight(1f).height(fieldHeight).focusRequester(focusRequester).onFocusChanged {
-                focusState ->
-              val nowFocused = focusState.isFocused
-              if (nowFocused && !isFocused) onTap()
-              isFocused = nowFocused
-            },
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        trailingIcon = {
-          AnimatedVisibility(
-              visible = isSearchMode || value.isNotEmpty(),
-              enter =
-                  fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)),
-              exit =
-                  fadeOut(
-                      animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing))) {
-                IconButton(onClick = onClear) {
-                  Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear search")
-                }
-              }
-        },
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            TextFieldDefaults.colors(
-                focusedContainerColor =
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                unfocusedContainerColor =
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
+        onTap = onTap,
+        onFocusChange = { isFocused = it },
+        isSearchMode = isSearchMode,
+        currentText = value,
+        focusRequester = focusRequester,
+        fieldHeight = fieldHeight,
+        onSearchAction = onSearchAction,
+        onClear = onClear,
+        modifier = Modifier.weight(1f).height(fieldHeight))
 
-    val profileSlotWidth by
-        animateDpAsState(
-            targetValue = if (profileVisible) fieldHeight else 0.dp,
-            animationSpec =
-                tween(
-                    durationMillis = if (profileVisible) 220 else 180,
-                    easing = FastOutSlowInEasing),
-            label = "profileWidth")
+    ProfileButtonSlot(
+        profileVisible = profileVisible,
+        fieldHeight = fieldHeight,
+        avatarUrl = avatarUrl,
+        onProfileClick = onProfileClick)
+  }
+}
 
-    val profileAlpha by
-        animateFloatAsState(
-            targetValue = if (profileVisible) 1f else 0f,
-            animationSpec =
-                tween(
-                    durationMillis = if (profileVisible) 220 else 180,
-                    easing = FastOutSlowInEasing),
-            label = "profileFade")
+@Composable
+private fun SearchInputField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    onTap: () -> Unit,
+    onFocusChange: (Boolean) -> Unit,
+    isSearchMode: Boolean,
+    currentText: String,
+    focusRequester: FocusRequester,
+    fieldHeight: Dp,
+    onSearchAction: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  TextField(
+      value = value,
+      onValueChange = onValueChange,
+      placeholder = { Text("Search events, people", style = MaterialTheme.typography.bodyLarge) },
+      modifier =
+          modifier.focusRequester(focusRequester).onFocusChanged { focusState ->
+            val nowFocused = focusState.isFocused
+            if (nowFocused) onTap()
+            onFocusChange(nowFocused)
+          },
+      singleLine = true,
+      textStyle = MaterialTheme.typography.bodyLarge,
+      trailingIcon = {
+        SearchTrailingIcon(visible = isSearchMode || currentText.isNotEmpty(), onClear = onClear)
+      },
+      shape = RoundedCornerShape(16.dp),
+      colors =
+          TextFieldDefaults.colors(
+              focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+              unfocusedContainerColor =
+                  MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent),
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+      keyboardActions = KeyboardActions(onSearch = { onSearchAction() }))
+}
 
-    val slotPadding = if (profileSlotWidth > 0.dp) 12.dp else 0.dp
-
-    Box(
-        modifier =
-            Modifier.padding(start = slotPadding).height(fieldHeight).width(profileSlotWidth),
-        contentAlignment = Alignment.Center) {
-          Surface(
-              modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-              shape = RoundedCornerShape(16.dp)) {
-                Box(
-                    modifier =
-                        Modifier.fillMaxSize().clickable(enabled = profileVisible) {
-                          onProfileClick()
-                        },
-                    contentAlignment = Alignment.Center) {
-                      if (!avatarUrl.isNullOrEmpty() && avatarUrl.startsWith("http")) {
-                        AsyncImage(
-                            model = avatarUrl,
-                            contentDescription = "Profile Picture",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)))
-                      } else {
-                        Icon(
-                            imageVector = getAvatarIcon(avatarUrl),
-                            contentDescription = "Profile",
-                            modifier = Modifier.fillMaxSize(),
-                            tint = MaterialTheme.colorScheme.onSurface)
-                      }
-                    }
-              }
+@Composable
+private fun SearchTrailingIcon(visible: Boolean, onClear: () -> Unit) {
+  AnimatedVisibility(
+      visible = visible,
+      enter = fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)),
+      exit = fadeOut(animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing))) {
+        IconButton(onClick = onClear) {
+          Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear search")
         }
+      }
+}
+
+@Composable
+private fun ProfileButtonSlot(
+    profileVisible: Boolean,
+    fieldHeight: Dp,
+    avatarUrl: String?,
+    onProfileClick: () -> Unit
+) {
+  val profileSlotWidth by
+      animateDpAsState(
+          targetValue = if (profileVisible) fieldHeight else 0.dp,
+          animationSpec =
+              tween(
+                  durationMillis = if (profileVisible) 220 else 180, easing = FastOutSlowInEasing),
+          label = "profileWidth")
+
+  val profileAlpha by
+      animateFloatAsState(
+          targetValue = if (profileVisible) 1f else 0f,
+          animationSpec =
+              tween(
+                  durationMillis = if (profileVisible) 220 else 180, easing = FastOutSlowInEasing),
+          label = "profileFade")
+
+  val slotPadding = if (profileSlotWidth > 0.dp) 12.dp else 0.dp
+
+  Box(
+      modifier = Modifier.padding(start = slotPadding).height(fieldHeight).width(profileSlotWidth),
+      contentAlignment = Alignment.Center) {
+        Surface(
+            modifier = Modifier.fillMaxSize().testTag("profileButton").alpha(profileAlpha),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            shape = RoundedCornerShape(16.dp)) {
+              Box(
+                  modifier =
+                      Modifier.fillMaxSize().clickable(enabled = profileVisible) {
+                        onProfileClick()
+                      },
+                  contentAlignment = Alignment.Center) {
+                    if (!avatarUrl.isNullOrEmpty() && avatarUrl.startsWith("http")) {
+                      AsyncImage(
+                          model = avatarUrl,
+                          contentDescription = "Profile Picture",
+                          contentScale = ContentScale.Crop,
+                          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)))
+                    } else {
+                      Icon(
+                          imageVector = getAvatarIcon(avatarUrl),
+                          contentDescription = "Profile",
+                          modifier = Modifier.fillMaxSize(),
+                          tint = MaterialTheme.colorScheme.onSurface)
+                    }
+                  }
+            }
+      }
+}
+
+@Composable
+private fun SyncTextFieldValue(
+    value: String,
+    textFieldValueState: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit
+) {
+  LaunchedEffect(value) {
+    if (textFieldValueState.text != value) {
+      onValueChange(TextFieldValue(text = value, selection = TextRange(value.length)))
+    }
+  }
+}
+
+@Composable
+private fun MoveCursorToEndOnFocus(
+    isFocused: Boolean,
+    value: String,
+    textFieldValueState: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit
+) {
+  LaunchedEffect(isFocused, value) {
+    if (isFocused && value.isNotEmpty() && textFieldValueState.selection.start == 0) {
+      onValueChange(TextFieldValue(text = value, selection = TextRange(value.length)))
+    }
   }
 }
 

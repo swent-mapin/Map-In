@@ -72,83 +72,117 @@ fun FriendsScreen(
   Scaffold(
       modifier = modifier.fillMaxSize().testTag("friendsScreen"),
       topBar = {
-        TopAppBar(
-            title = {
-              Text(
-                  "Friends",
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = {
-                    if (!hasNavigatedBack) {
-                      hasNavigatedBack = true
-                      onNavigateBack()
-                    }
-                  },
-                  modifier = Modifier.testTag("backButton")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                  }
-            },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
+        FriendsTopBar(
+            onNavigateBack = {
+              if (!hasNavigatedBack) {
+                hasNavigatedBack = true
+                onNavigateBack()
+              }
+            })
       }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-          TabRow(
-              selectedTabIndex = selectedTab.ordinal,
-              modifier = Modifier.fillMaxWidth().testTag("friendsTabRow")) {
-                FriendsTab.entries.forEach { tab ->
-                  Tab(
-                      selected = selectedTab == tab,
-                      onClick = { viewModel.selectTab(tab) },
-                      modifier = Modifier.testTag("tab${tab.name}"),
-                      text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center) {
-                              Text(tab.title)
-                              if (tab == FriendsTab.REQUESTS && pendingList.isNotEmpty()) {
-                                Spacer(Modifier.width(8.dp))
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.testTag("requestBadge")) {
-                                      Text(
-                                          pendingList.size.toString(),
-                                          style = MaterialTheme.typography.labelSmall)
-                                    }
-                              }
-                            }
-                      })
-                }
-              }
+          FriendsTabBar(
+              selectedTab = selectedTab,
+              pendingCount = pendingList.size,
+              onTabSelected = { viewModel.selectTab(it) })
           Box(Modifier.fillMaxSize().padding(16.dp)) {
-            when (selectedTab) {
-              FriendsTab.FRIENDS ->
-                  FriendsListTab(
-                      friendsList,
-                      onRemoveFriend ?: viewModel::removeFriend,
-                      Modifier.testTag("friendsListTab"))
-              FriendsTab.REQUESTS ->
-                  RequestsTab(
-                      pendingList,
-                      onAcceptRequest ?: viewModel::acceptRequest,
-                      onRejectRequest ?: viewModel::rejectRequest,
-                      Modifier.testTag("requestsTab"))
-              FriendsTab.SEARCH ->
-                  SearchTab(
-                      searchQ,
-                      onSearchQueryChange ?: viewModel::updateSearchQuery,
-                      searchList,
-                      onSendFriendRequest ?: viewModel::sendFriendRequest,
-                      Modifier.testTag("searchTab"))
-            }
+            FriendsTabContent(
+                selectedTab = selectedTab,
+                friendsList = friendsList,
+                pendingList = pendingList,
+                searchQuery = searchQ,
+                searchList = searchList,
+                onRemoveFriend = onRemoveFriend ?: viewModel::removeFriend,
+                onAcceptRequest = onAcceptRequest ?: viewModel::acceptRequest,
+                onRejectRequest = onRejectRequest ?: viewModel::rejectRequest,
+                onSendFriendRequest = onSendFriendRequest ?: viewModel::sendFriendRequest,
+                onSearchQueryChange = onSearchQueryChange ?: viewModel::updateSearchQuery)
           }
         }
       }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FriendsTopBar(onNavigateBack: () -> Unit) {
+  TopAppBar(
+      title = {
+        Text(
+            "Friends", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+      },
+      navigationIcon = {
+        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
+          Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+        }
+      },
+      colors =
+          TopAppBarDefaults.topAppBarColors(
+              containerColor = MaterialTheme.colorScheme.surface,
+              titleContentColor = MaterialTheme.colorScheme.onSurface,
+              navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
+}
+
+@Composable
+private fun FriendsTabBar(
+    selectedTab: FriendsTab,
+    pendingCount: Int,
+    onTabSelected: (FriendsTab) -> Unit
+) {
+  TabRow(
+      selectedTabIndex = selectedTab.ordinal,
+      modifier = Modifier.fillMaxWidth().testTag("friendsTabRow")) {
+        FriendsTab.entries.forEach { tab ->
+          Tab(
+              selected = selectedTab == tab,
+              onClick = { onTabSelected(tab) },
+              modifier = Modifier.testTag("tab${tab.name}"),
+              text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center) {
+                      Text(tab.title)
+                      if (tab == FriendsTab.REQUESTS && pendingCount > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag("requestBadge")) {
+                              Text(
+                                  pendingCount.toString(),
+                                  style = MaterialTheme.typography.labelSmall)
+                            }
+                      }
+                    }
+              })
+        }
+      }
+}
+
+@Composable
+private fun FriendsTabContent(
+    selectedTab: FriendsTab,
+    friendsList: List<FriendWithProfile>,
+    pendingList: List<FriendWithProfile>,
+    searchQuery: String,
+    searchList: List<SearchResultWithStatus>,
+    onRemoveFriend: (String) -> Unit,
+    onAcceptRequest: (String) -> Unit,
+    onRejectRequest: (String) -> Unit,
+    onSendFriendRequest: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit
+) {
+  when (selectedTab) {
+    FriendsTab.FRIENDS ->
+        FriendsListTab(friendsList, onRemoveFriend, Modifier.testTag("friendsListTab"))
+    FriendsTab.REQUESTS ->
+        RequestsTab(pendingList, onAcceptRequest, onRejectRequest, Modifier.testTag("requestsTab"))
+    FriendsTab.SEARCH ->
+        SearchTab(
+            searchQuery,
+            onSearchQueryChange,
+            searchList,
+            onSendFriendRequest,
+            Modifier.testTag("searchTab"))
+  }
 }
 
 /** Enum representing the three tabs in the Friends screen. */

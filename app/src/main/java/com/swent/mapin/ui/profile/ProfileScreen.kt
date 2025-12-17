@@ -6,11 +6,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -90,114 +92,133 @@ fun ProfileScreen(onNavigateBack: () -> Unit, viewModel: ProfileViewModel = view
   Scaffold(
       modifier = Modifier.fillMaxSize().testTag("profileScreen"),
       topBar = {
-        TopAppBar(
-            title = {
-              Text(
-                  "Profile",
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = {
-                    if (viewModel.isEditMode) {
-                      viewModel.cancelEditing()
-                    } else {
-                      onNavigateBack()
-                    }
-                  },
-                  modifier = Modifier.testTag("backButton")) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back")
-                  }
-            },
-            actions = {
-              if (!viewModel.isEditMode) {
-                FloatingActionButton(
-                    onClick = { viewModel.startEditing() },
-                    modifier = Modifier.testTag("editButton").padding(end = 8.dp).size(48.dp),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
-                      Icon(
-                          imageVector = Icons.Default.Edit,
-                          contentDescription = "Edit Profile",
-                          modifier = Modifier.size(24.dp))
-                    }
+        ProfileTopBar(
+            isEditMode = viewModel.isEditMode,
+            onNavigateBack = {
+              if (viewModel.isEditMode) {
+                viewModel.cancelEditing()
+              } else {
+                onNavigateBack()
               }
             },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
+            onStartEditing = { viewModel.startEditing() })
       }) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-          Column(
-              modifier =
-                  Modifier.fillMaxSize()
-                      .imePadding()
-                      .padding(paddingValues)
-                      .padding(horizontal = 20.dp)
-                      .verticalScroll(scrollState)
-                      .animateContentSize(
-                          animationSpec =
-                              spring(
-                                  dampingRatio = Spring.DampingRatioMediumBouncy,
-                                  stiffness = Spring.StiffnessLow)),
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                // Add top spacing
-                Spacer(modifier = Modifier.height(24.dp))
+        ProfileContent(
+            paddingValues = paddingValues,
+            scrollState = scrollState,
+            viewModel = viewModel,
+            userProfile = userProfile)
 
-                // Profile picture is now part of the scrollable content
-                ProfilePicture(
-                    avatarUrl =
-                        if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
-                          viewModel.selectedAvatar
-                        } else {
-                          userProfile.avatarUrl
-                        },
-                    isEditMode = viewModel.isEditMode,
-                    onAvatarClick = { viewModel.toggleAvatarSelector() })
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (viewModel.isEditMode) {
-                  EditProfileContent(viewModel = viewModel)
-                } else {
-                  ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
-
-                  Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-              }
-
-          // Avatar Selector Dialog
-          if (viewModel.showAvatarSelector) {
-            AvatarSelectorDialog(
-                viewModel = viewModel,
-                selectedAvatar = viewModel.selectedAvatar,
-                onAvatarSelected = { avatarUrl ->
-                  viewModel.updateAvatarSelection(avatarUrl)
-                  viewModel.toggleAvatarSelector()
-                },
-                onDismiss = { viewModel.toggleAvatarSelector() })
-          }
-
-          // Banner Selector Dialog (new: show when viewModel.showBannerSelector is true)
-          if (viewModel.showBannerSelector) {
-            BannerSelectorDialog(
-                viewModel = viewModel,
-                selectedBanner = viewModel.selectedBanner,
-                onBannerSelected = { bannerUrl ->
-                  viewModel.updateBannerSelection(bannerUrl)
-                  viewModel.toggleBannerSelector()
-                },
-                onDismiss = { viewModel.toggleBannerSelector() })
-          }
-        }
+        ProfileDialogs(viewModel)
       }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileTopBar(
+    isEditMode: Boolean,
+    onNavigateBack: () -> Unit,
+    onStartEditing: () -> Unit
+) {
+  TopAppBar(
+      title = {
+        Text(
+            "Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+      },
+      navigationIcon = {
+        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
+          Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        }
+      },
+      actions = {
+        if (!isEditMode) {
+          FloatingActionButton(
+              onClick = onStartEditing,
+              modifier = Modifier.testTag("editButton").padding(end = 8.dp).size(48.dp),
+              containerColor = MaterialTheme.colorScheme.secondaryContainer,
+              contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit Profile",
+                    modifier = Modifier.size(24.dp))
+              }
+        }
+      },
+      colors =
+          TopAppBarDefaults.topAppBarColors(
+              containerColor = Color.Transparent,
+              titleContentColor = MaterialTheme.colorScheme.onSurface,
+              navigationIconContentColor = MaterialTheme.colorScheme.onSurface))
+}
+
+@Composable
+private fun ProfileContent(
+    paddingValues: PaddingValues,
+    scrollState: ScrollState,
+    viewModel: ProfileViewModel,
+    userProfile: UserProfile
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxSize()
+              .imePadding()
+              .padding(paddingValues)
+              .padding(horizontal = 20.dp)
+              .verticalScroll(scrollState)
+              .animateContentSize(
+                  animationSpec =
+                      spring(
+                          dampingRatio = Spring.DampingRatioMediumBouncy,
+                          stiffness = Spring.StiffnessLow)),
+      horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        ProfilePicture(
+            avatarUrl =
+                if (viewModel.isEditMode && viewModel.selectedAvatar.isNotEmpty()) {
+                  viewModel.selectedAvatar
+                } else {
+                  userProfile.avatarUrl
+                },
+            isEditMode = viewModel.isEditMode,
+            onAvatarClick = { viewModel.toggleAvatarSelector() })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (viewModel.isEditMode) {
+          EditProfileContent(viewModel = viewModel)
+        } else {
+          ViewProfileContent(userProfile = userProfile, viewModel = viewModel)
+          Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+      }
+}
+
+@Composable
+private fun ProfileDialogs(viewModel: ProfileViewModel) {
+  if (viewModel.showAvatarSelector) {
+    AvatarSelectorDialog(
+        viewModel = viewModel,
+        selectedAvatar = viewModel.selectedAvatar,
+        onAvatarSelected = { avatarUrl ->
+          viewModel.updateAvatarSelection(avatarUrl)
+          viewModel.toggleAvatarSelector()
+        },
+        onDismiss = { viewModel.toggleAvatarSelector() })
+  }
+
+  if (viewModel.showBannerSelector) {
+    BannerSelectorDialog(
+        viewModel = viewModel,
+        selectedBanner = viewModel.selectedBanner,
+        onBannerSelected = { bannerUrl ->
+          viewModel.updateBannerSelection(bannerUrl)
+          viewModel.toggleBannerSelector()
+        },
+        onDismiss = { viewModel.toggleBannerSelector() })
+  }
 }
 
 /** Displays the user's profile picture or a placeholder. */
