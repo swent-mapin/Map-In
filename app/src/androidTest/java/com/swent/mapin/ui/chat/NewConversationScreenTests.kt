@@ -3,8 +3,8 @@ package com.swent.mapin.ui.chat
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify

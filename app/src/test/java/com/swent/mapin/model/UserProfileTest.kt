@@ -1,5 +1,6 @@
 package com.swent.mapin.model
 
+import com.swent.mapin.model.userprofile.UserProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

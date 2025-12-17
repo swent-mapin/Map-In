@@ -1,6 +1,6 @@
 package com.swent.mapin.model.badge
 
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 
 /**
  * Singleton object responsible for calculating badge unlock status and progress.

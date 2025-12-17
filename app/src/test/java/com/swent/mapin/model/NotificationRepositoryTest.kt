@@ -2,6 +2,10 @@ package com.swent.mapin.model
 
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.*
+import com.swent.mapin.model.notification.Notification
+import com.swent.mapin.model.notification.NotificationRepository
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationType
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before

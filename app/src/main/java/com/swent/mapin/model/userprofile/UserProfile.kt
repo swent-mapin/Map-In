@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.userprofile
 
 import com.swent.mapin.model.badge.Badge
 

@@ -1,6 +1,10 @@
 package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.friends.FriendRequest
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.model.userprofile.UserProfile
 import org.junit.Assert.*
 import org.junit.Test
 
