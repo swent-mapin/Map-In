@@ -126,17 +126,6 @@ fun AddEventTextField(
       singleLine = singleLine)
 }
 
-/**
- * Displays a pop-up dialog for adding a new event, including fields for title, date, time,
- * location, description, and tags. Handles error checking and displays an error message if any
- * required fields are missing or invalid.
- *
- * @param modifier [Modifier] to customize the pop-up layout.
- * @param eventViewModel ViewModel for events
- * @param locationViewModel ViewModel for Locations
- * @param onCancel callback triggered when the user cancels the event creation
- * @param onDone callback triggered when the user is done with the event creation
- */
 private fun computeDialogRecenterPoint(
     lastKnownPoint: Point?,
     manualLocation: Location?,
@@ -156,6 +145,17 @@ private fun computeDialogRecenterPoint(
   return null
 }
 
+/**
+ * Displays a pop-up dialog for adding a new event, including fields for title, date, time,
+ * location, description, and tags. Handles error checking and displays an error message if any
+ * required fields are missing or invalid.
+ *
+ * @param modifier [Modifier] to customize the pop-up layout.
+ * @param eventViewModel ViewModel for events
+ * @param locationViewModel ViewModel for Locations
+ * @param onCancel callback triggered when the user cancels the event creation
+ * @param onDone callback triggered when the user is done with the event creation
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -165,8 +165,6 @@ fun AddEventScreen(
     onCancel: () -> Unit = {},
     onDone: () -> Unit = {},
 ) {
-  val context = LocalContext.current
-
   val title = remember { mutableStateOf("") }
   val description = remember { mutableStateOf("") }
   val location = remember { mutableStateOf("") }
@@ -324,8 +322,7 @@ fun AddEventScreen(
                   return@EventTopBar
                 }
 
-                saveEvent(
-                    eventViewModel,
+                eventViewModel.saveEvent(
                     context,
                     title.value,
                     description.value,

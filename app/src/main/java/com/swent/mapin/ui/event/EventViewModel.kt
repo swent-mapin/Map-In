@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -100,6 +101,74 @@ class EventViewModel(
     }
   }
 
+  /**
+   * Creates a new [Event] object with the provided data and adds it to the given [EventViewModel].
+   *
+   * This function centralizes the logic of constructing an [Event] from user input and submitting
+   * it to the view model. After successfully adding the event, it invokes the [onDone] callback to
+   * signal completion.
+   *
+   * @param title The title of the event.
+   * @param description A textual description of the event.
+   * @param location The [Location] object representing the event’s location.
+   * @param tags A list of tags associated with the event.
+   * @param isPublic Whether the event is public (`true`) or private (`false`).
+   * @param onDone A callback invoked after the event has been added successfully.
+   * @see EventViewModel.addEvent
+   * @see Event
+   */
+  fun saveEvent(
+      context: Context,
+      title: String,
+      description: String,
+      location: Location,
+      startDate: Timestamp,
+      endDate: Timestamp?,
+      currentUserId: String?,
+      tags: List<String>,
+      isPublic: Boolean,
+      onDone: () -> Unit,
+      price: Double = 0.0,
+      capacity: Int? = null,
+      mediaUri: Uri? = null
+  ) {
+    val uid = currentUserId ?: return
+
+    viewModelScope.launch {
+      try {
+        // Upload media if provided
+        val mediaUrl =
+            mediaUri?.let {
+              uploadEventMedia(context, it, uid).getOrElse {
+                _error.value = "Failed to upload media"
+                return@launch // abort event creation
+              }
+            }
+
+        // Create the event
+        val newEvent =
+            Event(
+                uid = getNewUid(),
+                title = title,
+                url = null,
+                description = description,
+                location = location,
+                date = startDate,
+                endDate = endDate,
+                tags = tags,
+                public = isPublic,
+                ownerId = uid,
+                imageUrl = mediaUrl,
+                capacity = capacity,
+                price = price)
+        addEvent(newEvent)
+        onDone()
+      } catch (e: Exception) {
+        _error.value = e.message
+      }
+    }
+  }
+
   private val _eventToEdit = MutableStateFlow<Event?>(null)
   /**
    * Currently selected event for editing.
@@ -184,7 +253,7 @@ class EventViewModel(
    */
   fun saveEditedEvent(
       originalEvent: Event,
-      context: android.content.Context,
+      context: Context,
       title: String,
       description: String,
       location: Location,
@@ -196,7 +265,15 @@ class EventViewModel(
   ) {
     viewModelScope.launch {
       try {
-        val mediaUrl = mediaUri?.let { uploadEventMedia(context, it, originalEvent.ownerId) }
+        val mediaUrl =
+            if (mediaUri != null && mediaUri.scheme == "content") {
+              uploadEventMedia(context, mediaUri, originalEvent.ownerId).getOrElse {
+                _error.value = "Media upload failed"
+                return@launch
+              }
+            } else {
+              mediaUri?.toString() ?: originalEvent.imageUrl
+            }
 
         val editedEvent =
             originalEvent.copy(
