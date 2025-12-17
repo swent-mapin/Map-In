@@ -295,7 +295,11 @@ fun parseMediaItems(urls: List<String>): List<MediaItem> {
 }
 
 /* ------------------------ MEDIA ------------------------ */
-
+/**
+ * Media preview for memory detail sheet Shows the first URL as an image thumbnail, even for videos
+ *
+ * @param urls List of media URLs
+ */
 @Composable
 private fun MemoryMediaPreview(urls: List<String>) {
   if (urls.isEmpty()) return

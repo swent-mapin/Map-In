@@ -113,6 +113,6 @@
     <string name="memories_private">Private</string>
     <string name="memories_created">Created %1$s</string>
     <string name="memories_tagged">Tagged: %1$s</string>
-    <string name="memories_default_title">Memory %1$s</string>
+    <string name="memories_default_title">My Memory</string>
     <string name="back_button">Back</string>
 </resources>

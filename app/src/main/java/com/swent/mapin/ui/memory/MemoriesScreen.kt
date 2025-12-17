@@ -15,8 +15,8 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -323,7 +323,7 @@ private fun MemoryItem(
 private fun MemoryTitle(memory: Memory) {
   Row(verticalAlignment = Alignment.CenterVertically) {
     Text(
-        text = memory.title.ifBlank { stringResource(R.string.memories_default_title, memory.uid) },
+        text = memory.title.ifBlank { stringResource(R.string.memories_default_title) },
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.weight(1f))

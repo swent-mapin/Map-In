@@ -106,7 +106,7 @@ fun MediaThumbnail(
  * @param onLaunchMediaPicker Callback to launch media picker
  */
 @Composable
-fun emptyMediaBox(onLaunchMediaPicker: () -> Unit) {
+fun EmptyMediaBox(onLaunchMediaPicker: () -> Unit) {
   Box(
       modifier =
           Modifier.fillMaxWidth()
@@ -140,7 +140,7 @@ fun emptyMediaBox(onLaunchMediaPicker: () -> Unit) {
  * @param onLaunchMediaPicker Callback to launch media picker
  */
 @Composable
-fun addMediaBox(onLaunchMediaPicker: () -> Unit) {
+fun AddMediaBox(onLaunchMediaPicker: () -> Unit) {
   Box(
       modifier =
           Modifier.size(MEDIA_THUMBNAIL_SIZE)
@@ -180,7 +180,7 @@ fun MediaSelectionSection(
       modifier = modifier.padding(bottom = 8.dp))
 
   if (selectedMediaUris.isEmpty()) {
-    emptyMediaBox(onLaunchMediaPicker)
+    EmptyMediaBox(onLaunchMediaPicker)
   } else {
     Column(modifier = Modifier.fillMaxWidth()) {
       FlowRow(
@@ -192,7 +192,7 @@ fun MediaSelectionSection(
             }
             if (selectedMediaUris.size < maxMediaCount) {
               Log.d("MediaSelectionSection", "size ${selectedMediaUris.size} < $maxMediaCount")
-              addMediaBox(onLaunchMediaPicker)
+              AddMediaBox(onLaunchMediaPicker)
             }
           }
     }

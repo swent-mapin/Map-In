@@ -1,8 +1,8 @@
 package com.swent.mapin.model.memory
 
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.location.Location
 import com.google.firebase.firestore.PropertyName
+import com.swent.mapin.model.location.Location
 
 /**
  * Represents a memory created by a user, optionally linked to an event.

@@ -365,15 +365,10 @@ private fun EventImageCard(imageUrl: String?) {
                   if (imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.surface)) {
         if (imageUrl == null) {
-          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                "No image available",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
+          NoImageBox()
         } else {
           val media = parseMediaItems(listOf(imageUrl))
-          when (val mediaUrl = media.first()) {
+          when (val mediaUrl = media.firstOrNull()) {
             is MediaItem.Image -> {
               AsyncImage(
                   model = mediaUrl.url,
@@ -386,9 +381,23 @@ private fun EventImageCard(imageUrl: String?) {
                 MemoryVideoPlayer(mediaUrl.url)
               }
             }
+            else -> {
+              NoImageBox()
+            }
           }
         }
       }
+}
+
+/** No image available text */
+@Composable
+private fun NoImageBox() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Text(
+        "No image available",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
 }
 
 /** Organizer name text based on state */
