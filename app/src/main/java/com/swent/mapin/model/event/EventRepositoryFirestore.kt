@@ -73,6 +73,7 @@ class EventRepositoryFirestore(
 ) : EventRepository {
 
   companion object {
+    private const val TAG = "EventRepositoryFirestore"
     private const val EARLY_MORNING_START = 5
     private const val EARLY_MORNING_END = 8
     private const val LATE_NIGHT_START = 0
@@ -134,7 +135,7 @@ class EventRepositoryFirestore(
       // Send notifications to followers of the event creator
       notifyFollowersOfNewEvent(eventToSave)
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to add event (id=${event.uid}): ${e.message}", e)
+      Log.e(TAG, "Failed to add event (id=${event.uid}): ${e.message}", e)
       throw Exception("Failed to add event: ${e.message}", e)
     }
   }
@@ -148,21 +149,19 @@ class EventRepositoryFirestore(
     try {
       val ownerProfile = userProfileRepository.getUserProfile(event.ownerId)
       if (ownerProfile == null) {
-        Log.w("EventRepositoryFirestore", "Owner profile not found for event notification")
+        Log.w(TAG, "Owner profile not found for event notification")
         return
       }
 
       val followerIds = ownerProfile.followerIds
       if (followerIds.isEmpty()) {
-        Log.w("EventRepositoryFirestore", "No followers to notify for new event")
+        Log.w(TAG, "No followers to notify for new event")
         return
       }
 
       val organizerName = ownerProfile.name.ifBlank { "Someone you follow" }
 
-      Log.w(
-          "EventRepositoryFirestore",
-          "Notifying ${followerIds.size} followers about new event: ${event.title}")
+      Log.w(TAG, "Notifying ${followerIds.size} followers about new event: ${event.title}")
 
       followerIds.forEach { followerId ->
         try {
@@ -173,12 +172,11 @@ class EventRepositoryFirestore(
               eventId = event.uid,
               eventTitle = event.title)
         } catch (e: Exception) {
-          Log.e(
-              "EventRepositoryFirestore", "Failed to notify follower $followerId: ${e.message}", e)
+          Log.e(TAG, "Failed to notify follower $followerId: ${e.message}", e)
         }
       }
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to notify followers: ${e.message}", e)
+      Log.e(TAG, "Failed to notify followers: ${e.message}", e)
       // Don't throw - event creation succeeded, notification failure is non-critical
     }
   }
@@ -227,7 +225,7 @@ class EventRepositoryFirestore(
           }
           .await()
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed editEventAsOwner(id=$eventId): ${e.message}", e)
+      Log.e(TAG, "Failed editEventAsOwner(id=$eventId): ${e.message}", e)
       throw Exception("Failed to edit event (id=$eventId) as owner: ${e.message}", e)
     }
   }
@@ -262,7 +260,7 @@ class EventRepositoryFirestore(
         updateBadgeContextForJoin(userId)
       }
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed editEventAsUser(id=$eventId): ${e.message}", e)
+      Log.e(TAG, "Failed editEventAsUser(id=$eventId): ${e.message}", e)
       throw Exception("Failed to edit event (id=$eventId) as user: ${e.message}", e)
     }
   }
@@ -396,7 +394,7 @@ class EventRepositoryFirestore(
             .await()
       }
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to delete event (id=$eventId): ${e.message}", e)
+      Log.e(TAG, "Failed to delete event (id=$eventId): ${e.message}", e)
       throw e as? NoSuchElementException
           ?: Exception("Failed to delete event (id=$eventId): ${e.message}", e)
     }
@@ -414,7 +412,7 @@ class EventRepositoryFirestore(
       val doc = db.collection(EVENTS_COLLECTION_PATH).document(eventId).get().await()
       doc.toEvent() ?: throw NoSuchElementException("Event not found (id=$eventId)")
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch event $eventId", e)
+      Log.e(TAG, "Failed to fetch event $eventId", e)
       throw Exception("Failed to fetch event $eventId: ${e.message}", e)
     }
   }
@@ -445,7 +443,7 @@ class EventRepositoryFirestore(
       // Apply client-side filters that can't be done server-side
       applyClientSideFilters(events, filters)
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch filtered events", e)
+      Log.e(TAG, "Failed to fetch filtered events", e)
       throw Exception("Failed to fetch filtered events: ${e.message}", e)
     }
   }
@@ -484,7 +482,7 @@ class EventRepositoryFirestore(
           try {
             friendRequestRepository.getFriends(userId).map { it.userProfile.userId }
           } catch (e: Exception) {
-            Log.e("EventRepositoryFirestore", "Failed to fetch friends", e)
+            Log.e(TAG, "Failed to fetch friends", e)
             emptyList()
           }
         }
@@ -640,7 +638,7 @@ class EventRepositoryFirestore(
     return query.orderBy("date", Query.Direction.DESCENDING).addSnapshotListener { snapshot, error
       ->
       if (error != null || snapshot == null) {
-        Log.e("EventRepositoryFirestore", "Filtered events listener error", error)
+        Log.e(TAG, "Filtered events listener error", error)
         onUpdate(emptyList(), emptyList(), emptyList())
         return@addSnapshotListener
       }
@@ -739,9 +737,7 @@ class EventRepositoryFirestore(
           ->
           if (error != null) {
             Log.e(
-                "EventRepository",
-                "Error listening to user $userId ${source.fieldName}: ${error.message}",
-                error)
+                TAG, "Error listening to user $userId ${source.fieldName}: ${error.message}", error)
             onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }
@@ -761,7 +757,7 @@ class EventRepositoryFirestore(
                 (snapshot[source.fieldName] as? List<*>)?.filterIsInstance<String>()?.toSet()
                     ?: emptySet()
               } catch (e: Exception) {
-                Log.e("EventRepository", "Error parsing event IDs", e)
+                Log.e(TAG, "Error parsing event IDs", e)
                 emptySet()
               }
 
@@ -815,10 +811,7 @@ class EventRepositoryFirestore(
             eventSnapshot,
             eventError ->
           if (eventError != null) {
-            Log.e(
-                "EventRepository",
-                "Error listening to event $eventId: ${eventError.message}",
-                eventError)
+            Log.e(TAG, "Error listening to event $eventId: ${eventError.message}", eventError)
             onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }
@@ -854,14 +847,14 @@ class EventRepositoryFirestore(
     return try {
       val snap = db.collection(USERS_COLLECTION_PATH).document(userId).get().await()
       if (!snap.exists()) {
-        Log.w("EventRepositoryFirestore", "User $userId not found")
+        Log.w(TAG, "User $userId not found")
         throw Exception("User $userId not found")
       } else {
         @Suppress("UNCHECKED_CAST")
         (snap[source.fieldName] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
       }
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch event IDs for $source", e)
+      Log.e(TAG, "Failed to fetch event IDs for $source", e)
       throw e
     }
   }
@@ -902,7 +895,7 @@ class EventRepositoryFirestore(
                         .await()
                 snap.documents.mapNotNull { it.toEvent() }
               } catch (e: Exception) {
-                Log.e("EventRepositoryFirestore", "Failed to fetch chunk: ${e.message}")
+                Log.e(TAG, "Failed to fetch chunk: ${e.message}")
                 emptyList()
               }
             }
@@ -911,7 +904,7 @@ class EventRepositoryFirestore(
       // Collect all results and sort
       deferredResults.flatMap { it.await() }.sortedByDescending { it.date }
     } catch (e: Exception) {
-      Log.e("EventRepositoryFirestore", "Failed to fetch events by IDs", e)
+      Log.e(TAG, "Failed to fetch events by IDs", e)
       emptyList()
     }
   }
@@ -925,7 +918,7 @@ class EventRepositoryFirestore(
       try {
         this.toObject(Event::class.java)?.copy(uid = this.id)
       } catch (e: Exception) {
-        Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${this.id})", e)
+        Log.e(TAG, "Error converting document to Event (id=${this.id})", e)
         throw e
       }
 }
