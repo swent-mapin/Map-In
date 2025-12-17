@@ -237,16 +237,20 @@ Recommend 2-3 relevant events with selling reasons.
   }
 
   private fun executeRequest(requestPayload: JsonObject): String {
-    val authHeader = if (apiKey.isNotEmpty()) "Bearer $apiKey" else ""
-    val httpRequest =
+    val requestBuilder =
         Request.Builder()
             .url(OPENROUTER_API_URL)
-            .addHeader("Authorization", authHeader)
             .addHeader("Content-Type", "application/json")
             .addHeader("HTTP-Referer", "https://mapin.app")
             .addHeader("X-Title", "Map-In Event Recommender")
             .post(requestPayload.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+
+    // Only add Authorization header if API key is provided
+    if (apiKey.isNotEmpty()) {
+      requestBuilder.addHeader("Authorization", "Bearer $apiKey")
+    }
+
+    val httpRequest = requestBuilder.build()
 
     client.newCall(httpRequest).execute().use { response ->
       if (!response.isSuccessful) {

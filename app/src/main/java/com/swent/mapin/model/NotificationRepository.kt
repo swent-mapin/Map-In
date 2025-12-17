@@ -298,6 +298,7 @@ class NotificationRepository(
 
         awaitClose {
           // Remove listener when flow is cancelled
+          // Note: addSnapshotListener always returns a non-null ListenerRegistration
           listenerRegistration.remove()
         }
       }
