@@ -1,6 +1,7 @@
 package com.swent.mapin.model.memory
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.location.Location
 
 // Assisted by AI
 /**
@@ -106,7 +107,7 @@ class LocalMemoryRepository : MemoryRepository {
       endTime: Timestamp
   ): List<Memory> {
     return memories.values
-        .filter { memory -> memory.createdAt?.let { it >= startTime && it < endTime } ?: false }
+        .filter { memory -> memory.createdAt?.let { it in startTime ..< endTime } ?: false }
         .sortedByDescending { it.createdAt }
   }
 
@@ -114,6 +115,10 @@ class LocalMemoryRepository : MemoryRepository {
     return memories.values
         .filter { it.taggedUserIds.contains(userId) }
         .sortedByDescending { it.createdAt }
+  }
+
+  override suspend fun getMemoriesByLocation(location: Location, radius: Double): List<Memory> {
+    return memories.values.sortedByDescending { it.createdAt }
   }
 
   override suspend fun addMemory(memory: Memory) {

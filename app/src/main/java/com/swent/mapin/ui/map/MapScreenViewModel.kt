@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,6 +17,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.GeoPoint
 import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
@@ -65,6 +67,8 @@ sealed class OrganizerState {
 
   object Error : OrganizerState()
 }
+
+const val DEFAULT_MEMORY_RADIUS = 2.0
 
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
@@ -241,6 +245,19 @@ class MapScreenViewModel(
 
   val useSatelliteStyle: Boolean
     get() = _mapStyle == MapStyle.SATELLITE
+
+  // Position of a tap on the map by the user
+  private var _clickedPosition by mutableStateOf<GeoPoint?>(null)
+  val clickedPosition: GeoPoint?
+    get() = _clickedPosition
+
+  // Navigation to memoriesScreen logic
+  private var _shouldNavigateToNearbyMemories by mutableStateOf(false)
+  val shouldNavigateToNearbyMemories: Boolean
+    get() = _shouldNavigateToNearbyMemories
+
+  // Radius of the memories to fetch
+  private var _nearbyMemoriesRadius by mutableDoubleStateOf(DEFAULT_MEMORY_RADIUS)
 
   // State of the bottomsheet
 
@@ -757,6 +774,55 @@ class MapScreenViewModel(
 
   fun setBottomSheetTab(tab: BottomSheetTab) {
     _selectedBottomSheetTab = tab
+  }
+
+  /** Called when the user clicks on the map. */
+  fun onMapClicked(latitude: Double, longitude: Double) {
+    _clickedPosition = GeoPoint(latitude, longitude)
+
+    if (_mapStyle == MapStyle.HEATMAP) {
+      val currentZoom = cameraController.lastZoom
+      val radius = calculateRadiusFromZoom(currentZoom)
+
+      _shouldNavigateToNearbyMemories = true
+      _nearbyMemoriesRadius = radius
+    }
+  }
+
+  /** Clears the clicked location. */
+  fun clearClickedPosition() {
+    _clickedPosition = null
+  }
+
+  fun handleHeatmapClickForMemories() {
+    if (_mapStyle != MapStyle.HEATMAP) return
+
+    _clickedPosition ?: return
+
+    val currentZoom = cameraController.lastZoom
+    val radius = calculateRadiusFromZoom(currentZoom)
+
+    _nearbyMemoriesRadius = radius
+    _shouldNavigateToNearbyMemories = true
+  }
+
+  fun onNearbyMemoriesNavigated() {
+    _shouldNavigateToNearbyMemories = false
+    clearClickedPosition()
+  }
+
+  fun getNearbyMemoriesParams(): Pair<GeoPoint, Double>? {
+    return _clickedPosition?.let { it to _nearbyMemoriesRadius }
+  }
+
+  private fun calculateRadiusFromZoom(zoom: Float): Double {
+    return when {
+      zoom >= 18f -> 0.5
+      zoom >= 16f -> 1.0
+      zoom >= 14f -> DEFAULT_MEMORY_RADIUS
+      zoom >= 12f -> 5.0
+      else -> 10.0
+    }.coerceAtMost(10.0)
   }
 
   fun onEventPinClicked(event: Event, forceZoom: Boolean = false) {

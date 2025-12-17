@@ -55,6 +55,7 @@ class MemoryActionController(
                 description = formData.description,
                 eventId = formData.eventId,
                 ownerId = currentUserId,
+                location = formData.location,
                 isPublic = formData.isPublic,
                 createdAt = Timestamp.now(),
                 mediaUrls = mediaUrls,

@@ -31,6 +31,8 @@ class MapCameraController(private val scope: CoroutineScope) {
     get() = _isZooming
 
   private var _lastZoom by mutableFloatStateOf(0f)
+  val lastZoom: Float
+    get() = _lastZoom
 
   private var _isProgrammaticZoom by mutableStateOf(false)
   val isProgrammaticZoom: Boolean

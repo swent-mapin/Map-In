@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.components.UserPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -81,6 +82,7 @@ data class MemoryFormData(
     val title: String,
     val description: String,
     val eventId: String?,
+    val location: Location,
     val isPublic: Boolean,
     val mediaUris: List<Uri>,
     val taggedUserIds: List<String>
@@ -419,6 +421,7 @@ fun MemoryFormScreen(
                         title = title,
                         description = description,
                         eventId = selectedEvent?.uid,
+                        location = selectedEvent?.location ?: Location.UNDEFINED,
                         isPublic = isPublic,
                         mediaUris = selectedMediaUris.toList(),
                         taggedUserIds = taggedUserIds))

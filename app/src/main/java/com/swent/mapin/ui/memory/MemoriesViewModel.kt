@@ -7,11 +7,19 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.Memory
 import com.swent.mapin.model.memory.MemoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+enum class MemoryDisplayMode {
+  OWNER_MEMORIES,
+  NEARBY_MEMORIES
+}
+
+const val DEFAULT_MEMORY_RADIUS = 2.0
 
 class MemoriesViewModel(
     private val memoryRepository: MemoryRepository,
@@ -34,6 +42,12 @@ class MemoriesViewModel(
   private val _taggedNames = MutableStateFlow<List<String>>(emptyList())
   val taggedNames = _taggedNames.asStateFlow()
 
+  private val _displayMode = MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
+  val displayMode = _displayMode.asStateFlow()
+
+  private val _nearbyLocation = MutableStateFlow(Location.UNDEFINED)
+  private val _nearbyRadius = MutableStateFlow(DEFAULT_MEMORY_RADIUS)
+
   init {
     loadMemoriesOfOwner()
   }
@@ -55,7 +69,16 @@ class MemoriesViewModel(
     }
   }
 
-  fun refresh() = loadMemoriesOfOwner()
+  fun refresh() {
+    when (_displayMode.value) {
+      MemoryDisplayMode.OWNER_MEMORIES -> loadMemoriesOfOwner()
+      MemoryDisplayMode.NEARBY_MEMORIES -> {
+        _nearbyLocation.value.let { loc ->
+          viewModelScope.launch { loadMemoriesNearLocation(loc, _nearbyRadius.value) }
+        }
+      }
+    }
+  }
 
   fun selectMemoryToView(memoryId: String) {
     viewModelScope.launch {
@@ -79,6 +102,27 @@ class MemoriesViewModel(
         _error.value = e.message
       }
     }
+  }
+
+  fun loadMemoriesNearLocation(location: Location, radius: Double) {
+    viewModelScope.launch {
+      try {
+        _error.value = null
+        _displayMode.value = MemoryDisplayMode.NEARBY_MEMORIES
+        _nearbyLocation.value = location
+        _nearbyRadius.value = radius
+
+        _memories.value = memoryRepository.getMemoriesByLocation(location, radius)
+      } catch (e: Exception) {
+        _error.value = "Failed to load nearby memories: ${e.message}"
+      }
+    }
+  }
+
+  fun returnToOwnerMemories() {
+    _displayMode.value = MemoryDisplayMode.OWNER_MEMORIES
+    _nearbyLocation.value = Location.UNDEFINED
+    loadMemoriesOfOwner()
   }
 
   fun clearSelectedMemory() {

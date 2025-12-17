@@ -9,6 +9,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.swent.mapin.model.location.Location
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -330,5 +331,37 @@ class MemoryRepositoryFirestoreTest {
     whenever(document.delete()).thenReturn(voidTask())
     repo.deleteMemory("M1")
     verify(document).delete()
+  }
+
+  @Test
+  fun getMemoriesByLocation_withValidLocation_returnsMemoriesInRadius() = runTest {
+    val location = Location.from("Test", 46.5197, 6.6323)
+    val memory1 =
+        Memory(
+            uid = "",
+            title = "EPFL Memory",
+            description = "At EPFL",
+            ownerId = "user1",
+            location = location,
+            createdAt = Timestamp.now())
+
+    val snap = qs(doc("1", memory1))
+
+    whenever(collection.orderBy(eq("location.geohash"))).thenReturn(query)
+    whenever(query.startAt(any<String>())).thenReturn(query)
+    whenever(query.endAt(any<String>())).thenReturn(query)
+    whenever(query.get()).thenReturn(taskOf(snap))
+
+    val result = repo.getMemoriesByLocation(location, 2.0)
+
+    assertEquals(1, result.size)
+    assertEquals("1", result[0].uid)
+  }
+
+  @Test
+  fun getMemoriesByLocation_withUndefinedLocation_returnsEmptyList() = runTest {
+    val result = repo.getMemoriesByLocation(Location.UNDEFINED, 2.0)
+
+    assertEquals(0, result.size)
   }
 }
