@@ -70,6 +70,22 @@ internal fun formatPinnedLocationLabel(lat: Double, lng: Double): String {
   return "Pinned location (${String.format(Locale.getDefault(), "%.5f, %.5f", lat, lng)})"
 }
 
+internal fun computeInitialPickedPoint(initialLocation: Location?, recenterPoint: Point?): Point? {
+  initialLocation?.let { loc ->
+    if (loc.latitude != null && loc.longitude != null) {
+      return Point.fromLngLat(loc.longitude, loc.latitude)
+    }
+  }
+  return recenterPoint
+}
+
+internal fun locationToPoint(loc: Location): Point? {
+  if (loc.latitude != null && loc.longitude != null) {
+    return Point.fromLngLat(loc.longitude, loc.latitude)
+  }
+  return null
+}
+
 internal fun computeStartPoint(
     recenterPoint: Point?,
     initialLocation: Location?,
@@ -179,6 +195,16 @@ private fun DialogActionButtons(
       }
 }
 
+private fun buildAnnotations(
+    pickedPoint: Point?,
+    markerBitmap: android.graphics.Bitmap?
+): List<PointAnnotationOptions> {
+  val point = pickedPoint ?: return emptyList()
+  val opts = PointAnnotationOptions().withPoint(point)
+  markerBitmap?.let { opts.withIconImage(it) }
+  return listOf(opts)
+}
+
 @OptIn(MapboxDelicateApi::class)
 @Composable
 internal fun ManualLocationPickerDialog(
@@ -196,13 +222,7 @@ internal fun ManualLocationPickerDialog(
   val isDarkTheme = isSystemInDarkTheme()
   val lightPreset = if (isDarkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
   val startPoint = computeStartPoint(recenterPoint, initialLocation, searchResults)
-
-  val initialPickedPoint =
-      initialLocation?.let { loc ->
-        if (loc.latitude != null && loc.longitude != null) {
-          Point.fromLngLat(loc.longitude, loc.latitude)
-        } else null
-      } ?: recenterPoint
+  val initialPickedPoint = computeInitialPickedPoint(initialLocation, recenterPoint)
   var pickedPoint by remember { mutableStateOf(initialPickedPoint) }
   val mapViewportState = rememberMapViewportState {
     setCameraOptions {
@@ -259,11 +279,7 @@ internal fun ManualLocationPickerDialog(
                 Box(modifier = Modifier.fillMaxWidth().height(dialogMapHeight)) {
                   val annotations =
                       remember(pickedPoint, markerBitmap) {
-                        pickedPoint?.let { point ->
-                          markerBitmap?.let { bmp ->
-                            listOf(PointAnnotationOptions().withPoint(point).withIconImage(bmp))
-                          } ?: listOf(PointAnnotationOptions().withPoint(point))
-                        } ?: emptyList()
+                        buildAnnotations(pickedPoint, markerBitmap)
                       }
                   MapboxMap(
                       modifier =
@@ -295,8 +311,7 @@ internal fun ManualLocationPickerDialog(
                       SearchResultsOverlay(
                           searchResults = searchResults,
                           onResultClick = { loc ->
-                            if (loc.latitude != null && loc.longitude != null) {
-                              val point = Point.fromLngLat(loc.longitude, loc.latitude)
+                            locationToPoint(loc)?.let { point ->
                               pickedPoint = point
                               mapViewportState.setCameraOptions {
                                 center(point)
