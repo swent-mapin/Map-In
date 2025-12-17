@@ -43,8 +43,8 @@ data class Event(
       return false
     }
     // if endDate is provided it must be the same or after start date
-    if (endDate != null) {
-      if (endDate.toDate().before(date.toDate())) return false
+    if (endDate != null && endDate.toDate().before(date.toDate())) {
+      return false
     }
     return true
   }

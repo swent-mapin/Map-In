@@ -211,7 +211,7 @@ class SettingsViewModel(
 
         auth.signOut()
       } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("SettingsViewModel", "Failed to sign out", e)
       } finally {
         _isLoading.value = false
       }
@@ -262,7 +262,7 @@ class SettingsViewModel(
         }
       } catch (e: Exception) {
         _errorMessage.value = "Failed to delete account: ${e.message}"
-        e.printStackTrace()
+        android.util.Log.e("SettingsViewModel", "Failed to delete account", e)
         _isLoading.value = false
       }
     }
