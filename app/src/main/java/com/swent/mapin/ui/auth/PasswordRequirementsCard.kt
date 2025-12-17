@@ -18,16 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.R
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.INVALID
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.NEUTRAL
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.VALID
 import com.swent.mapin.ui.theme.MapInTheme
 import com.swent.mapin.util.PasswordValidation
 
 // Assisted by AI
-
-private enum class RequirementStatus {
-  NEUTRAL,
-  VALID,
-  INVALID
-}
 
 /**
  * Card showing password requirements with real-time validation feedback.
@@ -89,9 +86,9 @@ private fun PasswordRequirementItem(
   val status = resolveRequirementStatus(showStatus, isValid)
   val textColor =
       when (status) {
-        RequirementStatus.VALID -> MaterialTheme.colorScheme.primary
-        RequirementStatus.INVALID -> MaterialTheme.colorScheme.error
-        RequirementStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+        VALID -> MaterialTheme.colorScheme.primary
+        INVALID -> MaterialTheme.colorScheme.error
+        NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
       }
 
   Row(
@@ -104,23 +101,23 @@ private fun PasswordRequirementItem(
 }
 
 @Composable
-private fun RequirementStatusIcon(status: RequirementStatus) {
+private fun RequirementStatusIcon(status: PasswordRequirementStatus) {
   when (status) {
-    RequirementStatus.NEUTRAL -> {
+    NEUTRAL -> {
       Box(
           modifier =
               Modifier.size(8.dp)
                   .clip(CircleShape)
                   .background(MaterialTheme.colorScheme.onSurfaceVariant))
     }
-    RequirementStatus.VALID -> {
+    VALID -> {
       Icon(
           imageVector = Icons.Default.Check,
           contentDescription = stringResource(R.string.requirement_met),
           tint = MaterialTheme.colorScheme.primary,
           modifier = Modifier.size(16.dp))
     }
-    RequirementStatus.INVALID -> {
+    INVALID -> {
       Icon(
           imageVector = Icons.Default.Close,
           contentDescription = stringResource(R.string.requirement_not_met),
@@ -130,9 +127,12 @@ private fun RequirementStatusIcon(status: RequirementStatus) {
   }
 }
 
-private fun resolveRequirementStatus(showStatus: Boolean, isValid: Boolean): RequirementStatus {
-  if (!showStatus) return RequirementStatus.NEUTRAL
-  return if (isValid) RequirementStatus.VALID else RequirementStatus.INVALID
+private fun resolveRequirementStatus(
+    showStatus: Boolean,
+    isValid: Boolean
+): PasswordRequirementStatus {
+  if (!showStatus) return NEUTRAL
+  return if (isValid) VALID else INVALID
 }
 
 @Preview(showBackground = true, name = "Empty Password")

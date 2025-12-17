@@ -62,6 +62,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.swent.mapin.model.changepassword.ChangePasswordRepositoryProvider
+import com.swent.mapin.ui.auth.PasswordRequirementStatus
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.INVALID
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.NEUTRAL
+import com.swent.mapin.ui.auth.PasswordRequirementStatus.VALID
 import com.swent.mapin.ui.components.StandardTopAppBar
 
 /**
@@ -69,12 +73,6 @@ import com.swent.mapin.ui.components.StandardTopAppBar
  * services to detect whether the password is currently visible.
  */
 val PasswordVisibleKey = SemanticsPropertyKey<Boolean>("PasswordVisible")
-
-private enum class PasswordRequirementStatus {
-  NEUTRAL,
-  VALID,
-  INVALID
-}
 
 /**
  * Change Password screen allowing users to update their password.
@@ -401,9 +399,9 @@ private fun PasswordRequirementItem(
   val status = resolvePasswordRequirementStatus(showStatus, isValid)
   val textColor =
       when (status) {
-        PasswordRequirementStatus.VALID -> Color(0xFF4CAF50)
-        PasswordRequirementStatus.INVALID -> MaterialTheme.colorScheme.error
-        PasswordRequirementStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+        VALID -> Color(0xFF4CAF50)
+        INVALID -> MaterialTheme.colorScheme.error
+        NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
       }
 
   Row(
@@ -418,19 +416,19 @@ private fun PasswordRequirementItem(
 @Composable
 private fun PasswordRequirementStatusIcon(status: PasswordRequirementStatus) {
   when (status) {
-    PasswordRequirementStatus.NEUTRAL -> {
+    NEUTRAL -> {
       Box(
           modifier =
               Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
     }
-    PasswordRequirementStatus.VALID -> {
+    VALID -> {
       Icon(
           imageVector = Icons.Default.Check,
           contentDescription = "Requirement met",
           tint = Color(0xFF4CAF50),
           modifier = Modifier.size(16.dp))
     }
-    PasswordRequirementStatus.INVALID -> {
+    INVALID -> {
       Icon(
           imageVector = Icons.Default.Close,
           contentDescription = "Requirement not met",
@@ -444,6 +442,6 @@ private fun resolvePasswordRequirementStatus(
     showStatus: Boolean,
     isValid: Boolean
 ): PasswordRequirementStatus {
-  if (!showStatus) return PasswordRequirementStatus.NEUTRAL
-  return if (isValid) PasswordRequirementStatus.VALID else PasswordRequirementStatus.INVALID
+  if (!showStatus) return NEUTRAL
+  return if (isValid) VALID else INVALID
 }
