@@ -90,7 +90,7 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## Figma
 
-[View the design on Figma](https://www.figma.com/design/1O4tdBFh8A6mPBKelmKLjo/Map-In?node-id=415-64)
+[View the design on Figma](https://www.figma.com/design/1O4tdBFh8A6mPBKelmKLjo/Map-In?node-id=489-368&p=f&t=X7cf5yotV69eCEfq-0)
 
 ## License
 
