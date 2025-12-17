@@ -63,6 +63,7 @@ class AiAssistantOrchestrator(
    * @param maxDistanceKm Optional maximum distance filter in kilometers
    * @param userId User ID for fetching personalized events (uses empty string if not provided)
    * @param conversationId Optional conversation ID for multi-turn conversations (null for new)
+   * @param responseLanguage Language code for AI response (e.g., "en", "fr"). Defaults to "en"
    * @return AiAssistantResult containing the AI response and recommended events
    */
   suspend fun processQuery(
@@ -72,7 +73,8 @@ class AiAssistantOrchestrator(
       timeWindowEnd: Timestamp? = null,
       maxDistanceKm: Double? = null,
       userId: String? = null,
-      conversationId: String? = null
+      conversationId: String? = null,
+      responseLanguage: String = "en"
   ): AiAssistantResult {
     val currentConversationId = conversationId ?: lastConversationId
 
@@ -103,7 +105,10 @@ class AiAssistantOrchestrator(
     // Step 4: Build AI request
     val request =
         AiRecommendationRequest(
-            userQuery = userQuery, userContext = userContext, events = candidates)
+            userQuery = userQuery,
+            userContext = userContext,
+            events = candidates,
+            responseLanguage = responseLanguage)
 
     // Step 5: Call AI backend
     val response = aiRepository.recommendEvents(currentConversationId, request)
