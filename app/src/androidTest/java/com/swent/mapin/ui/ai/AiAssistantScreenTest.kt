@@ -182,6 +182,7 @@ class AiAssistantScreenTest {
     }
 
     composeTestRule.onNodeWithTag("backButton").performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("backButton").performClick()
 
     assert(clickCount == 1)
