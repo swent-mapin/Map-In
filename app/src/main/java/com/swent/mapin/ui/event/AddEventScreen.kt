@@ -134,6 +134,25 @@ fun AddEventTextField(
  * @param onCancel callback triggered when the user cancels the event creation
  * @param onDone callback triggered when the user is done with the event creation
  */
+private fun computeDialogRecenterPoint(
+    lastKnownPoint: Point?,
+    manualLocation: Location?,
+    fallbackLocation: Location
+): Point? {
+  lastKnownPoint?.let {
+    return it
+  }
+  manualLocation?.let { loc ->
+    if (loc.latitude != null && loc.longitude != null) {
+      return Point.fromLngLat(loc.longitude, loc.latitude)
+    }
+  }
+  if (fallbackLocation.latitude != null && fallbackLocation.longitude != null) {
+    return Point.fromLngLat(fallbackLocation.longitude, fallbackLocation.latitude)
+  }
+  return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -198,17 +217,7 @@ fun AddEventScreen(
           locationExpanded.value = false
         },
         recenterPoint =
-            lastKnownPoint
-                ?: manualLocation.value?.let { loc ->
-                  if (loc.latitude != null && loc.longitude != null) {
-                    Point.fromLngLat(loc.longitude, loc.latitude)
-                  } else null
-                }
-                ?: gotLocation.value.let { loc ->
-                  if (loc.latitude != null && loc.longitude != null) {
-                    Point.fromLngLat(loc.longitude, loc.latitude)
-                  } else null
-                },
+            computeDialogRecenterPoint(lastKnownPoint, manualLocation.value, gotLocation.value),
         locationExpanded = locationExpanded)
   }
 
