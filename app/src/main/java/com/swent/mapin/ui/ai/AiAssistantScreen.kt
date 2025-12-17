@@ -46,15 +46,24 @@ fun AiAssistantScreen(
     onNavigateBack: () -> Unit = {},
     onEventSelected: (String) -> Unit = {}
 ) {
+  var hasNavigatedBack by remember { mutableStateOf(false) }
+
   Scaffold(
       modifier = modifier.testTag("aiAssistantScreen"),
       topBar = {
         TopAppBar(
             title = { Text("AI Assistant", fontWeight = FontWeight.Bold) },
             navigationIcon = {
-              IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("backButton")) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-              }
+              IconButton(
+                  onClick = {
+                    if (!hasNavigatedBack) {
+                      hasNavigatedBack = true
+                      onNavigateBack()
+                    }
+                  },
+                  modifier = Modifier.testTag("backButton")) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                  }
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(

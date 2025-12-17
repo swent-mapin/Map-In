@@ -471,4 +471,90 @@ class ConversationScreenTest {
     // Verify navigation back was called
     assert(backCalled)
   }
+
+  // ------------------------------------------------------------
+  // Leave Group State Tests (Loading & Error)
+  // ------------------------------------------------------------
+  @Test
+  fun conversationScreen_showsLoadingDialog_whenLeaveGroupStateIsLoading() {
+    val mockVm = mockk<MessageViewModel>(relaxed = true)
+    val mockConvVm = mockk<ConversationViewModel>(relaxed = true)
+
+    val fakeGroupConversation =
+        Conversation(
+            id = "group1",
+            participantIds = listOf("u1", "u2", "u3"),
+            participants =
+                listOf(
+                    UserProfile("u1", "Alice"),
+                    UserProfile("u2", "Bob"),
+                    UserProfile("u3", "Charlie")),
+            profilePictureUrl = null)
+
+    val conversationFlow = MutableStateFlow<Conversation?>(fakeGroupConversation)
+    val leaveGroupStateFlow = MutableStateFlow<LeaveGroupState>(LeaveGroupState.Loading)
+
+    every { mockVm.messages } returns MutableStateFlow(emptyList())
+    every { mockVm.observeMessages(any()) } just Runs
+    every { mockConvVm.gotConversation } returns conversationFlow
+    every { mockConvVm.leaveGroupState } returns leaveGroupStateFlow
+    every { mockConvVm.getConversationById(any()) } just Runs
+    every { mockConvVm.currentUserProfile } returns UserProfile("u1", "Alice")
+
+    composeTestRule.setContent {
+      ConversationScreenForTest(
+          messageViewModel = mockVm,
+          conversationViewModel = mockConvVm,
+          conversationId = "group1",
+          conversationName = "Group Chat")
+    }
+
+    composeTestRule.onNodeWithText("Leaving Group").assertIsDisplayed()
+  }
+
+  @Test
+  fun conversationScreen_showsErrorDialog_whenLeaveGroupStateIsError() {
+    val mockVm = mockk<MessageViewModel>(relaxed = true)
+    val mockConvVm = mockk<ConversationViewModel>(relaxed = true)
+
+    val fakeGroupConversation =
+        Conversation(
+            id = "group1",
+            participantIds = listOf("u1", "u2", "u3"),
+            participants =
+                listOf(
+                    UserProfile("u1", "Alice"),
+                    UserProfile("u2", "Bob"),
+                    UserProfile("u3", "Charlie")),
+            profilePictureUrl = null)
+
+    val conversationFlow = MutableStateFlow<Conversation?>(fakeGroupConversation)
+    val leaveGroupStateFlow =
+        MutableStateFlow<LeaveGroupState>(LeaveGroupState.Error("Network error"))
+
+    every { mockVm.messages } returns MutableStateFlow(emptyList())
+    every { mockVm.observeMessages(any()) } just Runs
+    every { mockConvVm.gotConversation } returns conversationFlow
+    every { mockConvVm.leaveGroupState } returns leaveGroupStateFlow
+    every { mockConvVm.getConversationById(any()) } just Runs
+    every { mockConvVm.currentUserProfile } returns UserProfile("u1", "Alice")
+    every { mockConvVm.resetLeaveGroupState() } just Runs
+
+    composeTestRule.setContent {
+      ConversationScreenForTest(
+          messageViewModel = mockVm,
+          conversationViewModel = mockConvVm,
+          conversationId = "group1",
+          conversationName = "Group Chat")
+    }
+
+    // Verify error dialog is displayed
+    composeTestRule.onNodeWithText("Error").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Network error").assertIsDisplayed()
+    composeTestRule.onNodeWithText("OK").assertIsDisplayed()
+
+    // Click OK and verify state reset
+    composeTestRule.onNodeWithText("OK").performClick()
+    verify { mockConvVm.resetLeaveGroupState() }
+  }
 }

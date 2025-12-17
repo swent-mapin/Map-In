@@ -65,6 +65,8 @@ data class Conversation(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
+  var hasNavigatedBack by remember { mutableStateOf(false) }
+
   TopAppBar(
       title = {
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -72,7 +74,12 @@ fun ChatTopBar(title: String, onNavigateBack: (() -> Unit)? = null) {
       navigationIcon = {
         if (onNavigateBack != null) {
           IconButton(
-              onClick = onNavigateBack,
+              onClick = {
+                if (!hasNavigatedBack) {
+                  hasNavigatedBack = true
+                  onNavigateBack()
+                }
+              },
               modifier = Modifier.testTag(ChatScreenTestTags.BACK_BUTTON)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
               }

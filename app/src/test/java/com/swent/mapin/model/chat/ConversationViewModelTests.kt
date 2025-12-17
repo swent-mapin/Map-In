@@ -36,10 +36,12 @@ class ConversationViewModelTest {
   }
 
   @Test
-  fun `getNewUID returns repository UID`() {
-    whenever(conversationRepository.getNewUid()).thenReturn("new_uid_123")
-    val uid = viewModel.getNewUID()
-    Assert.assertEquals("new_uid_123", uid)
+  fun `getNewUID delegates to repository`() {
+    whenever(conversationRepository.getNewUid(listOf("a", "b"))).thenReturn("uid_123")
+
+    val uid = viewModel.getNewUID(listOf("a", "b"))
+
+    Assert.assertEquals("uid_123", uid)
   }
 
   @Test
@@ -53,7 +55,6 @@ class ConversationViewModelTest {
             location = "Test City")
     whenever(userProfileRepository.getUserProfile("user123")).thenReturn(userProfile)
 
-    // Just call the function; no Firebase mocking needed
     viewModel.getCurrentUserProfile()
     testDispatcher.scheduler.advanceUntilIdle()
 
@@ -92,7 +93,7 @@ class ConversationViewModelTest {
         whenever(conversationRepository.getConversationById("conv1")).thenReturn(conversation)
 
         viewModel.getConversationById("conv1")
-        testDispatcher.scheduler.advanceUntilIdle() // Let coroutine complete
+        testDispatcher.scheduler.advanceUntilIdle()
 
         Assert.assertEquals(conversation, viewModel.gotConversation.value)
       }
@@ -113,18 +114,52 @@ class ConversationViewModelTest {
     val firstConversation = Conversation(id = "conv1", name = "First Chat")
     val secondConversation = Conversation(id = "conv2", name = "Second Chat")
 
-    // Simulate repository calls with delay
-    whenever(conversationRepository.getConversationById("conv1")).thenAnswer { firstConversation }
+    whenever(conversationRepository.getConversationById("conv1")).thenReturn(firstConversation)
     whenever(conversationRepository.getConversationById("conv2")).thenReturn(secondConversation)
 
     viewModel.getConversationById("conv1")
-    viewModel.getConversationById("conv2") // This should cancel the first job
+    viewModel.getConversationById("conv2")
     testDispatcher.scheduler.advanceUntilIdle()
 
-    // The first call should have been cancelled, final value is from second call
     Assert.assertEquals(secondConversation, viewModel.gotConversation.value)
   }
-  // This was written with the help of Claude Sonnet 4.5
+
+  @Test
+  fun `getExistingConversation returns conversation when it exists`() = runTest {
+    val conversationId = "conv1"
+    val conversation = Conversation(id = conversationId, name = "Test Chat")
+
+    whenever(conversationRepository.conversationExists(conversationId)).thenReturn(true)
+    whenever(conversationRepository.getConversationById(conversationId)).thenReturn(conversation)
+
+    val result = viewModel.getExistingConversation(conversationId)
+
+    Assert.assertEquals(conversation, result)
+  }
+
+  @Test
+  fun `getExistingConversation returns null when conversation does not exist`() = runTest {
+    val conversationId = "conv1"
+
+    whenever(conversationRepository.conversationExists(conversationId)).thenReturn(false)
+
+    val result = viewModel.getExistingConversation(conversationId)
+
+    Assert.assertNull(result)
+    verify(conversationRepository, never()).getConversationById(any())
+  }
+
+  @Test
+  fun `getExistingConversation returns null when repository returns null`() = runTest {
+    val conversationId = "conv1"
+
+    whenever(conversationRepository.conversationExists(conversationId)).thenReturn(true)
+    whenever(conversationRepository.getConversationById(conversationId)).thenReturn(null)
+
+    val result = viewModel.getExistingConversation(conversationId)
+
+    Assert.assertNull(result)
+  }
 
   @Test
   fun `leaveConversation calls repository leaveConversation`() = runTest {

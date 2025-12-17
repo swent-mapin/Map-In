@@ -19,6 +19,7 @@ import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.Filters
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.directions.DirectionState
+import com.swent.mapin.ui.map.eventstate.EventLists
 import com.swent.mapin.ui.map.eventstate.MapEventStateController
 import com.swent.mapin.ui.map.location.LocationManager
 import com.swent.mapin.ui.memory.MemoryFormData
@@ -160,7 +161,7 @@ class MapScreenViewModelTest {
       }
     }
 
-    whenever(mockEventStateController.refreshSelectedEvent(any())).thenAnswer { invocation ->
+    whenever(mockEventStateController.refreshSelectedEvent(any(), any())).thenAnswer { invocation ->
       val eventId = invocation.getArgument<String>(0)
       joinedEvents.find { it.uid == eventId } ?: savedEvents.find { it.uid == eventId }
     }
@@ -761,7 +762,7 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     val updatedEvent = testEvent.copy(participantIds = listOf("testUserId"))
-    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid))
+    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid, EventLists.JOINED))
         .thenReturn(updatedEvent)
 
     viewModel.joinEvent()
@@ -788,7 +789,7 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     val updatedEvent = testEvent.copy(title = "Updated Event")
-    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid))
+    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid, EventLists.SAVED))
         .thenReturn(updatedEvent)
 
     viewModel.saveEventForLater()
@@ -846,7 +847,7 @@ class MapScreenViewModelTest {
     advanceUntilIdle()
 
     val updatedEvent = testEvent.copy(title = "Updated Event")
-    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid))
+    whenever(viewModel.eventStateController.refreshSelectedEvent(testEvent.uid, EventLists.ALL))
         .thenReturn(updatedEvent)
 
     viewModel.unsaveEventForLater()

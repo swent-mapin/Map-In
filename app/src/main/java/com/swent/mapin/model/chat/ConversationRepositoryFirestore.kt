@@ -2,9 +2,12 @@ package com.swent.mapin.model.chat
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
+import com.swent.mapin.util.HashUtils.hashUserIds
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -20,9 +23,17 @@ class ConversationRepositoryFirestore(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ConversationRepository {
-  /** Generates a new unique identifier for a conversation. */
-  override fun getNewUid(): String {
-    return db.collection("conversations").document().id
+  /**
+   * Generates a new unique identifier for a conversation. Returns a new random ID if the list given
+   * is empty, or a Hashed ID if the list isn't empty
+   *
+   * @param participantIds The list of participant IDs
+   */
+  override fun getNewUid(participantIds: List<String>): String {
+    if (participantIds.isEmpty()) {
+      return db.collection("conversations").document().id
+    }
+    return hashUserIds(participantIds)
   }
   /**
    * Observes conversations for the current user with live updates.
@@ -92,7 +103,46 @@ class ConversationRepositoryFirestore(
             participantIds = updatedParticipantIds,
         )
 
-    conversationRef.set(conversationToSave).await()
+    db.runTransaction { tx ->
+          val snapshot = tx[conversationRef]
+          if (!snapshot.exists()) {
+            tx[conversationRef] = conversationToSave
+          }
+        }
+        .await()
+  }
+
+  override suspend fun joinConversation(
+      conversationId: String,
+      userId: String,
+      userProfile: UserProfile
+  ) {
+    db.collection("conversations")
+        .document(conversationId)
+        .update(
+            mapOf(
+                "participantIds" to FieldValue.arrayUnion(userId),
+                "participants" to FieldValue.arrayUnion(userProfile)))
+  }
+
+  /**
+   * Checks whether a conversation with the given ID exists in Firestore.
+   *
+   * This function performs a single read on the "conversations" collection and returns whether a
+   * document with the specified [conversationId] exists.
+   *
+   * @param conversationId The ID of the conversation to check.
+   * @return `true` if the conversation exists in Firestore, `false` otherwise.
+   */
+  override suspend fun conversationExists(conversationId: String): Boolean {
+    return try {
+      val docSnapshot = db.collection("conversations").document(conversationId).get().await()
+
+      docSnapshot.exists()
+    } catch (e: Exception) {
+      Log.e("ConversationRepo", "Failed to check if conversation exists", e)
+      false
+    }
   }
 
   /**

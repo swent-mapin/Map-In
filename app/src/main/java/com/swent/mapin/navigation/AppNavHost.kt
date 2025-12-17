@@ -141,18 +141,7 @@ fun AppNavHost(
           memoryVM = memoryVM)
     }
 
-    composable(Route.Profile.route) {
-      ProfileScreen(
-          onNavigateBack = { safePopBackStack() },
-          onNavigateToSettings = { navController.navigate(Route.Settings.route) },
-          onNavigateToSignIn = {
-            navController.navigate(Route.Auth.route) {
-              popUpTo(navController.graph.startDestinationId) { inclusive = true }
-              launchSingleTop = true
-            }
-          },
-          onNavigateToFriends = { navController.navigate(Route.Friends.route) })
-    }
+    composable(Route.Profile.route) { ProfileScreen(onNavigateBack = { safePopBackStack() }) }
 
     composable(Route.Settings.route) {
       val passwordChangeResult =
@@ -207,8 +196,7 @@ fun AppNavHost(
           onNavigateBack = { safePopBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
-            val encodedName = Uri.encode(conversation.name)
-            navController.navigate("conversation/${conversation.id}/${encodedName}")
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
           },
           onTabSelected = { chatTab -> navController.navigate(chatTab.destination) })
     }
@@ -221,6 +209,9 @@ fun AppNavHost(
               popUpTo(Route.Chat.route) { inclusive = true }
               launchSingleTop = true
             }
+          },
+          onCreateExistingConversation = { conversation ->
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
           })
     }
 
