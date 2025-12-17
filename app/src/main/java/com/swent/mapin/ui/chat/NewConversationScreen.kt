@@ -307,6 +307,7 @@ fun NewConversationScreen(
   }
 
   fun onGroupConfirm() {
+    if (groupName.value.isBlank()) return
     scope.launch {
       handleGroupConfirm(
           conversationViewModel = conversationViewModel,
