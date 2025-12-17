@@ -104,9 +104,9 @@ class ConversationRepositoryFirestore(
         )
 
     db.runTransaction { tx ->
-          val snapshot = tx.get(conversationRef)
+          val snapshot = tx[conversationRef]
           if (!snapshot.exists()) {
-            tx.set(conversationRef, conversationToSave)
+            tx[conversationRef] = conversationToSave
           }
         }
         .await()
