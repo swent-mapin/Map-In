@@ -3,6 +3,7 @@ package com.swent.mapin.ui.ai
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
@@ -79,6 +80,22 @@ class AiAssistantViewModel(
       val aiRepository =
           AiConfig.provideRepository(okHttpClient = OkHttpClient(), gson = Gson(), baseUrl = "")
       return AiConfig.createOrchestrator(aiRepository, eventRepository)
+    }
+
+    /**
+     * Factory for creating AiAssistantViewModel with proper lifecycle management. Uses
+     * applicationContext to avoid memory leaks.
+     */
+    fun provideFactory(context: Context): ViewModelProvider.Factory {
+      return object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+          if (modelClass.isAssignableFrom(AiAssistantViewModel::class.java)) {
+            return AiAssistantViewModel(context.applicationContext) as T
+          }
+          throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+        }
+      }
     }
   }
 
@@ -204,16 +221,32 @@ class AiAssistantViewModel(
 
     if (!hasJoinIntent) return null
 
+    // Helper function to check for word boundary matches
+    fun matchesWord(pattern: String): Boolean {
+      return Regex("\\b$pattern\\b", RegexOption.IGNORE_CASE).containsMatchIn(lowerQuery)
+    }
+
+    // Check for explicit "join #N" or "event #N" patterns first
+    fun matchesEventNumber(number: Int): Boolean {
+      val patterns =
+          listOf(
+              "#$number",
+              "event $number",
+              "événement $number",
+              "number $number",
+              "numéro $number",
+              "option $number")
+      return patterns.any { lowerQuery.contains(it) }
+    }
+
     // Try to find event index
     return when {
-      lowerQuery.contains("first") || lowerQuery.contains("premier") || lowerQuery.contains("1") ->
-          0
-      lowerQuery.contains("second") ||
-          lowerQuery.contains("deuxième") ||
-          lowerQuery.contains("2") -> 1
-      lowerQuery.contains("third") ||
-          lowerQuery.contains("troisième") ||
-          lowerQuery.contains("3") -> 2
+      matchesWord("first") ||
+          matchesWord("premier") ||
+          matchesWord("première") ||
+          matchesEventNumber(1) -> 0
+      matchesWord("second") || matchesWord("deuxième") || matchesEventNumber(2) -> 1
+      matchesWord("third") || matchesWord("troisième") || matchesEventNumber(3) -> 2
       // If only one event, assume they want that one
       _recommendedEvents.value.size == 1 -> 0
       else -> null
