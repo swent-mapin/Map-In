@@ -102,21 +102,20 @@ fun AddEventTextField(
       value = textField.value,
       onValueChange = {
         textField.value = it
-        if (isLocation) {
-          locationQuery()
-          val isValid =
-              locationValidator?.invoke(textField.value)
-                  ?: isValidLocation(textField.value, locationSuggestions)
-          error.value = !isValid
-        } else if (isTag) {
-          error.value = !isValidTagInput(it)
-        } else if (isPrice) {
-          error.value = !isValidPriceInput(it)
-        } else if (isCapacity) {
-          error.value = !isValidCapacityInput(it)
-        } else {
-          error.value = textField.value.isBlank()
-        }
+        error.value =
+            when {
+              isLocation -> {
+                locationQuery()
+                val isValid =
+                    locationValidator?.invoke(textField.value)
+                        ?: isValidLocation(textField.value, locationSuggestions)
+                !isValid
+              }
+              isTag -> !isValidTagInput(it)
+              isPrice -> !isValidPriceInput(it)
+              isCapacity -> !isValidCapacityInput(it)
+              else -> textField.value.isBlank()
+            }
       },
       isError = error.value,
       placeholder = { Text(placeholderString, fontSize = 14.sp) },

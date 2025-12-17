@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.filters
 
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -31,6 +32,10 @@ import kotlinx.coroutines.flow.StateFlow
  * through the [errorMessage] StateFlow.
  */
 class FiltersSectionViewModel : ViewModel() {
+  companion object {
+    private const val TAG = "FiltersSectionViewModel"
+  }
+
   // Single Filters state
   private var _filters = MutableStateFlow(Filters())
   /** Current filter configuration. Emits updates when any filter changes. */
@@ -130,8 +135,7 @@ class FiltersSectionViewModel : ViewModel() {
       is ParseResult.Success -> {
         _filters.value = _filters.value.copy(startDate = result.date)
         isWhenChecked.value = true
-        println(
-            "FiltersSectionViewModel: Set startDate to ${result.date}, filters: ${_filters.value}")
+        Log.d(TAG, "Set startDate to ${result.date}, filters: ${_filters.value}")
       }
       is ParseResult.Failure -> {
         _errorMessage.value = result.message
@@ -156,8 +160,7 @@ class FiltersSectionViewModel : ViewModel() {
         if (result.date >= _filters.value.startDate) {
           _filters.value = _filters.value.copy(endDate = result.date)
           isWhenChecked.value = true
-          println(
-              "FiltersSectionViewModel: Set endDate to ${result.date}, filters: ${_filters.value}")
+          Log.d(TAG, "Set endDate to ${result.date}, filters: ${_filters.value}")
         } else {
           _errorMessage.value = "End date must be on or after start date"
         }
@@ -199,7 +202,7 @@ class FiltersSectionViewModel : ViewModel() {
     val newPrice = value?.coerceIn(0, 999)
     _filters.value = _filters.value.copy(maxPrice = newPrice)
     if (newPrice != null) isPriceChecked.value = true
-    println("FiltersSectionViewModel: Set maxPrice to $newPrice, filters: ${_filters.value}")
+    Log.d(TAG, "Set maxPrice to $newPrice, filters: ${_filters.value}")
   }
 
   // TAGS FILTER

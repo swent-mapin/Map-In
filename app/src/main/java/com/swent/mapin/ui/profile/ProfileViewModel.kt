@@ -335,8 +335,7 @@ class ProfileViewModel(
         Log.e("BadgeCalculationFail", "ProfileViewModel - Failed to save badges to Firestore")
       }
     } catch (e: Exception) {
-      Log.e("BadgeCalculationException", "ProfileViewModel - Exception saving badges: ${e.message}")
-      e.printStackTrace()
+      Log.e("BadgeCalculationException", "ProfileViewModel - Exception saving badges", e)
     }
   }
 

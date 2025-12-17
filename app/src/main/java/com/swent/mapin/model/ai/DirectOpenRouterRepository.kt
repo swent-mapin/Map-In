@@ -24,11 +24,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * @property client OkHttpClient instance for making HTTP requests
  * @property gson Gson instance for JSON serialization/deserialization
  * @property ioDispatcher Coroutine dispatcher for IO operations
+ * @property apiKey OpenRouter API key for authentication
  */
 class DirectOpenRouterRepository(
     private val client: OkHttpClient = OkHttpClient(),
     private val gson: Gson = Gson(),
-    private val ioDispatcher: CoroutineContext = Dispatchers.IO
+    private val ioDispatcher: CoroutineContext = Dispatchers.IO,
+    private val apiKey: String = ""
 ) : AiAssistantRepository {
 
   companion object {
@@ -235,15 +237,20 @@ Recommend 2-3 relevant events with selling reasons.
   }
 
   private fun executeRequest(requestPayload: JsonObject): String {
-    val httpRequest =
+    val requestBuilder =
         Request.Builder()
             .url(OPENROUTER_API_URL)
-            .addHeader("Authorization", "Bearer YOUR_API_KEY_HERE")
             .addHeader("Content-Type", "application/json")
             .addHeader("HTTP-Referer", "https://mapin.app")
             .addHeader("X-Title", "Map-In Event Recommender")
             .post(requestPayload.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+
+    // Only add Authorization header if API key is provided
+    if (apiKey.isNotEmpty()) {
+      requestBuilder.addHeader("Authorization", "Bearer $apiKey")
+    }
+
+    val httpRequest = requestBuilder.build()
 
     client.newCall(httpRequest).execute().use { response ->
       if (!response.isSuccessful) {
