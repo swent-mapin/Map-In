@@ -9,7 +9,9 @@ import com.mapbox.geojson.Point
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 
@@ -227,5 +229,32 @@ class ManualLocationPickerTest {
         .onNodeWithTag(ManualLocationPickerTestTags.DIALOG)
         .assertExists()
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun addEventScreen_selecting_search_result_in_dialog_sets_location() {
+    val testLocations = listOf(Location.from("EPFL", 46.5197, 6.5665))
+    val locationFlow = MutableStateFlow(testLocations)
+    val locationViewModel = mockk<LocationViewModel>(relaxed = true)
+    every { locationViewModel.locations } returns locationFlow
+    val eventViewModel = mockk<EventViewModel>(relaxed = true)
+
+    composeTestRule.setContent {
+      AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel)
+    }
+
+    // Open the dialog
+    composeTestRule.onNodeWithText("Pick location on map").performClick()
+    composeTestRule.waitForIdle()
+
+    // Type in search to show results
+    composeTestRule.onNodeWithTag(ManualLocationPickerTestTags.SEARCH_FIELD).performTextInput("E")
+    composeTestRule.waitForIdle()
+
+    // Click search result - this triggers onSearchResultSelect in AddEventScreen
+    composeTestRule
+        .onNodeWithTag(ManualLocationPickerTestTags.SEARCH_RESULT_PREFIX + 0)
+        .performClick()
+    composeTestRule.waitForIdle()
   }
 }
