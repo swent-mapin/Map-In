@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.firestore
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.UserProfileRepository
@@ -139,7 +138,7 @@ class ConversationViewModel(
     return conversationRepository.getNewUid(participantIds)
   }
 
-  fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile){
+  fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile) {
     viewModelScope.launch {
       conversationRepository.joinConversation(conversationId, userId, userProfile)
     }

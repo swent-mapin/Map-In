@@ -192,6 +192,7 @@ private fun GroupNameDialog(
       confirmButton = { TextButton(onClick = onConfirm) { Text("OK") } },
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
+
 suspend fun handleSingleFriendConfirm(
     conversationViewModel: ConversationViewModel,
     friend: FriendWithProfile,
@@ -199,31 +200,28 @@ suspend fun handleSingleFriendConfirm(
     onConfirm: () -> Unit,
     onCreateExistingConversation: (Conversation) -> Unit
 ) {
-    val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
+  val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
 
-    val existing = conversationViewModel.getExistingConversation(convoId)
+  val existing = conversationViewModel.getExistingConversation(convoId)
 
-    if (existing != null) {
-        if (currentUserId !in existing.participantIds) {
-            conversationViewModel.joinConversation(
-                conversationId = existing.id,
-                userId = currentUserId,
-                userProfile = conversationViewModel.currentUserProfile
-            )
-        }
-        onCreateExistingConversation(existing)
-    } else {
-        conversationViewModel.createConversation(
-            Conversation(
-                id = convoId,
-                name = friend.userProfile.name,
-                participantIds = listOf(currentUserId, friend.userProfile.userId),
-                participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
-                profilePictureUrl = friend.userProfile.profilePictureUrl
-            )
-        )
-        onConfirm()
+  if (existing != null) {
+    if (currentUserId !in existing.participantIds) {
+      conversationViewModel.joinConversation(
+          conversationId = existing.id,
+          userId = currentUserId,
+          userProfile = conversationViewModel.currentUserProfile)
     }
+    onCreateExistingConversation(existing)
+  } else {
+    conversationViewModel.createConversation(
+        Conversation(
+            id = convoId,
+            name = friend.userProfile.name,
+            participantIds = listOf(currentUserId, friend.userProfile.userId),
+            participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
+            profilePictureUrl = friend.userProfile.profilePictureUrl))
+    onConfirm()
+  }
 }
 
 suspend fun handleGroupConfirm(
@@ -233,30 +231,28 @@ suspend fun handleGroupConfirm(
     currentUserId: String,
     onConfirm: () -> Unit
 ) {
-    if (groupName.isBlank()) return
+  if (groupName.isBlank()) return
 
-    val ids = selectedFriends.map { it.userProfile.userId }
-    val profiles = selectedFriends.map { it.userProfile }
+  val ids = selectedFriends.map { it.userProfile.userId }
+  val profiles = selectedFriends.map { it.userProfile }
 
-    var convoId = conversationViewModel.getNewUID(ids + currentUserId)
+  var convoId = conversationViewModel.getNewUID(ids + currentUserId)
 
-    val existing = conversationViewModel.getExistingConversation(convoId)
+  val existing = conversationViewModel.getExistingConversation(convoId)
 
-    if (existing != null) {
-        convoId = conversationViewModel.getNewUID(emptyList())
-    }
+  if (existing != null) {
+    convoId = conversationViewModel.getNewUID(emptyList())
+  }
 
-    conversationViewModel.createConversation(
-        Conversation(
-            id = convoId,
-            name = groupName,
-            participantIds = ids + currentUserId,
-            participants = profiles + conversationViewModel.currentUserProfile,
-            profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl
-        )
-    )
+  conversationViewModel.createConversation(
+      Conversation(
+          id = convoId,
+          name = groupName,
+          participantIds = ids + currentUserId,
+          participants = profiles + conversationViewModel.currentUserProfile,
+          profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl))
 
-    onConfirm()
+  onConfirm()
 }
 /**
  * Assisted by AI Screen allowing the user to select one or more friends to start a new
@@ -291,29 +287,27 @@ fun NewConversationScreen(
   val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
 
   fun onSingleFriendConfirm(friend: FriendWithProfile) {
-        scope.launch {
-            handleSingleFriendConfirm(
-                conversationViewModel = conversationViewModel,
-                friend = friend,
-                currentUserId = currentUserId,
-                onConfirm = onConfirm,
-                onCreateExistingConversation = onCreateExistingConversation
-            )
-        }
+    scope.launch {
+      handleSingleFriendConfirm(
+          conversationViewModel = conversationViewModel,
+          friend = friend,
+          currentUserId = currentUserId,
+          onConfirm = onConfirm,
+          onCreateExistingConversation = onCreateExistingConversation)
+    }
   }
 
   fun onGroupConfirm() {
-        scope.launch {
-            handleGroupConfirm(
-                conversationViewModel = conversationViewModel,
-                selectedFriends = selectedFriends,
-                groupName = groupName.value,
-                currentUserId = currentUserId,
-                onConfirm = onConfirm
-            )
-        }
-        showGroupNameDialog.value = false
-        groupName.value = ""
+    scope.launch {
+      handleGroupConfirm(
+          conversationViewModel = conversationViewModel,
+          selectedFriends = selectedFriends,
+          groupName = groupName.value,
+          currentUserId = currentUserId,
+          onConfirm = onConfirm)
+    }
+    showGroupNameDialog.value = false
+    groupName.value = ""
   }
 
   Scaffold(
@@ -326,7 +320,7 @@ fun NewConversationScreen(
               if (selectedFriends.size >= 2) {
                 showGroupNameDialog.value = true
               } else {
-                  onSingleFriendConfirm(selectedFriends.first())
+                onSingleFriendConfirm(selectedFriends.first())
               }
             })
       }) { paddingValues ->
@@ -348,7 +342,6 @@ fun NewConversationScreen(
           showGroupNameDialog.value = false
           groupName.value = ""
         },
-        onConfirm = { onGroupConfirm() }
-    )
+        onConfirm = { onGroupConfirm() })
   }
 }

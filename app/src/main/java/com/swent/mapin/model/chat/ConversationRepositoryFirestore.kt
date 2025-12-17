@@ -104,20 +104,25 @@ class ConversationRepositoryFirestore(
         )
 
     db.runTransaction { tx ->
-        val snapshot = tx.get(conversationRef)
-        if (!snapshot.exists()) {
+          val snapshot = tx.get(conversationRef)
+          if (!snapshot.exists()) {
             tx.set(conversationRef, conversationToSave)
+          }
         }
-    }.await()
+        .await()
   }
 
-  override suspend fun joinConversation(conversationId: String, userId: String, userProfile: UserProfile) {
-      db.collection("conversations").document(conversationId).update(
+  override suspend fun joinConversation(
+      conversationId: String,
+      userId: String,
+      userProfile: UserProfile
+  ) {
+    db.collection("conversations")
+        .document(conversationId)
+        .update(
             mapOf(
                 "participantIds" to FieldValue.arrayUnion(userId),
-                "participants" to FieldValue.arrayUnion(userProfile)
-            )
-        )
+                "participants" to FieldValue.arrayUnion(userProfile)))
   }
 
   /**

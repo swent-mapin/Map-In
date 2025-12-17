@@ -720,9 +720,9 @@ class ConversationRepositoryFirestoreTest {
 
   @Test
   fun `getNewUid returns hashed id when participants provided`() {
-        val participants = listOf("userA", "userB")
-        val id = repo.getNewUid(participants)
-        // Assert it matches expected hash
-        assertEquals(HashUtils.hashUserIds(participants), id)
+    val participants = listOf("userA", "userB")
+    val id = repo.getNewUid(participants)
+    // Assert it matches expected hash
+    assertEquals(HashUtils.hashUserIds(participants), id)
   }
 }
