@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -51,35 +52,17 @@ fun AiAssistantScreen(
     onNavigateBack: () -> Unit = {},
     onEventSelected: (String) -> Unit = {}
 ) {
-  // If no viewModel is provided and we're in a test environment (context issues),
-  // we render a static version of the screen
-  if (viewModel == null) {
-    val context = LocalContext.current
-    val actualViewModel = remember {
-      try {
-        AiAssistantViewModel(context)
-      } catch (e: Exception) {
-        null
-      }
-    }
+  // If a viewModel is provided (e.g., for testing), use it directly
+  // Otherwise, use viewModel() with factory for proper lifecycle management
+  val context = LocalContext.current
+  val actualViewModel: AiAssistantViewModel =
+      viewModel ?: viewModel(factory = AiAssistantViewModel.provideFactory(context))
 
-    if (actualViewModel != null) {
-      AiAssistantScreenContent(
-          modifier = modifier,
-          viewModel = actualViewModel,
-          onNavigateBack = onNavigateBack,
-          onEventSelected = onEventSelected)
-    } else {
-      // Fallback for test environment - render static UI
-      AiAssistantScreenStaticContent(modifier = modifier, onNavigateBack = onNavigateBack)
-    }
-  } else {
-    AiAssistantScreenContent(
-        modifier = modifier,
-        viewModel = viewModel,
-        onNavigateBack = onNavigateBack,
-        onEventSelected = onEventSelected)
-  }
+  AiAssistantScreenContent(
+      modifier = modifier,
+      viewModel = actualViewModel,
+      onNavigateBack = onNavigateBack,
+      onEventSelected = onEventSelected)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
