@@ -69,128 +69,23 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
   Scaffold(
       modifier = Modifier.fillMaxSize(),
       topBar = {
-        TopAppBar(
-            title = {
-              Text(
-                  text =
-                      stringResource(
-                          when (displayMode) {
-                            MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_screen_title_my
-                            MemoryDisplayMode.NEARBY_MEMORIES ->
-                                R.string.memories_screen_title_nearby
-                          }),
-                  modifier = Modifier.testTag("memoriesScreenTitle"),
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold)
-            },
-            navigationIcon = {
-              IconButton(
-                  onClick = {
-                    if (!hasNavigatedBack) {
-                      hasNavigatedBack = true
-                      onNavigateBack()
-                    }
-                  }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back_button))
-                  }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent))
+        MemoriesTopBar(
+            displayMode = displayMode,
+            onNavigateBack = {
+              if (!hasNavigatedBack) {
+                hasNavigatedBack = true
+                onNavigateBack()
+              }
+            })
       }) { paddingValues ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
-                    .padding(paddingValues)
-                    .background(
-                        if (MaterialTheme.colorScheme.background ==
-                            MaterialTheme.colorScheme.surface) {
-                          MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        } else {
-                          MaterialTheme.colorScheme.background
-                        })) {
-              LazyColumn(
-                  modifier = Modifier.fillMaxSize().padding(16.dp),
-                  contentPadding = PaddingValues(bottom = 16.dp)) {
-                    item {
-                      Row(
-                          verticalAlignment = Alignment.CenterVertically,
-                          modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text =
-                                    stringResource(
-                                        when (displayMode) {
-                                          MemoryDisplayMode.OWNER_MEMORIES ->
-                                              R.string.memories_your_memories
-                                          MemoryDisplayMode.NEARBY_MEMORIES ->
-                                              R.string.memories_nearby_area
-                                        }),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f).testTag("yourMemoriesMessage"))
-
-                            TextButton(
-                                onClick = { viewModel.refresh() },
-                                modifier = Modifier.testTag("refreshAllButton")) {
-                                  Text(stringResource(R.string.memories_refresh_all))
-                                }
-                          }
-                      Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (memories.isEmpty()) {
-                      item {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center) {
-                              Column(
-                                  horizontalAlignment = Alignment.CenterHorizontally,
-                                  modifier =
-                                      Modifier.padding(horizontal = 24.dp)
-                                          .testTag("noMemoriesMessage")) {
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                when (displayMode) {
-                                                  MemoryDisplayMode.OWNER_MEMORIES ->
-                                                      R.string.memories_no_memories_yet
-                                                  MemoryDisplayMode.NEARBY_MEMORIES ->
-                                                      R.string.memories_no_memories_area
-                                                }),
-                                        style = MaterialTheme.typography.titleMedium)
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                when (displayMode) {
-                                                  MemoryDisplayMode.OWNER_MEMORIES ->
-                                                      R.string.memories_empty_message_owner
-                                                  MemoryDisplayMode.NEARBY_MEMORIES ->
-                                                      R.string.memories_empty_message_nearby
-                                                }),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis)
-                                  }
-                            }
-                      }
-                    } else {
-                      items(memories, key = { it.uid }) { memory ->
-                        MemoryItem(
-                            memory = memory,
-                            onClick = {
-                              viewModel.selectMemoryToView(memory.uid)
-                              onNavigateBack()
-                            },
-                            mediaUrls = memory.mediaUrls,
-                            taggedNames = memory.taggedUserIds)
-                        Spacer(modifier = Modifier.height(12.dp))
-                      }
-                    }
-                  }
+                Modifier.fillMaxSize().padding(paddingValues).background(getBackgroundColor())) {
+              MemoriesContent(
+                  memories = memories,
+                  displayMode = displayMode,
+                  viewModel = viewModel,
+                  onNavigateBack = onNavigateBack)
 
               error?.let { err ->
                 Text(
@@ -198,6 +93,133 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
               }
             }
       }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MemoriesTopBar(displayMode: MemoryDisplayMode, onNavigateBack: () -> Unit) {
+  TopAppBar(
+      title = {
+        Text(
+            text = stringResource(getTitleResource(displayMode)),
+            modifier = Modifier.testTag("memoriesScreenTitle"),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold)
+      },
+      navigationIcon = {
+        IconButton(onClick = onNavigateBack) {
+          Icon(
+              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+              contentDescription = stringResource(R.string.back_button))
+        }
+      },
+      colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent))
+}
+
+@Composable
+private fun MemoriesContent(
+    memories: List<Memory>,
+    displayMode: MemoryDisplayMode,
+    viewModel: MemoriesViewModel,
+    onNavigateBack: () -> Unit
+) {
+  LazyColumn(
+      modifier = Modifier.fillMaxSize().padding(16.dp),
+      contentPadding = PaddingValues(bottom = 16.dp)) {
+        item { MemoriesHeader(displayMode = displayMode, onRefresh = { viewModel.refresh() }) }
+
+        if (memories.isEmpty()) {
+          item { EmptyMemoriesState(displayMode = displayMode) }
+        } else {
+          items(memories, key = { it.uid }) { memory ->
+            MemoryItem(
+                memory = memory,
+                onClick = {
+                  viewModel.selectMemoryToView(memory.uid)
+                  onNavigateBack()
+                },
+                mediaUrls = memory.mediaUrls,
+                taggedNames = memory.taggedUserIds)
+            Spacer(modifier = Modifier.height(12.dp))
+          }
+        }
+      }
+}
+
+@Composable
+private fun MemoriesHeader(displayMode: MemoryDisplayMode, onRefresh: () -> Unit) {
+  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = stringResource(getSectionTitleResource(displayMode)),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.weight(1f).testTag("yourMemoriesMessage"))
+
+    TextButton(onClick = onRefresh, modifier = Modifier.testTag("refreshAllButton")) {
+      Text(stringResource(R.string.memories_refresh_all))
+    }
+  }
+  Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun EmptyMemoriesState(displayMode: MemoryDisplayMode) {
+  Spacer(modifier = Modifier.height(24.dp))
+  Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 24.dp).testTag("noMemoriesMessage")) {
+          Text(
+              text = stringResource(getEmptyTitleResource(displayMode)),
+              style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+              text = stringResource(getEmptyMessageResource(displayMode)),
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center,
+              maxLines = 2,
+              overflow = TextOverflow.Ellipsis)
+        }
+  }
+}
+
+// Helper functions to extract conditional logic
+@Composable
+private fun getBackgroundColor(): Color {
+  return if (MaterialTheme.colorScheme.background == MaterialTheme.colorScheme.surface) {
+    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+  } else {
+    MaterialTheme.colorScheme.background
+  }
+}
+
+private fun getTitleResource(displayMode: MemoryDisplayMode): Int {
+  return when (displayMode) {
+    MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_screen_title_my
+    MemoryDisplayMode.NEARBY_MEMORIES -> R.string.memories_screen_title_nearby
+  }
+}
+
+private fun getSectionTitleResource(displayMode: MemoryDisplayMode): Int {
+  return when (displayMode) {
+    MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_your_memories
+    MemoryDisplayMode.NEARBY_MEMORIES -> R.string.memories_nearby_area
+  }
+}
+
+private fun getEmptyTitleResource(displayMode: MemoryDisplayMode): Int {
+  return when (displayMode) {
+    MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_no_memories_yet
+    MemoryDisplayMode.NEARBY_MEMORIES -> R.string.memories_no_memories_area
+  }
+}
+
+private fun getEmptyMessageResource(displayMode: MemoryDisplayMode): Int {
+  return when (displayMode) {
+    MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_empty_message_owner
+    MemoryDisplayMode.NEARBY_MEMORIES -> R.string.memories_empty_message_nearby
+  }
 }
 
 /**
@@ -261,11 +283,7 @@ private fun MemoryFooter(isPublic: Boolean, dateText: String) {
     Icon(
         imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
         contentDescription =
-            if (isPublic) {
-              stringResource(R.string.memories_public)
-            } else {
-              stringResource(R.string.memories_private)
-            },
+            stringResource(if (isPublic) R.string.memories_public else R.string.memories_private),
         tint = MaterialTheme.colorScheme.primary)
     Text(
         text =
@@ -296,47 +314,48 @@ private fun MemoryItem(
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-          // --- 16:9 thumbnail ---
           MemoryThumbnail(imageUrl)
 
-          // --- Content ---
           Column(modifier = Modifier.padding(16.dp)) {
-
-            // Title
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  text =
-                      memory.title.ifBlank {
-                        stringResource(R.string.memories_default_title, memory.uid)
-                      },
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.SemiBold,
-                  modifier = Modifier.weight(1f))
-            }
-
-            // Tagged users
-            if (memory.taggedUserIds.isNotEmpty()) {
-              Text(
-                  text = stringResource(R.string.memories_tagged, taggedNames.joinToString { it }),
-                  style = MaterialTheme.typography.titleSmall,
-                  color = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.padding(top = 4.dp))
-            }
-
-            // Description preview (2 lines)
-            if (!memory.description.isBlank()) {
-              Text(
-                  text = memory.description,
-                  style = MaterialTheme.typography.bodyMedium,
-                  maxLines = 2,
-                  overflow = TextOverflow.Ellipsis,
-                  modifier = Modifier.padding(top = 8.dp))
-            }
-
-            // Footer row: Public + Date
+            MemoryTitle(memory = memory)
+            MemoryTaggedUsers(memory = memory, taggedNames = taggedNames)
+            MemoryDescription(memory = memory)
             MemoryFooter(memory.isPublic, dateText)
           }
         }
       }
+}
+
+@Composable
+private fun MemoryTitle(memory: Memory) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Text(
+        text = memory.title.ifBlank { stringResource(R.string.memories_default_title, memory.uid) },
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.weight(1f))
+  }
+}
+
+@Composable
+private fun MemoryTaggedUsers(memory: Memory, taggedNames: List<String>) {
+  if (memory.taggedUserIds.isNotEmpty()) {
+    Text(
+        text = stringResource(R.string.memories_tagged, taggedNames.joinToString { it }),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 4.dp))
+  }
+}
+
+@Composable
+private fun MemoryDescription(memory: Memory) {
+  if (!memory.description.isBlank()) {
+    Text(
+        text = memory.description,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(top = 8.dp))
+  }
 }
