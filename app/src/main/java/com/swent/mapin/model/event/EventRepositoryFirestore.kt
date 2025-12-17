@@ -926,7 +926,7 @@ class EventRepositoryFirestore(
       try {
         this.toObject(Event::class.java)?.copy(uid = this.id)
       } catch (e: Exception) {
-        Log.e("EventRepositoryFirestore", "Error converting document to Event (id=${this.id})", e)
+        Log.e(TAG, "Error converting document to Event (id=${this.id})", e)
         throw e
       }
 }
