@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import androidx.test.espresso.Espresso
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
 import com.swent.mapin.ui.event.AddEventScreen
@@ -193,14 +192,8 @@ class M2AddEventScreenTest {
     compose.onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_DESCRIPTION).performTextInput("Desc")
     compose.waitForIdle()
 
-    // Close keyboard to ensure UI is accessible
-    Espresso.closeSoftKeyboard()
-    compose.waitForIdle()
-
-    // Use performScrollTo to ensure save button is accessible regardless of screen size/keyboard
-    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo()
-    compose.waitForIdle()
-    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performClick()
+    // Scroll to save button and click - performScrollTo handles keyboard/visibility issues
+    compose.onNodeWithTag(AddEventScreenTestTags.EVENT_SAVE).performScrollTo().performClick()
     compose.waitForIdle()
 
     // Wait for error banner to appear
