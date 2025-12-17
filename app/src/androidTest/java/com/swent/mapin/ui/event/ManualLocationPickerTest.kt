@@ -213,8 +213,10 @@ class ManualLocationPickerTest {
 
   @Test
   fun addEventScreen_pick_location_on_map_button_opens_dialog() {
+    val locationFlow = MutableStateFlow(emptyList<Location>())
+    val locationViewModel = mockk<LocationViewModel>(relaxed = true)
+    every { locationViewModel.locations } returns locationFlow
     val eventViewModel = mockk<EventViewModel>(relaxed = true)
-    val locationViewModel = LocationViewModel(mockLocationRepo)
 
     composeTestRule.setContent {
       AddEventScreen(eventViewModel = eventViewModel, locationViewModel = locationViewModel)
@@ -256,5 +258,10 @@ class ManualLocationPickerTest {
         .onNodeWithTag(ManualLocationPickerTestTags.SEARCH_RESULT_PREFIX + 0)
         .performClick()
     composeTestRule.waitForIdle()
+
+    // Verify the location was set - "Use this location" button should now be enabled
+    composeTestRule
+        .onNodeWithTag(ManualLocationPickerTestTags.USE_LOCATION_BUTTON)
+        .assertIsEnabled()
   }
 }
