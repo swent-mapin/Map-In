@@ -247,7 +247,7 @@ private fun TaggedUsersSection(names: List<String>) {
 
 // ----- Video Player -----
 @Composable
-private fun MemoryVideoPlayer(url: String) {
+fun MemoryVideoPlayer(url: String) {
   val context = LocalContext.current
   val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
@@ -295,26 +295,24 @@ fun parseMediaItems(urls: List<String>): List<MediaItem> {
 }
 
 /* ------------------------ MEDIA ------------------------ */
-
+/**
+ * Media preview for memory detail sheet Shows the first URL as an image thumbnail, even for videos
+ *
+ * @param urls List of media URLs
+ */
 @Composable
 private fun MemoryMediaPreview(urls: List<String>) {
   if (urls.isEmpty()) return
-  // Parse all media items
-  val items = parseMediaItems(urls)
-  // Find the first image
-  val firstImage = items.firstOrNull { it is MediaItem.Image } as? MediaItem.Image
 
-  firstImage?.let { image ->
-    AsyncImage(
-        model = image.url,
-        contentDescription = "Memory photo",
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .testTag("memoryMediaPreview"),
-        contentScale = ContentScale.Crop)
-  }
+  AsyncImage(
+      model = urls.first(),
+      contentDescription = "Memory photo",
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(180.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .testTag("memoryMediaPreview"),
+      contentScale = ContentScale.Crop)
 }
 
 @Composable

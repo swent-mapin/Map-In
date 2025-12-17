@@ -1,6 +1,7 @@
 package com.swent.mapin.model.memory
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 import com.swent.mapin.model.location.Location
 
 /**
@@ -23,7 +24,7 @@ data class Memory(
     val eventId: String? = null,
     val ownerId: String = "",
     val location: Location = Location.UNDEFINED,
-    val isPublic: Boolean = false,
+    @get:PropertyName("isPublic") val isPublic: Boolean = false,
     val createdAt: Timestamp? = null,
     val mediaUrls: List<String> = emptyList(),
     val taggedUserIds: List<String> = emptyList()

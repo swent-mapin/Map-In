@@ -1165,6 +1165,10 @@ class MapScreenViewModel(
   fun closeEventDetailWithNavigation() {
     closeEventDetail()
   }
+
+  fun closeMemoryDetailSheet() {
+    setBottomSheetState(BottomSheetState.MEDIUM)
+  }
 }
 
 @Composable

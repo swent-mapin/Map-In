@@ -1,5 +1,7 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
+import android.net.Uri
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -31,6 +33,8 @@ class EventViewModelTests {
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var repository: EventRepository
   private lateinit var viewModel: EventViewModel
+
+  val context: Context = mockk(relaxed = true)
   private val stateController: MapEventStateController =
       Mockito.mock(MapEventStateController::class.java)
 
@@ -143,17 +147,20 @@ class EventViewModelTests {
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"
+    val media = Uri.parse("content://media/external/images/media/1")
 
     var successCalled = false
     viewModel.saveEditedEvent(
         originalEvent = event,
+        context = context,
         title = editedTitle,
         description = editedDesc,
         location = location,
         startTs = startTs,
         endTs = endTs,
         tagsString = tagsString,
-        onSuccess = { successCalled = true })
+        onSuccess = { successCalled = true },
+        mediaUri = media)
     advanceUntilIdle()
 
     Mockito.verify(repository).editEventAsOwner(eq(event.uid), any())
@@ -169,20 +176,97 @@ class EventViewModelTests {
     val startTs = Timestamp.now()
     val endTs = Timestamp.now()
     val tagsString = "tag1 tag2"
+    val media = null
 
     var successCalled = false
     viewModel.saveEditedEvent(
         originalEvent = event,
+        context = context,
         title = editedTitle,
         description = editedDesc,
         location = location,
         startTs = startTs,
         endTs = endTs,
         tagsString = tagsString,
-        onSuccess = { successCalled = true })
+        onSuccess = { successCalled = true },
+        mediaUri = media)
     advanceUntilIdle()
 
     Mockito.verify(repository, Mockito.never()).editEventAsOwner(eq(event.uid), any())
     assert(!successCalled)
+  }
+
+  @Test
+  fun `saveEvent creates event calls repository and calls onDone`() = runTest {
+    val title = "New Event"
+    val description = "Description"
+    val location = Location.from("Place", 10.0, 10.0)
+    val startTs = Timestamp.now()
+    val endTs = Timestamp.now()
+    val tags = listOf("tag1")
+    val userId = "user123"
+    var doneCalled = false
+    Mockito.`when`(repository.getNewUid()).thenReturn("new_event_uid")
+    viewModel.saveEvent(
+        context = context,
+        title = title,
+        description = description,
+        location = location,
+        startDate = startTs,
+        endDate = endTs,
+        currentUserId = userId,
+        tags = tags,
+        isPublic = true,
+        onDone = { doneCalled = true },
+        mediaUri = null)
+    advanceUntilIdle()
+    val eventCaptor = org.mockito.kotlin.argumentCaptor<Event>()
+    Mockito.verify(repository).addEvent(eventCaptor.capture())
+
+    val capturedEvent = eventCaptor.firstValue
+    assertEquals(title, capturedEvent.title)
+    assertEquals("new_event_uid", capturedEvent.uid)
+    assertEquals(userId, capturedEvent.ownerId)
+    assert(doneCalled)
+  }
+
+  @Test
+  fun `saveEvent fails gracefully when user is null`() = runTest {
+    var doneCalled = false
+    viewModel.saveEvent(
+        context = context,
+        title = "Title",
+        description = "Desc",
+        location = Location.from("Loc", 0.0, 0.0),
+        startDate = Timestamp.now(),
+        endDate = null,
+        currentUserId = null,
+        tags = emptyList(),
+        isPublic = true,
+        onDone = { doneCalled = true })
+    advanceUntilIdle()
+
+    Mockito.verify(repository, Mockito.never()).addEvent(any())
+    assert(!doneCalled)
+  }
+
+  @Test
+  fun `saveEvent sets error when repository throws`() = runTest {
+    Mockito.`when`(repository.getNewUid()).thenReturn("uid_123")
+    Mockito.doThrow(RuntimeException("Save failed")).`when`(repository).addEvent(any())
+    viewModel.saveEvent(
+        context = context,
+        title = "Title",
+        description = "Desc",
+        location = Location.from("Loc", 0.0, 0.0),
+        startDate = Timestamp.now(),
+        endDate = null,
+        currentUserId = "user123",
+        tags = emptyList(),
+        isPublic = true,
+        onDone = {})
+    advanceUntilIdle()
+
+    assertEquals("Save failed", viewModel.error.value)
   }
 }

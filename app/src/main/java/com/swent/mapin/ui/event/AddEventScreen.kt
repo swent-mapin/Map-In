@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +62,8 @@ object AddEventScreenTestTags : EventScreenTestTag {
   const val PUBLIC_TEXT = "publicText"
 
   const val SCREEN = "AddEventScreen"
+
+  override val PICK_MEDIA = "mediaPicker"
 }
 
 private data class FieldValidation(val hasError: () -> Boolean, val label: String)
@@ -122,17 +125,6 @@ fun AddEventTextField(
       singleLine = singleLine)
 }
 
-/**
- * Displays a pop-up dialog for adding a new event, including fields for title, date, time,
- * location, description, and tags. Handles error checking and displays an error message if any
- * required fields are missing or invalid.
- *
- * @param modifier [Modifier] to customize the pop-up layout.
- * @param eventViewModel ViewModel for events
- * @param locationViewModel ViewModel for Locations
- * @param onCancel callback triggered when the user cancels the event creation
- * @param onDone callback triggered when the user is done with the event creation
- */
 private fun computeDialogRecenterPoint(
     lastKnownPoint: Point?,
     manualLocation: Location?,
@@ -152,6 +144,17 @@ private fun computeDialogRecenterPoint(
   return null
 }
 
+/**
+ * Displays a pop-up dialog for adding a new event, including fields for title, date, time,
+ * location, description, and tags. Handles error checking and displays an error message if any
+ * required fields are missing or invalid.
+ *
+ * @param modifier [Modifier] to customize the pop-up layout.
+ * @param eventViewModel ViewModel for events
+ * @param locationViewModel ViewModel for Locations
+ * @param onCancel callback triggered when the user cancels the event creation
+ * @param onDone callback triggered when the user is done with the event creation
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -172,6 +175,7 @@ fun AddEventScreen(
   val price = remember { mutableStateOf("") }
   val capacity = remember { mutableStateOf("") }
   val isPublic = remember { mutableStateOf(true) }
+  val mediaUri = remember { mutableStateOf<Uri?>(null) }
 
   val dateError = remember { mutableStateOf(false) }
   val endDateError = remember { mutableStateOf(false) }
@@ -317,8 +321,8 @@ fun AddEventScreen(
                   return@EventTopBar
                 }
 
-                saveEvent(
-                    eventViewModel,
+                eventViewModel.saveEvent(
+                    context,
                     title.value,
                     description.value,
                     gotLocation.value,
@@ -329,7 +333,8 @@ fun AddEventScreen(
                     isPublic.value,
                     onDone,
                     price.value.toDoubleOrNull() ?: 0.0,
-                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull())
+                    capacity.value.trim().takeIf { it.isNotEmpty() }?.toIntOrNull(),
+                    mediaUri.value)
               })
           // Prominent validation banner shown right after the top bar when user attempted to save
           if (showValidation.value && !isEventValid) {
@@ -364,7 +369,8 @@ fun AddEventScreen(
               descriptionError = descriptionError,
               tag = tag,
               tagError = tagError,
-              testTags = AddEventScreenTestTags)
+              testTags = AddEventScreenTestTags,
+              mediaUri = mediaUri)
 
           Spacer(modifier = Modifier.padding(bottom = 10.dp))
           // Price field

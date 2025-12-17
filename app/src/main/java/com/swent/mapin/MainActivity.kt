@@ -20,6 +20,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import coil.Coil
+import coil.ImageLoader
+import coil.decode.VideoFrameDecoder
 import com.google.firebase.auth.FirebaseAuth
 import com.swent.mapin.model.PreferencesRepository
 import com.swent.mapin.model.PreferencesRepositoryProvider
@@ -97,6 +100,7 @@ class MainActivity : FragmentActivity() {
     enableEdgeToEdge()
     initializeRepositories()
     initializeFcmIfLoggedIn()
+    initializeVideoThumbnails()
     deepLink = getDeepLinkUrlFromIntent(intent)
 
     setContent { MainContent() }
@@ -106,6 +110,11 @@ class MainActivity : FragmentActivity() {
     MemoryRepositoryProvider.getRepository()
     EventRepositoryProvider.init(this)
     EventRepositoryProvider.getRepository()
+  }
+
+  private fun initializeVideoThumbnails() {
+    Coil.setImageLoader(
+        ImageLoader.Builder(this).components { add(VideoFrameDecoder.Factory()) }.build())
   }
 
   @Composable

@@ -2,6 +2,10 @@ package com.swent.mapin.ui.event
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,6 +45,7 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.R
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.ui.memory.components.MediaSelectionSection
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -59,7 +64,11 @@ interface EventScreenTestTag {
   val PICK_EVENT_TIME: String
   val PICK_END_TIME: String
   val INPUT_EVENT_LOCATION: String
+  val PICK_MEDIA: String
 }
+
+/** Maximum number of media files a user can upload */
+const val MAX_MEDIA = 1
 
 /** Extension function for TimeStamp to convert a timestamp to a dd/MM/yyyy date string */
 fun Timestamp.toDateString(): String =
@@ -364,8 +373,15 @@ fun EventFormBody(
     descriptionError: MutableState<Boolean>,
     tag: MutableState<String>,
     tagError: MutableState<Boolean>,
+    mediaUri: MutableState<Uri?>,
     testTags: EventScreenTestTag
 ) {
+
+  val mediaPickerLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.PickVisualMedia()) {
+          uri: Uri? ->
+        mediaUri.value = uri // assign the picked media
+      }
 
   // Title field
   Text(
@@ -479,6 +495,20 @@ fun EventFormBody(
   )
 
   Spacer(modifier = Modifier.padding(10.dp))
+
+  // Media field
+  MediaSelectionSection(
+      listOfNotNull(mediaUri.value),
+      onLaunchMediaPicker = {
+        mediaPickerLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+      },
+      onRemoveMedia = { mediaUri.value = null },
+      maxMediaCount = MAX_MEDIA,
+      modifier = Modifier.testTag(testTags.PICK_MEDIA))
+
+  Spacer(modifier = Modifier.padding(10.dp))
+
   // Tag Field
   Text(
       stringResource(R.string.tag_text),

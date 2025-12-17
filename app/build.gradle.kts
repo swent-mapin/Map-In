@@ -273,6 +273,8 @@ dependencies {
     implementation(libs.compose.material3.standalone)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    implementation("io.coil-kt:coil-video:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // ------------- Unit Tests (JVM) ------------------
     testImplementation(libs.test.junit)

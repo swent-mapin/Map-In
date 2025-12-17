@@ -677,6 +677,12 @@ fun MapScreen(
         modifier = Modifier.align(Alignment.BottomCenter).testTag("bottomSheet")) {
           val selectedMemory by memoryVM.selectedMemory.collectAsState()
 
+          LaunchedEffect(selectedMemory) {
+            if (selectedMemory != null) {
+              viewModel.setBottomSheetState(BottomSheetState.FULL)
+            }
+          }
+
           // sheetTarget : type of bottomSheetContent to show
           val sheetTarget =
               when {
@@ -727,7 +733,10 @@ fun MapScreen(
                         sheetState = viewModel.bottomSheetState,
                         ownerName = memoryVM.ownerName.collectAsState().value,
                         taggedUserNames = memoryVM.taggedNames.collectAsState().value,
-                        onClose = { memoryVM.clearSelectedMemory() })
+                        onClose = {
+                          memoryVM.clearSelectedMemory()
+                          viewModel.closeMemoryDetailSheet()
+                        })
                   }
                   is SheetContent.None -> {
                     BottomSheetContent(
