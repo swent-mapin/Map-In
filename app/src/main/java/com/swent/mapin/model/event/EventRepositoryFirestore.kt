@@ -161,9 +161,7 @@ class EventRepositoryFirestore(
 
       val organizerName = ownerProfile.name.ifBlank { "Someone you follow" }
 
-      Log.w(
-          TAG,
-          "Notifying ${followerIds.size} followers about new event: ${event.title}")
+      Log.w(TAG, "Notifying ${followerIds.size} followers about new event: ${event.title}")
 
       followerIds.forEach { followerId ->
         try {
@@ -174,8 +172,7 @@ class EventRepositoryFirestore(
               eventId = event.uid,
               eventTitle = event.title)
         } catch (e: Exception) {
-          Log.e(
-              TAG, "Failed to notify follower $followerId: ${e.message}", e)
+          Log.e(TAG, "Failed to notify follower $followerId: ${e.message}", e)
         }
       }
     } catch (e: Exception) {
@@ -740,9 +737,7 @@ class EventRepositoryFirestore(
           ->
           if (error != null) {
             Log.e(
-                TAG,
-                "Error listening to user $userId ${source.fieldName}: ${error.message}",
-                error)
+                TAG, "Error listening to user $userId ${source.fieldName}: ${error.message}", error)
             onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }
@@ -816,10 +811,7 @@ class EventRepositoryFirestore(
             eventSnapshot,
             eventError ->
           if (eventError != null) {
-            Log.e(
-                TAG,
-                "Error listening to event $eventId: ${eventError.message}",
-                eventError)
+            Log.e(TAG, "Error listening to event $eventId: ${eventError.message}", eventError)
             onUpdate(emptyList(), emptyList(), emptyList())
             return@addSnapshotListener
           }

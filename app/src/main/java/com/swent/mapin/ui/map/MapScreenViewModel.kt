@@ -103,6 +103,7 @@ class MapScreenViewModel(
     private const val TAG = "MapScreenViewModel"
     private const val DOWNLOAD_COMPLETE_DISMISS_DELAY_MS = 3000L
   }
+
   private val cameraController = MapCameraController(viewModelScope)
   private val searchStateController =
       SearchStateController(
@@ -454,9 +455,7 @@ class MapScreenViewModel(
             onSavedEventsFlow = eventStateController.savedEventsFlow,
             onJoinedEventsFlow = eventStateController.joinedEventsFlow)
 
-        Log.w(
-            TAG,
-            "Event-based offline downloads and deletions started for user: $userId")
+        Log.w(TAG, "Event-based offline downloads and deletions started for user: $userId")
       } catch (e: Exception) {
         Log.e(TAG, "Failed to start event-based offline downloads", e)
       }
