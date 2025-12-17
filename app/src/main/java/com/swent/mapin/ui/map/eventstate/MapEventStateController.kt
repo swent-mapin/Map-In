@@ -47,6 +47,7 @@ enum class EventLists {
 
 /** Anti spam debounce */
 const val ANTI_SPAM_DEBOUNCE: Long = 500
+private const val USER_PROFILE_NOT_FOUND = "User profile not found"
 
 typealias TimeProvider = () -> Long
 
@@ -226,7 +227,7 @@ class MapEventStateController(
               is OfflineAction.SaveEvent -> {
                 val userProfile =
                     userProfileRepository.getUserProfile(action.userId)
-                        ?: throw Exception("User profile not found")
+                        ?: throw Exception(USER_PROFILE_NOT_FOUND)
                 val updatedSavedEventIds = userProfile.savedEventIds + action.eventId
                 val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
                 userProfileRepository.saveUserProfile(updatedProfile)
@@ -235,7 +236,7 @@ class MapEventStateController(
               is OfflineAction.UnsaveEvent -> {
                 val userProfile =
                     userProfileRepository.getUserProfile(action.userId)
-                        ?: throw Exception("User profile not found")
+                        ?: throw Exception(USER_PROFILE_NOT_FOUND)
                 val updatedSavedEventIds = userProfile.savedEventIds - action.eventId
                 val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
                 userProfileRepository.saveUserProfile(updatedProfile)
@@ -746,7 +747,7 @@ class MapEventStateController(
     try {
       val userProfile =
           userProfileRepository.getUserProfile(currentUserId)
-              ?: throw Exception("User profile not found")
+              ?: throw Exception(USER_PROFILE_NOT_FOUND)
       val updatedSavedEventIds = userProfile.savedEventIds + event.uid
       val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
       userProfileRepository.saveUserProfile(updatedProfile)
@@ -793,7 +794,7 @@ class MapEventStateController(
     try {
       val userProfile =
           userProfileRepository.getUserProfile(currentUserId)
-              ?: throw Exception("User profile not found")
+              ?: throw Exception(USER_PROFILE_NOT_FOUND)
       val updatedSavedEventIds = userProfile.savedEventIds - event.uid
       val updatedProfile = userProfile.copy(savedEventIds = updatedSavedEventIds)
       userProfileRepository.saveUserProfile(updatedProfile)

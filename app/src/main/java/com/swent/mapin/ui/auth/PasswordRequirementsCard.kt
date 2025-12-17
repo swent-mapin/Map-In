@@ -23,6 +23,12 @@ import com.swent.mapin.util.PasswordValidation
 
 // Assisted by AI
 
+private enum class RequirementStatus {
+  NEUTRAL,
+  VALID,
+  INVALID
+}
+
 /**
  * Card showing password requirements with real-time validation feedback.
  *
@@ -80,39 +86,53 @@ private fun PasswordRequirementItem(
     isValid: Boolean = false,
     showStatus: Boolean = false
 ) {
+  val status = resolveRequirementStatus(showStatus, isValid)
+  val textColor =
+      when (status) {
+        RequirementStatus.VALID -> MaterialTheme.colorScheme.primary
+        RequirementStatus.INVALID -> MaterialTheme.colorScheme.error
+        RequirementStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+      }
+
   Row(
       modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
       verticalAlignment = Alignment.CenterVertically) {
-        if (showStatus) {
-          // Show checkmark or cross based on validation
-          Icon(
-              imageVector = if (isValid) Icons.Default.Check else Icons.Default.Close,
-              contentDescription =
-                  stringResource(
-                      if (isValid) R.string.requirement_met else R.string.requirement_not_met),
-              tint =
-                  if (isValid) MaterialTheme.colorScheme.primary
-                  else MaterialTheme.colorScheme.error,
-              modifier = Modifier.size(16.dp))
-        } else {
-          // Show neutral dot when no input yet
-          Box(
-              modifier =
-                  Modifier.size(8.dp)
-                      .clip(CircleShape)
-                      .background(MaterialTheme.colorScheme.onSurfaceVariant))
-        }
+        RequirementStatusIcon(status)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = requirement,
-            style = MaterialTheme.typography.bodyMedium,
-            color =
-                when {
-                  showStatus && isValid -> MaterialTheme.colorScheme.primary
-                  showStatus && !isValid -> MaterialTheme.colorScheme.error
-                  else -> MaterialTheme.colorScheme.onSurfaceVariant
-                })
+        Text(text = requirement, style = MaterialTheme.typography.bodyMedium, color = textColor)
       }
+}
+
+@Composable
+private fun RequirementStatusIcon(status: RequirementStatus) {
+  when (status) {
+    RequirementStatus.NEUTRAL -> {
+      Box(
+          modifier =
+              Modifier.size(8.dp)
+                  .clip(CircleShape)
+                  .background(MaterialTheme.colorScheme.onSurfaceVariant))
+    }
+    RequirementStatus.VALID -> {
+      Icon(
+          imageVector = Icons.Default.Check,
+          contentDescription = stringResource(R.string.requirement_met),
+          tint = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.size(16.dp))
+    }
+    RequirementStatus.INVALID -> {
+      Icon(
+          imageVector = Icons.Default.Close,
+          contentDescription = stringResource(R.string.requirement_not_met),
+          tint = MaterialTheme.colorScheme.error,
+          modifier = Modifier.size(16.dp))
+    }
+  }
+}
+
+private fun resolveRequirementStatus(showStatus: Boolean, isValid: Boolean): RequirementStatus {
+  if (!showStatus) return RequirementStatus.NEUTRAL
+  return if (isValid) RequirementStatus.VALID else RequirementStatus.INVALID
 }
 
 @Preview(showBackground = true, name = "Empty Password")

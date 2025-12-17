@@ -56,97 +56,124 @@ fun EventPickerDialog(
 ) {
   var searchQuery by remember { mutableStateOf("") }
 
-  val filteredEvents =
-      remember(events, searchQuery) {
-        if (searchQuery.isBlank()) {
-          events
-        } else {
-          events.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-                it.location.name?.contains(searchQuery, ignoreCase = true) ?: false ||
-                it.description.contains(searchQuery, ignoreCase = true)
-          }
-        }
-      }
+  val filteredEvents = remember(events, searchQuery) { filterEvents(events, searchQuery) }
 
   AlertDialog(
       onDismissRequest = onDismiss,
       title = { Text("Select an event", style = MaterialTheme.typography.titleLarge) },
       text = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          OutlinedTextField(
-              value = searchQuery,
-              onValueChange = { searchQuery = it },
-              modifier = Modifier.fillMaxWidth(),
-              placeholder = { Text("Search events...") },
-              leadingIcon = {
-                Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
-              },
-              trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                  IconButton(onClick = { searchQuery = "" }) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
-                  }
-                }
-              },
-              singleLine = true)
-
-          Spacer(modifier = Modifier.height(16.dp))
-
-          if (filteredEvents.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                contentAlignment = Alignment.Center) {
-                  Text(
-                      text =
-                          if (searchQuery.isBlank()) "No events available" else "No events found",
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-          } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth().height(EVENT_DIALOG_LIST_HEIGHT)) {
-              items(filteredEvents) { event ->
-                Card(
-                    modifier =
-                        Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable {
-                          onEventSelected(event)
-                        },
-                    colors =
-                        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(8.dp)) {
-                      Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text(
-                            text = event.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                              val dateStr =
-                                  event.date?.let {
-                                    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                                        .format(it.toDate())
-                                  } ?: "No date"
-                              Text(
-                                  text = dateStr,
-                                  style = MaterialTheme.typography.bodySmall,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-                              Text(
-                                  text = "•",
-                                  style = MaterialTheme.typography.bodySmall,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-                              Text(
-                                  text = event.location.name ?: Location.NO_NAME,
-                                  style = MaterialTheme.typography.bodySmall,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                      }
-                    }
-              }
-            }
-          }
-        }
+        EventPickerContent(
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            filteredEvents = filteredEvents,
+            onEventSelected = onEventSelected)
       },
       confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+@Composable
+private fun EventPickerContent(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    filteredEvents: List<Event>,
+    onEventSelected: (Event) -> Unit
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    EventSearchField(searchQuery, onSearchQueryChange)
+    Spacer(modifier = Modifier.height(16.dp))
+    EventPickerList(filteredEvents, searchQuery, onEventSelected)
+  }
+}
+
+@Composable
+private fun EventPickerList(
+    events: List<Event>,
+    searchQuery: String,
+    onEventSelected: (Event) -> Unit
+) {
+  if (events.isEmpty()) {
+    EmptyEventState(searchQuery)
+    return
+  }
+
+  LazyColumn(modifier = Modifier.fillMaxWidth().height(EVENT_DIALOG_LIST_HEIGHT)) {
+    items(events) { event -> EventListItem(event, onEventSelected) }
+  }
+}
+
+@Composable
+private fun EventListItem(event: Event, onEventSelected: (Event) -> Unit) {
+  Card(
+      modifier =
+          Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onEventSelected(event) },
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+      shape = RoundedCornerShape(8.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+          Text(
+              text = event.title,
+              style = MaterialTheme.typography.bodyLarge,
+              color = MaterialTheme.colorScheme.onSurface)
+          Spacer(modifier = Modifier.height(4.dp))
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = event.date?.let { formatEventDate(it) } ?: "No date",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "•",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = event.location.name ?: Location.NO_NAME,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+        }
+      }
+}
+
+@Composable
+private fun EventSearchField(searchQuery: String, onSearchQueryChange: (String) -> Unit) {
+  OutlinedTextField(
+      value = searchQuery,
+      onValueChange = onSearchQueryChange,
+      modifier = Modifier.fillMaxWidth(),
+      placeholder = { Text("Search events...") },
+      leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search") },
+      trailingIcon = { ClearSearchIcon(searchQuery, onSearchQueryChange) },
+      singleLine = true)
+}
+
+@Composable
+private fun ClearSearchIcon(searchQuery: String, onSearchQueryChange: (String) -> Unit) {
+  if (searchQuery.isEmpty()) return
+  IconButton(onClick = { onSearchQueryChange("") }) {
+    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+  }
+}
+
+@Composable
+private fun EmptyEventState(searchQuery: String) {
+  val message = if (searchQuery.isBlank()) "No events available" else "No events found"
+  Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+}
+
+private fun filterEvents(events: List<Event>, query: String): List<Event> {
+  if (query.isBlank()) return events
+  return events.filter {
+    it.title.contains(query, ignoreCase = true) ||
+        it.location.name?.contains(query, ignoreCase = true) ?: false ||
+        it.description.contains(query, ignoreCase = true)
+  }
+}
+
+private fun formatEventDate(timestamp: com.google.firebase.Timestamp): String {
+  return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(timestamp.toDate())
 }

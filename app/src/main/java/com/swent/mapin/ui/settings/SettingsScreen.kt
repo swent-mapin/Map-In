@@ -75,6 +75,8 @@ import com.swent.mapin.ui.components.StandardTopAppBar
 import com.swent.mapin.util.BiometricAuthManager
 import kotlinx.coroutines.launch
 
+private const val DELETE_ACCOUNT_LABEL = "Delete Account"
+
 /**
  * Settings screen with theme, map style, map preferences and account management.
  *
@@ -276,7 +278,7 @@ fun SettingsScreen(
 
                     // Delete Account Button
                     SettingsActionButton(
-                        label = "Delete Account",
+                        label = DELETE_ACCOUNT_LABEL,
                         description = "Permanently delete your account and data",
                         icon = Icons.Default.Delete,
                         backgroundColor = Color(0xFFef5350),
@@ -306,10 +308,10 @@ fun SettingsScreen(
   // Delete Account Confirmation Dialog
   if (showDeleteConfirmation) {
     ConfirmationDialog(
-        title = "Delete Account",
+        title = DELETE_ACCOUNT_LABEL,
         message =
             "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
-        confirmButtonText = "Delete Account",
+        confirmButtonText = DELETE_ACCOUNT_LABEL,
         confirmButtonColor = Color(0xFFef5350),
         isDangerous = true,
         confirmTestTag = "deleteAccountConfirmButton", // explicit stable tag
@@ -631,7 +633,7 @@ internal fun ConfirmationDialog(
             title.equals("Confirm Logout", ignoreCase = true) ||
                 title.equals("Logout", ignoreCase = true) ||
                 confirmButtonText.equals("Logout", ignoreCase = true) -> "logoutConfirmButton"
-            title.equals("Delete Account", ignoreCase = true) ||
+            title.equals(DELETE_ACCOUNT_LABEL, ignoreCase = true) ||
                 title.equals("Delete", ignoreCase = true) ||
                 confirmButtonText.contains("Delete", ignoreCase = true) ->
                 "deleteAccountConfirmButton"
