@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.Location
@@ -97,16 +98,21 @@ private fun EventPickerList(
     return
   }
 
-  LazyColumn(modifier = Modifier.fillMaxWidth().height(EVENT_DIALOG_LIST_HEIGHT)) {
-    items(events) { event -> EventListItem(event, onEventSelected) }
-  }
+  LazyColumn(
+      modifier =
+          Modifier.fillMaxWidth().height(EVENT_DIALOG_LIST_HEIGHT).testTag("eventPickerList")) {
+        items(events) { event -> EventListItem(event, onEventSelected) }
+      }
 }
 
 @Composable
 private fun EventListItem(event: Event, onEventSelected: (Event) -> Unit) {
   Card(
       modifier =
-          Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onEventSelected(event) },
+          Modifier.fillMaxWidth()
+              .padding(vertical = 4.dp)
+              .clickable { onEventSelected(event) }
+              .testTag("eventPickerItem_${event.uid}"),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -140,7 +146,7 @@ private fun EventSearchField(searchQuery: String, onSearchQueryChange: (String) 
   OutlinedTextField(
       value = searchQuery,
       onValueChange = onSearchQueryChange,
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().testTag("eventPickerSearch"),
       placeholder = { Text("Search events...") },
       leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search") },
       trailingIcon = { ClearSearchIcon(searchQuery, onSearchQueryChange) },
@@ -158,12 +164,14 @@ private fun ClearSearchIcon(searchQuery: String, onSearchQueryChange: (String) -
 @Composable
 private fun EmptyEventState(searchQuery: String) {
   val message = if (searchQuery.isBlank()) "No events available" else "No events found"
-  Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-    Text(
-        text = message,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
-  }
+  Box(
+      modifier = Modifier.fillMaxWidth().height(200.dp).testTag("eventPickerEmpty"),
+      contentAlignment = Alignment.Center) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
 }
 
 @VisibleForTesting
