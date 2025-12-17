@@ -44,6 +44,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.*
 
+private const val FRIENDS_ONLY_LABEL = "Friends only"
+private const val POPULAR_ONLY_LABEL = "Popular only"
+
 // Assisted by AI tools
 
 /**
@@ -170,14 +173,14 @@ class FiltersSection {
 
       // Friends Only
       ToggleSection(
-          title = "Friends only",
+          title = FRIENDS_ONLY_LABEL,
           isChecked = filters.friendsOnly,
           onCheckedChange = { checked -> filterViewModel.setFriendsOnly(checked) },
           content = {})
 
       // Popular Only
       ToggleSection(
-          title = "Popular only",
+          title = POPULAR_ONLY_LABEL,
           isChecked = filters.popularOnly,
           onCheckedChange = { checked -> filterViewModel.setPopularOnly(checked) },
           content = {})
@@ -207,8 +210,8 @@ class FiltersSection {
           "Location" -> Icons.Default.Place
           "Price" -> Icons.Default.AttachMoney
           "Tags" -> Icons.Default.Tag
-          "Friends only" -> Icons.Default.Group
-          "Popular only" -> Icons.Default.Star
+          FRIENDS_ONLY_LABEL -> Icons.Default.Group
+          POPULAR_ONLY_LABEL -> Icons.Default.Star
           else -> Icons.Default.Settings
         }
 
@@ -227,8 +230,8 @@ class FiltersSection {
                       "Location" -> FiltersSectionTestTags.TOGGLE_LOCATION
                       "Price" -> FiltersSectionTestTags.TOGGLE_PRICE
                       "Tags" -> FiltersSectionTestTags.TOGGLE_TAGS
-                      "Friends only" -> FiltersSectionTestTags.TOGGLE_FRIENDS
-                      "Popular only" -> FiltersSectionTestTags.TOGGLE_POPULAR
+                      FRIENDS_ONLY_LABEL -> FiltersSectionTestTags.TOGGLE_FRIENDS
+                      POPULAR_ONLY_LABEL -> FiltersSectionTestTags.TOGGLE_POPULAR
                       else -> "toggle_${title.lowercase()}"
                     }))
 
@@ -362,47 +365,7 @@ class FiltersSection {
         rememberSaveable(filters.radiusKm) { mutableStateOf(filters.radiusKm.toString()) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-
-      // --- TOP SELECTOR (Segmented Control) ---
-      Row(
-          modifier =
-              Modifier.fillMaxWidth()
-                  .background(
-                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                      shape = MaterialTheme.shapes.medium)
-                  .padding(4.dp),
-          horizontalArrangement = Arrangement.SpaceEvenly) {
-            AroundOption.entries.forEach { option ->
-              val isSelected = selectedOption == option
-              val label =
-                  when (option) {
-                    AroundOption.SEARCH -> "Search"
-                    AroundOption.USER -> "My location"
-                  }
-
-              Box(
-                  modifier =
-                      Modifier.clip(MaterialTheme.shapes.medium)
-                          .background(
-                              if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                              else Color.Transparent)
-                          .clickable { selectedOption = option }
-                          .padding(horizontal = 16.dp, vertical = 10.dp)
-                          .testTag(
-                              when (option) {
-                                AroundOption.SEARCH -> FiltersSectionTestTags.AROUND_SEARCH
-                                AroundOption.USER -> FiltersSectionTestTags.AROUND_USER
-                              }),
-              ) {
-                Text(
-                    text = label,
-                    color =
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.titleSmall)
-              }
-            }
-          }
+      AroundOptionSelector(selectedOption) { selectedOption = it }
 
       Spacer(modifier = Modifier.height(16.dp))
 
@@ -412,62 +375,120 @@ class FiltersSection {
           shape = MaterialTheme.shapes.medium,
           tonalElevation = 2.dp) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-              when (selectedOption) {
-                AroundOption.SEARCH -> {
-                  SearchPlacePicker(locationViewModel, filterViewModel)
-                  Spacer(modifier = Modifier.height(20.dp))
-                }
-                AroundOption.USER -> UserLocationPicker(filterViewModel, userProfile)
+              AroundOptionContent(
+                  selectedOption = selectedOption,
+                  filterViewModel = filterViewModel,
+                  locationViewModel = locationViewModel,
+                  userProfile = userProfile)
+              RadiusPicker(radiusInput) { input ->
+                val filtered = input.filter { it.isDigit() }.take(3)
+                radiusInput = filtered
+                filterViewModel.setRadius(filtered.toIntOrNull())
               }
-
-              // --- RADIUS PICKER ---
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Radius",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface)
-
-                    Box(
-                        modifier =
-                            Modifier.width(60.dp)
-                                .height(36.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = MaterialTheme.shapes.small)
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outline,
-                                    MaterialTheme.shapes.small)
-                                .padding(horizontal = 6.dp),
-                        contentAlignment = Alignment.Center) {
-                          BasicTextField(
-                              value = radiusInput,
-                              onValueChange = { input ->
-                                val filtered = input.filter { it.isDigit() }.take(3)
-                                radiusInput = filtered
-                                filterViewModel.setRadius(filtered.toIntOrNull())
-                              },
-                              singleLine = true,
-                              textStyle =
-                                  LocalTextStyle.current.copy(
-                                      fontSize = 14.sp,
-                                      textAlign = TextAlign.Center,
-                                      color = MaterialTheme.colorScheme.onSurface),
-                              modifier =
-                                  Modifier.fillMaxWidth()
-                                      .testTag(FiltersSectionTestTags.RADIUS_INPUT))
-                        }
-
-                    Text(
-                        "km",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface)
-                  }
             }
           }
     }
+  }
+
+  @Composable
+  private fun AroundOptionSelector(
+      selectedOption: AroundOption,
+      onOptionSelected: (AroundOption) -> Unit
+  ) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.medium)
+                .padding(4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly) {
+          AroundOption.entries.forEach { option ->
+            val isSelected = selectedOption == option
+            val label =
+                when (option) {
+                  AroundOption.SEARCH -> "Search"
+                  AroundOption.USER -> "My location"
+                }
+
+            Box(
+                modifier =
+                    Modifier.clip(MaterialTheme.shapes.medium)
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            else Color.Transparent)
+                        .clickable { onOptionSelected(option) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .testTag(
+                            when (option) {
+                              AroundOption.SEARCH -> FiltersSectionTestTags.AROUND_SEARCH
+                              AroundOption.USER -> FiltersSectionTestTags.AROUND_USER
+                            }),
+            ) {
+              Text(
+                  text = label,
+                  color =
+                      if (isSelected) MaterialTheme.colorScheme.primary
+                      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                  style = MaterialTheme.typography.titleSmall)
+            }
+          }
+        }
+  }
+
+  @Composable
+  private fun AroundOptionContent(
+      selectedOption: AroundOption,
+      filterViewModel: FiltersSectionViewModel,
+      locationViewModel: LocationViewModel,
+      userProfile: UserProfile
+  ) {
+    when (selectedOption) {
+      AroundOption.SEARCH -> {
+        SearchPlacePicker(locationViewModel, filterViewModel)
+        Spacer(modifier = Modifier.height(20.dp))
+      }
+      AroundOption.USER -> UserLocationPicker(filterViewModel, userProfile)
+    }
+  }
+
+  @Composable
+  private fun RadiusPicker(radiusInput: String, onRadiusChange: (String) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          Text(
+              "Radius",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface)
+
+          Box(
+              modifier =
+                  Modifier.width(60.dp)
+                      .height(36.dp)
+                      .background(
+                          MaterialTheme.colorScheme.surfaceVariant,
+                          shape = MaterialTheme.shapes.small)
+                      .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                      .padding(horizontal = 6.dp),
+              contentAlignment = Alignment.Center) {
+                BasicTextField(
+                    value = radiusInput,
+                    onValueChange = onRadiusChange,
+                    singleLine = true,
+                    textStyle =
+                        LocalTextStyle.current.copy(
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth().testTag(FiltersSectionTestTags.RADIUS_INPUT))
+              }
+
+          Text(
+              "km",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface)
+        }
   }
 
   /**
