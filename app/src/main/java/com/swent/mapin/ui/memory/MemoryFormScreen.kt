@@ -50,9 +50,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.swent.mapin.model.FriendRequestRepository
+import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.ui.components.UserPickerDialog
+import com.swent.mapin.ui.components.UserPickerVMFactory
+import com.swent.mapin.ui.components.UserPickerViewModel
 import com.swent.mapin.ui.memory.components.MAX_MEDIA_COUNT
 import com.swent.mapin.ui.memory.components.MediaSelectionSection
 import java.text.SimpleDateFormat
@@ -282,6 +287,14 @@ fun MemoryFormScreen(
   var showUserPicker by remember { mutableStateOf(false) }
   val taggedUserIds = remember { mutableStateListOf<String>() }
 
+  val notificationService = remember { NotificationService() }
+  val friendRepository = remember {
+    FriendRequestRepository(notificationService = notificationService)
+  }
+
+  val userPickerViewModel: UserPickerViewModel =
+      viewModel(factory = UserPickerVMFactory(friendRepository))
+
   val mediaPickerLauncher =
       rememberLauncherForActivityResult(
           contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = MAX_MEDIA_COUNT)) {
@@ -401,7 +414,8 @@ fun MemoryFormScreen(
                 taggedUserIds.add(userId)
               }
             },
-            onDismiss = { showUserPicker = false })
+            onDismiss = { showUserPicker = false },
+            viewModel = userPickerViewModel)
       }
 
       Spacer(modifier = Modifier.height(24.dp))

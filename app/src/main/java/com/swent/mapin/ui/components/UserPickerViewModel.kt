@@ -29,7 +29,7 @@ class UserPickerViewModel(
   init {
     viewModelScope.launch {
       try {
-        val userId = firebaseAuth.currentUser!!.uid
+        val userId = firebaseAuth.currentUser?.uid ?: return@launch
         _friends.value = friendRepository.getFriends(userId)
       } catch (e: Exception) {
         Log.e("UserPickerViewModel", "Error fetching friends", e)
@@ -38,8 +38,13 @@ class UserPickerViewModel(
   }
 }
 
-class UserPickerVMFactory(private val repo: FriendRequestRepository) : ViewModelProvider.Factory {
+class UserPickerVMFactory(private val friendRepository: FriendRequestRepository) :
+    ViewModelProvider.Factory {
+
   override fun <T : ViewModel> create(modelClass: Class<T>): T {
-    return UserPickerViewModel(repo) as T
+    if (modelClass.isAssignableFrom(UserPickerViewModel::class.java)) {
+      @Suppress("UNCHECKED_CAST") return UserPickerViewModel(friendRepository) as T
+    }
+    throw IllegalArgumentException("Unknown ViewModel class")
   }
 }

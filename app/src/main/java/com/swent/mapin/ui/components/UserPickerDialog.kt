@@ -36,9 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.NotificationService
 
 // Assisted by AI
 
@@ -51,13 +48,11 @@ private val USER_DIALOG_LIST_HEIGHT = 250.dp
  * @param onDismiss Callback when dialog is dismissed
  */
 @Composable
-fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
-  val notificationService = remember { NotificationService() }
-  val friendRepository = remember {
-    FriendRequestRepository(notificationService = notificationService)
-  }
-
-  val viewModel: UserPickerViewModel = viewModel(factory = UserPickerVMFactory(friendRepository))
+fun UserPickerDialog(
+    onUserSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+    viewModel: UserPickerViewModel
+) {
 
   val friends by viewModel.friends.collectAsState()
   var userIdInput by remember { mutableStateOf("") }
