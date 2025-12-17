@@ -104,7 +104,7 @@
     <string name="memories_refresh_all">Refresh All</string>
     <string name="memories_no_memories_yet">No memories yet</string>
     <string name="memories_no_memories_area">No memories in this area</string>
-    <string name="memories_empty_message_owner">Create memories for attended events and they'll appear here</string>
+    <string name="memories_empty_message_owner">Create memories for attended events and they\'ll appear here</string>
     <string name="memories_empty_message_nearby">Try to look in another area if someone posted a memory</string>
     <string name="memories_memory_photo">Memory photo</string>
     <string name="memories_placeholder">Placeholder</string>
