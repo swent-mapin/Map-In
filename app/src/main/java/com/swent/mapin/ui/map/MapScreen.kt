@@ -182,122 +182,22 @@ fun MapScreen(
   val coroutineScope = rememberCoroutineScope()
   val context = LocalContext.current
 
-  // Track if we should request notification permission after location permission
-  var shouldRequestNotificationPermission by remember { mutableStateOf(false) }
+  val permissionHandlers =
+      setupPermissionHandlers(
+          context = context,
+          viewModel = viewModel,
+          coroutineScope = coroutineScope,
+          snackbarHostState = snackbarHostState,
+          autoRequestPermissions = autoRequestPermissions)
 
-  // Notification permission launcher (Android 13+)
-  val notificationPermissionLauncher =
-      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
-          isGranted ->
-        if (!isGranted) {
-          coroutineScope.launch { snackbarHostState.showSnackbar("Notification permission denied") }
-        }
-      }
+  val locationPermissionLauncher = permissionHandlers.locationPermissionLauncher
 
-  // Location permission launcher
-  val locationPermissionLauncher =
-      rememberLauncherForActivityResult(
-          contract = ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-            val coarseLocationGranted =
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-
-            if (fineLocationGranted && coarseLocationGranted) {
-              viewModel.checkLocationPermission()
-              viewModel.startLocationUpdates()
-              viewModel.getLastKnownLocation(centerCamera = true)
-            } else {
-              coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
-            }
-
-            // After location permission result, request notification permission if needed
-            if (shouldRequestNotificationPermission) {
-              shouldRequestNotificationPermission = false
-              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val hasNotificationPermission =
-                    ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.POST_NOTIFICATIONS) ==
-                        PackageManager.PERMISSION_GRANTED
-
-                if (!hasNotificationPermission) {
-                  notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-              }
-            }
-          }
-
-  // Auto-request permissions on app launch (skip in test mode)
-  LaunchedEffect(autoRequestPermissions) {
-    if (autoRequestPermissions) {
-      // Request location permission if not already granted
-      viewModel.checkLocationPermission()
-      if (!viewModel.hasLocationPermission) {
-        shouldRequestNotificationPermission = true
-        locationPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION))
-      } else {
-        // If location permission already granted, request notification permission directly
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-          val hasNotificationPermission =
-              ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-                  PackageManager.PERMISSION_GRANTED
-
-          if (!hasNotificationPermission) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-          }
-        }
-      }
-    }
-  }
-
-  // Reload user profile when MapScreen is composed (e.g., returning from ProfileScreen)
-  LaunchedEffect(Unit) { viewModel.loadUserProfile() }
-
-  // Initialize TileStore for offline map caching
-  LaunchedEffect(Unit) { viewModel.initializeTileStore() }
-
-  LaunchedEffect(viewModel.errorMessage) {
-    viewModel.errorMessage?.let { message ->
-      snackbarHostState.showSnackbar(message)
-      viewModel.clearError()
-    }
-  }
-
-  // Handle deep link navigation to event
-  LaunchedEffect(deepLinkEventId) {
-    deepLinkEventId?.let { eventId ->
-      viewModel.onDeepLinkEvent(eventId)
-      onDeepLinkConsumed()
-    }
-  }
-
-  // Retry deep link selection once events finish loading
-  LaunchedEffect(Unit) { snapshotFlow { viewModel.events }.collect { viewModel.onEventsUpdated() } }
-
-  // Handle resolved deep link event from ViewModel (separates VM logic from UI navigation)
-  LaunchedEffect(viewModel.resolvedDeepLinkEvent) {
-    viewModel.resolvedDeepLinkEvent?.let { event ->
-      viewModel.onEventPinClicked(event, forceZoom = true)
-      viewModel.clearResolvedDeepLinkEvent()
-    }
-  }
-
-  // Setup location management
-  LaunchedEffect(Unit) {
-    viewModel.checkLocationPermission()
-    if (viewModel.hasLocationPermission) {
-      viewModel.startLocationUpdates()
-      viewModel.getLastKnownLocation(centerCamera = false)
-    }
-
-    viewModel.onRequestLocationPermission = {
-      locationPermissionLauncher.launch(
-          arrayOf(
-              Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-    }
-  }
+  MapScreenEffects(
+      viewModel = viewModel,
+      snackbarHostState = snackbarHostState,
+      deepLinkEventId = deepLinkEventId,
+      onDeepLinkConsumed = onDeepLinkConsumed,
+      locationPermissionLauncher = locationPermissionLauncher)
 
   // Get saved camera position from preferences
   val preferencesRepository = remember { PreferencesRepositoryProvider.getInstance(context) }
@@ -1088,4 +988,180 @@ internal fun calculateLocationPaddingPx(
   val mediumThreshold = mediumHeightPx.coerceAtLeast(collapsedHeightPx)
   val mediumPaddingPx = clampedSheet * mediumWeight + mediumExtraPx
   return if (clampedSheet >= mediumThreshold) mediumPaddingPx else minPaddingPx
+}
+
+private data class PermissionHandlers(
+    val locationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<
+            Array<String>, Map<String, @JvmSuppressWildcards Boolean>>,
+    val notificationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<String, Boolean>
+)
+
+@Composable
+private fun setupPermissionHandlers(
+    context: android.content.Context,
+    viewModel: MapScreenViewModel,
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    autoRequestPermissions: Boolean
+): PermissionHandlers {
+  var shouldRequestNotificationPermission by remember { mutableStateOf(false) }
+
+  val notificationPermissionLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+          isGranted ->
+        if (!isGranted) {
+          coroutineScope.launch { snackbarHostState.showSnackbar("Notification permission denied") }
+        }
+      }
+
+  val locationPermissionLauncher =
+      rememberLauncherForActivityResult(
+          contract = ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            handleLocationPermissionResult(
+                permissions,
+                viewModel,
+                coroutineScope,
+                snackbarHostState,
+                shouldRequestNotificationPermission,
+                notificationPermissionLauncher,
+                context,
+                onPermissionHandled = { shouldRequestNotificationPermission = false })
+          }
+
+  LaunchedEffect(autoRequestPermissions) {
+    if (autoRequestPermissions) {
+      requestInitialPermissions(
+          viewModel,
+          locationPermissionLauncher,
+          notificationPermissionLauncher,
+          context,
+          onShouldRequestNotification = { shouldRequestNotificationPermission = true })
+    }
+  }
+
+  return PermissionHandlers(locationPermissionLauncher, notificationPermissionLauncher)
+}
+
+private fun handleLocationPermissionResult(
+    permissions: Map<String, @JvmSuppressWildcards Boolean>,
+    viewModel: MapScreenViewModel,
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    shouldRequestNotificationPermission: Boolean,
+    notificationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<String, Boolean>,
+    context: android.content.Context,
+    onPermissionHandled: () -> Unit
+) {
+  val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+  val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+  if (fineLocationGranted && coarseLocationGranted) {
+    viewModel.checkLocationPermission()
+    viewModel.startLocationUpdates()
+    viewModel.getLastKnownLocation(centerCamera = true)
+  } else {
+    coroutineScope.launch { snackbarHostState.showSnackbar("Location permission denied") }
+  }
+
+  if (shouldRequestNotificationPermission) {
+    onPermissionHandled()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      val hasNotificationPermission =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+              PackageManager.PERMISSION_GRANTED
+
+      if (!hasNotificationPermission) {
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
+  }
+}
+
+private fun requestInitialPermissions(
+    viewModel: MapScreenViewModel,
+    locationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<
+            Array<String>, Map<String, @JvmSuppressWildcards Boolean>>,
+    notificationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<String, Boolean>,
+    context: android.content.Context,
+    onShouldRequestNotification: () -> Unit
+) {
+  viewModel.checkLocationPermission()
+  if (!viewModel.hasLocationPermission) {
+    onShouldRequestNotification()
+    locationPermissionLauncher.launch(
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+  } else {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      val hasNotificationPermission =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+              PackageManager.PERMISSION_GRANTED
+
+      if (!hasNotificationPermission) {
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
+  }
+}
+
+@Composable
+private fun MapScreenEffects(
+    viewModel: MapScreenViewModel,
+    snackbarHostState: SnackbarHostState,
+    deepLinkEventId: String?,
+    onDeepLinkConsumed: () -> Unit,
+    locationPermissionLauncher: androidx.activity.compose.ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>>
+) {
+  // Reload user profile when MapScreen is composed
+  LaunchedEffect(Unit) { viewModel.loadUserProfile() }
+
+  // Initialize TileStore for offline map caching
+  LaunchedEffect(Unit) { viewModel.initializeTileStore() }
+
+  // Handle error messages
+  LaunchedEffect(viewModel.errorMessage) {
+    viewModel.errorMessage?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearError()
+    }
+  }
+
+  // Handle deep link navigation to event
+  LaunchedEffect(deepLinkEventId) {
+    deepLinkEventId?.let { eventId ->
+      viewModel.onDeepLinkEvent(eventId)
+      onDeepLinkConsumed()
+    }
+  }
+
+  // Retry deep link selection once events finish loading
+  LaunchedEffect(Unit) { snapshotFlow { viewModel.events }.collect { viewModel.onEventsUpdated() } }
+
+  // Handle resolved deep link event from ViewModel
+  LaunchedEffect(viewModel.resolvedDeepLinkEvent) {
+    viewModel.resolvedDeepLinkEvent?.let { event ->
+      viewModel.onEventPinClicked(event, forceZoom = true)
+      viewModel.clearResolvedDeepLinkEvent()
+    }
+  }
+
+  // Setup location management
+  LaunchedEffect(Unit) {
+    viewModel.checkLocationPermission()
+    if (viewModel.hasLocationPermission) {
+      viewModel.startLocationUpdates()
+      viewModel.getLastKnownLocation(centerCamera = false)
+    }
+
+    viewModel.onRequestLocationPermission = {
+      locationPermissionLauncher.launch(
+          arrayOf(
+              Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    }
+  }
 }
