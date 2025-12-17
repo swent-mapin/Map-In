@@ -208,28 +208,6 @@ class AiAssistantViewModelTest {
     assertEquals(AiAssistantState.Idle, viewModel.state.value)
   }
 
-  @Test
-  fun `toggleListening during Processing does nothing`() = runTest {
-    viewModel = createViewModel()
-
-    // Manually set processing state by starting a long query
-    coEvery { mockOrchestrator.processQuery(any(), any(), any()) } coAnswers
-        {
-          // Simulate a delay
-          kotlinx.coroutines.delay(1000)
-          testAiResult
-        }
-
-    viewModel.handleUserQuery("Find me events")
-    // State should be Processing
-    // Try to toggle - should do nothing
-
-    // The toggleListening should not affect Processing state
-    viewModel.toggleListening()
-
-    // State should still be Processing (or continuing the flow)
-  }
-
   // ==================== Speech Recognition Tests ====================
 
   @Test
