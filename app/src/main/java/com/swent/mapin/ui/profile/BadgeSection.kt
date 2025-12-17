@@ -156,72 +156,87 @@ private fun BadgeItem(badge: Badge, onClick: () -> Unit) {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       modifier = Modifier.testTag("badgeItem_${badge.id}").clickable { onClick() }) {
-        Box(contentAlignment = Alignment.Center) {
-          Box(
-              modifier =
-                  Modifier.size(56.dp)
-                      .alpha(alpha)
-                      .clip(CircleShape)
-                      .background(
-                          brush =
-                              if (badge.isUnlocked) {
-                                Brush.radialGradient(
-                                    colors = rarityColors,
-                                    center = androidx.compose.ui.geometry.Offset(28f, 28f),
-                                    radius = 40f)
-                              } else {
-                                Brush.radialGradient(
-                                    colors =
-                                        listOf(
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                            MaterialTheme.colorScheme.surfaceVariant))
-                              })
-                      .border(
-                          width = 2.dp,
-                          color =
-                              if (badge.isUnlocked) rarityColors.first().copy(alpha = 0.8f)
-                              else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                          shape = CircleShape),
-              contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector =
-                        if (badge.isUnlocked) getIconFromName(badge.iconName)
-                        else Icons.Default.Lock,
-                    contentDescription = badge.title,
-                    modifier = Modifier.size(28.dp),
-                    tint =
-                        if (badge.isUnlocked) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-
-          if (!badge.isUnlocked && badge.progress > 0) {
-            Box(
-                modifier = Modifier.size(60.dp).padding(2.dp),
-                contentAlignment = Alignment.BottomCenter) {
-                  LinearProgressIndicator(
-                      progress = badge.progress,
-                      modifier =
-                          Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-                      color = rarityColors.first(),
-                      trackColor = Color.Transparent)
-                }
-          }
-        }
-
+        BadgeIconWithProgress(badge, alpha, rarityColors)
         Spacer(modifier = Modifier.height(4.dp))
 
-        Text(
-            text = badge.title,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (badge.isUnlocked) FontWeight.SemiBold else FontWeight.Normal,
-            color =
-                if (badge.isUnlocked) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(64.dp))
+        BadgeTitle(badge)
       }
+}
+
+@Composable
+private fun BadgeIconWithProgress(badge: Badge, alpha: Float, rarityColors: List<Color>) {
+  Box(contentAlignment = Alignment.Center) {
+    BadgeIconCircle(badge, alpha, rarityColors)
+
+    if (shouldShowProgressBar(badge)) {
+      Box(
+          modifier = Modifier.size(60.dp).padding(2.dp),
+          contentAlignment = Alignment.BottomCenter) {
+            LinearProgressIndicator(
+                progress = badge.progress,
+                modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+                color = rarityColors.first(),
+                trackColor = Color.Transparent)
+          }
+    }
+  }
+}
+
+@Composable
+private fun BadgeIconCircle(badge: Badge, alpha: Float, rarityColors: List<Color>) {
+  Box(
+      modifier =
+          Modifier.size(56.dp)
+              .alpha(alpha)
+              .clip(CircleShape)
+              .background(
+                  brush =
+                      if (badge.isUnlocked) {
+                        Brush.radialGradient(
+                            colors = rarityColors,
+                            center = androidx.compose.ui.geometry.Offset(28f, 28f),
+                            radius = 40f)
+                      } else {
+                        Brush.radialGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.surfaceVariant))
+                      })
+              .border(
+                  width = 2.dp,
+                  color =
+                      if (badge.isUnlocked) rarityColors.first().copy(alpha = 0.8f)
+                      else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                  shape = CircleShape),
+      contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector =
+                if (badge.isUnlocked) getIconFromName(badge.iconName) else Icons.Default.Lock,
+            contentDescription = badge.title,
+            modifier = Modifier.size(28.dp),
+            tint =
+                if (badge.isUnlocked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+}
+
+@Composable
+private fun BadgeTitle(badge: Badge) {
+  Text(
+      text = badge.title,
+      style = MaterialTheme.typography.labelSmall,
+      fontWeight = if (badge.isUnlocked) FontWeight.SemiBold else FontWeight.Normal,
+      color =
+          if (badge.isUnlocked) MaterialTheme.colorScheme.onSurface
+          else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+      textAlign = TextAlign.Center,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier.width(64.dp))
+}
+
+private fun shouldShowProgressBar(badge: Badge): Boolean {
+  return !badge.isUnlocked && badge.progress > 0
 }
 
 /**
@@ -239,111 +254,8 @@ private fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit = {}) {
 
   AlertDialog(
       onDismissRequest = onDismiss,
-      title = {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()) {
-              Box(
-                  modifier =
-                      Modifier.size(80.dp)
-                          .clip(CircleShape)
-                          .background(
-                              brush =
-                                  Brush.radialGradient(
-                                      colors =
-                                          if (badge.isUnlocked) rarityColors
-                                          else
-                                              listOf(
-                                                  MaterialTheme.colorScheme.surfaceVariant,
-                                                  MaterialTheme.colorScheme.surfaceVariant)))
-                          .border(
-                              width = 3.dp,
-                              color =
-                                  if (badge.isUnlocked) rarityColors.first().copy(alpha = 0.8f)
-                                  else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                              shape = CircleShape),
-                  contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector =
-                            if (badge.isUnlocked) getIconFromName(badge.iconName)
-                            else Icons.Default.Lock,
-                        contentDescription = badge.title,
-                        modifier = Modifier.size(40.dp),
-                        tint =
-                            if (badge.isUnlocked) Color.White
-                            else MaterialTheme.colorScheme.onSurfaceVariant)
-                  }
-
-              Spacer(modifier = Modifier.height(12.dp))
-              Text(
-                  text = badge.title,
-                  style = MaterialTheme.typography.headlineSmall,
-                  fontWeight = FontWeight.Bold,
-                  textAlign = TextAlign.Center)
-              Spacer(modifier = Modifier.height(4.dp))
-              Text(
-                  text = badge.rarity.name.lowercase().replaceFirstChar { it.uppercase() },
-                  style = MaterialTheme.typography.labelMedium,
-                  color = rarityColors.first(),
-                  fontWeight = FontWeight.SemiBold)
-            }
-      },
-      text = {
-        Column {
-          Text(
-              text = badge.description,
-              style = MaterialTheme.typography.bodyMedium,
-              textAlign = TextAlign.Center,
-              modifier = Modifier.fillMaxWidth())
-
-          when {
-            !badge.isUnlocked && badge.progress > 0 -> {
-              Spacer(modifier = Modifier.height(16.dp))
-              Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                      Text(
-                          text = "Progress",
-                          style = MaterialTheme.typography.labelMedium,
-                          color = MaterialTheme.colorScheme.onSurfaceVariant)
-                      Text(
-                          text = "${(badge.progress * 100).toInt()}%",
-                          style = MaterialTheme.typography.labelMedium,
-                          fontWeight = FontWeight.SemiBold,
-                          color = rarityColors.first())
-                    }
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = badge.progress,
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = rarityColors.first(),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant)
-              }
-            }
-            badge.isUnlocked -> {
-              Spacer(modifier = Modifier.height(8.dp))
-              Text(
-                  text = "✓ Unlocked",
-                  style = MaterialTheme.typography.labelLarge,
-                  color = rarityColors.first(),
-                  fontWeight = FontWeight.Bold,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.fillMaxWidth())
-            }
-            else -> {
-              Spacer(modifier = Modifier.height(8.dp))
-              Text(
-                  text = "🔒 Locked",
-                  style = MaterialTheme.typography.labelLarge,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  fontWeight = FontWeight.Bold,
-                  textAlign = TextAlign.Center,
-                  modifier = Modifier.fillMaxWidth())
-            }
-          }
-        }
-      },
+      title = { BadgeDialogHeader(badge, rarityColors) },
+      text = { BadgeDialogContent(badge, rarityColors) },
       confirmButton = {
         Button(
             onClick = onDismiss,
@@ -353,6 +265,121 @@ private fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit = {}) {
       },
       containerColor = MaterialTheme.colorScheme.surface,
       shape = RoundedCornerShape(24.dp))
+}
+
+@Composable
+private fun BadgeDialogHeader(badge: Badge, rarityColors: List<Color>) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            Modifier.size(80.dp)
+                .clip(CircleShape)
+                .background(
+                    brush =
+                        Brush.radialGradient(
+                            colors =
+                                if (badge.isUnlocked) rarityColors
+                                else
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        MaterialTheme.colorScheme.surfaceVariant)))
+                .border(
+                    width = 3.dp,
+                    color =
+                        if (badge.isUnlocked) rarityColors.first().copy(alpha = 0.8f)
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    shape = CircleShape),
+        contentAlignment = Alignment.Center) {
+          Icon(
+              imageVector =
+                  if (badge.isUnlocked) getIconFromName(badge.iconName) else Icons.Default.Lock,
+              contentDescription = badge.title,
+              modifier = Modifier.size(40.dp),
+              tint =
+                  if (badge.isUnlocked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = badge.title,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = badge.rarity.name.lowercase().replaceFirstChar { it.uppercase() },
+        style = MaterialTheme.typography.labelMedium,
+        color = rarityColors.first(),
+        fontWeight = FontWeight.SemiBold)
+  }
+}
+
+@Composable
+private fun BadgeDialogContent(badge: Badge, rarityColors: List<Color>) {
+  Column {
+    Text(
+        text = badge.description,
+        style = MaterialTheme.typography.bodyMedium,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
+
+    Spacer(modifier = Modifier.height(8.dp))
+    BadgeDialogStatus(badge, rarityColors)
+  }
+}
+
+@Composable
+private fun BadgeDialogStatus(badge: Badge, rarityColors: List<Color>) {
+  when {
+    shouldShowProgressBar(badge) -> BadgeProgressSection(badge, rarityColors)
+    badge.isUnlocked -> BadgeUnlockedLabel(rarityColors)
+    else -> BadgeLockedLabel()
+  }
+}
+
+@Composable
+private fun BadgeProgressSection(badge: Badge, rarityColors: List<Color>) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+      Text(
+          text = "Progress",
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(
+          text = "${(badge.progress * 100).toInt()}%",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = rarityColors.first())
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    LinearProgressIndicator(
+        progress = badge.progress,
+        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+        color = rarityColors.first(),
+        trackColor = MaterialTheme.colorScheme.surfaceVariant)
+  }
+}
+
+@Composable
+private fun BadgeUnlockedLabel(rarityColors: List<Color>) {
+  Text(
+      text = "✓ Unlocked",
+      style = MaterialTheme.typography.labelLarge,
+      color = rarityColors.first(),
+      fontWeight = FontWeight.Bold,
+      textAlign = TextAlign.Center,
+      modifier = Modifier.fillMaxWidth())
+}
+
+@Composable
+private fun BadgeLockedLabel() {
+  Text(
+      text = "🔒 Locked",
+      style = MaterialTheme.typography.labelLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      fontWeight = FontWeight.Bold,
+      textAlign = TextAlign.Center,
+      modifier = Modifier.fillMaxWidth())
 }
 
 /**

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.mapbox.geojson.Point
 import com.swent.mapin.R
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationViewModel
@@ -93,6 +94,8 @@ fun AddEventTextField(
     isPrice: Boolean = false,
     isCapacity: Boolean = false,
     isTag: Boolean = false,
+    locationValidator: ((String) -> Boolean)? = null,
+    locationSuggestions: List<Location> = emptyList(),
     locationQuery: () -> Unit = {},
     singleLine: Boolean = false
 ) {
@@ -104,6 +107,10 @@ fun AddEventTextField(
         textField.value = it
         if (isLocation) {
           locationQuery()
+          val isValid =
+              locationValidator?.invoke(textField.value)
+                  ?: isValidLocation(textField.value, locationSuggestions)
+          error.value = !isValid
         } else if (isTag) {
           error.value = !isValidTagInput(it)
         } else if (isPrice) {
@@ -130,6 +137,25 @@ fun AddEventTextField(
  * @param onCancel callback triggered when the user cancels the event creation
  * @param onDone callback triggered when the user is done with the event creation
  */
+private fun computeDialogRecenterPoint(
+    lastKnownPoint: Point?,
+    manualLocation: Location?,
+    fallbackLocation: Location
+): Point? {
+  lastKnownPoint?.let {
+    return it
+  }
+  manualLocation?.let { loc ->
+    if (loc.latitude != null && loc.longitude != null) {
+      return Point.fromLngLat(loc.longitude, loc.latitude)
+    }
+  }
+  if (fallbackLocation.latitude != null && fallbackLocation.longitude != null) {
+    return Point.fromLngLat(fallbackLocation.longitude, fallbackLocation.latitude)
+  }
+  return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -168,7 +194,38 @@ fun AddEventScreen(
 
   val locationExpanded = remember { mutableStateOf(false) }
   val gotLocation = remember { mutableStateOf(Location.UNDEFINED) }
+  val manualLocation = remember { mutableStateOf<Location?>(null) }
+  val showLocationPicker = remember { mutableStateOf(false) }
   val locations by locationViewModel.locations.collectAsState()
+  val context = LocalContext.current
+  val lastKnownPoint = getLastKnownUserPoint(context)
+
+  if (showLocationPicker.value) {
+    ManualLocationPickerDialog(
+        initialLocation = manualLocation.value ?: gotLocation.value,
+        onDismiss = { showLocationPicker.value = false },
+        onLocationPicked = { picked ->
+          manualLocation.value = picked
+          gotLocation.value = picked
+          val label = formatPinnedLocationLabel(picked.latitude!!, picked.longitude!!)
+          location.value = label
+          locationError.value = false
+          locationExpanded.value = false
+          showLocationPicker.value = false
+        },
+        searchResults = locations,
+        onSearchQuery = { query -> locationViewModel.onQueryChanged(query) },
+        onSearchResultSelect = { loc ->
+          manualLocation.value = loc
+          gotLocation.value = loc
+          location.value = loc.name ?: formatPinnedLocationLabel(loc.latitude!!, loc.longitude!!)
+          locationError.value = false
+          locationExpanded.value = false
+        },
+        recenterPoint =
+            computeDialogRecenterPoint(lastKnownPoint, manualLocation.value, gotLocation.value),
+        locationExpanded = locationExpanded)
+  }
 
   val fieldValidations =
       listOf(
@@ -307,6 +364,11 @@ fun AddEventScreen(
               gotLocation = gotLocation,
               locationExpanded = locationExpanded,
               locationViewModel = locationViewModel,
+              manualLocation = manualLocation,
+              onPickLocationOnMap = {
+                locationExpanded.value = false
+                showLocationPicker.value = true
+              },
               description = description,
               descriptionError = descriptionError,
               tag = tag,

@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
@@ -341,6 +342,8 @@ fun EventTopBar(
  * @param gotLocation Mutable state holding the currently selected `Location`.
  * @param locationExpanded Mutable state controlling whether the location dropdown is expanded.
  * @param locationViewModel ViewModel used for fetching or managing location data.
+ * @param manualLocation Mutable state holding manually picked location (if any)
+ * @param onPickLocationOnMap Callback when user wants to pick location on map
  * @param description Mutable state for the event description text.
  * @param descriptionError Mutable state indicating whether the description is invalid.
  * @param tag Mutable state for the event tag text.
@@ -364,6 +367,8 @@ fun EventFormBody(
     gotLocation: MutableState<Location>,
     locationExpanded: MutableState<Boolean>,
     locationViewModel: LocationViewModel,
+    manualLocation: MutableState<Location?>? = null,
+    onPickLocationOnMap: (() -> Unit)? = null,
     description: MutableState<String>,
     descriptionError: MutableState<Boolean>,
     tag: MutableState<String>,
@@ -468,7 +473,12 @@ fun EventFormBody(
       locationExpanded,
       locations,
       gotLocation,
+      manualLocation,
   )
+  onPickLocationOnMap?.let { pickOnMap ->
+    Spacer(modifier = Modifier.height(6.dp))
+    TextButton(onClick = pickOnMap) { Text(text = stringResource(R.string.pick_location_on_map)) }
+  }
 
   Spacer(modifier = Modifier.padding(10.dp))
   // Description field
