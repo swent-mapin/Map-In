@@ -42,6 +42,8 @@ class MemoriesScreenTest {
     every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
     every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
     every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
+    every { memoryViewModelMock.displayMode } returns
+        MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
 
     // Compose a small test UI that mirrors the important parts of MemoriesScreen
     composeTestRule.setContent { MemoriesScreen(viewModel = memoryViewModelMock) }
@@ -74,6 +76,8 @@ class MemoriesScreenTest {
     every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
     every { memoryViewModelMock.ownerName } returns MutableStateFlow("")
     every { memoryViewModelMock.taggedNames } returns MutableStateFlow(emptyList())
+    every { memoryViewModelMock.displayMode } returns
+        MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
 
     composeTestRule.setContent { MemoriesScreen(viewModel = memoryViewModelMock) }
     // Top app bar title
@@ -93,6 +97,8 @@ class MemoriesScreenTest {
     every { memoryViewModelMock.selectedMemory } returns MutableStateFlow(null)
     every { memoryViewModelMock.ownerName } returns MutableStateFlow("user1")
     every { memoryViewModelMock.taggedNames } returns MutableStateFlow(listOf("user2", "user3"))
+    every { memoryViewModelMock.displayMode } returns
+        MutableStateFlow(MemoryDisplayMode.OWNER_MEMORIES)
 
     var clicked = false
     composeTestRule.setContent {

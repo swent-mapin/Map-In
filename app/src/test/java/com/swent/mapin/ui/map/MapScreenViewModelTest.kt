@@ -507,6 +507,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())
@@ -528,6 +529,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())
@@ -543,7 +545,9 @@ class MapScreenViewModelTest {
   fun clearError_clearsErrorMessage() {
     runBlocking {
       whenever(mockAuth.currentUser).thenReturn(null)
-      val formData = MemoryFormData("", "desc", null, false, emptyList(), emptyList())
+      val formData =
+          MemoryFormData(
+              "", "desc", null, location = Location.UNDEFINED, false, emptyList(), emptyList())
       viewModel.onMemorySave(formData)
       testDispatcher.scheduler.advanceUntilIdle()
     }
@@ -566,6 +570,7 @@ class MapScreenViewModelTest {
             title = "Test",
             description = "Description",
             eventId = null,
+            location = Location.UNDEFINED,
             isPublic = false,
             mediaUris = emptyList(),
             taggedUserIds = emptyList())
@@ -1751,5 +1756,62 @@ class MapScreenViewModelTest {
 
     assertNull(viewModel.profileSheetUserId)
     assertNull(viewModel.selectedEvent.value)
+  }
+
+  @Test
+  fun onMapClicked_setsClickedPosition() {
+    viewModel.onMapClicked(46.5197, 6.6323)
+
+    assertNotNull(viewModel.clickedPosition)
+    assertEquals(
+        46.5197,
+        viewModel.clickedPosition?.latitude ?: 0.0,
+        0.0001) // Will be false if clicked position is not well defined
+    assertEquals(6.6323, viewModel.clickedPosition?.longitude ?: 0.0, 0.0001)
+  }
+
+  @Test
+  fun clearClickedPosition_resetsPosition() {
+    viewModel.onMapClicked(46.5197, 6.6323)
+    assertNotNull(viewModel.clickedPosition)
+
+    viewModel.clearClickedPosition()
+
+    assertNull(viewModel.clickedPosition)
+  }
+
+  @Test
+  fun handleHeatmapClickForMemories_inHeatmapMode_triggersNavigation() {
+    // Switch to heatmap mode
+    viewModel.setMapStyle(MapScreenViewModel.MapStyle.HEATMAP)
+    viewModel.onMapClicked(46.5197, 6.6323)
+
+    viewModel.handleHeatmapClickForMemories()
+
+    assertTrue(viewModel.shouldNavigateToNearbyMemories)
+
+    viewModel.onNearbyMemoriesNavigated()
+
+    assertFalse(viewModel.shouldNavigateToNearbyMemories)
+    assertNull(viewModel.clickedPosition)
+  }
+
+  @Test
+  fun getNearbyMemoriesParams_returnsCorrectValues() {
+    viewModel.onMapClicked(46.5197, 6.6323)
+
+    val params = viewModel.getNearbyMemoriesParams()
+
+    assertNotNull(params)
+    assertEquals(46.5197, params!!.first.latitude, 0.0001)
+    assertEquals(6.6323, params.first.longitude, 0.0001)
+    assertTrue(params.second > 0)
+  }
+
+  @Test
+  fun getNearbyMemoriesParams_withNoClickedPosition_returnsNull() {
+    val params = viewModel.getNearbyMemoriesParams()
+
+    assertNull(params)
   }
 }

@@ -2,12 +2,15 @@ package com.swent.mapin.model.chat
 
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.TaskCompletionSource
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
 import com.swent.mapin.model.UserProfile
 import com.swent.mapin.ui.chat.Conversation
+import com.swent.mapin.util.HashUtils
 import io.mockk.*
+import junit.framework.TestCase.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,7 +56,7 @@ class ConversationRepositoryFirestoreTest {
     every { mockCollection.document() } returns mockDocRef
     every { mockDb.collection("conversations") } returns mockCollection
 
-    val id = repo.getNewUid()
+    val id = repo.getNewUid(emptyList())
     assertEquals("fake-id", id)
   }
 
@@ -135,27 +138,32 @@ class ConversationRepositoryFirestoreTest {
     val conversation = Conversation(id = "c1", participantIds = listOf("u2"))
 
     val mockDocRef = mockk<DocumentReference>()
+    val mockTx = mockk<Transaction>(relaxed = true)
+    val mockSnapshot = mockk<DocumentSnapshot>()
+
     every { mockDb.collection("conversations") } returns
         mockk { every { document("c1") } returns mockDocRef }
 
-    val mockUser = mockk<FirebaseUser>()
-    every { mockUser.uid } returns "u1"
-    every { mockAuth.currentUser } returns mockUser
+    every { mockAuth.currentUser?.uid } returns "u1"
 
-    // Create a TaskCompletionSource to simulate a completed Task<Void>
-    val tcs = TaskCompletionSource<Void>()
-    tcs.setResult(null)
-    val task: Task<Void> = tcs.task
+    // Snapshot does not exist → should create
+    every { mockSnapshot.exists() } returns false
+    every { mockTx.get(mockDocRef) } returns mockSnapshot
 
-    // Mock set() to return the Task
-    every { mockDocRef.set(any()) } returns task
+    every { mockTx.set(any<DocumentReference>(), any<Conversation>()) } returns mockTx
+    // Mock runTransaction
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val block = firstArg<Transaction.Function<Void>>()
+          block.apply(mockTx)
+          Tasks.forResult(null)
+        }
 
-    // Call the suspend function (await will work on the real Task)
     repo.addConversation(conversation)
 
-    // Verify the conversation was set with current UID included
     verify {
-      mockDocRef.set(match<Conversation> { it.participantIds.containsAll(listOf("u1", "u2")) })
+      mockTx.set(
+          mockDocRef, match<Conversation> { it.participantIds.containsAll(listOf("u1", "u2")) })
     }
   }
 
@@ -171,20 +179,28 @@ class ConversationRepositoryFirestoreTest {
     every { mockUser.uid } returns "u1"
     every { mockAuth.currentUser } returns mockUser
 
-    // Create a completed Task<Void>
-    val tcs = TaskCompletionSource<Void>()
-    tcs.setResult(null)
-    val task: Task<Void> = tcs.task
+    val mockTx = mockk<Transaction>()
 
-    // Mock set() to return the Task
-    every { mockDocRef.set(any()) } returns task
+    val mockSnapshot = mockk<DocumentSnapshot>()
+    every { mockSnapshot.exists() } returns false
+    every { mockTx.get(mockDocRef) } returns mockSnapshot
 
-    // Call the suspend function (await will work on the real Task)
+    every { mockTx.set(any<DocumentReference>(), any<Conversation>()) } returns mockTx
+
+    every { mockDb.runTransaction<Void>(any()) } answers
+        {
+          val block = firstArg<Transaction.Function<Void>>()
+          block.apply(mockTx)
+          Tasks.forResult(null)
+        }
+
+    // Call
     repo.addConversation(conversation)
 
-    // Verify the conversation set contains only one "u1" and includes "u2"
+    // Verify tx.set was called with no duplicate "u1"
     verify {
-      mockDocRef.set(
+      mockTx.set(
+          mockDocRef,
           match<Conversation> {
             it.participantIds.count { id -> id == "u1" } == 1 && it.participantIds.contains("u2")
           })
@@ -666,5 +682,60 @@ class ConversationRepositoryFirestoreTest {
             participantIds?.isEmpty() == true && participants?.isEmpty() == true
           })
     }
+  }
+
+  @Test
+  fun `conversationExists returns true when document exists`() = runTest {
+    // Arrange
+    val conversationId = "conv123"
+
+    val mockSnapshot = mockk<DocumentSnapshot>()
+    every { mockSnapshot.exists() } returns true
+
+    val realTask = Tasks.forResult(mockSnapshot)
+
+    val mockDocRef = mockk<DocumentReference>()
+    every { mockDocRef.get() } returns realTask
+
+    val mockCollection = mockk<CollectionReference>()
+    every { mockCollection.document(conversationId) } returns mockDocRef
+
+    every { mockDb.collection("conversations") } returns mockCollection
+
+    // Act
+    val result = repo.conversationExists(conversationId)
+
+    // Assert
+    assertTrue(result)
+  }
+
+  @Test
+  fun `conversationExists returns false when document does not exist`() = runTest {
+    val conversationId = "conv123"
+
+    val mockSnapshot = mockk<DocumentSnapshot>()
+    every { mockSnapshot.exists() } returns false
+
+    val realTask = Tasks.forResult(mockSnapshot)
+
+    val mockDocRef = mockk<DocumentReference>()
+    every { mockDocRef.get() } returns realTask
+
+    val mockCollection = mockk<CollectionReference>()
+    every { mockCollection.document(conversationId) } returns mockDocRef
+
+    every { mockDb.collection("conversations") } returns mockCollection
+
+    val result = repo.conversationExists(conversationId)
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `getNewUid returns hashed id when participants provided`() {
+    val participants = listOf("userA", "userB")
+    val id = repo.getNewUid(participants)
+    // Assert it matches expected hash
+    assertEquals(HashUtils.hashUserIds(participants), id)
   }
 }

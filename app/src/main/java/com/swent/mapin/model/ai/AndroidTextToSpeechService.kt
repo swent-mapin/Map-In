@@ -28,11 +28,16 @@ class AndroidTextToSpeechService(
     tts =
         TextToSpeech(context) { status ->
           if (status == TextToSpeech.SUCCESS) {
-            val result = tts?.setLanguage(Locale.getDefault())
+            val result = tts?.setLanguage(Locale.US)
             isInitialized =
                 result != TextToSpeech.LANG_MISSING_DATA &&
                     result != TextToSpeech.LANG_NOT_SUPPORTED
 
+            // Make the voice friendlier: slightly higher pitch and slightly slower
+            if (isInitialized) {
+              tts?.setPitch(1.3f) // Slightly higher pitch (1.0 = normal)
+              tts?.setSpeechRate(1f)
+            }
             // Process any pending speeches
             if (isInitialized) {
               pendingSpeeches.forEach { (text, callback) -> speakInternal(text, callback) }

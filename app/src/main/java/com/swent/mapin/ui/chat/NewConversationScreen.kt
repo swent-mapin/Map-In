@@ -40,6 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ import com.google.firebase.auth.auth
 import com.swent.mapin.R
 import com.swent.mapin.model.FriendWithProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
+import kotlinx.coroutines.launch
 
 object NewConversationScreenTestTags {
   const val NEW_CONVERSATION_SCREEN = "newConversationScreen"
@@ -64,27 +67,6 @@ object NewConversationScreenTestTags {
   const val GROUP_NAME_DIALOG_TEXT = "groupText"
 }
 
-private fun createSingleConversation(friend: FriendWithProfile, vm: ConversationViewModel) =
-    Conversation(
-        id = vm.getNewUID(),
-        name = friend.userProfile.name,
-        participantIds = listOf(Firebase.auth.currentUser?.uid ?: "", friend.userProfile.userId),
-        participants = listOf(vm.currentUserProfile, friend.userProfile),
-        profilePictureUrl = friend.userProfile.profilePictureUrl)
-
-private fun createGroupConversation(
-    groupName: String,
-    friends: List<FriendWithProfile>,
-    vm: ConversationViewModel
-) =
-    Conversation(
-        id = vm.getNewUID(),
-        name = groupName,
-        participantIds =
-            friends.map { it.userProfile.userId } + listOf(Firebase.auth.currentUser?.uid ?: ""),
-        participants = friends.map { it.userProfile } + listOf(vm.currentUserProfile),
-        profilePictureUrl = friends.first().userProfile.profilePictureUrl)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NewConversationTopBar(
@@ -92,6 +74,8 @@ private fun NewConversationTopBar(
     selectedFriends: SnapshotStateList<FriendWithProfile>,
     onConfirmClick: () -> Unit
 ) {
+  var hasNavigatedBack by remember { mutableStateOf(false) }
+
   val colors =
       TopAppBarDefaults.topAppBarColors(
           containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -102,7 +86,12 @@ private fun NewConversationTopBar(
       title = { Text("New Conversation") },
       navigationIcon = {
         IconButton(
-            onClick = onNavigateBack,
+            onClick = {
+              if (!hasNavigatedBack) {
+                hasNavigatedBack = true
+                onNavigateBack()
+              }
+            },
             modifier = Modifier.testTag(NewConversationScreenTestTags.BACK_BUTTON)) {
               Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
@@ -212,6 +201,67 @@ private fun GroupNameDialog(
       dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
 
+suspend fun handleSingleFriendConfirm(
+    conversationViewModel: ConversationViewModel,
+    friend: FriendWithProfile,
+    currentUserId: String,
+    onConfirm: () -> Unit,
+    onCreateExistingConversation: (Conversation) -> Unit
+) {
+  val convoId = conversationViewModel.getNewUID(listOf(friend.userProfile.userId, currentUserId))
+
+  val existing = conversationViewModel.getExistingConversation(convoId)
+
+  if (existing != null) {
+    if (currentUserId !in existing.participantIds) {
+      conversationViewModel.joinConversation(
+          conversationId = existing.id,
+          userId = currentUserId,
+          userProfile = conversationViewModel.currentUserProfile)
+    }
+    onCreateExistingConversation(existing)
+  } else {
+    conversationViewModel.createConversation(
+        Conversation(
+            id = convoId,
+            name = friend.userProfile.name,
+            participantIds = listOf(currentUserId, friend.userProfile.userId),
+            participants = listOf(conversationViewModel.currentUserProfile, friend.userProfile),
+            profilePictureUrl = friend.userProfile.profilePictureUrl))
+    onConfirm()
+  }
+}
+
+suspend fun handleGroupConfirm(
+    conversationViewModel: ConversationViewModel,
+    selectedFriends: List<FriendWithProfile>,
+    groupName: String,
+    currentUserId: String,
+    onConfirm: () -> Unit
+) {
+  if (groupName.isBlank()) return
+
+  val ids = selectedFriends.map { it.userProfile.userId }
+  val profiles = selectedFriends.map { it.userProfile }
+
+  var convoId = conversationViewModel.getNewUID(ids + currentUserId)
+
+  val existing = conversationViewModel.getExistingConversation(convoId)
+
+  if (existing != null) {
+    convoId = conversationViewModel.getNewUID(emptyList())
+  }
+
+  conversationViewModel.createConversation(
+      Conversation(
+          id = convoId,
+          name = groupName,
+          participantIds = ids + currentUserId,
+          participants = profiles + conversationViewModel.currentUserProfile,
+          profilePictureUrl = selectedFriends.first().userProfile.profilePictureUrl))
+
+  onConfirm()
+}
 /**
  * Assisted by AI Screen allowing the user to select one or more friends to start a new
  * conversation.
@@ -223,6 +273,8 @@ private fun GroupNameDialog(
  * @param friendsViewModel ViewModel for user's friends
  * @param onNavigateBack Callback invoked when the back button is pressed.
  * @param onConfirm Callback invoked when the user confirms selection.
+ * @param onCreateExistingConversation Callback invoked when the user tries to create an existing 1
+ *   on 1 conversation
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -230,35 +282,58 @@ fun NewConversationScreen(
     conversationViewModel: ConversationViewModel = viewModel(),
     friendsViewModel: FriendsViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onConfirm: () -> Unit = {}
+    onConfirm: () -> Unit = {},
+    onCreateExistingConversation: (Conversation) -> Unit = {}
 ) {
   LaunchedEffect(Unit) { friendsViewModel.loadFriends() }
 
-  val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
   val friends by friendsViewModel.friends.collectAsState()
+  val selectedFriends = remember { mutableStateListOf<FriendWithProfile>() }
   val showGroupNameDialog = remember { mutableStateOf(false) }
   val groupName = remember { mutableStateOf("") }
+  val scope = rememberCoroutineScope()
+  val currentUserId = Firebase.auth.currentUser?.uid.orEmpty()
+  var hasNavigatedBack by remember { mutableStateOf(false) }
 
-  val onConfirmSelection: () -> Unit = {
-    if (selectedFriends.size >= 2) {
-      showGroupNameDialog.value = true
-    } else {
-      val friend = selectedFriends.first()
-      val newConvo = createSingleConversation(friend, conversationViewModel)
-      conversationViewModel.createConversation(newConvo)
-      onConfirm()
+  fun onSingleFriendConfirm(friend: FriendWithProfile) {
+    scope.launch {
+      handleSingleFriendConfirm(
+          conversationViewModel = conversationViewModel,
+          friend = friend,
+          currentUserId = currentUserId,
+          onConfirm = onConfirm,
+          onCreateExistingConversation = onCreateExistingConversation)
     }
   }
 
+  fun onGroupConfirm() {
+    if (groupName.value.isBlank()) return
+    scope.launch {
+      handleGroupConfirm(
+          conversationViewModel = conversationViewModel,
+          selectedFriends = selectedFriends,
+          groupName = groupName.value,
+          currentUserId = currentUserId,
+          onConfirm = onConfirm)
+    }
+    showGroupNameDialog.value = false
+    groupName.value = ""
+  }
+
   Scaffold(
+      modifier = Modifier.testTag(NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN),
       topBar = {
         NewConversationTopBar(
             onNavigateBack = onNavigateBack,
             selectedFriends = selectedFriends,
-            onConfirmClick = onConfirmSelection)
-      },
-      modifier = Modifier.testTag(NewConversationScreenTestTags.NEW_CONVERSATION_SCREEN)) {
-          paddingValues ->
+            onConfirmClick = {
+              if (selectedFriends.size >= 2) {
+                showGroupNameDialog.value = true
+              } else {
+                onSingleFriendConfirm(selectedFriends.first())
+              }
+            })
+      }) { paddingValues ->
         if (friends.isEmpty()) {
           EmptyFriendsContent(modifier = Modifier.padding(paddingValues))
         } else {
@@ -273,19 +348,10 @@ fun NewConversationScreen(
     GroupNameDialog(
         groupName = groupName.value,
         onGroupNameChange = { groupName.value = it },
-        onConfirm = {
-          if (groupName.value.isNotBlank()) {
-            val newConvo =
-                createGroupConversation(groupName.value, selectedFriends, conversationViewModel)
-            conversationViewModel.createConversation(newConvo)
-            onConfirm()
-            showGroupNameDialog.value = false
-            groupName.value = ""
-          }
-        },
         onDismiss = {
           showGroupNameDialog.value = false
           groupName.value = ""
-        })
+        },
+        onConfirm = { onGroupConfirm() })
   }
 }
