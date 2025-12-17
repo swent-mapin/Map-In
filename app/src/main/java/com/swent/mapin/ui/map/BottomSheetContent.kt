@@ -473,14 +473,11 @@ fun BottomSheetContent(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                if (isFull) {
-                                  // Avoid running filter side effects when sheet is not fully shown
-                                  filterSection.Render(
-                                      Modifier.fillMaxWidth(),
-                                      filterViewModel,
-                                      locationViewModel,
-                                      userProfile)
-                                }
+                                filterSection.Render(
+                                    Modifier.fillMaxWidth(),
+                                    filterViewModel,
+                                    locationViewModel,
+                                    userProfile)
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
