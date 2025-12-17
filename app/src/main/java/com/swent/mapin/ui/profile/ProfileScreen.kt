@@ -586,10 +586,7 @@ private fun EditProfileActionButtons(viewModel: ProfileViewModel) {
         modifier = Modifier.weight(1f).height(40.dp).testTag("cancelButton"),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFef5350))) {
-          Text(
-              "Cancel",
-              fontWeight = FontWeight.Bold,
-              style = MaterialTheme.typography.bodySmall)
+          Text("Cancel", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
         }
 
     // Save button with solid background
@@ -619,8 +616,12 @@ private fun EditProfileActionButtons(viewModel: ProfileViewModel) {
                       Text(
                           "Save",
                           fontWeight = FontWeight.Bold,
-
-
+                          style = MaterialTheme.typography.bodySmall)
+                    }
+              }
+        }
+  }
+}
 
 /** Data class for avatar options */
 data class AvatarOption(val id: String, val icon: ImageVector)

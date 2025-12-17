@@ -241,14 +241,11 @@ private fun SignInActions(
   Spacer(modifier = Modifier.height(24.dp))
 
   GoogleSignInButton(
-      viewModel = viewModel,
-      credentialManager = credentialManager,
-      isLoading = uiState.isLoading)
+      viewModel = viewModel, credentialManager = credentialManager, isLoading = uiState.isLoading)
 
   Spacer(modifier = Modifier.height(24.dp))
 
-  MicrosoftSignInButton(
-      viewModel = viewModel, context = context, isLoading = uiState.isLoading)
+  MicrosoftSignInButton(viewModel = viewModel, context = context, isLoading = uiState.isLoading)
 }
 
 @Composable
@@ -382,10 +379,8 @@ private fun MicrosoftSignInButton(
                     contentDescription = "Microsoft logo",
                     modifier = Modifier.size(28.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Continue with Microsoft", style = MaterialTheme.typography.titleMedium)
+                Text(text = "Continue with Microsoft", style = MaterialTheme.typography.titleMedium)
               }
         }
       }
-
-
+}

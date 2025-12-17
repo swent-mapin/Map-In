@@ -1115,7 +1115,9 @@ private fun MapScreenEffects(
     snackbarHostState: SnackbarHostState,
     deepLinkEventId: String?,
     onDeepLinkConsumed: () -> Unit,
-    locationPermissionLauncher: androidx.activity.compose.ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>>
+    locationPermissionLauncher:
+        androidx.activity.compose.ManagedActivityResultLauncher<
+            Array<String>, Map<String, @JvmSuppressWildcards Boolean>>
 ) {
   // Reload user profile when MapScreen is composed
   LaunchedEffect(Unit) { viewModel.loadUserProfile() }

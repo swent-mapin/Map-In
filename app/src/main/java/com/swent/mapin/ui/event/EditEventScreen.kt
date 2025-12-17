@@ -287,9 +287,24 @@ private fun handleEditEventSave(
 
   // update per-field error flags from current values so UI shows them immediately
   updateEditFieldErrors(
-      titleError, title, descriptionError, description, locationError, location,
-      dateError, date, timeError, time, endDateError, endDate, endTimeError, endTime,
-      tagError, tag, priceError, price)
+      titleError,
+      title,
+      descriptionError,
+      description,
+      locationError,
+      location,
+      dateError,
+      date,
+      timeError,
+      time,
+      endDateError,
+      endDate,
+      endTimeError,
+      endTime,
+      tagError,
+      tag,
+      priceError,
+      price)
 
   // Run relational validation for start/end (may clear or set end errors)
   validateStartEnd()

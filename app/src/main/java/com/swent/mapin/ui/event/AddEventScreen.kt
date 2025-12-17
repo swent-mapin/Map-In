@@ -419,11 +419,11 @@ private fun createFieldValidations(
 ): List<FieldValidation> {
   return listOf(
       FieldValidation(
-          { titleError.value || title.value.isBlank() },
-          context.getString(R.string.title_field)),
+          { titleError.value || title.value.isBlank() }, context.getString(R.string.title_field)),
       FieldValidation(
           { dateError.value || date.value.isBlank() }, context.getString(R.string.date_field)),
-      FieldValidation({ timeError.value || time.value.isBlank() }, context.getString(R.string.time)),
+      FieldValidation(
+          { timeError.value || time.value.isBlank() }, context.getString(R.string.time)),
       FieldValidation({ endDateError.value || endDate.value.isBlank() }, "End date"),
       FieldValidation({ endTimeError.value || endTime.value.isBlank() }, "End time"),
       FieldValidation(
@@ -473,12 +473,30 @@ private fun handleAddEventSave(
 
   // update per-field error flags from current values so UI shows them immediately
   updateFieldErrors(
-      titleError, title, descriptionError, description, locationError, location,
-      dateError, date, timeError, time, endDateError, endDate, endTimeError, endTime,
-      tagError, tag, priceError, price, capacityError, capacity)
+      titleError,
+      title,
+      descriptionError,
+      description,
+      locationError,
+      location,
+      dateError,
+      date,
+      timeError,
+      time,
+      endDateError,
+      endDate,
+      endTimeError,
+      endTime,
+      tagError,
+      tag,
+      priceError,
+      price,
+      capacityError,
+      capacity)
 
   // Run relational validation for start/end (may clear or set end errors)
-  validateStartEndLogic(date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
+  validateStartEndLogic(
+      date, time, endDate, endTime, dateError, endDateError, timeError, endTimeError)
 
   val nowValid = fieldValidations.none { it.hasError() } && isLoggedIn.value
   if (!nowValid) return
@@ -490,7 +508,7 @@ private fun handleAddEventSave(
   }
 
   val (startTs, endTs) = timestamps
-  
+
   if (!validateEndAfterStart(startTs, endTs, endDateError, endTimeError)) return
 
   eventViewModel.saveEvent(
@@ -551,7 +569,7 @@ private fun parseEventTimestamps(
 ): Pair<Timestamp, Timestamp>? {
   val sdf = SimpleDateFormat("dd/MM/yyyyHHmm", Locale.getDefault())
   sdf.timeZone = java.util.TimeZone.getDefault()
-  
+
   val rawTime = if (time.contains("h")) time.replace("h", "") else time
   val rawEndTime = if (endTime.contains("h")) endTime.replace("h", "") else endTime
 
