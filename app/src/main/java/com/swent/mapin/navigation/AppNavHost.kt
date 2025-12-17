@@ -196,8 +196,7 @@ fun AppNavHost(
           onNavigateBack = { safePopBackStack() },
           onNewConversation = { navController.navigate(Route.NewConversation.route) },
           onOpenConversation = { conversation ->
-            val encodedName = Uri.encode(conversation.name)
-            navController.navigate("conversation/${conversation.id}/${encodedName}")
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
           },
           onTabSelected = { chatTab -> navController.navigate(chatTab.destination) })
     }
@@ -210,6 +209,9 @@ fun AppNavHost(
               popUpTo(Route.Chat.route) { inclusive = true }
               launchSingleTop = true
             }
+          },
+          onCreateExistingConversation = { conversation ->
+            navigateToExistingConversation(navController, conversation.id, conversation.name)
           })
     }
 
