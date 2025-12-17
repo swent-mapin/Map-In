@@ -19,6 +19,8 @@ enum class MemoryDisplayMode {
   NEARBY_MEMORIES
 }
 
+const val DEFAULT_MEMORY_RADIUS = 2.0
+
 class MemoriesViewModel(
     private val memoryRepository: MemoryRepository,
     private val userRepository: UserProfileRepository = UserProfileRepository(),
@@ -44,7 +46,7 @@ class MemoriesViewModel(
   val displayMode = _displayMode.asStateFlow()
 
   private val _nearbyLocation = MutableStateFlow(Location.UNDEFINED)
-  private val _nearbyRadius = MutableStateFlow(2.0)
+  private val _nearbyRadius = MutableStateFlow(DEFAULT_MEMORY_RADIUS)
 
   init {
     loadMemoriesOfOwner()

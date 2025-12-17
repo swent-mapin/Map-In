@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.Timestamp
+import com.swent.mapin.R
 import com.swent.mapin.model.memory.Memory
 import java.time.Instant
 import java.time.ZoneId
@@ -38,6 +40,7 @@ import java.time.format.DateTimeFormatter
 /** Formats a [Timestamp] to a human-readable date string. */
 private val memoryDateFormatter =
     DateTimeFormatter.ofPattern("dd MMM yyyy").withZone(ZoneId.systemDefault())
+
 /**
  * Memories screen displaying a list of the user's memories.
  *
@@ -66,17 +69,21 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
             title = {
               Text(
                   text =
-                      when (displayMode) {
-                        MemoryDisplayMode.OWNER_MEMORIES -> "My Memories"
-                        MemoryDisplayMode.NEARBY_MEMORIES -> "Nearby Memories"
-                      },
+                      stringResource(
+                          when (displayMode) {
+                            MemoryDisplayMode.OWNER_MEMORIES -> R.string.memories_screen_title_my
+                            MemoryDisplayMode.NEARBY_MEMORIES ->
+                                R.string.memories_screen_title_nearby
+                          }),
                   modifier = Modifier.testTag("memoriesScreenTitle"),
                   style = MaterialTheme.typography.headlineSmall,
                   fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
               IconButton(onClick = onNavigateBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back_button))
               }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent))
@@ -101,10 +108,13 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                           modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text =
-                                    when (displayMode) {
-                                      MemoryDisplayMode.OWNER_MEMORIES -> "Your Memories"
-                                      MemoryDisplayMode.NEARBY_MEMORIES -> "Memories in the area"
-                                    },
+                                    stringResource(
+                                        when (displayMode) {
+                                          MemoryDisplayMode.OWNER_MEMORIES ->
+                                              R.string.memories_your_memories
+                                          MemoryDisplayMode.NEARBY_MEMORIES ->
+                                              R.string.memories_nearby_area
+                                        }),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f).testTag("yourMemoriesMessage"))
@@ -112,7 +122,7 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                             TextButton(
                                 onClick = { viewModel.refresh() },
                                 modifier = Modifier.testTag("refreshAllButton")) {
-                                  Text("Refresh All")
+                                  Text(stringResource(R.string.memories_refresh_all))
                                 }
                           }
                       Spacer(modifier = Modifier.height(16.dp))
@@ -131,21 +141,24 @@ fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel
                                           .testTag("noMemoriesMessage")) {
                                     Text(
                                         text =
-                                            when (displayMode) {
-                                              MemoryDisplayMode.OWNER_MEMORIES -> "No memories yet"
-                                              MemoryDisplayMode.NEARBY_MEMORIES ->
-                                                  "No memories in this area"
-                                            },
+                                            stringResource(
+                                                when (displayMode) {
+                                                  MemoryDisplayMode.OWNER_MEMORIES ->
+                                                      R.string.memories_no_memories_yet
+                                                  MemoryDisplayMode.NEARBY_MEMORIES ->
+                                                      R.string.memories_no_memories_area
+                                                }),
                                         style = MaterialTheme.typography.titleMedium)
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text =
-                                            when (displayMode) {
-                                              MemoryDisplayMode.OWNER_MEMORIES ->
-                                                  "Create memories for attended events and they'll appear here"
-                                              MemoryDisplayMode.NEARBY_MEMORIES ->
-                                                  "Try to look in another area if someone posted a memory"
-                                            },
+                                            stringResource(
+                                                when (displayMode) {
+                                                  MemoryDisplayMode.OWNER_MEMORIES ->
+                                                      R.string.memories_empty_message_owner
+                                                  MemoryDisplayMode.NEARBY_MEMORIES ->
+                                                      R.string.memories_empty_message_nearby
+                                                }),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
@@ -213,13 +226,13 @@ private fun MemoryThumbnail(imageUrl: String?) {
         if (imageUrl != null) {
           AsyncImage(
               model = imageUrl,
-              contentDescription = "Memory photo",
+              contentDescription = stringResource(R.string.memories_memory_photo),
               modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
               contentScale = ContentScale.Crop)
         } else {
           Icon(
               imageVector = Icons.Default.Image,
-              contentDescription = "Placeholder",
+              contentDescription = stringResource(R.string.memories_placeholder),
               tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
               modifier = Modifier.size(48.dp))
         }
@@ -237,15 +250,21 @@ private fun MemoryFooter(isPublic: Boolean, dateText: String) {
   Row(modifier = Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
     Icon(
         imageVector = if (isPublic) Icons.Default.LockOpen else Icons.Default.Lock,
-        contentDescription = if (isPublic) "Public" else "Private",
+        contentDescription =
+            if (isPublic) {
+              stringResource(R.string.memories_public)
+            } else {
+              stringResource(R.string.memories_private)
+            },
         tint = MaterialTheme.colorScheme.primary)
     Text(
-        text = if (isPublic) "Public" else "Private",
+        text =
+            stringResource(if (isPublic) R.string.memories_public else R.string.memories_private),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 4.dp))
     Text(
-        text = "  •  Created $dateText",
+        text = "  •  " + stringResource(R.string.memories_created, dateText),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
   }
@@ -277,7 +296,10 @@ private fun MemoryItem(
             // Title
             Row(verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  text = memory.title.ifBlank { "Memory ${memory.uid}" },
+                  text =
+                      memory.title.ifBlank {
+                        stringResource(R.string.memories_default_title, memory.uid)
+                      },
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.SemiBold,
                   modifier = Modifier.weight(1f))
@@ -286,7 +308,7 @@ private fun MemoryItem(
             // Tagged users
             if (memory.taggedUserIds.isNotEmpty()) {
               Text(
-                  text = "Tagged: " + taggedNames.joinToString { it },
+                  text = stringResource(R.string.memories_tagged, taggedNames.joinToString { it }),
                   style = MaterialTheme.typography.titleSmall,
                   color = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.padding(top = 4.dp))

@@ -81,7 +81,6 @@ class MemoryRepositoryFirestore(private val db: FirebaseFirestore) : MemoryRepos
   }
 
   override suspend fun getMemoriesByLocation(location: Location, radius: Double): List<Memory> {
-    Log.d("MemoryRepositoryFirestore", "getMemoriesByLocation: $location, $radius")
     if (!location.isDefined()) return emptyList()
 
     val bounds =
@@ -100,7 +99,6 @@ class MemoryRepositoryFirestore(private val db: FirebaseFirestore) : MemoryRepos
 
     val memories = snap.documents.mapNotNull { documentToMemory(it) }
 
-    Log.d("MemoryRepositoryFirestore", "getMemoriesByLocation: $memories")
     return memories
   }
 

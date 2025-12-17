@@ -92,4 +92,23 @@
     <!-- Route info -->
     <string name="route_distance">Distance</string>
     <string name="route_duration">Duration</string>
+
+    <!-- Memories Screen -->
+    <string name="memories_screen_title_my">My Memories</string>
+    <string name="memories_screen_title_nearby">Nearby Memories</string>
+    <string name="memories_your_memories">Your Memories</string>
+    <string name="memories_nearby_area">Memories in the area</string>
+    <string name="memories_refresh_all">Refresh All</string>
+    <string name="memories_no_memories_yet">No memories yet</string>
+    <string name="memories_no_memories_area">No memories in this area</string>
+    <string name="memories_empty_message_owner">Create memories for attended events and they'll appear here</string>
+    <string name="memories_empty_message_nearby">Try to look in another area if someone posted a memory</string>
+    <string name="memories_memory_photo">Memory photo</string>
+    <string name="memories_placeholder">Placeholder</string>
+    <string name="memories_public">Public</string>
+    <string name="memories_private">Private</string>
+    <string name="memories_created">Created %1$s</string>
+    <string name="memories_tagged">Tagged: %1$s</string>
+    <string name="memories_default_title">Memory %1$s</string>
+    <string name="back_button">Back</string>
 </resources>

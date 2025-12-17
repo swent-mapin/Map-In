@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -65,6 +66,8 @@ sealed class OrganizerState {
 
   object Error : OrganizerState()
 }
+
+const val DEFAULT_MEMORY_RADIUS = 2.0
 
 /**
  * ViewModel for the Map Screen, managing state for the map, bottom sheet, search, and memory form.
@@ -253,7 +256,7 @@ class MapScreenViewModel(
     get() = _shouldNavigateToNearbyMemories
 
   // Radius of the memories to fetch
-  private var _nearbyMemoriesRadius by mutableStateOf(2.0)
+  private var _nearbyMemoriesRadius by mutableDoubleStateOf(DEFAULT_MEMORY_RADIUS)
 
   // State of the bottomsheet
 
@@ -783,8 +786,6 @@ class MapScreenViewModel(
       _shouldNavigateToNearbyMemories = true
       _nearbyMemoriesRadius = radius
     }
-
-    Log.d("MapScreenViewModel", "Map clicked at: lat=$latitude, lon=$longitude")
   }
 
   /** Clears the clicked location. */
@@ -817,7 +818,7 @@ class MapScreenViewModel(
     return when {
       zoom >= 18f -> 0.5
       zoom >= 16f -> 1.0
-      zoom >= 14f -> 2.0
+      zoom >= 14f -> DEFAULT_MEMORY_RADIUS
       zoom >= 12f -> 5.0
       else -> 10.0
     }.coerceAtMost(10.0)

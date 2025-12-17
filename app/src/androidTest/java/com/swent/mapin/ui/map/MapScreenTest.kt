@@ -5,6 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
+import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.testing.UiTestTags
 import com.swent.mapin.ui.chat.ChatScreenTestTags
@@ -235,11 +236,10 @@ class MapScreenTest {
     rule.onNodeWithTag("mapStyleOption_SATELLITE").performClick()
     rule.waitForIdle()
 
-    // Add a small delay to allow map style transition to complete on slower CI environments
-    Thread.sleep(200)
-    rule.waitForIdle()
+    rule.waitUntil(timeoutMillis = 2_000) {
+      rule.onNodeWithTag(UiTestTags.MAP_SCREEN).isDisplayed()
+    }
 
-    rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
     rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
 
@@ -252,10 +252,6 @@ class MapScreenTest {
         MapScreen(renderMap = false, autoRequestPermissions = false, memoryVM = testMemoryVM)
       }
     }
-    rule.waitForIdle()
-
-    // Add additional wait to ensure composition completes on slower CI environments
-    Thread.sleep(100)
     rule.waitForIdle()
 
     rule.onNodeWithTag(UiTestTags.MAP_SCREEN).assertIsDisplayed()
@@ -317,7 +313,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -329,8 +325,10 @@ class MapScreenTest {
     rule.waitForIdle()
     rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
     rule.waitForIdle()
-    Thread.sleep(500)
-    rule.waitForIdle()
+
+    rule.waitUntil(timeoutMillis = 2_000) {
+      rule.onAllNodesWithTag("eventDetailSheet").fetchSemanticsNodes().isNotEmpty()
+    }
 
     // Test: EventDetailSheet displays with correct elements
     rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
@@ -341,7 +339,11 @@ class MapScreenTest {
     // Test: Close button works
     rule.onNodeWithTag("closeButton").performClick()
     rule.waitForIdle()
-    Thread.sleep(200)
+
+    rule.waitUntil(timeoutMillis = 1_000) {
+      rule.onAllNodesWithTag("eventDetailSheet").fetchSemanticsNodes().isEmpty()
+    }
+
     rule.onNodeWithTag("eventDetailSheet").assertDoesNotExist()
     rule.onNodeWithText("Search events, people").assertIsDisplayed()
   }
@@ -351,7 +353,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -363,8 +365,10 @@ class MapScreenTest {
     rule.waitForIdle()
     rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
     rule.waitForIdle()
-    Thread.sleep(500)
-    rule.waitForIdle()
+
+    rule.waitUntil(timeoutMillis = 2_000) {
+      rule.onAllNodesWithTag("eventDetailSheet").fetchSemanticsNodes().isNotEmpty()
+    }
 
     // Click share button and verify dialog appears
     rule.onNodeWithTag("shareButton").performClick()
@@ -377,7 +381,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -389,8 +393,10 @@ class MapScreenTest {
     rule.waitForIdle()
     rule.runOnIdle { viewModel.onEventPinClicked(testEvent) }
     rule.waitForIdle()
-    Thread.sleep(500)
-    rule.waitForIdle()
+
+    rule.waitUntil(timeoutMillis = 2_000) {
+      rule.onAllNodesWithTag("eventDetailSheet").fetchSemanticsNodes().isNotEmpty()
+    }
 
     // Test: EventDetailSheet displays in collapsed state
     rule.onNodeWithTag("eventDetailSheet").assertIsDisplayed()
@@ -603,7 +609,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -777,7 +783,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -806,7 +812,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -834,7 +840,7 @@ class MapScreenTest {
     val config =
         BottomSheetConfig(collapsedHeight = 120.dp, mediumHeight = 400.dp, fullHeight = 800.dp)
     lateinit var viewModel: MapScreenViewModel
-    val testEvent = com.swent.mapin.model.event.LocalEventList.defaultSampleEvents()[0]
+    val testEvent = LocalEventList.defaultSampleEvents()[0]
 
     rule.setContent {
       MaterialTheme {
@@ -888,7 +894,8 @@ class MapScreenTest {
     }
 
     rule.waitForIdle()
-    Thread.sleep(500)
+
+    rule.waitUntil(timeoutMillis = 2_000) { navigatedToMemories }
 
     assertTrue(navigatedToMemories)
   }
@@ -917,7 +924,6 @@ class MapScreenTest {
     rule.runOnIdle { viewModel.onMapClicked(46.5197, 6.6323) }
 
     rule.waitForIdle()
-    Thread.sleep(300)
 
     assertFalse(navigatedToMemories)
   }
