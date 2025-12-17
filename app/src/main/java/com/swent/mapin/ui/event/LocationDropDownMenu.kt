@@ -24,6 +24,7 @@ fun LocationDropDownMenu(
     expanded: MutableState<Boolean>,
     locations: List<Location>,
     gotLocation: MutableState<Location>,
+    manualLocation: MutableState<Location?>? = null,
 ) {
   Column {
     AddEventTextField(
@@ -31,11 +32,20 @@ fun LocationDropDownMenu(
         locationError,
         stringResource(R.string.location_place_holder),
         isLocation = true,
+        locationValidator = { input ->
+          manualLocation?.value != null || isValidLocation(input, locations)
+        },
+        locationSuggestions = locations,
         modifier = Modifier.testTag(testTag.INPUT_EVENT_LOCATION),
         locationQuery = {
-          locationViewModel.onQueryChanged(location.value)
-          expanded.value = true
-          locationError.value = !isValidLocation(location.value, locations)
+          if (manualLocation?.value != null) {
+            expanded.value = false
+            locationError.value = false
+          } else {
+            locationViewModel.onQueryChanged(location.value)
+            expanded.value = true
+            locationError.value = !isValidLocation(location.value, locations)
+          }
         },
         singleLine = true)
     DropdownMenu(
@@ -55,6 +65,7 @@ fun LocationDropDownMenu(
                 onClick = {
                   location.value = loc.name ?: Location.NO_NAME
                   gotLocation.value = loc
+                  manualLocation?.value = null
                   expanded.value = false
                   locationError.value = false
                 })
