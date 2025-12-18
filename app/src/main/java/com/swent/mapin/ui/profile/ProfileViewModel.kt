@@ -8,16 +8,16 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.ImageUploadHelper
-import com.swent.mapin.model.NotificationService
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.badge.Badge
 import com.swent.mapin.model.badge.BadgeContext
 import com.swent.mapin.model.badge.BadgeManager
 import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.badge.BadgeRepositoryFirestore
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.notification.NotificationService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
+import com.swent.mapin.util.ImageUploadHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -335,8 +335,7 @@ class ProfileViewModel(
         Log.e("BadgeCalculationFail", "ProfileViewModel - Failed to save badges to Firestore")
       }
     } catch (e: Exception) {
-      Log.e("BadgeCalculationException", "ProfileViewModel - Exception saving badges: ${e.message}")
-      e.printStackTrace()
+      Log.e("BadgeCalculationException", "ProfileViewModel - Exception saving badges", e)
     }
   }
 

@@ -83,6 +83,10 @@ class AddEventScreenTests {
         .onNodeWithTag(AddEventScreenTestTags.INPUT_EVENT_LOCATION)
         .performScrollTo()
         .assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(AddEventScreenTestTags.PICK_MEDIA)
+        .performScrollTo()
+        .assertIsDisplayed()
   }
 
   @Test

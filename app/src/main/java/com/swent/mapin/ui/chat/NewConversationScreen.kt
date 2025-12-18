@@ -55,7 +55,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.swent.mapin.R
-import com.swent.mapin.model.FriendWithProfile
+import com.swent.mapin.model.friends.FriendWithProfile
 import com.swent.mapin.ui.friends.FriendsViewModel
 import kotlinx.coroutines.launch
 

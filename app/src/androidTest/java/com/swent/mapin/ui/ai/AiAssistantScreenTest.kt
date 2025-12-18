@@ -150,4 +150,62 @@ class AiAssistantScreenTest {
         .onNode(hasText("Register for the second one", substring = true))
         .assertIsDisplayed()
   }
+
+  @Test
+  fun noUserOrAiMessages_initialState() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("userBubble").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("aiBubble").assertDoesNotExist()
+  }
+
+  @Test
+  fun noEventCards_initialState() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onAllNodesWithTag("eventCard_").assertCountEquals(0)
+  }
+
+  @Test
+  fun noFollowupQuestions_initialState() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("followupQuestion").assertDoesNotExist()
+  }
+
+  @Test
+  fun backButton_onlyTriggersOnce() {
+    var clickCount = 0
+
+    composeTestRule.setContent {
+      MapInTheme { AiAssistantScreen(onNavigateBack = { clickCount++ }) }
+    }
+
+    composeTestRule.onNodeWithTag("backButton").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("backButton").performClick()
+
+    assert(clickCount == 1)
+  }
+
+  @Test
+  fun micButton_hasClickAction() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("micButton").assertHasClickAction()
+  }
+
+  @Test
+  fun resetButton_hasClickAction() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("resetButton").assertHasClickAction()
+  }
+
+  @Test
+  fun backButton_hasClickAction() {
+    composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
+
+    composeTestRule.onNodeWithTag("backButton").assertHasClickAction()
+  }
 }

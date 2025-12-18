@@ -40,15 +40,17 @@ object AiConfig {
    * @param okHttpClient OkHttpClient instance for HTTP requests
    * @param gson Gson instance for JSON serialization
    * @param baseUrl Backend URL (deprecated, kept for compatibility)
+   * @param apiKey OpenRouter API key (optional, defaults to empty string)
    * @return AiAssistantRepository implementation (DirectOpenRouter or Fake based on feature flag)
    */
   fun provideRepository(
       okHttpClient: OkHttpClient,
       gson: Gson,
-      baseUrl: String
+      baseUrl: String,
+      apiKey: String = ""
   ): AiAssistantRepository {
     return if (AI_ASSISTANT_ENABLED) {
-      DirectOpenRouterRepository(client = okHttpClient, gson = gson)
+      DirectOpenRouterRepository(client = okHttpClient, gson = gson, apiKey = apiKey)
     } else {
       FakeAiAssistantRepository()
     }

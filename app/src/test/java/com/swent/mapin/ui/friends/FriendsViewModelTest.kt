@@ -2,7 +2,11 @@ package com.swent.mapin.ui.friends
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.*
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.model.friends.SearchResultWithStatus
+import com.swent.mapin.model.userprofile.UserProfile
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -26,9 +26,8 @@ class LocationViewModelFactory(private val context: Context, private val client:
       // 1. Retrieve the Token using your provider
       val token = ApiKeyProvider.getMapboxAccessToken(context)
 
-      if (token.isEmpty()) {
-        throw IllegalStateException(
-            "Mapbox Access Token not found. Please check ApiKeyProvider and your string resources.")
+      check(token.isNotEmpty()) {
+        "Mapbox Access Token not found. Please check ApiKeyProvider and your string resources."
       }
 
       // 2. Create the configured Repository

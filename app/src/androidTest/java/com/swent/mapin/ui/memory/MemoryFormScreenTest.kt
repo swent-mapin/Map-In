@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performTextInput
 import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.Location
+import com.swent.mapin.ui.memory.components.MediaSelectionSection
 import java.util.Calendar
 import org.junit.Rule
 import org.junit.Test

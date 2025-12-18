@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +53,7 @@ private val memoryDateFormatter =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoriesScreen(onNavigateBack: () -> Unit = {}, viewModel: MemoriesViewModel = viewModel()) {
+  LaunchedEffect(Unit) { viewModel.refresh() }
 
   val memories by viewModel.memories.collectAsState()
   val error by viewModel.error.collectAsState()
@@ -233,16 +235,6 @@ private fun formatMemoryDate(memory: Memory): String =
     } ?: ""
 
 /**
- * Returns the first image URL from a list of media URLs.
- *
- * @param mediaUrls List of media URLs.
- */
-private fun firstImageUrl(mediaUrls: List<String>): String? =
-    parseMediaItems(mediaUrls)
-        .firstOrNull { it is MediaItem.Image }
-        ?.let { (it as MediaItem.Image).url }
-
-/**
  * Thumbnail for a memory.
  *
  * @param imageUrl URL of the image to display.
@@ -306,7 +298,6 @@ private fun MemoryItem(
     taggedNames: List<String>
 ) {
   val dateText = formatMemoryDate(memory)
-  val imageUrl = firstImageUrl(mediaUrls)
 
   Card(
       modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -314,7 +305,9 @@ private fun MemoryItem(
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Column(modifier = Modifier.fillMaxWidth()) {
-          MemoryThumbnail(imageUrl)
+
+          // --- 16:9 thumbnail ---
+          MemoryThumbnail(mediaUrls.firstOrNull())
 
           Column(modifier = Modifier.padding(16.dp)) {
             MemoryTitle(memory = memory)
@@ -330,7 +323,7 @@ private fun MemoryItem(
 private fun MemoryTitle(memory: Memory) {
   Row(verticalAlignment = Alignment.CenterVertically) {
     Text(
-        text = memory.title.ifBlank { stringResource(R.string.memories_default_title, memory.uid) },
+        text = memory.title.ifBlank { stringResource(R.string.memories_default_title) },
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.weight(1f))

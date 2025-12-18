@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.LocalEventList
@@ -13,6 +12,7 @@ import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityServiceProvider
 import com.swent.mapin.model.network.ConnectivityState
 import com.swent.mapin.model.network.NetworkType
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf

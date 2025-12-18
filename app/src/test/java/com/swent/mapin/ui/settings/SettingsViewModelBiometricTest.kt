@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.settings
 
-import com.swent.mapin.model.PreferencesRepository
+import com.swent.mapin.model.preferences.PreferencesRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

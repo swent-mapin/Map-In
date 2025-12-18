@@ -45,6 +45,9 @@ import com.google.firebase.Timestamp
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.ui.map.BottomSheetState
 import com.swent.mapin.ui.map.OrganizerState
+import com.swent.mapin.ui.memory.MediaItem
+import com.swent.mapin.ui.memory.MemoryVideoPlayer
+import com.swent.mapin.ui.memory.parseMediaItems
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -361,20 +364,40 @@ private fun EventImageCard(imageUrl: String?) {
               containerColor =
                   if (imageUrl == null) MaterialTheme.colorScheme.surfaceVariant
                   else MaterialTheme.colorScheme.surface)) {
-        imageUrl?.let {
-          AsyncImage(
-              model = it,
-              contentDescription = "Event image",
-              modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-              contentScale = ContentScale.Crop)
-        }
-            ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-              Text(
-                  "No image available",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (imageUrl == null) {
+          NoImageBox()
+        } else {
+          val media = parseMediaItems(listOf(imageUrl))
+          when (val mediaUrl = media.firstOrNull()) {
+            is MediaItem.Image -> {
+              AsyncImage(
+                  model = mediaUrl.url,
+                  contentDescription = "Event image",
+                  modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                  contentScale = ContentScale.Crop)
             }
+            is MediaItem.Video -> {
+              Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
+                MemoryVideoPlayer(mediaUrl.url)
+              }
+            }
+            else -> {
+              NoImageBox()
+            }
+          }
+        }
       }
+}
+
+/** No image available text */
+@Composable
+private fun NoImageBox() {
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Text(
+        "No image available",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
 }
 
 /** Organizer name text based on state */
@@ -648,8 +671,8 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
   val endDate = end?.toDate()?.takeUnless { it.time == startDate.time }
 
   val calStart = Calendar.getInstance(zone, locale).apply { time = startDate }
-  val currentYear = Calendar.getInstance(zone, locale).get(Calendar.YEAR)
-  val showYearSingle = calStart.get(Calendar.YEAR) != currentYear
+  val currentYear = Calendar.getInstance(zone, locale)[Calendar.YEAR]
+  val showYearSingle = calStart[Calendar.YEAR] != currentYear
 
   val dateFmtNoYear = SimpleDateFormat("MMM d", locale).apply { timeZone = zone }
   val dateFmtWithYear = SimpleDateFormat("MMM d, yyyy", locale).apply { timeZone = zone }
@@ -660,7 +683,7 @@ internal fun formatEventDateRangeMedium(start: Timestamp, end: Timestamp?): Stri
   }
 
   val calEnd = Calendar.getInstance(zone, locale).apply { time = endDate }
-  val sameYearRange = calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR)
+  val sameYearRange = calStart[Calendar.YEAR] == calEnd[Calendar.YEAR]
   val sameDayRange = sameYearRange && calStart.isSameDay(calEnd)
 
   return if (sameDayRange) {
@@ -694,7 +717,7 @@ private fun buildSingleDate(
 }
 
 private fun Calendar.isSameDay(other: Calendar): Boolean {
-  return get(Calendar.DAY_OF_YEAR) == other.get(Calendar.DAY_OF_YEAR)
+  return this[Calendar.DAY_OF_YEAR] == other[Calendar.DAY_OF_YEAR]
 }
 
 private fun timeShortFormatter(tz: TimeZone): SimpleDateFormat {
@@ -713,11 +736,11 @@ internal fun formatEventDateRangeFull(start: Timestamp, end: Timestamp?): String
   val calEnd = endDate?.let { Calendar.getInstance().apply { time = it } }
 
   // For ranges, only compare year/day if calEnd is provided
-  val sameYearRange = calEnd != null && calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR)
+  val sameYearRange = calEnd != null && calStart[Calendar.YEAR] == calEnd[Calendar.YEAR]
   val sameDayRange =
       calEnd != null &&
           sameYearRange &&
-          calStart.get(Calendar.DAY_OF_YEAR) == calEnd.get(Calendar.DAY_OF_YEAR)
+          calStart[Calendar.DAY_OF_YEAR] == calEnd[Calendar.DAY_OF_YEAR]
 
   val dateFullFmt = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.US)
 

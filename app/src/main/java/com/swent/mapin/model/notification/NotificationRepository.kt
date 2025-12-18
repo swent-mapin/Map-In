@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.notification
 
 import android.util.Log
 import com.google.firebase.Timestamp
@@ -297,9 +297,9 @@ class NotificationRepository(
             }
 
         awaitClose {
-          // Safely remove listener, checking for null in case addSnapshotListener failed
-          listenerRegistration?.remove()
-              ?: Log.w(TAG, "Listener registration was null during awaitClose for user: $userId")
+          // Remove listener when flow is cancelled
+          // Note: addSnapshotListener always returns a non-null ListenerRegistration
+          listenerRegistration.remove()
         }
       }
 

@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,11 +48,16 @@ private val USER_DIALOG_LIST_HEIGHT = 250.dp
  * @param onDismiss Callback when dialog is dismissed
  */
 @Composable
-fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
+fun UserPickerDialog(
+    onUserSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+    viewModel: UserPickerViewModel
+) {
+
+  val friends by viewModel.friends.collectAsState()
   var userIdInput by remember { mutableStateOf("") }
 
-  // TODO: Replace with actual friend list from repository
-  val sampleUsers = listOf("user1", "user2", "user3", "user4", "user5")
+  val friendsList = friends.map { it.userProfile.name }
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -71,7 +77,7 @@ fun UserPickerDialog(onUserSelected: (String) -> Unit, onDismiss: () -> Unit) {
           Spacer(modifier = Modifier.height(16.dp))
 
           LazyColumn(modifier = Modifier.fillMaxWidth().height(USER_DIALOG_LIST_HEIGHT)) {
-            items(sampleUsers) { userId ->
+            items(friendsList) { userId ->
               Card(
                   modifier =
                       Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable {

@@ -6,7 +6,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.*
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import com.swent.mapin.util.HashUtils
 import io.mockk.*

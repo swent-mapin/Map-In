@@ -3,10 +3,10 @@ package com.swent.mapin.ui.friends
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.NotificationService
-import com.swent.mapin.model.SearchResultWithStatus
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.SearchResultWithStatus
+import com.swent.mapin.model.notification.NotificationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -14,11 +15,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,6 +50,7 @@ object EditEventScreenTestTags : EventScreenTestTag {
   override val PICK_EVENT_TIME = "EDIT_PICK_TIME"
   override val PICK_END_TIME = "eEDIT_PICK_END_TIME"
   override val INPUT_EVENT_LOCATION = "EDIT_INPUT_LOCATION"
+  override val PICK_MEDIA = "EDIT_PICK_MEDIA"
   const val SCREEN = "EditEventScreen"
 }
 /**
@@ -69,9 +73,20 @@ fun EditEventScreen(
     onDone: () -> Unit = {},
 ) {
 
+  val context = LocalContext.current
+
   val title = remember { mutableStateOf(event.title) }
   val description = remember { mutableStateOf(event.description) }
   val location = remember { mutableStateOf(event.location.name ?: Location.NO_NAME) }
+  val mediaUri = remember { mutableStateOf<Uri?>(null) }
+
+  val firebaseUrl: String = event.imageUrl ?: ""
+
+  LaunchedEffect(firebaseUrl) {
+    if (firebaseUrl.isNotBlank()) {
+      mediaUri.value = Uri.parse(firebaseUrl)
+    }
+  }
 
   val dateString = event.date?.toDateString() ?: ""
   val date = remember { mutableStateOf(dateString) }
@@ -230,6 +245,7 @@ fun EditEventScreen(
                 }
                 eventViewModel.saveEditedEvent(
                     originalEvent = event,
+                    context = context,
                     title = title.value,
                     description = description.value,
                     location = gotLocation.value,
@@ -237,7 +253,7 @@ fun EditEventScreen(
                     endTs = endTs,
                     tagsString = tag.value,
                     onSuccess = { onDone() },
-                )
+                    mediaUri = mediaUri.value)
               })
 
           // Prominent validation banner shown right after the top bar when user attempted to save
@@ -268,7 +284,8 @@ fun EditEventScreen(
               descriptionError = descriptionError,
               tag = tag,
               tagError = tagError,
-              testTags = EditEventScreenTestTags)
+              testTags = EditEventScreenTestTags,
+              mediaUri = mediaUri)
 
           Spacer(modifier = Modifier.padding(bottom = 5.dp))
           Text(

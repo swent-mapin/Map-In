@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.swent.mapin.model.PreferencesRepository
+import com.swent.mapin.model.preferences.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -211,7 +211,7 @@ class SettingsViewModel(
 
         auth.signOut()
       } catch (e: Exception) {
-        e.printStackTrace()
+        android.util.Log.e("SettingsViewModel", "Failed to sign out", e)
       } finally {
         _isLoading.value = false
       }
@@ -262,7 +262,7 @@ class SettingsViewModel(
         }
       } catch (e: Exception) {
         _errorMessage.value = "Failed to delete account: ${e.message}"
-        e.printStackTrace()
+        android.util.Log.e("SettingsViewModel", "Failed to delete account", e)
         _isLoading.value = false
       }
     }

@@ -562,7 +562,8 @@ class MapScreenTest {
       }
     }
 
-    rule.waitForIdle()
+    // Wait until viewModel and callback are set
+    rule.waitUntil(timeoutMillis = 5000) { viewModel?.onCenterOnUserLocation != null }
 
     // Verify the onCenterOnUserLocation callback was set
     val vm = viewModel
@@ -794,9 +795,11 @@ class MapScreenTest {
 
     rule.waitForIdle()
 
-    // Trigger delete dialog
+    // Trigger delete dialog on the main thread
     rule.runOnIdle { viewModel.requestDeleteEvent(testEvent) }
-    rule.waitForIdle()
+
+    // Wait until the dialog state is true (max 5 seconds)
+    rule.waitUntil(5000) { viewModel.showDeleteDialog }
 
     // Assert dialog is shown
     rule.onNodeWithText("Delete Event").assertIsDisplayed()

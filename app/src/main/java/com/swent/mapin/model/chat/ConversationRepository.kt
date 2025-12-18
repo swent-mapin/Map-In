@@ -1,6 +1,6 @@
 package com.swent.mapin.model.chat
 
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.chat.Conversation
 import kotlinx.coroutines.flow.Flow
 

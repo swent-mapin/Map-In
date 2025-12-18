@@ -1,12 +1,19 @@
 package com.swent.mapin.ui.event
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.compose.runtime.MutableState
 import com.google.firebase.Timestamp
-import com.swent.mapin.model.event.Event
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.storageMetadata
 import com.swent.mapin.model.location.Location
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
+import kotlinx.coroutines.tasks.await
 
 private const val MAX_CAPACITY = 10_000
 
@@ -84,55 +91,26 @@ fun isValidLocation(input: String, locations: List<Location>): Boolean {
   return locations.any { it.name.equals(input, ignoreCase = true) }
 }
 
-/**
- * Creates a new [Event] object with the provided data and adds it to the given [EventViewModel].
- *
- * This function centralizes the logic of constructing an [Event] from user input and submitting it
- * to the view model. After successfully adding the event, it invokes the [onDone] callback to
- * signal completion.
- *
- * @param viewModel The [EventViewModel] responsible for managing and storing events.
- * @param title The title of the event.
- * @param description A textual description of the event.
- * @param location The [Location] object representing the event’s location.
- * @param tags A list of tags associated with the event.
- * @param isPublic Whether the event is public (`true`) or private (`false`).
- * @param onDone A callback invoked after the event has been added successfully.
- * @see EventViewModel.addEvent
- * @see Event
- */
-fun saveEvent(
-    viewModel: EventViewModel,
-    title: String,
-    description: String,
-    location: Location,
-    startDate: Timestamp,
-    endDate: Timestamp?,
-    currentUserId: String?,
-    tags: List<String>,
-    isPublic: Boolean,
-    onDone: () -> Unit,
-    price: Double = 0.0,
-    capacity: Int? = null,
-) {
-  val uid = currentUserId ?: return
-  val newEvent =
-      Event(
-          uid = viewModel.getNewUid(),
-          title = title,
-          url = null,
-          description = description,
-          location = location,
-          date = startDate,
-          endDate = endDate,
-          tags = tags,
-          public = isPublic,
-          ownerId = uid,
-          imageUrl = null,
-          capacity = capacity,
-          price = price)
-  viewModel.addEvent(newEvent)
-  onDone()
+/** Uploads the media file to Firebase Storage and returns the download URL. */
+suspend fun uploadEventMedia(context: Context, uri: Uri, userId: String): Result<String> {
+  return try {
+    val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+    val isVideo = mimeType.startsWith("video/")
+    val folder = if (isVideo) "videos" else "images"
+    val extension =
+        MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            ?: if (isVideo) "mp4" else "jpg"
+    val storageRef = FirebaseStorage.getInstance().reference
+    val fileRef =
+        storageRef.child(
+            "events/$userId/$folder/${UUID.randomUUID()}_${System.currentTimeMillis()}.$extension")
+    val metadata = storageMetadata { contentType = mimeType }
+    fileRef.putFile(uri, metadata).await()
+    Result.success(fileRef.downloadUrl.await().toString())
+  } catch (e: Exception) {
+    Log.e("EventMediaUpload", "Failed to upload media", e)
+    Result.failure(e)
+  }
 }
 
 sealed class ParseResult {

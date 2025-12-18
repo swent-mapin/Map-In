@@ -1,6 +1,12 @@
 package com.swent.mapin.model
 
 import com.google.firebase.Timestamp
+import com.swent.mapin.model.notification.Notification
+import com.swent.mapin.model.notification.NotificationBuilder
+import com.swent.mapin.model.notification.NotificationRepository
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationService
+import com.swent.mapin.model.notification.NotificationType
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

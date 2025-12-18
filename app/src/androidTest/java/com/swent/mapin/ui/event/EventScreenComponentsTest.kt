@@ -1,5 +1,6 @@
 package com.swent.mapin.ui.event
 
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -87,6 +88,7 @@ class EventScreenComponentsTest {
     val tagError = mutableStateOf(false)
     val locations = listOf(Location("Test Location"))
     val dummyLocationViewModel = mockk<LocationViewModel>()
+    val mediaState = mutableStateOf<Uri?>(null)
 
     composeTestRule.setContent {
       MapInTheme {
@@ -111,7 +113,8 @@ class EventScreenComponentsTest {
             descriptionError = descriptionError,
             tag = tagState,
             tagError = tagError,
-            testTags = testTags)
+            testTags = testTags,
+            mediaUri = mediaState)
       }
     }
 
