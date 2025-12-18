@@ -64,22 +64,17 @@ android {
             keyPassword = teamDebugKeyPassword
         }
 
-        create("release") {
-            val missingProperty = listOf(
-                "RELEASE_STORE_FILE" to releaseStoreFile,
-                "RELEASE_STORE_PASSWORD" to releaseStorePassword,
-                "RELEASE_KEY_ALIAS" to releaseKeyAlias,
-                "RELEASE_KEY_PASSWORD" to releaseKeyPassword
-            ).firstOrNull { it.second.isNullOrBlank() }
-
-            check(missingProperty == null) {
-                "Missing release keystore property: ${missingProperty?.first}. Add it to android/gradle.properties or your local gradle.properties."
+        // Only create release signing config if all properties are available
+        if (!releaseStoreFile.isNullOrBlank() &&
+            !releaseStorePassword.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() &&
+            !releaseKeyPassword.isNullOrBlank()) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
-
-            storeFile = rootProject.file(releaseStoreFile!!)
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
         }
     }
 
@@ -102,7 +97,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
