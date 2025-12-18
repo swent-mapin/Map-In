@@ -29,15 +29,13 @@ class DirectOpenAIRepository(
     private val client: OkHttpClient = OkHttpClient(),
     private val gson: Gson = Gson(),
     private val ioDispatcher: CoroutineContext = Dispatchers.IO,
-    //Here, use the OpenAIKeyConfig file provided separately instead of the placeholder
-    //Replace "" by OpenAIKeyConfig.OPENAI_API_KEY
+    // Here, use the OpenAIKeyConfig file provided separately instead of the placeholder
+    // Replace "" by OpenAIKeyConfig.OPENAI_API_KEY
     private val apiKey: String = ""
 ) : AiAssistantRepository {
 
   companion object {
     private const val TAG = "DirectOpenAI"
-    //private const val OPENAI_API_URL = "https://api.openai.com/v1/responses"
-    //private const val MODEL = "gpt-4o-mini-2024-07-18"
     private const val OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
     private const val MODEL = "gpt-4o-mini"
   }
@@ -243,7 +241,8 @@ Recommend 2-3 relevant events with selling reasons.
 
   private fun executeRequest(requestPayload: JsonObject): String {
     if (apiKey.isEmpty()) {
-      throw Exception("OpenAI API key is not configured. Please set OPENAI_API_KEY in OpenAIKeyConfig.kt")
+      throw Exception(
+          "OpenAI API key is not configured. Please set OPENAI_API_KEY in OpenAIKeyConfig.kt")
     }
 
     val httpRequest =
@@ -334,4 +333,3 @@ Recommend 2-3 relevant events with selling reasons.
             listOf("Would you like me to try again?", "Can you rephrase your request?"))
   }
 }
-

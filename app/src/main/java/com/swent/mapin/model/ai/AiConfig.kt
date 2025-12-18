@@ -48,7 +48,9 @@ object AiConfig {
       okHttpClient: OkHttpClient,
       gson: Gson,
       baseUrl: String,
-      apiKey: String = OpenAIKeyConfig.OPENAI_API_KEY
+      // Here, use the OpenAIKeyConfig file provided separately instead of the placeholder
+      // Replace "" by OpenAIKeyConfig.OPENAI_API_KEY
+      apiKey: String = ""
   ): AiAssistantRepository {
     return if (AI_ASSISTANT_ENABLED) {
       DirectOpenAIRepository(client = okHttpClient, gson = gson, apiKey = apiKey)
