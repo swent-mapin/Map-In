@@ -58,11 +58,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.EditEventScreen
@@ -154,7 +156,7 @@ fun BottomSheetContent(
     onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     // User search results
-    userSearchResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+    userSearchResults: List<UserProfile> = emptyList(),
     onUserSearchClick: (String, String) -> Unit = { _, _ -> },
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
@@ -303,7 +305,6 @@ fun BottomSheetContent(
                 onSettingsClick = onSettingsClick,
                 filterViewModel = filterViewModel,
                 locationViewModel = locationViewModel,
-                isFull = isFull,
                 scrollState = scrollState,
                 focusRequester = focusRequester,
                 focusManager = focusManager,
@@ -325,7 +326,7 @@ private fun MainBottomSheetContent(
     onRecentEventClick: (String) -> Unit,
     onRecentProfileClick: (String) -> Unit,
     onClearRecentSearches: () -> Unit,
-    userSearchResults: List<com.swent.mapin.model.UserProfile>,
+    userSearchResults: List<UserProfile>,
     onUserSearchClick: (String, String) -> Unit,
     joinedEvents: List<Event>,
     attendedEvents: List<Event>,
@@ -350,7 +351,6 @@ private fun MainBottomSheetContent(
     onSettingsClick: () -> Unit,
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
-    isFull: Boolean,
     scrollState: ScrollState,
     focusRequester: FocusRequester,
     focusManager: androidx.compose.ui.focus.FocusManager,
@@ -471,7 +471,7 @@ private fun MainContentLayout(
     onShowAllRecents: () -> Unit,
     onEventClick: (Event) -> Unit,
     state: BottomSheetState,
-    userSearchResults: List<com.swent.mapin.model.UserProfile>,
+    userSearchResults: List<UserProfile>,
     onUserSearchClick: (String, String) -> Unit,
     scrollState: ScrollState,
     onCreateEventClick: () -> Unit,
@@ -488,7 +488,6 @@ private fun MainContentLayout(
     onEditEvent: (Event) -> Unit,
     onDeleteEvent: (Event) -> Unit,
     onRetryOwnedEvents: () -> Unit,
-    isFull: Boolean,
     filterSection: FiltersSection,
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel
@@ -558,7 +557,7 @@ private fun SearchModeContent(
     onShowAllRecents: () -> Unit,
     onEventClick: (Event) -> Unit,
     state: BottomSheetState,
-    userSearchResults: List<com.swent.mapin.model.UserProfile>,
+    userSearchResults: List<UserProfile>,
     onUserSearchClick: (String, String) -> Unit,
     scrollState: ScrollState,
     onCreateEventClick: () -> Unit,
@@ -575,7 +574,6 @@ private fun SearchModeContent(
     onEditEvent: (Event) -> Unit,
     onDeleteEvent: (Event) -> Unit,
     onRetryOwnedEvents: () -> Unit,
-    isFull: Boolean,
     filterSection: FiltersSection,
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
@@ -627,7 +625,6 @@ private fun SearchModeContent(
               onEditEvent = onEditEvent,
               onDeleteEvent = onDeleteEvent,
               onRetryOwnedEvents = onRetryOwnedEvents,
-              isFull = isFull,
               filterSection = filterSection,
               filterViewModel = filterViewModel,
               locationViewModel = locationViewModel,
@@ -656,7 +653,6 @@ private fun NonSearchModeContent(
     onEditEvent: (Event) -> Unit,
     onDeleteEvent: (Event) -> Unit,
     onRetryOwnedEvents: () -> Unit,
-    isFull: Boolean,
     filterSection: FiltersSection,
     filterViewModel: FiltersSectionViewModel,
     locationViewModel: LocationViewModel,
@@ -705,10 +701,7 @@ private fun NonSearchModeContent(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    if (isFull) {
-      // Avoid running filter side effects when sheet is not fully shown
-      filterSection.Render(Modifier.fillMaxWidth(), filterViewModel, locationViewModel, userProfile)
-    }
+    filterSection.Render(Modifier.fillMaxWidth(), filterViewModel, locationViewModel, userProfile)
 
     Spacer(modifier = Modifier.height(16.dp))
     Spacer(modifier = Modifier.height(24.dp))
