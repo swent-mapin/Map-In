@@ -51,10 +51,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.swent.mapin.model.FriendRequestRepository
-import com.swent.mapin.model.NotificationService
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.friends.FriendRequestRepository
 import com.swent.mapin.model.location.Location
+import com.swent.mapin.model.notification.NotificationService
 import com.swent.mapin.ui.components.UserPickerDialog
 import com.swent.mapin.ui.components.UserPickerVMFactory
 import com.swent.mapin.ui.components.UserPickerViewModel

@@ -20,6 +20,7 @@ import com.swent.mapin.model.event.LocalEventList
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.location.LocationRepository
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.event.EditEventScreenTestTags
 import com.swent.mapin.ui.event.EventViewModel
 import com.swent.mapin.ui.filters.FiltersSectionTestTags
@@ -1433,7 +1434,7 @@ class BottomSheetContentTest {
   @Composable
   private fun SearchModeWithUsersContent(
       query: String = "test",
-      userResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+      userResults: List<UserProfile> = emptyList(),
       searchResults: List<Event> = emptyList(),
       onUserClick: (String, String) -> Unit = { _, _ -> }
   ) {
@@ -1464,8 +1465,8 @@ class BottomSheetContentTest {
   fun peopleResultsSection_displaysUsersInFullState() {
     val testUsers =
         listOf(
-            com.swent.mapin.model.UserProfile(userId = "user1", name = "Alice Smith"),
-            com.swent.mapin.model.UserProfile(userId = "user2", name = "Bob Jones"))
+            UserProfile(userId = "user1", name = "Alice Smith"),
+            UserProfile(userId = "user2", name = "Bob Jones"))
 
     rule.setContent { SearchModeWithUsersContent(query = "test", userResults = testUsers) }
     rule.waitForIdle()
@@ -1482,8 +1483,7 @@ class BottomSheetContentTest {
   fun userSearchCard_triggersClickCallback() {
     var clickedUserId = ""
     var clickedUserName = ""
-    val testUsers =
-        listOf(com.swent.mapin.model.UserProfile(userId = "user123", name = "Test User"))
+    val testUsers = listOf(UserProfile(userId = "user123", name = "Test User"))
 
     rule.setContent {
       SearchModeWithUsersContent(

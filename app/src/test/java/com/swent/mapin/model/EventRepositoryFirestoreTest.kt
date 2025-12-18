@@ -27,7 +27,15 @@ import com.swent.mapin.model.event.FirestoreSchema.USERS_COLLECTION_PATH
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.JOINED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.OWNED_EVENT_IDS
 import com.swent.mapin.model.event.FirestoreSchema.UserFields.SAVED_EVENT_IDS
+import com.swent.mapin.model.friends.FriendRequestRepository
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
 import com.swent.mapin.model.location.Location
+import com.swent.mapin.model.notification.Notification
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.filters.Filters
 import java.time.LocalDate
 import java.util.Calendar

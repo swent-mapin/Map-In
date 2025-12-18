@@ -6,9 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.swent.mapin.model.FriendWithProfile
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.UserProfile
+import com.swent.mapin.model.friends.FriendWithProfile
+import com.swent.mapin.model.friends.FriendshipStatus
+import com.swent.mapin.model.friends.SearchResultWithStatus
+import com.swent.mapin.model.userprofile.UserProfile
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,7 +32,7 @@ class FriendsScreenTest {
   fun searchTab_displaysAddButtonForNewUsers() {
     val results =
         listOf(
-            com.swent.mapin.model.SearchResultWithStatus(
+            SearchResultWithStatus(
                 userProfile = UserProfile(userId = "1", name = "Bob", bio = "Hi"),
                 hasPendingRequest = false))
 
@@ -52,7 +53,7 @@ class FriendsScreenTest {
   fun searchTab_sendRequestButtonChangesAfterClick() {
     val results =
         listOf(
-            com.swent.mapin.model.SearchResultWithStatus(
+            SearchResultWithStatus(
                 userProfile = UserProfile(userId = "1", name = "Eve", bio = "Developer"),
                 hasPendingRequest = false))
 
@@ -210,7 +211,7 @@ class FriendsScreenTest {
   fun searchTab_displaysSearchResultAvatars() {
     val results =
         listOf(
-            com.swent.mapin.model.SearchResultWithStatus(
+            SearchResultWithStatus(
                 userProfile =
                     UserProfile(
                         userId = "3",

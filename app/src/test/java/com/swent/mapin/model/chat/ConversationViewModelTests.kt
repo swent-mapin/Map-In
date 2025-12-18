@@ -1,7 +1,7 @@
 package com.swent.mapin.model.chat
 
-import com.swent.mapin.model.UserProfile
-import com.swent.mapin.model.UserProfileRepository
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.chat.Conversation
 import com.swent.mapin.ui.chat.ConversationViewModel
 import kotlinx.coroutines.Dispatchers

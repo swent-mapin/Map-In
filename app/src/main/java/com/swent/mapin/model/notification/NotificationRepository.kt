@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.notification
 
 import android.util.Log
 import com.google.firebase.Timestamp

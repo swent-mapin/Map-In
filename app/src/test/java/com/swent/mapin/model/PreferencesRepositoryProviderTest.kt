@@ -1,6 +1,8 @@
 package com.swent.mapin.model
 
 import android.content.Context
+import com.swent.mapin.model.preferences.PreferencesRepository
+import com.swent.mapin.model.preferences.PreferencesRepositoryProvider
 import io.mockk.every
 import io.mockk.mockk
 import java.util.concurrent.ConcurrentHashMap

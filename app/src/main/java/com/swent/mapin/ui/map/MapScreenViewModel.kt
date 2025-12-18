@@ -22,8 +22,6 @@ import com.google.gson.JsonObject
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.Point
-import com.swent.mapin.model.PreferencesRepositoryProvider
-import com.swent.mapin.model.UserProfileRepository
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.event.EventRepository
 import com.swent.mapin.model.event.EventRepositoryProvider
@@ -31,6 +29,9 @@ import com.swent.mapin.model.memory.MemoryRepository
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
 import com.swent.mapin.model.network.ConnectivityService
 import com.swent.mapin.model.network.ConnectivityServiceProvider
+import com.swent.mapin.model.preferences.PreferencesRepositoryProvider
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import com.swent.mapin.ui.components.BottomSheetConfig
 import com.swent.mapin.ui.filters.FiltersSectionViewModel
 import com.swent.mapin.ui.map.bottomsheet.BottomSheetStateController
@@ -211,7 +212,7 @@ class MapScreenViewModel(
   val searchResults: List<Event>
     get() = eventStateController.searchResults
 
-  val userSearchResults: List<com.swent.mapin.model.UserProfile>
+  val userSearchResults: List<UserProfile>
     get() = eventStateController.userSearchResults
 
   fun setCenterCameraCallback(callback: (Event, Boolean) -> Unit) {

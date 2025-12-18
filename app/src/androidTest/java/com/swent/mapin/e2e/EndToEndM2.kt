@@ -17,12 +17,12 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
-import com.swent.mapin.model.FriendRequest
-import com.swent.mapin.model.FriendshipStatus
-import com.swent.mapin.model.UserProfile
 import com.swent.mapin.model.event.Event
+import com.swent.mapin.model.friends.FriendRequest
+import com.swent.mapin.model.friends.FriendshipStatus
 import com.swent.mapin.model.location.Location
 import com.swent.mapin.model.memory.Memory
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.navigation.Route
 import com.swent.mapin.testing.UiTestTags

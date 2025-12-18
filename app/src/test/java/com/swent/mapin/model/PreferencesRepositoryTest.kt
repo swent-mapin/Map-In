@@ -1,6 +1,7 @@
 package com.swent.mapin.model
 
 import androidx.datastore.preferences.core.Preferences
+import com.swent.mapin.model.preferences.PreferencesRepository
 import org.junit.Assert.*
 import org.junit.Test
 
