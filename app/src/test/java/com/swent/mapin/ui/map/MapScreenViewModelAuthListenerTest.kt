@@ -134,8 +134,12 @@ class MapScreenViewModelAuthListenerTest {
   @Test
   fun authListener_onSignIn_loadsSavedAndJoined() =
       runTest(testDispatcher) {
-        // Provide some saved data after sign-in
-        val e = LocalEventList.defaultSampleEvents().first()
+        // Create a future event so it isn't filtered out as "ended"
+        val futureTimestamp = com.google.firebase.Timestamp(java.util.Date().time / 1000 + 10000, 0)
+        val e =
+            LocalEventList.defaultSampleEvents()
+                .first()
+                .copy(date = futureTimestamp, endDate = futureTimestamp)
 
         whenever(mockAuth.currentUser).thenReturn(mockUser)
         whenever(mockUser.uid).thenReturn("testUserId")
@@ -143,6 +147,7 @@ class MapScreenViewModelAuthListenerTest {
         // Update repo responses for this user
         whenever(mockRepo.getSavedEvents("testUserId")).thenReturn(listOf(e))
         whenever(mockRepo.getJoinedEvents("testUserId")).thenReturn(emptyList())
+        whenever(mockRepo.getOwnedEvents("testUserId")).thenReturn(emptyList())
 
         authListener.onAuthStateChanged(mockAuth)
         testScheduler.advanceUntilIdle()
