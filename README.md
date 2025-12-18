@@ -45,7 +45,7 @@ Map'In transforms how students discover, attend, and remember events. Instead of
 
 <img src="assets/ARCH.png" width="100%" />
 
-[View on Excalidraw](https://excalidraw.com/#json=eQsc-cu0dPSd0cFuJvPTc,wAq2zUT_4USJ6sP1JcGehw)
+[View on Excalidraw](https://excalidraw.com/#json=1EvxBEO5-hmjNuO9HbyP8,gxxyMZ2aC0crkX2TlcdU7g)
 
 The app follows a three-layer architecture:
 - **UI Layer**: Jetpack Compose screens organized by feature
