@@ -398,7 +398,7 @@ class MapEventStateController(
     _joinedEvents = currentMap.values.sortedByDescending { it.date }
     _joinedEventsFlow.value = _joinedEvents
 
-      refreshTimeDependentLists()
+    refreshTimeDependentLists()
   }
 
   /** Handles updates to saved events from Firestore listener. */
@@ -418,11 +418,10 @@ class MapEventStateController(
     // Remove deleted events
     removedIds.forEach { id -> currentMap.remove(id) }
 
-      // Update state - FILTER IMMEDIATELY so ended events don't reappear
-      val now = timeProvider()
-      _savedEvents = currentMap.values
-          .filter { !isEventEnded(it, now) }
-          .sortedByDescending { it.date }
+    // Update state - FILTER IMMEDIATELY so ended events don't reappear
+    val now = timeProvider()
+    _savedEvents =
+        currentMap.values.filter { !isEventEnded(it, now) }.sortedByDescending { it.date }
 
     _savedEventsFlow.value = _savedEvents
   }
@@ -443,20 +442,22 @@ class MapEventStateController(
     // Remove deleted events
     removedIds.forEach { id -> currentMap.remove(id) }
 
-      // Update state - FILTER IMMEDIATELY so ended events don't reappear
-      val now = timeProvider()
-      val allOwned = currentMap.values.sortedByDescending { it.date }
+    // Update state - FILTER IMMEDIATELY so ended events don't reappear
+    val now = timeProvider()
+    val allOwned = currentMap.values.sortedByDescending { it.date }
 
-      // Split into active and past immediately
-      val (ended, active) = allOwned.partition { isEventEnded(it, now) }
-      _ownedEvents = active
+    // Split into active and past immediately
+    val (ended, active) = allOwned.partition { isEventEnded(it, now) }
+    _ownedEvents = active
 
-      // until the next refresh cycle
-      if (ended.isNotEmpty()) {
-          val newAttended = (_attendedEvents + ended).distinctBy { it.uid }
+    // until the next refresh cycle
+    if (ended.isNotEmpty()) {
+      val newAttended =
+          (_attendedEvents + ended)
+              .distinctBy { it.uid }
               .sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
-          _attendedEvents = newAttended
-      }
+      _attendedEvents = newAttended
+    }
   }
 
   /** Refreshes [allEvents] using the current filters. */
@@ -552,7 +553,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _joinedEvents = eventRepository.getJoinedEvents(currentUserId)
-          refreshTimeDependentLists()
+        refreshTimeDependentLists()
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching joined events")
       }
@@ -571,7 +572,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _savedEvents = eventRepository.getSavedEvents(currentUserId)
-          refreshTimeDependentLists()
+        refreshTimeDependentLists()
       } catch (e: Exception) {
         setErrorMessage(e.message ?: "Unknown error occurred while fetching saved events")
       }
@@ -591,7 +592,7 @@ class MapEventStateController(
       try {
         val currentUserId = getUserId()
         _ownedEvents = eventRepository.getOwnedEvents(currentUserId)
-          refreshTimeDependentLists()
+        refreshTimeDependentLists()
       } catch (e: Exception) {
         val msg = e.message ?: "Unknown error occurred while fetching owned events"
         _ownedError = msg
@@ -602,13 +603,11 @@ class MapEventStateController(
     }
   }
 
-    /**
-     * Checks if the given [event] has already ended.
-     */
-    private fun isEventEnded(event: Event, now: Long): Boolean {
-        val endTime = event.endDate?.toDate()?.time
-        return endTime != null && endTime <= now
-    }
+  /** Checks if the given [event] has already ended. */
+  private fun isEventEnded(event: Event, now: Long): Boolean {
+    val endTime = event.endDate?.toDate()?.time
+    return endTime != null && endTime <= now
+  }
 
   /** Automatically refreshes [attendedEvents] every 10 seconds. */
   init {
@@ -620,58 +619,58 @@ class MapEventStateController(
   private fun startAttendedAutoRefresh() {
     scope.launch {
       while (isActive) {
-         refreshTimeDependentLists()
+        refreshTimeDependentLists()
         delay(10_000) // every 10 seconds
       }
     }
   }
 
-    /**
-     * Re-evaluates [joinedEvents], [savedEvents], and [ownedEvents] against the current time.
-     * - Moves ended Joined AND Owned events to [attendedEvents] (Past).
-     * - Removes ended events from [savedEvents], [joinedEvents], and [ownedEvents].
-     * - Updates all relevant flows.
-     */
-    private fun refreshTimeDependentLists() {
-        val now = timeProvider()
+  /**
+   * Re-evaluates [joinedEvents], [savedEvents], and [ownedEvents] against the current time.
+   * - Moves ended Joined AND Owned events to [attendedEvents] (Past).
+   * - Removes ended events from [savedEvents], [joinedEvents], and [ownedEvents].
+   * - Updates all relevant flows.
+   */
+  private fun refreshTimeDependentLists() {
+    val now = timeProvider()
 
-        // 1. Handle Joined Events
-        // Combine current joined + attended to ensure we have the full pool to re-sort
-        val allJoinedPool = (_joinedEvents + _attendedEvents).distinctBy { it.uid }
-        val (endedJoined, activeJoined) = allJoinedPool.partition { isEventEnded(it, now) }
+    // 1. Handle Joined Events
+    // Combine current joined + attended to ensure we have the full pool to re-sort
+    val allJoinedPool = (_joinedEvents + _attendedEvents).distinctBy { it.uid }
+    val (endedJoined, activeJoined) = allJoinedPool.partition { isEventEnded(it, now) }
 
-        // Update Joined (Active Only)
-        if (_joinedEvents != activeJoined) {
-            _joinedEvents = activeJoined.sortedByDescending { it.date }
-            _joinedEventsFlow.value = _joinedEvents
-        }
-
-        // 2. Handle Owned Events
-        val (endedOwned, activeOwned) = _ownedEvents.partition { isEventEnded(it, now) }
-
-        // Update Owned (Active Only)
-        if (_ownedEvents != activeOwned) {
-            _ownedEvents = activeOwned.sortedByDescending { it.date }
-        }
-
-        // 3. Handle Attended (Past) = Ended Joined + Ended Owned
-        // Requirement: "if joined or owned move it to past"
-        val allPast = (endedJoined + endedOwned).distinctBy { it.uid }
-        val sortedPast = allPast.sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
-
-        if (_attendedEvents != sortedPast) {
-            _attendedEvents = sortedPast
-        }
-
-        // 4. Handle Saved Events (Active Only)
-        val activeSaved = _savedEvents.filter { !isEventEnded(it, now) }
-
-        // We compare sizes or content to avoid unnecessary flow emissions
-        if (activeSaved.size != _savedEvents.size || _savedEvents != activeSaved) {
-            _savedEvents = activeSaved.sortedByDescending { it.date }
-            _savedEventsFlow.value = _savedEvents
-        }
+    // Update Joined (Active Only)
+    if (_joinedEvents != activeJoined) {
+      _joinedEvents = activeJoined.sortedByDescending { it.date }
+      _joinedEventsFlow.value = _joinedEvents
     }
+
+    // 2. Handle Owned Events
+    val (endedOwned, activeOwned) = _ownedEvents.partition { isEventEnded(it, now) }
+
+    // Update Owned (Active Only)
+    if (_ownedEvents != activeOwned) {
+      _ownedEvents = activeOwned.sortedByDescending { it.date }
+    }
+
+    // 3. Handle Attended (Past) = Ended Joined + Ended Owned
+    // Requirement: "if joined or owned move it to past"
+    val allPast = (endedJoined + endedOwned).distinctBy { it.uid }
+    val sortedPast = allPast.sortedByDescending { it.endDate?.toDate()?.time ?: 0L }
+
+    if (_attendedEvents != sortedPast) {
+      _attendedEvents = sortedPast
+    }
+
+    // 4. Handle Saved Events (Active Only)
+    val activeSaved = _savedEvents.filter { !isEventEnded(it, now) }
+
+    // We compare sizes or content to avoid unnecessary flow emissions
+    if (activeSaved.size != _savedEvents.size || _savedEvents != activeSaved) {
+      _savedEvents = activeSaved.sortedByDescending { it.date }
+      _savedEventsFlow.value = _savedEvents
+    }
+  }
 
   fun isRunningUnderUnitTest(): Boolean {
     return Thread.currentThread().stackTrace.any {
@@ -713,7 +712,7 @@ class MapEventStateController(
     val optimisticEvent = event.copy(participantIds = event.participantIds + currentUserId)
     _joinedEvents = (_joinedEvents + optimisticEvent).sortedByDescending { it.date }
     _joinedEventsFlow.value = _joinedEvents
-      refreshTimeDependentLists()
+    refreshTimeDependentLists()
     // Try to sync with server
     try {
       eventRepository.editEventAsUser(event.uid, currentUserId, join = true)
@@ -722,7 +721,7 @@ class MapEventStateController(
       // Rollback optimistic update on error
       _joinedEvents = previousJoinedEvents
       _joinedEventsFlow.value = _joinedEvents
-        refreshTimeDependentLists()
+      refreshTimeDependentLists()
       setErrorMessage(e.message ?: "Unknown error occurred while joining event")
     }
   }
@@ -751,7 +750,7 @@ class MapEventStateController(
     val previousJoinedEvents = _joinedEvents
     _joinedEvents = _joinedEvents.filter { it.uid != event.uid }
     _joinedEventsFlow.value = _joinedEvents
-      refreshTimeDependentLists()
+    refreshTimeDependentLists()
 
     // Try to sync with server (or queue if offline)
     if (!_isOnline.value) {
@@ -771,7 +770,7 @@ class MapEventStateController(
       // Rollback optimistic update on error
       _joinedEvents = previousJoinedEvents
       _joinedEventsFlow.value = _joinedEvents
-        refreshTimeDependentLists()
+      refreshTimeDependentLists()
       setErrorMessage(e.message ?: "Unknown error occurred while leaving event")
     }
   }
@@ -931,10 +930,10 @@ class MapEventStateController(
     _joinedEvents = events
   }
 
-    @VisibleForTesting
-    fun setPastEventsForTest(events: List<Event>) {
-        _attendedEvents = events
-    }
+  @VisibleForTesting
+  fun setPastEventsForTest(events: List<Event>) {
+    _attendedEvents = events
+  }
 
   @VisibleForTesting
   fun setSavedEventsForTest(events: List<Event>) {

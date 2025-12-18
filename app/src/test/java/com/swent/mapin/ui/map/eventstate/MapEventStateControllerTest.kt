@@ -964,68 +964,73 @@ class MapEventStateControllerTest {
     assertTrue(controller.userSearchResults.isEmpty())
   }
 
-    @Test
-    fun `refreshTimeDependentLists moves ended events to past and cleans other lists`() {
-        // 1. Setup Timestamps
-        val now = 100000L
-        fakeTimeProvider.currentTime = now
+  @Test
+  fun `refreshTimeDependentLists moves ended events to past and cleans other lists`() {
+    // 1. Setup Timestamps
+    val now = 100000L
+    fakeTimeProvider.currentTime = now
 
-        // Future timestamp (Active)
-        val futureTime = com.google.firebase.Timestamp(now / 1000 + 3600, 0)
-        // Past timestamp (Ended)
-        val pastTime = com.google.firebase.Timestamp(now / 1000 - 3600, 0)
+    // Future timestamp (Active)
+    val futureTime = com.google.firebase.Timestamp(now / 1000 + 3600, 0)
+    // Past timestamp (Ended)
+    val pastTime = com.google.firebase.Timestamp(now / 1000 - 3600, 0)
 
-        // 2. Create Events
-        // Event A: Joined, Active (Future) -> Should stay in JOINED
-        val eventA = testEvent.copy(uid = "A", title = "Active Joined", endDate = futureTime)
+    // 2. Create Events
+    // Event A: Joined, Active (Future) -> Should stay in JOINED
+    val eventA = testEvent.copy(uid = "A", title = "Active Joined", endDate = futureTime)
 
-        // Event B: Joined, Ended (Past) -> Should move to PAST
-        val eventB = testEvent.copy(uid = "B", title = "Ended Joined", endDate = pastTime)
+    // Event B: Joined, Ended (Past) -> Should move to PAST
+    val eventB = testEvent.copy(uid = "B", title = "Ended Joined", endDate = pastTime)
 
-        // Event C: Owned, Active (Future) -> Should stay in OWNED
-        val eventC = testEvent.copy(uid = "C", title = "Active Owned", endDate = futureTime, ownerId = testUserId)
+    // Event C: Owned, Active (Future) -> Should stay in OWNED
+    val eventC =
+        testEvent.copy(
+            uid = "C", title = "Active Owned", endDate = futureTime, ownerId = testUserId)
 
-        // Event D: Owned, Ended (Past) -> Should move to PAST and leave OWNED
-        val eventD = testEvent.copy(uid = "D", title = "Ended Owned", endDate = pastTime, ownerId = testUserId)
+    // Event D: Owned, Ended (Past) -> Should move to PAST and leave OWNED
+    val eventD =
+        testEvent.copy(uid = "D", title = "Ended Owned", endDate = pastTime, ownerId = testUserId)
 
-        // Event E: Saved, Active (Future) -> Should stay in SAVED
-        val eventE = testEvent.copy(uid = "E", title = "Active Saved", endDate = futureTime)
+    // Event E: Saved, Active (Future) -> Should stay in SAVED
+    val eventE = testEvent.copy(uid = "E", title = "Active Saved", endDate = futureTime)
 
-        // Event F: Saved, Ended (Past) -> Should be removed from SAVED (not moved to Past unless also joined/owned)
-        val eventF = testEvent.copy(uid = "F", title = "Ended Saved", endDate = pastTime)
+    // Event F: Saved, Ended (Past) -> Should be removed from SAVED (not moved to Past unless also
+    // joined/owned)
+    val eventF = testEvent.copy(uid = "F", title = "Ended Saved", endDate = pastTime)
 
-        // 3. Set Initial State
-        controller.setJoinedEventsForTest(listOf(eventA, eventB))
-        controller.setOwnedEventsForTest(listOf(eventC, eventD))
-        controller.setSavedEventsForTest(listOf(eventE, eventF))
+    // 3. Set Initial State
+    controller.setJoinedEventsForTest(listOf(eventA, eventB))
+    controller.setOwnedEventsForTest(listOf(eventC, eventD))
+    controller.setSavedEventsForTest(listOf(eventE, eventF))
 
-        // 4. Trigger Refresh
-        val refreshMethod = MapEventStateController::class.java.getDeclaredMethod("refreshTimeDependentLists")
-        refreshMethod.isAccessible = true
-        refreshMethod.invoke(controller)
+    // 4. Trigger Refresh
+    val refreshMethod =
+        MapEventStateController::class.java.getDeclaredMethod("refreshTimeDependentLists")
+    refreshMethod.isAccessible = true
+    refreshMethod.invoke(controller)
 
-        // 5. Assertions
+    // 5. Assertions
 
-        // JOINED: Should only contain Active (A)
-        assertEquals(1, controller.joinedEvents.size)
-        assertEquals("A", controller.joinedEvents[0].uid)
+    // JOINED: Should only contain Active (A)
+    assertEquals(1, controller.joinedEvents.size)
+    assertEquals("A", controller.joinedEvents[0].uid)
 
-        // OWNED: Should only contain Active (C)
-        val ownedEvents = controller.ownedEvents // Assuming getter exists or use reflection
-        assertEquals(1, ownedEvents.size)
-        assertEquals("C", ownedEvents[0].uid)
+    // OWNED: Should only contain Active (C)
+    val ownedEvents = controller.ownedEvents // Assuming getter exists or use reflection
+    assertEquals(1, ownedEvents.size)
+    assertEquals("C", ownedEvents[0].uid)
 
-        // SAVED: Should only contain Active (E)
-        assertEquals(1, controller.savedEvents.size)
-        assertEquals("E", controller.savedEvents[0].uid)
+    // SAVED: Should only contain Active (E)
+    assertEquals(1, controller.savedEvents.size)
+    assertEquals("E", controller.savedEvents[0].uid)
 
-        // PAST (Attended): Should contain Ended Joined (B) and Ended Owned (D)
-        val attendedEvents = controller.attendedEvents
-        assertEquals(2, attendedEvents.size)
-        // Check content (order might vary based on sorting, but usually descending date)
-        assertTrue(attendedEvents.any { it.uid == "B" })
-        assertTrue(attendedEvents.any { it.uid == "D" })
-    }
+    // PAST (Attended): Should contain Ended Joined (B) and Ended Owned (D)
+    val attendedEvents = controller.attendedEvents
+    assertEquals(2, attendedEvents.size)
+    // Check content (order might vary based on sorting, but usually descending date)
+    assertTrue(attendedEvents.any { it.uid == "B" })
+    assertTrue(attendedEvents.any { it.uid == "D" })
+  }
 }
 
 /** Provides a chosen time in milliseconds for tests */
