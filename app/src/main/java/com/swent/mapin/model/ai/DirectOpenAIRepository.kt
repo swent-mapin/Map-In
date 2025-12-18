@@ -29,7 +29,9 @@ class DirectOpenAIRepository(
     private val client: OkHttpClient = OkHttpClient(),
     private val gson: Gson = Gson(),
     private val ioDispatcher: CoroutineContext = Dispatchers.IO,
-    private val apiKey: String = OpenAIKeyConfig.OPENAI_API_KEY
+    //Here, use the OpenAIKeyConfig file provided separately instead of the placeholder
+    //Replace "" by OpenAIKeyConfig.OPENAI_API_KEY
+    private val apiKey: String = ""
 ) : AiAssistantRepository {
 
   companion object {
