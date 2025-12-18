@@ -595,8 +595,8 @@ private fun HelpCard(modifier: Modifier = Modifier) {
                           "\"Find me a sports event this weekend\"\n" +
                           "\"What festivals are coming up?\"\n\n" +
                           "To join an event, say:\n" +
-                          "\"Join the first event\"\n" +
-                          "\"Register for the second one\"",
+                          "\"Sign up for the first event\"\n" +
+                          "\"Sign up for the salsa event\"",
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onTertiaryContainer,
                   textAlign = TextAlign.Center,
