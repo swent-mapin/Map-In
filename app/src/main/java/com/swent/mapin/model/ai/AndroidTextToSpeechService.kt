@@ -33,10 +33,10 @@ class AndroidTextToSpeechService(
                 result != TextToSpeech.LANG_MISSING_DATA &&
                     result != TextToSpeech.LANG_NOT_SUPPORTED
 
-            // Make the voice friendlier: slightly higher pitch and slightly slower
+            // Make the voice deeper and slightly slower
             if (isInitialized) {
-              tts?.setPitch(1.3f) // Slightly higher pitch (1.0 = normal)
-              tts?.setSpeechRate(1f)
+              tts?.setPitch(1f) // Lower pitch for deeper voice (1.0 = normal, <1.0 = deeper)
+              tts?.setSpeechRate(0.95f) // Slightly slower for better clarity
             }
             // Process any pending speeches
             if (isInitialized) {
