@@ -1,5 +1,6 @@
 name: Build APK
 
+# Build APK manually for Sprint releases
 on:
   workflow_dispatch:
     inputs:
@@ -11,9 +12,6 @@ on:
         options:
           - debug
           - release
-  push:
-    tags:
-      - 'v*'
 
 jobs:
   build-apk:
@@ -21,24 +19,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name:  Checkout
+        uses:  actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Restore shared debug keystore
+      - name:  Restore shared debug keystore
         env:
           TEAM_DEBUG_KEYSTORE_B64: ${{ secrets.TEAM_DEBUG_KEYSTORE_B64 }}
           TEAM_DEBUG_STORE_PASSWORD: ${{ secrets.TEAM_DEBUG_STORE_PASSWORD }}
           TEAM_DEBUG_KEY_PASSWORD: ${{ secrets.TEAM_DEBUG_KEY_PASSWORD }}
-        run: |
+        run:  |
           if [ -z "$TEAM_DEBUG_KEYSTORE_B64" ] || [ -z "$TEAM_DEBUG_STORE_PASSWORD" ] || [ -z "$TEAM_DEBUG_KEY_PASSWORD" ]; then
             echo "Shared debug keystore secrets are not configured" >&2
             exit 1
           fi
           mkdir -p android/keystores
-          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug.keystore
+          echo "$TEAM_DEBUG_KEYSTORE_B64" | base64 --decode > android/keystores/team-debug. keystore
           cat <<EOF > android/gradle.properties
           TEAM_DEBUG_STORE_FILE=android/keystores/team-debug.keystore
           TEAM_DEBUG_STORE_PASSWORD=$TEAM_DEBUG_STORE_PASSWORD
@@ -46,13 +44,13 @@ jobs:
           TEAM_DEBUG_KEY_PASSWORD=$TEAM_DEBUG_KEY_PASSWORD
           EOF
 
-      - name: Restore release keystore
-        if: ${{ github.event_name == 'push' || github.event.inputs.build_type == 'release' }}
+      - name:  Restore release keystore
+        if: ${{ github.event. inputs.build_type == 'release' }}
         env:
           RELEASE_STORE_FILE_BASE64: ${{ secrets.RELEASE_STORE_FILE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS:  ${{ secrets. RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets. RELEASE_KEY_PASSWORD }}
         run: |
           if [ -z "$RELEASE_STORE_FILE_BASE64" ]; then
             echo "Release keystore secrets are not configured" >&2
@@ -79,16 +77,16 @@ jobs:
           echo "$FIREBASE_SERVICE_JSON_B64" | base64 --decode > app/google-services.json
           ls -l app/google-services.json
 
-      - name: Restore Mapbox access token resource
+      - name:  Restore Mapbox access token resource
         env:
-          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets. MAPBOX_ACCESS_TOKEN }}
         run: |
           if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then
             echo "MAPBOX_ACCESS_TOKEN secret is not set" >&2
             exit 1
           fi
           mkdir -p app/src/main/res/values
-          cat <<EOF > app/src/main/res/values/mapbox_access_token.xml
+          cat <<EOF > app/src/main/res/values/mapbox_access_token. xml
           <?xml version="1.0" encoding="utf-8"?>
           <resources xmlns:tools="http://schemas.android.com/tools">
               <string name="mapbox_access_token" translatable="false" tools:ignore="UnusedResources">$MAPBOX_ACCESS_TOKEN</string>
@@ -108,46 +106,35 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug' }}
+        if: ${{ github. event.inputs.build_type == 'debug' }}
         run: ./gradlew assembleDebug
 
-      - name: Build Release APK & AAB
-        if: ${{ github.event_name == 'push' || github.event.inputs.build_type == 'release' }}
+      - name:  Build Release APK & AAB
+        if: ${{ github. event.inputs.build_type == 'release' }}
         run: |
           ./gradlew assembleRelease
           ./gradlew bundleRelease
 
       - name: Upload Debug APK
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug' }}
+        if: ${{ github. event.inputs.build_type == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: mapin-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*. apk
           retention-days: 30
 
-      - name: Upload Release APK
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+      - name:  Upload Release APK
+        if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: mapin-release-apk
+          name:  mapin-release-apk
           path: app/build/outputs/apk/release/*.apk
-          retention-days: 30
+          retention-days:  30
 
       - name: Upload Release AAB
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' }}
+        if: ${{ github. event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: mapin-release-aab
           path: app/build/outputs/bundle/release/*.aab
           retention-days: 30
-
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
