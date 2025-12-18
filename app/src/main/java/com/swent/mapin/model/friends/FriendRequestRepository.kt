@@ -1,9 +1,15 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.friends
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.swent.mapin.model.badge.BadgeRepository
 import com.swent.mapin.model.badge.BadgeRepositoryFirestore
+import com.swent.mapin.model.notification.NotificationResult
+import com.swent.mapin.model.notification.NotificationService
+import com.swent.mapin.model.userprofile.UserProfile
+import com.swent.mapin.model.userprofile.UserProfileRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -51,9 +57,7 @@ class FriendRequestRepository(
               .collection(COLLECTION)
               .document(existingRequest.requestId)
               .update(
-                  mapOf(
-                      "status" to FriendshipStatus.PENDING.name,
-                      "timestamp" to com.google.firebase.Timestamp.now()))
+                  mapOf("status" to FriendshipStatus.PENDING.name, "timestamp" to Timestamp.now()))
               .await()
 
           // Send notification for re-requested friend request
@@ -316,7 +320,7 @@ class FriendRequestRepository(
    * @return Flow of friend lists that updates in real-time.
    */
   fun observeFriends(userId: String): Flow<List<FriendWithProfile>> = callbackFlow {
-    val listeners = mutableListOf<com.google.firebase.firestore.ListenerRegistration>()
+    val listeners = mutableListOf<ListenerRegistration>()
 
     // Helper function to fetch and send updated data
     suspend fun refreshAndSend() {

@@ -1,6 +1,6 @@
 package com.swent.mapin.ui.chat
 
-import com.swent.mapin.model.FriendshipStatus
+import com.swent.mapin.model.friends.FriendshipStatus
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import kotlin.test.Test

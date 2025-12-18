@@ -2,7 +2,7 @@ package com.swent.mapin.ui.settings
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.swent.mapin.model.PreferencesRepository
+import com.swent.mapin.model.preferences.PreferencesRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

@@ -1,4 +1,4 @@
-package com.swent.mapin.model
+package com.swent.mapin.model.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore

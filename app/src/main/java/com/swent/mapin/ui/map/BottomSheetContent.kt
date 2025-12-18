@@ -63,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.swent.mapin.model.event.Event
 import com.swent.mapin.model.location.LocationViewModel
+import com.swent.mapin.model.userprofile.UserProfile
 import com.swent.mapin.ui.event.AddEventScreen
 import com.swent.mapin.ui.event.AddEventScreenTestTags
 import com.swent.mapin.ui.event.EditEventScreen
@@ -154,7 +155,7 @@ fun BottomSheetContent(
     onCategoryClick: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     // User search results
-    userSearchResults: List<com.swent.mapin.model.UserProfile> = emptyList(),
+    userSearchResults: List<UserProfile> = emptyList(),
     onUserSearchClick: (String, String) -> Unit = { _, _ -> },
     // Memory form and events
     currentScreen: BottomSheetScreen = BottomSheetScreen.MAIN_CONTENT,
@@ -472,14 +473,11 @@ fun BottomSheetContent(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                if (isFull) {
-                                  // Avoid running filter side effects when sheet is not fully shown
-                                  filterSection.Render(
-                                      Modifier.fillMaxWidth(),
-                                      filterViewModel,
-                                      locationViewModel,
-                                      userProfile)
-                                }
+                                filterSection.Render(
+                                    Modifier.fillMaxWidth(),
+                                    filterViewModel,
+                                    locationViewModel,
+                                    userProfile)
 
                                 Spacer(modifier = Modifier.height(16.dp))
 

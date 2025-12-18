@@ -24,10 +24,10 @@ import coil.Coil
 import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
 import com.google.firebase.auth.FirebaseAuth
-import com.swent.mapin.model.PreferencesRepository
-import com.swent.mapin.model.PreferencesRepositoryProvider
 import com.swent.mapin.model.event.EventRepositoryProvider
 import com.swent.mapin.model.memory.MemoryRepositoryProvider
+import com.swent.mapin.model.preferences.PreferencesRepository
+import com.swent.mapin.model.preferences.PreferencesRepositoryProvider
 import com.swent.mapin.navigation.AppNavHost
 import com.swent.mapin.notifications.FCMTokenManager
 import com.swent.mapin.ui.auth.BiometricLockScreen
