@@ -144,10 +144,12 @@ class AiAssistantScreenTest {
     composeTestRule.setContent { MapInTheme { AiAssistantScreen() } }
 
     // Verify join event examples are shown
-    composeTestRule.onNode(hasText("Join the first event", substring = true)).assertIsDisplayed()
+    composeTestRule
+        .onNode(hasText("Sign up for the first event", substring = true))
+        .assertIsDisplayed()
 
     composeTestRule
-        .onNode(hasText("Register for the second one", substring = true))
+        .onNode(hasText("Sign up for the salsa event", substring = true))
         .assertIsDisplayed()
   }
 

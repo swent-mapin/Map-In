@@ -40,17 +40,20 @@ object AiConfig {
    * @param okHttpClient OkHttpClient instance for HTTP requests
    * @param gson Gson instance for JSON serialization
    * @param baseUrl Backend URL (deprecated, kept for compatibility)
-   * @param apiKey OpenRouter API key (optional, defaults to empty string)
-   * @return AiAssistantRepository implementation (DirectOpenRouter or Fake based on feature flag)
+   * @param apiKey OpenAI API key (optional, defaults to key from OpenAIKeyConfig)
+   * @return AiAssistantRepository implementation (DirectOpenAI or Fake based on feature flag)
    */
+  @Suppress("UNUSED_PARAMETER")
   fun provideRepository(
       okHttpClient: OkHttpClient,
       gson: Gson,
       baseUrl: String,
+      // Here, use the OpenAIKeyConfig file provided separately instead of the placeholder
+      // Replace "" by OpenAIKeyConfig.OPENAI_API_KEY
       apiKey: String = ""
   ): AiAssistantRepository {
     return if (AI_ASSISTANT_ENABLED) {
-      DirectOpenRouterRepository(client = okHttpClient, gson = gson, apiKey = apiKey)
+      DirectOpenAIRepository(client = okHttpClient, gson = gson, apiKey = apiKey)
     } else {
       FakeAiAssistantRepository()
     }
