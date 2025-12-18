@@ -521,7 +521,7 @@ class EventRepositoryFirestore(
     val limitedTags = filters.tags.take(FIRESTORE_QUERY_LIMIT).toList()
     query = query.whereArrayContainsAny("tags", limitedTags)
 
-    val snap = query.orderBy("date", Query.Direction.DESCENDING).get().await()
+    val snap = query.get().await()
     return snap.documents.mapNotNull { it.toEvent() }
   }
 
@@ -532,7 +532,7 @@ class EventRepositoryFirestore(
   private suspend fun getEventsByBasicQuery(filters: Filters): List<Event> {
     val query = buildBaseQuery(filters)
 
-    val snap = query.orderBy("date", Query.Direction.DESCENDING).get().await()
+    val snap = query.get().await()
     val events = snap.documents.mapNotNull { it.toEvent() }
 
     return events
@@ -541,6 +541,7 @@ class EventRepositoryFirestore(
   /** Builds the base query with date filters. */
   private fun buildBaseQuery(filters: Filters): Query {
     var query: Query = db.collection(EVENTS_COLLECTION_PATH)
+    var hasGeohashOrdering = false
 
     // Apply startDate filter
     val (startTimestamp, _) = TimeUtils.dayBounds(filters.startDate, zone = ZoneOffset.UTC)
@@ -564,11 +565,16 @@ class EventRepositoryFirestore(
 
       val bound = bounds[0]
       query = query.orderBy("location.geohash").startAt(bound.startHash).endAt(bound.endHash)
+      hasGeohashOrdering = true
     }
 
     // Add price to query if present
     if (filters.maxPrice != null) {
       query = query.whereLessThanOrEqualTo("price", filters.maxPrice.toDouble())
+    }
+
+    if (!hasGeohashOrdering) {
+      query = query.orderBy("date", Query.Direction.DESCENDING)
     }
 
     return query
